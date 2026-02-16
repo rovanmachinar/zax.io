@@ -16,6 +16,11 @@ These are **project-specific** and keep their own context.
 - Pinned model: `openai/gpt-5.2`
 - Use when: turning discussions into small RFCs, tracking open questions.
 
+### zax-researcher
+- Purpose: research how other languages solve a design problem; provide options + tradeoffs.
+- Pinned model: `openai/gpt-5.2`
+- Use when: gathering patterns and references before making a design decision.
+
 ### zax-designer
 - Purpose: propose concrete language design (syntax + semantics + examples).
 - Pinned model: `anthropic/claude-opus-4-6`
@@ -26,13 +31,20 @@ These are **project-specific** and keep their own context.
 - Pinned model: `anthropic/claude-opus-4-6`
 - Use when: you want a design challenged before committing to it.
 
+### zax-spec-editor
+- Purpose: convert accepted RFC decisions into docs/spec/website updates.
+- Pinned model: `openai/gpt-5.2`
+- Use when: updating documentation after a decision is accepted.
+
 ## Routing commands (in the main chat)
 
 Prefix your message with one of these to route it:
 
 - `zax-planner: <prompt>`
+- `zax-researcher: <prompt>`
 - `zax-designer: <prompt>`
 - `zax-skeptic: <prompt>`
+- `zax-spec-editor: <prompt>`
 
 ## Cancel / status / reset (for when something goes wrong)
 
