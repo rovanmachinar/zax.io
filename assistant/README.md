@@ -67,6 +67,10 @@ Use these in the main chat:
 - Each subagent is **pinned** to a model when created.
 - If we need a different model for a one-off, we can spawn a temporary session.
 
+## Output length rule (rate-limit friendly)
+
+- For any output likely to exceed ~30 lines (plans, RFC drafts, research notes, doc edits): **write it to a file in the repo** and only relay back the file path + a short bullet summary.
+
 ## Persistence across reboots
 
 - Subagent sessions are stored on disk (session transcripts) and should still be visible after restarting OpenClaw.
