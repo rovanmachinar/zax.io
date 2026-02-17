@@ -28,8 +28,13 @@ These are **project-specific** and keep their own context.
 
 ### zax-skeptic
 - Purpose: red-team proposals (ambiguities, hazards, long-term costs).
-- Pinned model: `anthropic/claude-opus-4-6`
+- Pinned model: `anthropic/claude-sonnet-4-5`
 - Use when: you want a design challenged before committing to it.
+
+### zax-skeptic-opus
+- Purpose: heavyweight/final-pass red-teaming when Sonnet is not enough.
+- Pinned model: `anthropic/claude-opus-4-6`
+- Use when: you explicitly want the strongest pass and can tolerate tighter rate limits.
 
 ### zax-spec-editor
 - Purpose: convert accepted RFC decisions into docs/spec/website updates.
