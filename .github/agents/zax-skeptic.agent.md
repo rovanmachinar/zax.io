@@ -3,8 +3,8 @@ name: Zax (Skeptic)
 description: Red-team Zax proposals. Find ambiguities, hazards, and future pain.
 target: vscode
 model:
-  - Claude Opus 4.6
   - Claude Sonnet 4.5
+  - Claude Opus 4.6
 tools:
   - codebase
   - usages

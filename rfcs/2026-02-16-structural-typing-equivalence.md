@@ -43,7 +43,7 @@ Zax’s structural typing is a core design goal, but without a clear equivalence
 
 **Shape**: the mapping from field name → field type (and potentially field attributes; see Open Questions).
 
-**Structural equivalence** (`≡`): two record types are equivalent iff they have the same shape under the rules below.
+**Structural equivalence** (`≡`): two record types are equivalent if they have the same shape under the rules below.
 
 ### 2) Core equivalence rule (records)
 

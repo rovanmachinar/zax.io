@@ -1,0 +1,29 @@
+# sample-queue.yaml
+# Example queue for the Zax project.
+#
+# This file is illustrative only.
+# Role labels used here should be taken from: assistant/project.yaml
+
+version: 1
+name: sample
+project: zax
+repoRoot: ../..   # relative to this file (assistant/queues/)
+
+settings:
+  # Machine-local session routing belongs in local config / runtime state.
+  sessions:
+    mapPath: ~/.config/assistant-queue/sessions.yaml
+
+  execution:
+    minDelayMs: 1000
+
+tasks:
+  - id: hello-role
+    title: Hello (any role)
+    agent:
+      label: "<role-label-from-assistant/project.yaml>"
+    prompt:
+      kind: inline
+      text: |
+        Write a 3-line greeting to Robin.
+        If you need follow-up work, write output/spawn.yaml.

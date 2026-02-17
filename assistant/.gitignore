@@ -1,0 +1,7 @@
+# assistant-queue / local runtime artifacts
+# Keep operational bus state out of the repo.
+
+# Prefer keeping runtime state outside the repo (default: ~/.local/state/assistant-queue/)
+# but if you ever configure assistant-queue to write state inside this repo,
+# ignore that directory.
+.assistant-queue/

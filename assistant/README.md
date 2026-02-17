@@ -1,82 +1,42 @@
 # Zax assistant guide (OpenClaw)
 
-This repo is worked on with OpenClaw (Rovan Machinar) plus persistent Zax subagents.
+This folder exists to keep **one** authoritative, repo-committed definition of the Zax assistant roles and orchestration conventions.
 
-## Where things live
+## Source of truth (roles)
 
-- RFCs: `rfcs/`
-- Assistant guide (this file): `assistant/README.md`
+- **The one-and-only authoritative roles list:** `assistant/project.yaml`
 
-## Persistent Zax subagents
+Do not restate the role list elsewhere in this repo.
 
-These are **project-specific** and keep their own context.
+## Per-role behavior definitions (authoritative)
 
-### zax-planner
-- Purpose: project planning / RFC drafting / decision tracking.
-- Pinned model: `openai/gpt-5.2`
-- Use when: turning discussions into small RFCs, tracking open questions.
+The source of truth for **how each role behaves** (prompting, tools, model preferences) is:
 
-### zax-researcher
-- Purpose: research how other languages solve a design problem; provide options + tradeoffs.
-- Pinned model: `openai/gpt-5.2`
-- Use when: gathering patterns and references before making a design decision.
+- `.github/agents/`
 
-### zax-designer
-- Purpose: propose concrete language design (syntax + semantics + examples).
-- Pinned model: `anthropic/claude-opus-4-6`
-- Use when: generating a first-pass design proposal once constraints are clear.
+These files must remain **compatible with VS Code agent usage** (one-off runs).
 
-### zax-skeptic
-- Purpose: red-team proposals (ambiguities, hazards, long-term costs).
-- Pinned model: `anthropic/claude-sonnet-4-5`
-- Use when: you want a design challenged before committing to it.
+Important constraint:
+- Do **not** bake queue/orchestration mechanics into the VS Code agent definitions.
+  - VS Code runs these roles as one-off helpers today.
+  - Queue-awareness (if/when we add it) belongs in the queue tool and its own docs/config, not in `.github/agents/*`.
 
-### zax-skeptic-opus
-- Purpose: heavyweight/final-pass red-teaming when Sonnet is not enough.
-- Pinned model: `anthropic/claude-opus-4-6`
-- Use when: you explicitly want the strongest pass and can tolerate tighter rate limits.
+The role **labels** in `.github/agents/` must match the labels in `assistant/project.yaml`.
 
-### zax-spec-editor
-- Purpose: convert accepted RFC decisions into docs/spec/website updates.
-- Pinned model: `openai/gpt-5.2`
-- Use when: updating documentation after a decision is accepted.
+## Orchestration tool (optional)
 
-## Routing commands (in the main chat)
+Zax can also be orchestrated by the external runner **assistant-queue**.
 
-Prefix your message with one of these to route it:
+- Runtime state (runs/logs/artifacts/config) should live in a **local, gitignored directory**.
+- If you keep any queue-tool state inside this repo, it must be under:
+  - `assistant/.assistant-queue/` (gitignored)
 
-- `zax-planner: <prompt>`
-- `zax-researcher: <prompt>`
-- `zax-designer: <prompt>`
-- `zax-skeptic: <prompt>`
-- `zax-spec-editor: <prompt>`
+The presumption is that `assistant/.assistant-queue/` is safe to delete at any time and can be recreated.
 
-## Cancel / status / reset (for when something goes wrong)
+## Queue definitions
 
-Use these in the main chat:
+If you keep example or committable queues in-repo, store them under:
 
-- `cancel-wait` — stop waiting/polling for a subagent reply.
-- `cancel-wait zax-planner` — stop waiting for a specific role.
-- `status zax-planner` — fetch latest state/output from that session.
-- `reset zax-planner` — create a fresh session for that role (old one is retired).
+- `assistant/queues/`
 
-(These are conventions the main assistant follows.)
-
-## Notes on model selection
-
-- Each subagent is **pinned** to a model when created.
-- If we need a different model for a one-off, we can spawn a temporary session.
-
-## Output length rule (rate-limit friendly)
-
-- For any output likely to exceed ~30 lines (plans, RFC drafts, research notes, doc edits): **write it to a file in the repo** and only relay back the file path + a short bullet summary.
-
-## Persistence across reboots
-
-- Subagent sessions are stored on disk (session transcripts) and should still be visible after restarting OpenClaw.
-- If you use a destructive reset of OpenClaw sessions/credentials, sessions can be lost.
-
-## Multiple projects
-
-- Zax roles are specific to this repo.
-- For a new project, we will spawn new project-specific roles (for example, `projectname-planner`) and keep them separate.
+Queues should refer to role labels defined in `assistant/project.yaml`.

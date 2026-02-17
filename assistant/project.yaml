@@ -1,0 +1,39 @@
+# Zax assistant project scenario
+#
+# Committed so orchestration tooling can (re)initialize Zax-specific roles
+# without contaminating other projects.
+
+version: 1
+project: "zax"
+
+roles:
+  - label: "zax-planner"
+    title: "Planner"
+    purpose: "Turn discussions into small RFCs and concrete task queues."
+
+  - label: "zax-researcher"
+    title: "Researcher"
+    purpose: "Compare other languages and extract patterns/options for Zax."
+
+  - label: "zax-designer"
+    title: "Designer"
+    purpose: "Propose concrete language designs (syntax + semantics + examples)."
+
+  - label: "zax-feasibility"
+    title: "Feasibility"
+    purpose: "Evaluate whether proposals are realistically implementable (compiler/runtime/tooling)."
+
+  - label: "zax-skeptic"
+    title: "Skeptic"
+    purpose: "Red-team proposals and identify ambiguities, hazards, and edge cases."
+
+  - label: "zax-spec-editor"
+    title: "Spec editor"
+    purpose: "Convert accepted RFC decisions into docs/spec/website updates."
+
+queueDefaults:
+  recursion:
+    maxDepth: 7
+    onMaxDepth: "escalate"
+  retention:
+    pruneOnSuccess: "light"
