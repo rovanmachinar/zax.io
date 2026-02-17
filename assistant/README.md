@@ -70,4 +70,4 @@ Use these in the main chat:
 ## Multiple projects
 
 - Zax roles are specific to this repo.
-- For a new project, we will spawn new project-specific roles (e.g., `gnedo-planner`) and keep them separate.
+- For a new project, we will spawn new project-specific roles (for example, `projectname-planner`) and keep them separate.
