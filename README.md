@@ -33,3 +33,8 @@ Zax is a data oriented modern refresh of a compile-time language which offers hi
 A prototype for the  [zax-compiler](https://github.com/robin-raymond/zax-compiler) is being developed in C++.
 
 Please visit the website [zax.io](https://zax.io/) for a detailed overview of the language.
+
+## Project guidance
+
+See the [project guide](project/README.md) for the human-agent working agreement,
+documentation architecture, and current language-design work.

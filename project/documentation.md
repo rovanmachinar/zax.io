@@ -1,0 +1,478 @@
+# Zax documentation architecture
+
+| Field | Value |
+| --- | --- |
+| Status | Current project guidance |
+| Audience | Language maintainers, human developers, and agents creating, reviewing, or navigating Zax documentation |
+| Applies To | What Zax documents, where it belongs, and how it is developed and maintained |
+| Owns | Documentation types, locations, authority, reading paths, numbered work, promotion, archival, and validation |
+| Does Not Own | Zax language concepts, the current active work pointer, or session-specific authorization |
+
+## Purpose
+
+Zax documentation exists first to help human developers understand, evaluate,
+and use the language. It must also let a focused agent comprehend relevant parts
+of the language without reading the entire repository.
+
+This document defines:
+
+- **what we document:** audiences, document types, technical depth, authority,
+  and maturity;
+- **where we document:** repository surfaces, owner locations, naming,
+  navigation, active work, and archives;
+- **how we document:** focused reading, bounded refinement, promotion,
+  continuation, and validation.
+
+It is not a template requiring speculative folders or placeholder documents.
+
+## Project roles
+
+These are documentation and cooperation terms, not Zax language terms:
+
+| Term | Meaning |
+| --- | --- |
+| Zax language maintainer | The human who guides the work and has authority to accept language decisions and authorize project changes |
+| Human language maintainer | The same role when it is useful to distinguish the human from an assisting agent |
+| Language author | The person whose original design intent is relevant to the current question |
+| Human developer | A person learning, evaluating, or using Zax |
+| Programmer | A human developer considered specifically as an author or reader of Zax code |
+| Agent | An AI assistant helping investigate, reason about, or document Zax under the supplied operating guidance |
+
+Use the most specific term needed by the context. Do not conflate a developer
+using the language with the language maintainer who decides its design.
+
+## Current repository surfaces
+
+| Surface | Current role | Authority and reading posture |
+| --- | --- | --- |
+| `README.md` | Repository entry point | Router |
+| `index.md` | Public website entry point | Router plus a legacy project overview |
+| Root language-topic pages | Public human-developer-facing language material | Legacy design input until individually reviewed and promoted |
+| `project/README.md` | Project-guidance router | Current routing guidance |
+| `project/handoff.md` | Source for the new-session copy/paste prompt | Current source; agents do not proactively read it |
+| `project/rehydrate.md` | Source for the post-compaction copy/paste prompt | Current source; agents do not proactively read it |
+| `project/documentation.md` | Documentation architecture | Current for the concerns owned here |
+| `project/work/` | The one active numbered work unit | Non-normative working material |
+| `project/archive/` | Completed project records | Historical and audit-only |
+| `rfcs/` | Existing candidate language material | Non-authoritative; not an active RFC process |
+
+The existing public language pages remain at the repository root while the
+language is being understood. Moving them requires a separately discussed,
+aligned, and authorized structural change.
+
+There is no formal specification area. Do not create one until accepted
+conceptual design and real consumer pressure justify it.
+
+Compiler, transpiler, runtime, and toolchain implementation belong in another
+repository. This repository may document implementation constraints when they
+affect the language design or programmer-visible behavior, but it does not own
+implementation source or internal architecture.
+
+## Audiences
+
+### Human developers
+
+They need to understand why Zax exists, how its concepts work, what tradeoffs
+they make, how to use them, and which areas remain unsettled.
+
+### Zax language maintainer
+
+The maintainer needs durable ownership, visible maturity, bounded review units,
+preserved findings, and explicit control over promotion and structural change.
+
+### Agents
+
+Agents need a supplied operating prompt, one active concern, a minimal reading
+path, clear authority, and explicit stopping and authorization boundaries.
+
+### Future compiler and tooling contributors
+
+They may eventually need formal grammar, semantics, diagnostics, compatibility,
+ABI, and conformance material. Those future needs inform feasibility without
+prematurely turning conceptual documentation into a specification.
+
+## Document types
+
+Create a document type only when real content has a distinct audience,
+authority, lifecycle, or independent reuse.
+
+### Router
+
+A `README.md` or index routes readers by audience and task. It contains only
+enough context to choose the next document. Substantive definitions belong in
+named owner documents.
+
+The public `index.md` currently includes substantial legacy content. That is an
+existing condition to review later, not precedent for new indexes.
+
+### Language concept owner document
+
+A language concept owner document explains an accepted part of Zax for human
+developers. It may be technically detailed, but it prioritizes a usable mental
+model, behavior, examples, costs, failures, and interactions over formal
+specification language.
+
+Each important concern has one owning document. Other documents may link, show a
+local example, or summarize usage without becoming competing definitions.
+
+### Project guidance
+
+Project guidance defines cooperation and documentation practice. The supplied
+operating prompts establish session behavior and current work. This document
+owns the detailed documentation architecture.
+
+### Active numbered work
+
+`project/work/00n-concept.md` is the one shared, non-normative work unit for a
+bounded concern. It preserves the initiating input and evolving discussion
+without presenting findings as accepted language design.
+
+### Archived work
+
+`project/archive/work/00n-concept.md` is the completed form of a numbered work
+unit. It is retained for human discovery and targeted audits, not onboarding or
+current authority.
+
+### Candidate or raw material
+
+Unaccepted proposals, recovered evidence, research, and unresolved ideas remain
+clearly non-authoritative. They are read when a current work unit names them or
+a concrete consequence makes them relevant.
+
+The current `rfcs/` folder is in this category. Its one proposal may become a
+numbered work item, potentially `001`, but that selection has not been made.
+After its useful content is dispositioned, the folder may be retired if it has
+no remaining role.
+
+### Future specification or contract
+
+A specification defines exact rules for compilers, tools, and conformance. A
+formal contract defines a stable shape or compatibility promise for named
+consumers. Neither should be created merely to make the documentation tree look
+complete.
+
+### Implementation documentation
+
+Transpiler mappings, lowering algorithms, compiler data structures, and
+toolchain internals belong with the implementation that owns them. Language
+documentation includes such information only when it creates a
+programmer-visible promise or design constraint.
+
+## Human-developer-facing depth
+
+Human-first does not mean introductory, simplified, or imprecise.
+
+Include a detail in human-developer-facing language documentation when a
+programmer needs it to:
+
+- write or read Zax code;
+- predict behavior or ordering;
+- reason about types, ranges, operators, and conversions;
+- understand initialization, lifetime, ownership, or allocation;
+- anticipate cost, failure, panic, or undefined behavior;
+- reason about portability or cross-feature interaction;
+- debug an outcome.
+
+Details that primarily serve compiler conformance, formal proof, lowering, or
+internal implementation belong in future owners unless they change the
+programmer's model.
+
+Do not discard a useful idea merely because it is too detailed or immature for a
+public concept owner. Give it another explicit disposition before the working
+file is archived.
+
+## Authority and maturity
+
+Document location does not create authority. Checked-in prose, polished
+examples, generated output, plans, and agent-authored proposals remain evidence
+until promoted deliberately.
+
+Use these decision-maturity states:
+
+| State | Meaning |
+| --- | --- |
+| Raw input | Evidence, observations, concerns, rough ideas, or unresolved alternatives |
+| Candidate | A coherent possible model that has not received sufficient review |
+| Tentative proposal | A specific option offered for discussion |
+| Open question | A consequential issue still requiring disposition |
+| Aligned finding | Meaning accepted for the current review scope but not yet promoted |
+| Accepted language design | An aligned finding incorporated into the document that owns the concern |
+| Formal contract or specification | A future stable shape or rule on which named consumers may depend |
+| Explicitly deferred | A question left for later with a reason and deciding pressure |
+| Discarded or superseded | Material deliberately rejected or replaced |
+
+Keep these distinctions visible:
+
+- conceptual acceptance is not implementation;
+- accepted design is not a formal specification;
+- aligned working findings are not authoritative until promoted;
+- historical records are not current owners;
+- decision maturity does not authorize an edit.
+
+New or materially rewritten owner documents should state the applicable parts
+of:
+
+| Field | Purpose |
+| --- | --- |
+| Status | Document lifecycle and authority |
+| Audience | Primary readers |
+| Applies To | Conceptual design, current behavior, contract, process, or another bounded purpose |
+| Implementation State | Not implemented, partial, current, superseded, or not applicable |
+| Owns | Concerns defined here |
+| Does Not Own | Adjacent concerns owned elsewhere |
+| Source / Provenance | Evidence or predecessor when useful |
+| Supersedes / Superseded By | Ownership transitions when applicable |
+
+Do not retrofit untouched legacy pages merely for cosmetic consistency.
+
+## Naming and structure
+
+Use lower-case file and directory names except for the conventional
+`README.md`.
+
+Split documentation when audience, authority, lifecycle, ownership, or
+independent reuse differs. Do not split a cohesive concept merely because it is
+long. Conversely, do not preserve a giant document when its sections have
+different owners or reading paths.
+
+Structural changes require discussion, alignment, and explicit edit
+authorization. Do not introduce speculative folder families, empty indexes, or
+placeholder specifications.
+
+## Focused reading
+
+Focused reading is a correctness and token-cost requirement.
+
+The agent's operating guidance has already been supplied in chat. A reader
+assigned to one concern should normally need:
+
+1. this documentation architecture;
+2. the active numbered work file;
+3. its small required-reading set;
+4. conditional material when a stated boundary is crossed;
+5. additional focused reading when a concrete consequence establishes the need.
+
+Agents do not proactively read the source files for the supplied handoff or
+rehydration prompts. They read those files only when explicitly assigned to
+maintain them.
+
+Indexes route by task. Owner documents teach. Each owner should make its
+prerequisites and adjacent boundaries clear without an exhaustive "see also"
+list.
+
+Do not require agents to read all public language pages, plans, RFCs, or history
+before contributing. Do not read `project/archive/` by default.
+
+A reading scope is guidance, not an artificial prohibition. If discussion or a
+finding crosses into another concern, inspect the smallest relevant owner or
+section, state why it became necessary, and capture the impact. Avoid unbounded
+scans and speculative reading.
+
+## Numbered work
+
+There is at most one active `00n-concept.md` file in `project/work/`.
+
+### Minimal file shape
+
+Use only the stable divisions needed to preserve the work:
+
+```markdown
+# 00n concept: <working title>
+
+## Non-authority notice
+
+## Fixed initiating input
+
+## Reading scope
+
+## Working record
+
+## Dispositions and promotion dry run
+```
+
+The final section may remain absent or empty until the work approaches
+promotion. Add other headings only when they make the particular concern easier
+to understand.
+
+Do not force every statement into a permanent category such as "raw
+observation," "candidate model," or "impact trace." Organize the working record
+naturally. Use explicit maturity labels in prose or local subsections when a
+reader could otherwise confuse an observation, proposal, question, aligned
+finding, or deferral.
+
+### Fixed initiating input
+
+The initiating input contains the aligned information known when the work item
+is created, such as:
+
+- the initiating concern;
+- motivating pressure, when known;
+- known assumptions, inclusions, or exclusions;
+- deliberately unresolved framing;
+- initial stopping guidance, when useful.
+
+These elements are not exhaustive and need not all be supplied. Absence from
+known exclusions does not imply inclusion.
+
+Once created, the fixed initiating input is immutable. Record later
+clarifications, discovered boundaries, corrections, and consequences in the
+working record rather than rewriting what initiated the work. If the frame
+proves materially unsuitable, record that finding and prepare a later work item
+instead of silently broadening it.
+
+### Reading scope
+
+Name the smallest useful required-reading set and explain why each item matters.
+Identify conditional reading by the boundary that triggers it. Exclude archives,
+unrelated areas, and historical plans by default.
+
+The scope may expand when discussion or a concrete consequence makes additional
+material relevant. Explain the need and read only enough to follow that
+consequence responsibly.
+
+### Consequences and deferrals
+
+Keep the initiating concern fixed while tracing material consequences.
+
+Continue when a consequence is necessary to resolve the concern. Trace an
+immediate dependency far enough to expose a constraint or contradiction.
+Capture independently decidable impacts without designing them prematurely.
+Avoid remote speculation without concrete pressure.
+
+Do not use "out of scope" to erase a material finding. A useful deferral records:
+
+- the finding;
+- why it matters;
+- why it can wait;
+- the future question, use case, or pressure that should reopen it;
+- any constraint it places on the current conclusion.
+
+An unresolved contradiction cannot be hidden by deferral if it invalidates the
+current proposal.
+
+The active work file evolves only through discussed, aligned, and explicitly
+authorized edits.
+
+## Pre-promotion documentation fit dry run
+
+The dry run is a read-only pre-promotion step used only when a numbered work item
+is approaching incorporation into lasting repository documentation.
+
+Do not perform it after each edit to the active work file. Do not require it for
+unrelated mechanical documentation corrections. Its purpose is to test whether
+the wider documentation is ready to absorb the findings from `00n`.
+
+The dry run:
+
+1. Maps every aligned finding to one lasting owner.
+2. Identifies every existing file affected by the promotion.
+3. Verifies that the proposed owners can absorb the material coherently.
+4. Identifies missing, overloaded, or incorrectly bounded owner documents.
+5. Identifies terminology, index, navigation, reading-path, and reference
+   changes.
+6. Separates material that must remain candidate, deferred, future
+   specification, or implementation pressure.
+7. Identifies relocations and archive effects.
+8. Produces the exact proposed promotion change set.
+
+Resolve architecture gaps through discussion before promotion. The dry run does
+not edit files, promote findings, or authorize later edits.
+
+## Promotion
+
+Promotion is a separate authorized act, not a status label applied inside the
+working file.
+
+After the dry run:
+
+1. Discuss its complete result.
+2. Align on the lasting owners and coherent repository-wide change set.
+3. Wait for explicit edit authorization.
+4. Apply only the authorized promotion.
+5. Validate the resulting current documentation.
+
+Relocate useful content before archiving the working file. Current owners must
+not depend on archived work for meaning.
+
+The language maintainer may stage changes to preserve a before/after comparison
+boundary. Staging does not imply acceptance, approval, or permission to commit.
+Do not alter the staged boundary without explicit authorization.
+
+## Closure, archival, and continuation
+
+When item `n` closes:
+
+1. Give every material finding a disposition.
+2. Complete the dry run, promotion, and validation when promotion applies.
+3. Mark the working file historical, non-normative, and audit-only.
+4. Move `project/work/00n-concept.md` to
+   `project/archive/work/00n-concept.md`.
+5. Propose the fixed initiating input and focused reading scope for `n+1`.
+6. Discuss and align `n+1` with the language maintainer.
+7. Wait for authorization to create it.
+8. Create `n+1` and update the mirrored current state in both operating-prompt
+   source files.
+9. Stop before analyzing `n+1`.
+
+The agent that creates `n+1` does not begin it until the language maintainer
+explicitly assigns the new work unit. A fresh session or the same session may
+receive that assignment.
+
+Current documents do not link to archived work as ordinary supporting material.
+The archive index may identify completed work for targeted discovery.
+
+## Operating-prompt source maintenance
+
+The new-session handoff source and post-compaction rehydration source are
+mutually exclusive prompts. An agent receives one block in chat and never needs
+the other for that entry or recovery path.
+
+The two prompts intentionally duplicate safety-critical operating guidance.
+They do not reference each other or require an agent to reconcile them during
+normal work.
+
+Their revision, current phase, active work pointer, next work number,
+language-document status, and implementation state must remain synchronized.
+When explicitly maintaining either source, inspect and update both in the same
+coherent change set.
+
+Detailed documentation rules remain here rather than being copied into both
+operating prompts.
+
+## Website and repository navigation
+
+All repository material must be public-safe.
+
+Public website navigation routes human developers to current language
+explanations, not active or archived project work. Project files may remain
+reachable to someone who browses the public repository or knows their URL; they
+need not be hidden from the site build.
+
+Repository navigation routes project contributors from `README.md` to
+`project/README.md`. The language maintainer supplies the appropriate operating
+prompt to an agent.
+
+Validate both rendered website use and direct Markdown use. Relative links
+should work for repository readers as well as the website wherever practical.
+
+## Validation
+
+For an authorized documentation change, check the applicable items:
+
+- The changed concern has one owner.
+- Authority and implementation state are not overstated.
+- Human-developer-facing detail supports a programmer's mental model.
+- Mirrored operating-prompt state agrees.
+- The active work pointer and actual active work agree.
+- Required reading is minimal and reasoned.
+- Conditional reading has a concrete trigger.
+- Additional reading remains possible when justified.
+- Archives are absent from ordinary routes.
+- Current references do not depend on archived material.
+- Moves update destinations, indexes, and references coherently.
+- No obsolete compatibility stub remains without a real constraint.
+- Lower-case naming is followed except for `README.md`.
+- Local links and heading anchors resolve.
+- Markdown renders coherently.
+- Staged and unstaged review boundaries are preserved.
+- The final changed-file set matches the explicitly authorized scope.

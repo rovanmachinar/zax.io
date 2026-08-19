@@ -6,7 +6,12 @@
 
 ### When was the idea of Zax inspired?
 
-The concept of writing the Zax language has been around for a long while. With Robin's many years of software development, some ideas of best practices and desired features in a language formed over time as well as a syntax that enables those concepts into reality. The language is designed for programmers who desire to remain closer to hardware while having access to higher level language convenience for those with the skill levels strong enough to understand the implications of their coding decisions.
+The concept of writing the Zax language has been around for a long while. Many
+years of software development informed ideas about best practices, desirable
+language features, and syntax that could express those concepts. The language is
+designed for programmers who want to remain closer to hardware while retaining
+high-level conveniences and who understand the implications of their coding
+decisions.
 
 
 ### Can Zax be used by beginners?
