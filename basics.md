@@ -5,95 +5,15 @@
 
 ### Basics of parsing
 
-````zax
-//---------------------------------------------------------------------------//
-// C++ style inline comments
+Accepted source reading and layout are defined by
+[Zax source structure](language/source-structure.md). It owns statement-level
+newlines, explicit continuation, simple and composed statements, block and body
+formation, mandatory layout validation, and ordinary, raw, and documentation
+comments.
 
-/*
-   C style multiline comments
-*/
-
-// The semi-colon `;` is not necessary between statements, and has a different
-// role to play in the Zax language and does not mirror the "C" language. The
-// semi-colon `;` operator is used two combine one or more separate statement
-// as if it were a single statement.
-funcA()
-funcB()
-
-// single line with multiple statements treated as a single statement
-funcA(); funcB()
-
-// a scope of statements is treated as a single statement for flow control
-// purposes
-{
-    funcA()
-    funcB()
-}
-
-// a scope combines multiple statements as if it were a single statement
-if true {
-    funcA()
-    funcB()
-}
-
-// a semi-colon `;` operator combines multiple statements as if it were a single
-// statement
-if true
-    funcA();  // this line is part of the `if` statement as normal
-    funcB()   // this line is also part of the `if` statement as it is combined
-
-// if code needs to span multiple lines then the continuation '\' operator can
-// be used
-value := 2 + func() \    // continuation of statement to multiple lines
-         * 3 \
-         / 2
-
-// keywords are all lowercase and keywords are reserved only where they may be
-// legally used
-if condition() {
-} else {
-}
-
-// Additional nested multiline comments are supported
-/**
-  Nested multi
-/**
-  multi line comments
-**/
-  comments
-**/
-
-/// <summary>
-/// Triple slashes `///` are treated as a documentation comments and if XML
-/// is detected at the start of the documentation comment then the comment is
-/// assumed to be an XML style documentation comment.
-/// </summary>
-someType :: type SomeType {}
-
-/// Automatic summary documentation about `func`.
-func final : (
-    output : Integer   /// Automatic summary comment about `output`
-)(
-    input : Integer    /// Automatic summary comment about `input`
-) = {
-    // normal code comment
-    // ...
-}
-
-///***
-
-<summary>
-Triple slash with triple stars `///` `***` with closing triple start with triple
-slash `***` `///` comments are treated as documentation comments without the
-need to place `///` on every single line. In fact, putting `///` or `*` or any
-other symbol inside comment would be treated as part of the documentation. If
-XML is detected at the start of the comment then XML style documentation is
-presumed. Otherwise the comment is assumed to be a large-style summary comment
-for a given context.
-</summary>
-
-***///
-````
+This legacy basics page no longer defines those concerns. The remaining sections
+preserve unreviewed design input for keywords, operators, declarations, types,
+literals, and related concepts.
 
 
 ### Keywords
@@ -270,7 +190,7 @@ The operators have built-in interpretations that cannot be overridden. The langu
 .                   // post-unary dereference operator
 .                   // binary namespace resolution operator
 ,                   // post-unary argument operator
-;                   // binary statement separator and combiner operator
+;                   // binary statement composition operator
 ;;                  // binary sub-statement separator operator
 :                   // binary variable type declaration operator
 ::                  // binary data type or meta-type declaration operator
@@ -285,7 +205,7 @@ The operators have built-in interpretations that cannot be overridden. The langu
                     // defined type)
 <-                  // pre-unary argument split operator (split type into
                     // multiple function arguments)
-\                   // post-unary statement continuation operator
+\                   // explicit statement continuation marker
 ````
 
 

@@ -75,9 +75,6 @@ There is no formal Zax specification. Do not describe proposed behavior as
 implemented, conforming, normative, or guaranteed unless a current owner
 explicitly establishes that status.
 
-The current `rfcs/` area is candidate material, not an active RFC process. Do not
-read it by default.
-
 The Zax language maintainer is the language decision authority. An agent may
 investigate, reason, propose, disagree, identify risks, and trace consequences.
 It may not infer acceptance or promote a decision through confident wording,

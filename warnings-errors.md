@@ -3,6 +3,11 @@
 
 ## Compiler Warnings and Errors
 
+Mandatory source-structure errors are defined conceptually by
+[Zax source structure](language/source-structure.md). They are not configurable
+warnings. Exact diagnostic identifiers and presentation remain future
+diagnostics design; the registries below are otherwise legacy input.
+
 ### `error` directive
 
 #### Forcing the compiler to issue an error
@@ -173,10 +178,10 @@ randomValue final : (output : S32)() = {
 
 value := randomValue()
 
-[[warning=no, intrinsic-type-cast-overflow]] \
+[[warning=no, intrinsic-type-cast-overflow]]
 castedValue1 := value unsafe as U32
 
-[[warning=yes, intrinsic-type-cast-overflow]] \
+[[warning=yes, intrinsic-type-cast-overflow]]
 castedValue2 := value unsafe as U32
 
 
@@ -292,8 +297,6 @@ The following are registered warnings, default states, and their meaning:
     * a `type` is using an alignment for a `type` which the CPU knowingly cannot support or access
 * `upgrade-directive` (always)
     * usage of an obsolete directive was found and should be upgraded to its replacement (or removed)
-* `statement-separator-operator-redundant` (always)
-    * a statement separator and combine operator (`;`) was found but is not connected to another statement in this context
 * `export-disabled-from-export-never` (always)
     * an export keyword was encountered on a `type` that cannot be exported due to the `[[export=never]]` directive
 * `redundant-access-via-self` (always)
@@ -308,8 +311,6 @@ The following are registered warnings, default states, and their meaning:
     * the compiler is uncertain if a `lease` or `last` polymorphic version of a function should be used where a function that received a `last` instance is then passing that instance to another function which accepts both a `lease` or a `last` instance
 * `copy-or-move` (error)
     * the compiler is uncertain if a `move` or `copy` polymorphic version of a function should be used where a function that received a `move` instance is then passing that instance to another function which accepts both a `move` or a `copy` instance
-* `newline-after-continuation` (always)
-    * expecting new line after continuation operator
 * `allocation-into-raw-pointer` (always)
     * the compiler detected an attempt to allocate into a raw pointer rather than using a `unique` or other managed pointer type
 * `generated-file-not-touched` (error)

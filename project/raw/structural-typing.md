@@ -15,8 +15,9 @@ This proposal was drafted by the former `zax-planner` agent on 2026-02-16. It
 was never accepted. Its generic syntax, APIs, recommendations, and normative
 wording must not be treated as Zax decisions.
 
-Read it only when a future work item explicitly evaluates structural identity,
-equivalence, layout, conversion, or subtyping.
+This file is not required for ordinary reading. Consult it when a work item or
+material consequence evaluates structural identity, equivalence, layout,
+conversion, or subtyping.
 
 ## Candidate summary
 

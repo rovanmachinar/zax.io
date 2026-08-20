@@ -54,7 +54,7 @@ using the language with the language maintainer who decides its design.
 | `project/rehydrate.md` | Generic source for the post-compaction copy/paste prompt | Current source; agents do not proactively read it |
 | `project/documentation.md` | Documentation architecture | Current for the concerns owned here |
 | `project/work/` | The one active numbered work unit | Non-normative working material |
-| `project/raw/` | Indexed future-work input whose lasting location is not yet known | Non-authoritative and excluded from normal reading |
+| `project/raw/` | Indexed future-work input whose lasting location is not yet known | Non-authoritative and available through consequence-driven reading |
 | `project/archive/` | Completed project records | Historical and audit-only |
 
 The existing public language pages remain at the repository root while the
@@ -155,7 +155,8 @@ Create a raw placeholder only when it identifies:
 - how the placeholder will retire or move.
 
 Every raw placeholder appears in `project/raw/README.md`. Raw files are not
-ordinary onboarding or language-documentation reading. The next applicable
+required for ordinary onboarding, but a work item may read or update a specific
+file when a concrete consequence makes it relevant. The next applicable
 documentation fit dry run must propose whether each file moves to a
 domain-oriented owner, remains temporary, or retires.
 
@@ -259,12 +260,12 @@ placeholder specifications.
 Focused reading is a correctness and token-cost requirement.
 
 The agent's operating guidance has already been supplied in chat. A reader
-assigned to one concern should normally need:
+assigned to one concern should begin with:
 
 1. this documentation architecture;
 2. the active numbered work file;
 3. its small required-reading set;
-4. conditional material when a stated boundary is crossed;
+4. consequence-driven material when a stated boundary is crossed;
 5. additional focused reading when a concrete consequence establishes the need.
 
 Agents do not proactively read the source files for the supplied handoff or
@@ -275,13 +276,16 @@ Indexes route by task. Owner documents teach. Each owner should make its
 prerequisites and adjacent boundaries clear without an exhaustive "see also"
 list.
 
-Do not require agents to read all public language pages, plans, RFCs, or history
-before contributing. Do not read `project/raw/` or `project/archive/` by default.
+Repository-wide reading is not required before contributing. Raw, public,
+implementation, research, and historical material remain available when a
+concrete consequence establishes relevance. Archived material remains
+audit-only.
 
-A reading scope is guidance, not an artificial prohibition. If discussion or a
-finding crosses into another concern, inspect the smallest relevant owner or
-section, state why it became necessary, and capture the impact. Avoid unbounded
-scans and speculative reading.
+A reading scope defines an efficient starting path, not the complete universe of
+material that may become relevant. If discussion or a finding crosses into
+another concern, inspect the smallest relevant owner or section, state why it
+became necessary, and capture the impact. Avoid unbounded scans and speculative
+reading.
 
 ## Numbered work
 
@@ -327,12 +331,13 @@ is created, such as:
 
 - the initiating concern;
 - motivating pressure, when known;
-- known assumptions, inclusions, or exclusions;
+- known assumptions, initial focus, or starting boundaries;
 - deliberately unresolved framing;
 - initial stopping guidance, when useful.
 
-These elements are not exhaustive and need not all be supplied. Absence from
-known exclusions does not imply inclusion.
+These elements are not exhaustive and need not all be supplied. A starting
+boundary describes the initiating concern without prohibiting investigation of
+material consequences.
 
 Once created, the fixed initiating input is immutable. Record later
 clarifications, discovered boundaries, corrections, and consequences in the
@@ -343,8 +348,13 @@ instead of silently broadening it.
 ### Reading scope
 
 Name the smallest useful required-reading set and explain why each item matters.
-Identify conditional reading by the boundary that triggers it. Exclude archives,
-unrelated areas, and historical plans by default.
+Identify consequence-driven reading by the boundary that triggers it. Leave
+other material unlisted rather than predicting that it will or will not become
+necessary.
+
+Use an audit-only category for archived, superseded, or confirmed dead material
+that should not enter ordinary reading. Audit-only material requires direct
+human instruction or a concrete audit or recovery need.
 
 The scope may expand when discussion or a concrete consequence makes additional
 material relevant. Explain the need and read only enough to follow that
@@ -515,9 +525,9 @@ For an authorized documentation change, check the applicable items:
 - The `project/README.md` active-work pointer and next number agree with actual
   numbered work.
 - Required reading is minimal and reasoned.
-- Conditional reading has a concrete trigger.
+- Consequence-driven reading has a concrete trigger.
 - Additional reading remains possible when justified.
-- Archives are absent from ordinary routes.
+- Audit-only material is absent from ordinary routes.
 - Current references do not depend on archived material.
 - Moves update destinations, indexes, and references coherently.
 - No obsolete compatibility stub remains without a real constraint.

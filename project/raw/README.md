@@ -11,9 +11,10 @@
 This is a temporary, indexed holding area. Its existence does not decide that
 long-term Zax documentation should be organized by maturity.
 
-Do not read this directory during ordinary onboarding or unrelated concept work.
-A current work item must name the relevant raw file, or a concrete consequence
-must establish why it is needed.
+This directory is not required during ordinary onboarding. Read or update a
+specific raw file when a current work item names it or a concrete consequence
+establishes its relevance. Do not scan the directory merely as general
+background.
 
 | Raw input | Future pressure | Intended disposition |
 | --- | --- | --- |

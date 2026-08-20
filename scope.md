@@ -5,6 +5,11 @@
 
 Scopes can be used to help flow control by breaking or continuing out of a nested inner code flow to an outer code flow.
 
+Accepted block formation, flow-body extent, and the source-visible clause scope
+are defined by [Zax source structure](language/source-structure.md). The detailed
+scope, lifetime, destruction, capture, `break`, and `continue` claims below
+remain legacy design input until their own focused review.
+
 
 ### Unnamed scopes
 

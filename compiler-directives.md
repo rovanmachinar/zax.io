@@ -130,16 +130,16 @@ value := randomValue()
 castedValue1 := value as U16
 
 // code will generate a panic condition for this statement if an overflow occurs
-[[panic=yes, intrinsic-type-cast-overflow]] \
+[[panic=yes, intrinsic-type-cast-overflow]]
 castedValue1 := value as U16
 
 // code will silently perform a casting without an overflow panic
-[[panic=no, intrinsic-type-cast-overflow]] \
+[[panic=no, intrinsic-type-cast-overflow]]
 castedValue1 := value as U16
 
 // code will not generate a panic as `unsafe as` was used to cast which does
 // not cause a panic condition even though a panic is enabled
-[[panic=yes, intrinsic-type-cast-overflow]] \
+[[panic=yes, intrinsic-type-cast-overflow]]
 castedValue2 := value unsafe as U8
 
 [[panic=always, intrinsic-type-cast-overflow]]
@@ -227,14 +227,14 @@ A `min` option requires an importing module must declare an import of at least t
 Only one `always` deprecation can be active at a time. A `never` directive will disable any active `always` deprecation. Usage of `never` cannot be declared with `error`, `min`, `max` or `context` as they have no applicability and a compiler will issue an `incompatible-directive` error. Usage of `local` cannot be declared with `min` or `max` as those values are only applicable to an importing module and thus a compiler will issue an `incompatible-directive` error. Individual `yes` or `no` temporarily override any `always` deprecations directives for a current statement. Any current deprecation state will not apply to an subsequently imported modules. No `push` or `pop` deprecation declarations exist unlike with `panic`, `warning`, or `error` directives as a deprecation relationship's definition is limited between an importing module and an imported module exclusively.
 
 ````zax
-[[deprecate]] \
+[[deprecate]]
 MyOldBadlyDesignedType :: type {
     // ...
 }
 
 // usage of this type should only be allowed when an importer declares version
 // `2.3` or higher
-[[deprecate, min="2.3"]] \
+[[deprecate, min="2.3"]]
 MyShinyNewType :: type {
     // ...
 }
@@ -261,13 +261,13 @@ ValidType :: type {
 
     // a deprecation warning is issued if this function is referenced within
     // the current module but a warning is not issued for an importing module
-    [[deprecate, context=local]] \
+    [[deprecate, context=local]]
     needsRedesignFunc : ()() = {
         // ...
     }
 
     // usage of this function always causes a deprecation warning
-    [[deprecate, context=all]] \
+    [[deprecate, context=all]]
     mightNeedThisSoNotReadyToRemoveFunc : ()() = {
         // ...
     }
@@ -326,7 +326,7 @@ func4 final [[inline=never]] : ()() = {
 func1()
 func2()
 
-[[descope]] \
+[[descope]]
 func3() // calling a function marked with an `[[inline=descope]]` requires a
         // declaration of `[[descope]]` prior to calling that function or a
         // warning `descope-directive-required` will be issued
@@ -1089,7 +1089,7 @@ MyPrivateType :: type {
     // ...
 }
 
-[export] \
+[export]
 visibleToImports : Boolean = true
 ````
 

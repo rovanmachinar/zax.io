@@ -4,16 +4,24 @@ Zax is a general-purpose programming language intended to provide high-level
 capabilities without hiding the lower-level behavior, costs, and tradeoffs
 producing them.
 
-> **Project status:** Zax is in conceptual design. The language vision is the
-> current owner of its accepted foundational direction. The topic pages below
-> are legacy design notes being reviewed; they are not yet a formal
+> **Project status:** Zax is in conceptual design. The current conceptual-design
+> pages below own the accepted concerns assigned to them. The root topic pages
+> remain legacy design notes being reviewed; none of this material is a formal
 > specification or implementation promise.
 
 ## Start here
 
 - Read the [Zax language vision](language/vision.md) for its purpose, audience,
   principles, goals, advantages, non-goals, and accepted tradeoffs.
+- Read [Zax source structure](language/source-structure.md) for statement-level
+  newlines, continuation, bodies, semicolon composition, mandatory layout, and
+  comments.
 - Use the grouped design notes below when exploring a specific proposed concept.
+
+## Current conceptual design
+
+- [Language vision](language/vision.md)
+- [Source structure](language/source-structure.md)
 
 ## Legacy language-design notes
 

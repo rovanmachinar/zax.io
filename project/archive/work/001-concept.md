@@ -2,18 +2,21 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working material / non-normative / audit-only |
 | Work Item | `001` |
 | Created | 2026-08-19 |
+| Archived | 2026-08-19 |
 | Owns | The bounded review defined by the fixed initiating input |
 | Does Not Own | Accepted Zax language design or lasting documentation authority |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owner documents.
+This completed working record is retained only for targeted audit and recovery.
+It is excluded from ordinary onboarding and language-design reading.
+
+Its promoted findings now belong to their current owner documents. Raw and
+deferred findings belong to the indexed future-work inputs created during
+closure. This file must not be used as a competing definition.
 
 ## Fixed initiating input
 
@@ -111,7 +114,7 @@ Stop when the work has:
 - captured independently decidable feature questions for later work; and
 - gathered enough information to perform the pre-promotion documentation fit dry
   run defined in the
-  [documentation architecture](../documentation.md#pre-promotion-documentation-fit-dry-run).
+  [documentation architecture](../../documentation.md#pre-promotion-documentation-fit-dry-run).
 
 Do not promote findings, reorganize documentation, or begin work item `002`
 without the separately required discussion, alignment, and authorization.
@@ -120,15 +123,15 @@ without the separately required discussion, alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) — governs documentation
+- [Documentation architecture](../../documentation.md) — governs documentation
   ownership, focused reading, numbered work, and eventual promotion.
-- [Repository README](../../README.md) — contains the current repository
+- [Repository README](../../../README.md) — contains the current repository
   description, goals, non-goals, and project route.
-- [Website entry point](../../index.md), from **Description** through **Credit
+- [Website entry point](../../../index.md), from **Description** through **Credit
   and Inspiration** — contains the public introduction, expanded feature
   catalog, and current website framing. Do not follow its language-topic links
   during initial reading.
-- The following sections of the [FAQ](../../faq.md):
+- The following sections of the [FAQ](../../../faq.md):
   - **When was the idea of Zax inspired?**
   - **Can Zax be used by beginners?**
   - **Why is the language strongly typed?**
@@ -1169,7 +1172,7 @@ interoperability. It must not define Zax semantics or claim exact historical
 provenance.
 
 The raw requirements for that future guide are retained in
-[the similarity input](../raw/similarity.md).
+[the similarity input](../../raw/similarity.md).
 
 #### Documentation structure remains a dry-run output
 

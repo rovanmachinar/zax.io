@@ -7,7 +7,12 @@
 
 An `if` statement tests a condition and if a condition is `true` then code that follow executes, or `if` a condition is `false` then skips a code block and proceeds to execute code following an `else` statement (if present).
 
-Flow control code blocks following an `if` or `else` condition must either continue on the following line or must be encapsulated inside a scope.
+Accepted body formation, semicolon composition, braces, clause-visible scope,
+and mandatory layout validation are defined by
+[Zax source structure](language/source-structure.md). A flow-control clause
+consumes one effective body statement, which may be simple, composed, or a
+braced block. This page remains legacy input for the exact behavior of `if`,
+loops, `switch`, `using`, and other control forms.
 
 ````zax
 isNegativeOrGreaterThan10 : (negative : Boolean)(input : Integer) = {

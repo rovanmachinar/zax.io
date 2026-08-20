@@ -132,7 +132,7 @@ By default, symbols in code are not exported beyond the boundary of their origin
 
 myInteger : Integer         // symbol is only accessible by this source
 
-[[export]] \
+[[export]]
 canYouSeeMe : String // symbol is exported
 
 Cos1Tan2Arc4Sin :: type {
@@ -142,12 +142,12 @@ Cos1Tan2Arc4Sin :: type {
 }
 
 // export `Cos1Tan2Arc4Sin` type under an alias of `FriendlyName`
-[[export]] \
+[[export]]
 FriendlyName :: alias type Cos1Tan2Arc4Sin
 
 // all exported symbols found when importing `Module.Useful.FileUtilities` are
 // re-exported to any module importing this code.
-[[export]] \
+[[export]]
 FileUtilities :: import Module.Useful.FileUtilities
 ````
 
@@ -163,14 +163,14 @@ Take note: these are not keywords named `secret` or `protected` (or similar). Wh
 ````zax
 :: import Module.System.Types
 
-[[export]] \
+[[export]]
 MyType :: type {
     value1 : Float              // symbol is visible
     value2 : String             // symbol is visible
     value3 private : Integer    // symbol is `private` to everything except
                                 // functions and types within this type
 
-    [[export=no]] \
+    [[export=no]]
     value4 : String             // symbol is accessible to other types within
                                 // the same set of sources but is hidden
                                 // when exported
@@ -387,7 +387,7 @@ print final : ()(...) = {
 
 FastFoo :: import Module.FastFooMathModule
 
-[[export]] \
+[[export]]
 lifesMeaning final : (result : Integer)() = {
     // a compile-time test to see if compiling in debug mode
     if Options.debug {
@@ -403,7 +403,7 @@ lifesMeaning final : (result : Integer)() = {
   FastFooMath.zax
 */
 
-[[export]] \
+[[export]]
 whatIsTheMeaningOfLife final : (result : Integer)() = {
     return 42
 }

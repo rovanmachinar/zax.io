@@ -25,4 +25,9 @@ project/work/00n-<concept>.md
 project/archive/work/00n-<concept>.md
 ```
 
-There are no archived numbered work items yet.
+## Archived work
+
+| Work item | Concern | Completed outcome |
+| --- | --- | --- |
+| [001](work/001-concept.md) | Zax purpose and design principles | Promoted to the current language vision and indexed raw future-work inputs |
+| [002](work/002-source-structure.md) | Source and statement structure | Promoted to the current source-structure owner and reconciled affected legacy routes, examples, and warning classifications |

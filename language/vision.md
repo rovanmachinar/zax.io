@@ -361,9 +361,14 @@ claiming exact historical provenance.
 This vision is accepted conceptual direction, not a formal compatibility
 promise.
 
-Detailed language pages in the repository predate this ownership model and
-remain design input until individually reviewed. Exact syntax, semantics,
-guarantees, diagnostics, and implementation contracts will be established by
-later focused work.
+The pre-existing topic pages at the repository root predate this ownership model
+and remain design input until individually reviewed. Reviewed concept owners
+under `language/` state the accepted concerns assigned to them. Accepted
+statement-level newlines, continuation, body formation, layout, and comments are
+owned by [Zax source structure](source-structure.md).
+
+Exact behavior outside the accepted concept owners, along with formal
+guarantees, diagnostic contracts, and implementation contracts, remains later
+focused work.
 
 For current navigation, return to the [Zax website entry point](../index.md).

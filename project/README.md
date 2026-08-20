@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [001: Zax purpose and design principles](work/001-concept.md) |
-| Next work number | `002` |
+| Active work item | [003: Declarations, bindings, and assignment](work/003-declarations-and-bindings.md) |
+| Next work number | `004` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
