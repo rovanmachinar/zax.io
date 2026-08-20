@@ -13,6 +13,10 @@ source file except when explicitly assigned to maintain it.
 
 ## Post-compaction copy/paste block
 
+Before copying, replace `project/work/00n-<concept>.md` inside the block with the
+active work path from `project/README.md`. Do not commit that substitution back
+to this source.
+
 The language maintainer may add a short description of where the conversation
 had reached. That description is recovery evidence, not edit authorization.
 
@@ -28,10 +32,9 @@ been lost. Recover them before continuing.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 2 |
-| Current phase | Project guidance established; awaiting preparation of the first numbered work item |
-| Active numbered work item | None |
-| Next work number | `001` |
+| Operating guidance revision | 3 |
+| Current project phase | Human-readable conceptual language-design refinement |
+| Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Legacy design input under review; not a formal specification |
 | Implementation in this repository | None |
 

@@ -1,12 +1,25 @@
-# RFC: Structural Typing — Equivalence Rules
+# Raw input: structural typing equivalence
 
-- RFC ID: 2026-02-16-structural-typing-equivalence
-- Status: Draft
-- Author(s): zax-planner (editorial draft)
-- Created: 2026-02-16
-- Related: (none yet)
+| Field | Value |
+| --- | --- |
+| Status | Raw candidate / non-authoritative |
+| Audience | A future numbered work item defining structural type identity and compatibility |
+| Applies To | Preserved agent-authored proposal and unresolved structural-typing questions |
+| Owns | Provenance and candidate input only |
+| Does Not Own | Accepted structural typing, syntax, layout, conversion, or reflection behavior |
+| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence` |
 
-## Summary
+## Provenance and reading posture
+
+This proposal was drafted by the former `zax-planner` agent on 2026-02-16. It
+was never accepted. Its generic syntax, APIs, recommendations, and normative
+wording must not be treated as Zax decisions.
+
+Read it only when a future work item explicitly evaluates structural identity,
+equivalence, layout, conversion, or subtyping.
+
+## Candidate summary
+
 Define when two record/struct types are considered *structurally equivalent* in Zax. Equivalence is based on a type’s *field set* (field **names + field types**), independent of declaration order. Layout/ABI order is treated as a separate concern that can be specified explicitly when required.
 
 ## Goals
@@ -50,7 +63,7 @@ Zax’s structural typing is a core design goal, but without a clear equivalence
 Two record types `R1` and `R2` are structurally equivalent, written `R1 ≡ R2`, if and only if:
 
 1. They have the **same set of field names**.
-2. For each field name `f`, the field types are equivalent by the language’s type equivalence (`typeEq`) relation:  
+2. For each field name `f`, the field types are equivalent by the language’s type equivalence (`typeEq`) relation:
    `typeEq(R1.f, R2.f)` holds for all fields `f`.
 3. **Field order is ignored** for equivalence.
 
@@ -150,13 +163,13 @@ Important:
 ---
 
 ## Alternatives considered
-1. **Field order matters** (positional records)  
+1. **Field order matters** (positional records)
    Rejected: conflicts with the stated constraint and reduces flexibility for refactors.
 
-2. **Names don’t matter** (pure positional typing)  
+2. **Names don’t matter** (pure positional typing)
    Rejected: violates constraint and harms readability/safety.
 
-3. **Implicit width subtyping by default**  
+3. **Implicit width subtyping by default**
    Risky for low-level/data-oriented code; can introduce accidental field loss and subtle bugs. Better as explicit projection or separate subtype relation.
 
 ---

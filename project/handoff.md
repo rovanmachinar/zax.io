@@ -25,7 +25,11 @@ created the next work item to begin it.
 
 ## New-session copy/paste block
 
-Receiving this block provides context but does not authorize edits.
+Before copying, replace `project/work/00n-<concept>.md` inside the block with the
+active work path from `project/README.md`. Do not commit that substitution back
+to this source.
+
+Receiving the completed block provides context but does not authorize edits.
 
 <!-- begin zax handoff -->
 
@@ -35,10 +39,9 @@ Receiving this block provides context but does not authorize edits.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 2 |
-| Current phase | Project guidance established; awaiting preparation of the first numbered work item |
-| Active numbered work item | None |
-| Next work number | `001` |
+| Operating guidance revision | 3 |
+| Current project phase | Human-readable conceptual language-design refinement |
+| Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Legacy design input under review; not a formal specification |
 | Implementation in this repository | None |
 
@@ -152,7 +155,7 @@ owned by `project/documentation.md`.
 
 When item `n` closes, it must prepare the aligned initiating input and focused
 reading scope for `n+1`, archive `n`, create `n+1` after explicit authorization,
-and update the operating-prompt current state. The creating agent stops before
+and update the project current-work index. The creating agent stops before
 analyzing `n+1`. A new session may take over, or the language maintainer may
 explicitly reassign the same session.
 

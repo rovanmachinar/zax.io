@@ -20,9 +20,9 @@ meaning.
 Completed numbered work mirrors its active path:
 
 ```text
-project/work/00n-concept.md
+project/work/00n-<concept>.md
     ->
-project/archive/work/00n-concept.md
+project/archive/work/00n-<concept>.md
 ```
 
 There are no archived numbered work items yet.

@@ -46,15 +46,16 @@ using the language with the language maintainer who decides its design.
 | Surface | Current role | Authority and reading posture |
 | --- | --- | --- |
 | `README.md` | Repository entry point | Router |
-| `index.md` | Public website entry point | Router plus a legacy project overview |
+| `index.md` | Public website entry point | Router and legacy-note index |
+| `language/vision.md` | Accepted foundational language direction | Current conceptual owner for purpose, audience, principles, goals, advantages, non-goals, and high-level tradeoffs |
 | Root language-topic pages | Public human-developer-facing language material | Legacy design input until individually reviewed and promoted |
-| `project/README.md` | Project-guidance router | Current routing guidance |
-| `project/handoff.md` | Source for the new-session copy/paste prompt | Current source; agents do not proactively read it |
-| `project/rehydrate.md` | Source for the post-compaction copy/paste prompt | Current source; agents do not proactively read it |
+| `project/README.md` | Project-guidance router and current-work index | Current routing and numbered-work state |
+| `project/handoff.md` | Generic source for the new-session copy/paste prompt | Current source; agents do not proactively read it |
+| `project/rehydrate.md` | Generic source for the post-compaction copy/paste prompt | Current source; agents do not proactively read it |
 | `project/documentation.md` | Documentation architecture | Current for the concerns owned here |
 | `project/work/` | The one active numbered work unit | Non-normative working material |
+| `project/raw/` | Indexed future-work input whose lasting location is not yet known | Non-authoritative and excluded from normal reading |
 | `project/archive/` | Completed project records | Historical and audit-only |
-| `rfcs/` | Existing candidate language material | Non-authoritative; not an active RFC process |
 
 The existing public language pages remain at the repository root while the
 language is being understood. Moving them requires a separately discussed,
@@ -123,15 +124,16 @@ owns the detailed documentation architecture.
 
 ### Active numbered work
 
-`project/work/00n-concept.md` is the one shared, non-normative work unit for a
-bounded concern. It preserves the initiating input and evolving discussion
+`project/work/00n-<concept>.md` is the one shared, non-normative work unit for a
+bounded concern, where `<concept>` is a short lower-case slug that names the
+actual subject. It preserves the initiating input and evolving discussion
 without presenting findings as accepted language design.
 
 ### Archived work
 
-`project/archive/work/00n-concept.md` is the completed form of a numbered work
-unit. It is retained for human discovery and targeted audits, not onboarding or
-current authority.
+`project/archive/work/00n-<concept>.md` is the completed form of a numbered work
+unit. It retains the same subject-specific filename and is kept for human
+discovery and targeted audits, not onboarding or current authority.
 
 ### Candidate or raw material
 
@@ -139,10 +141,23 @@ Unaccepted proposals, recovered evidence, research, and unresolved ideas remain
 clearly non-authoritative. They are read when a current work unit names them or
 a concrete consequence makes them relevant.
 
-The current `rfcs/` folder is in this category. Its one proposal may become a
-numbered work item, potentially `001`, but that selection has not been made.
-After its useful content is dispositioned, the folder may be retired if it has
-no remaining role.
+`project/raw/` is a temporary, indexed holding area for evidence-backed input
+whose future review is known but whose lasting documentation owner and directory
+are not yet established. Its existence does not decide that long-term
+documentation should be organized by maturity.
+
+Create a raw placeholder only when it identifies:
+
+- the future concern and why it requires review;
+- what useful input must not be lost;
+- what it explicitly does not decide;
+- the pressure that should activate future work; and
+- how the placeholder will retire or move.
+
+Every raw placeholder appears in `project/raw/README.md`. Raw files are not
+ordinary onboarding or language-documentation reading. The next applicable
+documentation fit dry run must propose whether each file moves to a
+domain-oriented owner, remains temporary, or retires.
 
 ### Future specification or contract
 
@@ -261,7 +276,7 @@ prerequisites and adjacent boundaries clear without an exhaustive "see also"
 list.
 
 Do not require agents to read all public language pages, plans, RFCs, or history
-before contributing. Do not read `project/archive/` by default.
+before contributing. Do not read `project/raw/` or `project/archive/` by default.
 
 A reading scope is guidance, not an artificial prohibition. If discussion or a
 finding crosses into another concern, inspect the smallest relevant owner or
@@ -270,14 +285,19 @@ scans and speculative reading.
 
 ## Numbered work
 
-There is at most one active `00n-concept.md` file in `project/work/`.
+There is at most one active `00n-<concept>.md` file in `project/work/`.
+
+The number records sequence; the slug names the concern. Do not use `concept`
+as a literal default slug. The current `001-concept.md` name is appropriate
+because its subject is the concept of Zax as a whole. A work item about another
+subject uses that subject in its filename.
 
 ### Minimal file shape
 
 Use only the stable divisions needed to preserve the work:
 
 ```markdown
-# 00n concept: <working title>
+# 00n: <concept title>
 
 ## Non-authority notice
 
@@ -373,10 +393,27 @@ The dry run:
 6. Separates material that must remain candidate, deferred, future
    specification, or implementation pressure.
 7. Identifies relocations and archive effects.
-8. Produces the exact proposed promotion change set.
+8. Produces a proposed ownership map and minimal directory/index structure able
+   to hold every disposition without creating duplicate authority or orphaned
+   material.
+9. Produces the exact proposed promotion change set.
 
 Resolve architecture gaps through discussion before promotion. The dry run does
 not edit files, promote findings, or authorize later edits.
+
+The dry-run result always includes a structure proposal, even when the proposal
+is to retain the current layout. It explains:
+
+- which current and proposed documents own each concern;
+- which files remain routers, active owners, raw inputs, or historical records;
+- the smallest directory and index changes needed;
+- how focused reading reaches each owner;
+- how raw or deferred material remains discoverable without entering ordinary
+  reading paths; and
+- which existing paths move, remain, or retire.
+
+The structure is a proposal for discussion, not permission to scaffold or move
+files.
 
 ## Promotion
 
@@ -405,13 +442,13 @@ When item `n` closes:
 1. Give every material finding a disposition.
 2. Complete the dry run, promotion, and validation when promotion applies.
 3. Mark the working file historical, non-normative, and audit-only.
-4. Move `project/work/00n-concept.md` to
-   `project/archive/work/00n-concept.md`.
+4. Move `project/work/00n-<concept>.md` to
+   `project/archive/work/00n-<concept>.md` without changing its filename.
 5. Propose the fixed initiating input and focused reading scope for `n+1`.
 6. Discuss and align `n+1` with the language maintainer.
 7. Wait for authorization to create it.
-8. Create `n+1` and update the mirrored current state in both operating-prompt
-   source files.
+8. Create `n+1` with a subject-specific filename and update the current-work
+   index in `project/README.md`.
 9. Stop before analyzing `n+1`.
 
 The agent that creates `n+1` does not begin it until the language maintainer
@@ -431,10 +468,15 @@ The two prompts intentionally duplicate safety-critical operating guidance.
 They do not reference each other or require an agent to reconcile them during
 normal work.
 
-Their revision, current phase, active work pointer, next work number,
-language-document status, and implementation state must remain synchronized.
-When explicitly maintaining either source, inspect and update both in the same
-coherent change set.
+Both sources keep `project/work/00n-<concept>.md` as a generic placeholder. The
+language maintainer replaces it in the copied text with the active path from
+`project/README.md`. Do not update or commit either prompt source merely because
+work moves from `n` to `n+1`.
+
+Their operating-guidance revision, stable project phase, language-document
+status, implementation state, and shared operating rules must remain
+synchronized. When those rules change and maintenance is explicitly authorized,
+inspect and update both in the same coherent change set.
 
 Detailed documentation rules remain here rather than being copied into both
 operating prompts.
@@ -448,9 +490,15 @@ explanations, not active or archived project work. Project files may remain
 reachable to someone who browses the public repository or knows their URL; they
 need not be hidden from the site build.
 
+The live `zax.io` website is rendered from an upstream version of this
+repository. Current work refines and validates the documentation here. Do not
+open pull requests or synchronize upstream as part of incremental concept work;
+that integration is deferred until the repository has been brought into shape
+and the language maintainer explicitly authorizes it.
+
 Repository navigation routes project contributors from `README.md` to
-`project/README.md`. The language maintainer supplies the appropriate operating
-prompt to an agent.
+`language/vision.md` or `project/README.md` according to their task. The
+language maintainer supplies the appropriate operating prompt to an agent.
 
 Validate both rendered website use and direct Markdown use. Relative links
 should work for repository readers as well as the website wherever practical.
@@ -462,8 +510,10 @@ For an authorized documentation change, check the applicable items:
 - The changed concern has one owner.
 - Authority and implementation state are not overstated.
 - Human-developer-facing detail supports a programmer's mental model.
-- Mirrored operating-prompt state agrees.
-- The active work pointer and actual active work agree.
+- Mirrored stable operating-prompt guidance agrees.
+- Both operating-prompt sources retain the generic active-work placeholder.
+- The `project/README.md` active-work pointer and next number agree with actual
+  numbered work.
 - Required reading is minimal and reasoned.
 - Conditional reading has a concrete trigger.
 - Additional reading remains possible when justified.
