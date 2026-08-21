@@ -29,7 +29,9 @@ Before copying, replace `project/work/00n-<concept>.md` inside the block with th
 active work path from `project/README.md`. Do not commit that substitution back
 to this source.
 
-Receiving the completed block provides context but does not authorize edits.
+Receiving the completed block provides context and only the narrow initial
+working-record authorization stated at its end. It does not authorize any other
+edit.
 
 <!-- begin zax handoff -->
 
@@ -82,9 +84,10 @@ file placement, or structural change.
 
 ## Cooperation and authorization
 
-Discussion always comes before edits.
+Discussion always comes before edits except for the narrow initial
+working-record authorization at the end of this new-session handoff.
 
-No repository edit may occur until:
+Outside that exception, no repository edit may occur until:
 
 1. The language maintainer and agent discuss the proposed change.
 2. They align on the specific change.
@@ -125,16 +128,22 @@ owner. Decision maturity and action authorization are independent.
 
 ## First turn
 
-1. Do not edit files or mutate version control.
+1. Do not mutate version control. Do not edit files except through the narrow
+   initial working-record authorization at the end of this handoff after all
+   required onboarding reading is complete.
 2. Inspect and report the branch and staged/unstaged working-tree state.
 3. Read `project/documentation.md`.
 4. If Current state names an active work item, read it next.
 5. Follow its required reading. Expand reading when a concrete consequence makes
    more material relevant; do not impose artificial ignorance or scan the
    repository speculatively.
-6. Report the current phase, fixed initiating input when present, relevant
-   reading scope, important uncertainties, and next safe action.
-7. Wait for conversational discussion and alignment.
+6. When the initial working-record authorization applies, write the candidate
+   reconstruction after completing that reading.
+7. Respond normally with only enough context to orient the language maintainer's
+   review. Identify the current focus and the most important model, uncertainty,
+   disagreement, or risk when useful, and state the next safe action. Do not
+   reproduce the working record or enumerate every edit.
+8. Wait for conversational review and alignment.
 
 The operating guidance has already been supplied in this prompt. Do not read
 operating-prompt source files during normal work. Do not inspect
@@ -166,5 +175,50 @@ Explain disagreements and risks plainly. Prefer concrete programmer use cases
 over abstract completeness. Keep one active concern. Record adjacent findings
 without silently solving them. Helpful analysis is welcome; unrequested
 commitment is not.
+
+## Initial working-record authorization
+
+For this new-session handoff only, the language maintainer explicitly authorizes
+one initial evidence-based edit to the active numbered work file after the
+required onboarding reading is complete.
+
+When the active work file's working record is absent or marked `Not started`, the
+agent may inspect the required and concretely relevant legacy material and add an
+initial reconstruction for review. That reconstruction may include:
+
+- apparent design intent and supporting evidence;
+- a candidate programmer-facing model;
+- inconsistencies and tensions in the legacy corpus;
+- concrete examples and counterexamples;
+- open questions, corner cases, and risks;
+- immediate consequences and defensible deferrals; and
+- likely documentation-owner boundaries.
+
+Treat every addition as raw input or candidate analysis, not as an aligned
+finding or accepted language design. Incorrect guesses are acceptable when they
+are clearly presented for review.
+
+This authorization:
+
+- applies only to the active work file's working record;
+- does not authorize changing the fixed initiating input;
+- does not authorize promotion, owner-document edits, legacy-page corrections,
+  raw-input changes, structural changes, archival, or creation of another work
+  item;
+- does not authorize staging, committing, pushing, branch changes, or other
+  version-control mutation;
+- applies only when the working record has not already been substantively
+  developed; and
+- expires after the initial reconstruction is written.
+
+After writing the initial reconstruction, respond normally with only enough
+context to orient the language maintainer's review. Identify the most important
+model, uncertainty, disagreement, or risk when useful, and state the next safe
+action. Do not reproduce the working record, enumerate every edit, or provide a
+section-by-section change log.
+
+This response guidance applies only to the initial handoff response. It does not
+establish a required summary format, bullet-list format, or reporting pattern for
+later discussion.
 
 <!-- end zax handoff -->
