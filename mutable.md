@@ -3,43 +3,51 @@
 
 ## Mutability
 
-A `mutable` type is a type that can have its contents modified after a type has been instantiated. An `immutable` type is a type whose contents cannot be modified once a type is constructed (and immutability is enforced by a compiler). A `pliable` variable overrides a type's `constant` or `inconstant` qualifier.
+Accepted qualifier axes use `final`/`varying` for place replacement,
+`mutable`/`immutable` for underlying value change, and
+`writable`/`readonly` for access capability, as defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). Those
+findings establish the qualifier terminology used here. The remaining detailed
+mutability, pliability, conversion, and concurrency proposals remain legacy
+input.
 
-An `unpliable` variable will respect a type's `constant` or `inconstant` qualifier (and makes no promise otherwise). Variables are defaulted and implicitly declared as `unpliable` and declaring variables as `pliable` is rarely done when a variable is declared. An `unpliable` variable is not the same concept as an `immutable` type. For variables, pliability affects if a type's `constant` qualifier is respected or not. Whereas a type's immutability indicates if contents of a type can be modified or not. A `pliable` variable indicates that a type's `constant` qualifier should be ignored, but `unpliable` on a variable indicates that a type's `constant` qualifier should be respected.
+A `mutable` type is a type that can have its contents modified after a type has been instantiated. An `immutable` type is a type whose contents cannot be modified once a type is constructed (and immutability is enforced by a compiler). A `pliable` variable overrides a type's `readonly` or `writable` qualifier.
 
-A `constant` `type` qualifier is a promise not to modify any contents of a normally `mutable` type or `varies` variable, which is enforced by a compiler. An `inconstant` type indicates a `mutable` type's contents may be modified. A function declared as `constant` inside a `type` is a promise that a function will not modify a type's `mutable` contents, which is enforced by a compiler. A function declared as `inconstant` inside a `type` is an announcement that a function may modify a type's `mutable` contents.
+An `unpliable` variable will respect a type's `readonly` or `writable` qualifier (and makes no promise otherwise). Variables are defaulted and implicitly declared as `unpliable` and declaring variables as `pliable` is rarely done when a variable is declared. An `unpliable` variable is not the same concept as an `immutable` type. For variables, pliability affects if a type's `readonly` qualifier is respected or not. Whereas a type's immutability indicates if contents of a type can be modified or not. A `pliable` variable indicates that a type's `readonly` qualifier should be ignored, but `unpliable` on a variable indicates that a type's `readonly` qualifier should be respected.
 
-A `constant` / `inconstant` type qualifier and a `varies` / `final` variable declaration have no affect on `immutable` contents. By convention, `immutable` types can never have their value or contained contents modified thus a `constant` promise not to modify a `type` that already can't be modified has no meaning. Likewise, `inconstant` cannot be applied to `immutable` types as an `immutable` type can never be modified. All `immutable` types are `constant` and `final` once constructed. Further, `varies`, `pliable`, and `unpliable` variable declarations on `immutable` types have no affect because `immutable` types can never be modified (even by attempting to override a type's `constant` promise by using a `pliable` variable declaration).
+A `readonly` `type` qualifier is a promise not to modify any contents of a normally `mutable` type or `varying` variable, which is enforced by a compiler. A `writable` type indicates a `mutable` type's contents may be modified. A function declared as `readonly` inside a `type` is a promise that a function will not modify a type's `mutable` contents, which is enforced by a compiler. A function declared as `writable` inside a `type` is an announcement that a function may modify a type's `mutable` contents.
 
-A `final` variable is not allowed to change its immediate value once instantiated, which is enforced by a compiler. A `final` variables makes no promise about any `mutable` contents contained within a variable's `type`, and only applies to the immediate a variable's immediate value. A `varies` variable allows `mutable` and `inconstant` type's immediate value to be changed (and `mutable` and `inconstant` contained contents are allowed to be changed regardless if a variable is declares as `final` or `varies`).
+A `readonly` / `writable` type qualifier and a `varying` / `final` variable declaration have no affect on `immutable` contents. By convention, `immutable` types can never have their value or contained contents modified thus a `readonly` promise not to modify a `type` that already can't be modified has no meaning. Likewise, `writable` cannot be applied to `immutable` types as an `immutable` type can never be modified. All `immutable` types are `readonly` and `final` once constructed. Further, `varying`, `pliable`, and `unpliable` variable declarations on `immutable` types have no affect because `immutable` types can never be modified (even by attempting to override a type's `readonly` promise by using a `pliable` variable declaration).
 
-A `mutable` type can be passed into functions which accept a `mutable` type as a `constant` type. A constant argument denies further modification of a type's value and contained contents, which is enforced by a compiler.
+A `final` variable is not allowed to change its immediate value once instantiated, which is enforced by a compiler. A `final` variables makes no promise about any `mutable` contents contained within a variable's `type`, and only applies to the immediate a variable's immediate value. A `varying` variable allows `mutable` and `writable` type's immediate value to be changed (and `mutable` and `writable` contained contents are allowed to be changed regardless if a variable is declares as `final` or `varying`).
+
+A `mutable` type can be passed into functions which accept a `mutable` type as a `readonly` type. A `readonly` argument denies further modification of a type's value and contained contents, which is enforced by a compiler.
 
 Quick lookup guide (type qualifiers):
 ````
 mutable         // (default) values and contents inside a type are modifiable
 immutable       // all values are `final` once constructed regardless of a
                 // type's underlying inherent mutability
-constant        // values and contents of a `mutable` type are disallowed to be
+readonly        // values and contents of a `mutable` type are disallowed to be
                 // modified (has no applicability for `immutable` types which
-                // are effectively always `constant`)
-constant        // when applied to a function, a function promises to not modify
-                // any contents within a type (and a `constant` qualifier is
+                // are effectively always `readonly`)
+readonly        // when applied to a function, a function promises to not modify
+                // any contents within a type (and a `readonly` qualifier is
                 // ignored if `pliable` is used on a variable)
-inconstant      // (default) values and contents of a `mutable` type are allowed
+writable        // (default) values and contents of a `mutable` type are allowed
                 // to be modified (has no applicability for `immutable` types
-                // which are effectively always `constant`)
-inconstant      // (default) when applied to a function, a function declares it
+                // which are effectively always `readonly`)
+writable        // (default) when applied to a function, a function declares it
                 // may modify any `mutable` contents within a type
 
 Mutually exclusive:
 immutable vs mutable    // ability modify contents a type's value and contents
                         // post construction
-constant vs inconstant  // a promise not to modify of a type's value or contents
+readonly vs writable    // a promise not to modify of a type's value or contents
                         // (except for `immutable` types which are always
-                        // `constant`, and `constant` can be overridden using a
+                        // `readonly`, and `readonly` can be overridden using a
                         // `pliable` declaration on a variable)
-constant vs inconstant  // when applied to a function, declaration of a
+readonly vs writable    // when applied to a function, declaration of a
                         // function's intent to modify a `type`'s contained
                         // values (or not)
 ````
@@ -47,33 +55,33 @@ constant vs inconstant  // when applied to a function, declaration of a
 Quick lookup guide (variable declarations):
 ````
 pliable         // value and contents of a `mutable` `type` can be changed
-                // even if a `type` is declared `constant` (although has
+                // even if a `type` is declared `readonly` (although has
                 // no affect on `immutable` types as immutable types can never
                 // be modified)
-unpliable       // (default) causes a variable to respect a `constant` or
-                // `inconstant` `type` qualifier on `mutable` types (i.e.
+unpliable       // (default) causes a variable to respect a `readonly` or
+                // `writable` `type` qualifier on `mutable` types (i.e.
                 // opposite behavior of `pliable`)
                 // NOTE: rarely used unless a default `unpliable` declaration
                 // is overridden with a `variables` compiler directive
 final           // a variable which receives its final value once constructed
                 // (but makes no promise not to modify any contents of any
                 // contained values within a `type`)
-varies          // (default) a variable which is allowed to have its value
+varying          // (default) a variable which is allowed to have its value
                 // change over time (and makes no promise about contents of any
-                // contained values within the value); `varies` has no affect
-                // on `constant` or `immutable` types which can not have their
-                // value changed (unless `constant` is overridden with a
+                // contained values within the value); `varying` has no affect
+                // on `readonly` or `immutable` types which can not have their
+                // value changed (unless `readonly` is overridden with a
                 // `pliable` declaration)
-                // NOTE: rarely used unless a default `varies` is overridden
+                // NOTE: rarely used unless a default `varying` is overridden
                 // with a `variables` compiler directive
 
 Mutually exclusive:
-final vs varies         // ability to change a variable's value once initialized
+final vs varying         // ability to change a variable's value once initialized
                         // but in both cases makes no promise about a `type`'s
-                        // contained contents (but all `constant` and
+                        // contained contents (but all `readonly` and
                         // `immutable` types are always considered `final`)
 pliable vs unpliable    // ability modify the value and contents of a `type`
-                        // (regardless if a `type` is `constant` or not)
+                        // (regardless if a `type` is `readonly` or not)
 ````
 
 
@@ -92,8 +100,8 @@ myType1 : MyType                // pick the `default` mutability for the type
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of a type
 myType3 : MyType immutable      // pick the `immutable` version of the type
-myType4 : MyType constant       // pick the `default` mutability for the type
-                                // but force the type to be in a `constant`
+myType4 : MyType readonly       // pick the `default` mutability for the type
+                                // but force the type to be in a `readonly`
                                 // state
 
 myType1.value1 = 30             // allowed
@@ -105,7 +113,7 @@ myType3.value1 = 30             // ERROR: type is `immutable` and cannot change
 myType3 = myType1               // ERROR: type is `immutable` and cannot change
                                 // its contents
 
-myType4.value1 = 30             // ERROR: type is `mutable` and `constant`
+myType4.value1 = 30             // ERROR: type is `mutable` and `readonly`
                                 // cannot change its contents
 
 myType1 = myType3               // allowed (source is `immutable` but the
@@ -113,9 +121,9 @@ myType1 = myType3               // allowed (source is `immutable` but the
 ````
 
 
-### `constant` functions and mutability
+### `readonly` functions and mutability
 
-Functions that are not qualified as `constant` are not callable if a type is instantiated using an `immutable` type.
+Functions that are not qualified as `readonly` are not callable if a type is instantiated using an `immutable` type.
 
 ````zax
 print final : ()(...) = {
@@ -143,18 +151,18 @@ myType1 : MyType                // pick the `default` mutability for the type
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of a type
 myType3 : MyType immutable      // pick the `immutable` version of the type
-myType4 : MyType constant       // pick the `default` mutability for the type but
-                                // force the type to be in a `constant` state
+myType4 : MyType readonly       // pick the `default` mutability for the type but
+                                // force the type to be in a `readonly` state
 
 myType1.func1(1)                // allowed
 myType1.func2(-1)               // allowed
 myType2.func1(10)               // allowed
 myType2.func2(-10)              // allowed
 myType3.func1(20)               // ERROR: Cannot call function as the function
-                                //  is missing `constant` declaration
+                                //  is missing `readonly` declaration
 myType3.func2(-20)              // allowed
 myType4.func1(20)               // ERROR: Cannot call function as the type is
-                                // `mutable` but `constant`
+                                // `mutable` but `readonly`
 myType4.func2(-20)              // allowed
 ````
 
@@ -185,8 +193,8 @@ myType1 : MyType                // pick the `default` mutability for the type
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of a type
 myType3 : MyType immutable      // pick the `immutable` version of the type
-myType4 : MyType constant       // pick the `default` mutability for the type
-                                // but force the type to be `constant`
+myType4 : MyType readonly       // pick the `default` mutability for the type
+                                // but force the type to be `readonly`
 ````
 
 
@@ -212,8 +220,8 @@ myType1 : MyType                // pick the `default` mutability for the type
                                 // (which in this case is `immutable`)
 myType2 : MyType mutable        // pick the `mutable` version of a type
 myType3 : MyType immutable      // pick the `immutable` version of the type
-myType4 : MyType constant       // pick the `default` mutability for the type
-                                // which is `immutable` and thus `constant` is
+myType4 : MyType readonly       // pick the `default` mutability for the type
+                                // which is `immutable` and thus `readonly` is
                                 // ignored
 ````
 
@@ -235,8 +243,8 @@ myType1 : MyType                // pick the `default` mutability for the `type`
                                 // (which in this case is `immutable`)
 myType2 : MyType mutable        // pick the `mutable` version of a `type`
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
-                                // (which is `immutable` and thus `constant` is
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
+                                // (which is `immutable` and thus `readonly` is
                                 // ignored)
 ````
 
@@ -255,9 +263,9 @@ myType1 : MyType                // pick the `default` mutability for the type
                                 // (which in this case must be `immutable`)
 myType2 : MyType mutable        // ERROR: `mutable` type is unsupported
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
                                 // (which must be `immutable` and thus
-                                // `constant` is ignored)
+                                // `readonly` is ignored)
 ````
 
 
@@ -272,7 +280,7 @@ MyType :: type mutable {
 
 MyType :: type immutable default {
     // the implementation of the `immutable` version borrows the implementation
-    // of the `mutable` version (where non `constant` functions become
+    // of the `mutable` version (where non `readonly` functions become
     // inaccessible)
     contain own : MyType mutable
 }
@@ -281,8 +289,8 @@ myType1 : MyType                // pick the `default` mutability for the `type`
                                 // (which in this case is `immutable`)
 myType2 : MyType mutable        // pick the `mutable` version of the `type`
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
-                                // (which is `immutable` and thus `constant` is
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
+                                // (which is `immutable` and thus `readonly` is
                                 // ignored)
 ````
 
@@ -291,7 +299,7 @@ myType4 : MyType constant       // pick the `default` mutability for the `type`
 
 #### Automatic conversion of qualifiers when type supports both qualifiers
 
-When a `type` supports both `mutable` and `immutable` within type's definition, a conversion from `mutable` to `immutable` or `constant` is automatic (although the reverse direction is not allowed).
+When a `type` supports both `mutable` and `immutable` within type's definition, a conversion from `mutable` to `immutable` or `readonly` is automatic (although the reverse direction is not allowed).
 
 ````zax
 MyType :: type {
@@ -313,8 +321,8 @@ func3 final : ()(value : MyType immutable &) = {
     // ...
 }
 
-// accept a `constant` version of a `mutable` `type`
-func4 final : ()(value : MyType constant &) = {
+// accept a `readonly` version of a `mutable` `type`
+func4 final : ()(value : MyType readonly &) = {
     // ...
 }
 
@@ -323,9 +331,9 @@ myType1 : MyType                // pick the `default` mutability for the `type`
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of the `type`
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
                                 // (which is `mutable` but make the `type`
-                                // `constant`)
+                                // `readonly`)
 
 // `mutable` `type` passed into four function variations
 func1(myType1)                  // allowed
@@ -344,25 +352,25 @@ func1(myType3)                  // ERROR: `func1` expects a `mutable` type
 func2(myType3)                  // ERROR: `func2` expects a `mutable` type
 func3(myType3)                  // allowed
 func4(myType3)                  // ERROR: `func4` expects an a `mutable` but
-                                // `constant` type
+                                // `readonly` type
 
 func2(myType3 as mutable)            // ERROR: `myType3` cannot be safely
                                      // converted as `mutable`
 func2(myType3 unsafe as mutable)     // UNSAFE: `myType3` is stripped of its
                                      // `immutable` qualification
 func2(myType4 as mutable)            // ERROR: `myType4` was `mutable` and it
-                                     // remains `constant`
+                                     // remains `readonly`
 func2(myType4 unsafe as mutable)     // ERROR: `myType4` was `mutable` and it
-                                     // remains `constant`
-func2(myType4 as inconstant)         // ERROR: `myType4` cannot be safely
-                                     // converted as `inconstant`
-func2(myType4 unsafe as inconstant)  // UNSAFE: `myType4` is stripped of its
-                                     // `constant` qualification
+                                     // remains `readonly`
+func2(myType4 as writable)         // ERROR: `myType4` cannot be safely
+                                     // converted as `writable`
+func2(myType4 unsafe as writable)  // UNSAFE: `myType4` is stripped of its
+                                     // `readonly` qualification
 
 
-// constant type passed into four function variations
-func1(myType4)                  // ERROR: `func1` expects a non-`constant` type
-func2(myType4)                  // ERROR: `func2` expects a non-`constant` type
+// readonly type passed into four function variations
+func1(myType4)                  // ERROR: `func1` expects a non-`readonly` type
+func2(myType4)                  // ERROR: `func2` expects a non-`readonly` type
 func3(myType4)                  // allowed
 func4(myType4)                  // allowed
 ````
@@ -370,7 +378,7 @@ func4(myType4)                  // allowed
 
 #### Automatic conversion of qualifiers when two different implementations of mutability exists
 
-When a type supports both `mutable` and `immutable` qualifiers except with two different type implementations, conversion between `mutable`, `immutable`, and `constant` is only automatic for some conversions. Other conversions will fail or require a use of an `as` operator with special conversion logic.
+When a type supports both `mutable` and `immutable` qualifiers except with two different type implementations, conversion between `mutable`, `immutable`, and `readonly` is only automatic for some conversions. Other conversions will fail or require a use of an `as` operator with special conversion logic.
 
 ````zax
 MyType :: type mutable {
@@ -398,8 +406,8 @@ func3 final : ()(value : MyType immutable &) = {
     // ...
 }
 
-// accept a `constant` version of a `mutable` `type`
-func4 final : ()(value : MyType constant &) = {
+// accept a `readonly` version of a `mutable` `type`
+func4 final : ()(value : MyType readonly &) = {
     // ...
 }
 
@@ -408,9 +416,9 @@ myType1 : MyType                // pick the `default` mutability for the `type`
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of the `type`
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
                                 // which is `mutable` but make the `type`
-                                // `constant`
+                                // `readonly`
 
 // mutable type passed into four function variations
 func1(myType1)                  // allowed
@@ -431,7 +439,7 @@ func1(myType3)                  // ERROR: `func1` expects a `mutable` `type`
 func2(myType3)                  // ERROR: `func2` expects a `mutable` `type`
 func3(myType3)                  // allowed
 func4(myType3)                  // ERROR: `func2` expects a
-                                // `constant` `mutable` `type`
+                                // `readonly` `mutable` `type`
 
 func2(myType3 as mutable)           // ERROR: `myType3` cannot be safely
                                     // converted as `mutable`
@@ -441,19 +449,19 @@ func2(myType3 unsafe as mutable)    // ERROR: `myType3` has no conversion to a
                                     // pointer cast which would have undefined
                                     // behavior)
 func2(myType4 as mutable)           // ERROR: `myType4` was `mutable` and it
-                                    // remains `constant`
+                                    // remains `readonly`
 func2(myType4 unsafe as mutable)    // ERROR: `myType4` was `mutable` and it
-                                    // remains `constant`
-func2(myType4 as inconstant)        // ERROR: `myType4` cannot be safely
-                                    // converted as `inconstant`
-func2(myType4 unsafe as inconstant) // UNSAFE: `myType4` is `mutable` and
-                                    // `unsafe as` would strip the `constant`
+                                    // remains `readonly`
+func2(myType4 as writable)        // ERROR: `myType4` cannot be safely
+                                    // converted as `writable`
+func2(myType4 unsafe as writable) // UNSAFE: `myType4` is `mutable` and
+                                    // `unsafe as` would strip the `readonly`
                                     // qualification
 
 
-// constant type passed into four function variations
-func1(myType4)                  // ERROR: `func1` expects a non-`constant` type
-func2(myType4)                  // ERROR: `func2` expects a non-`constant` type
+// readonly type passed into four function variations
+func1(myType4)                  // ERROR: `func1` expects a non-`readonly` type
+func2(myType4)                  // ERROR: `func2` expects a non-`readonly` type
 func3(myType4)                  // ERROR: `func3` expects a `immutable` type
 func4(myType4)                  // allowed
 ````
@@ -469,7 +477,7 @@ Important caveat: even though adding an `as` operator to convert from `immutable
 MyType :: type mutable {
     // ...
 
-    operator binary 'as' final : (result : MyType immutable)(# : MyType immutable) constant = {
+    operator binary 'as' final : (result : MyType immutable)(# : MyType immutable) readonly = {
         // ...
     }
 }
@@ -477,7 +485,7 @@ MyType :: type mutable {
 MyType :: type immutable {
     // ...
 
-    operator binary 'as' final : (result : MyType mutable)(# : MyType mutable constant) constant = {
+    operator binary 'as' final : (result : MyType mutable)(# : MyType mutable readonly) readonly = {
         // ...
     }
 }
@@ -497,8 +505,8 @@ func3 final : ()(value : MyType immutable &) = {
     // ...
 }
 
-// accept a `constant` version of a `mutable` `type`
-func4 final : ()(value : MyType constant &) = {
+// accept a `readonly` version of a `mutable` `type`
+func4 final : ()(value : MyType readonly &) = {
     // ...
 }
 
@@ -507,9 +515,9 @@ myType1 : MyType                // pick the `default` mutability for the `type`
                                 // (which in this case is `mutable`)
 myType2 : MyType mutable        // pick the `mutable` version of the `type`
 myType3 : MyType immutable      // pick the `immutable` version of the `type`
-myType4 : MyType constant       // pick the `default` mutability for the `type`
+myType4 : MyType readonly       // pick the `default` mutability for the `type`
                                 // which is `mutable` but make the `type`
-                                // `constant`
+                                // `readonly`
 
 // mutable type passed into four function variations
 func1(myType1)                  // allowed
@@ -529,23 +537,23 @@ func2(myType3 as mutable)       // allowed
 func3(myType3)                  // allowed
 func4(myType3 as mutable)       // allowed
 
-// constant type passed into four function variations
-func1(myType4 as mutable)       // ERROR: `func1` expects a non-`constant` type
+// readonly type passed into four function variations
+func1(myType4 as mutable)       // ERROR: `func1` expects a non-`readonly` type
                                 // and the `type` is already `mutable`
-func2(myType4 as mutable)       // ERROR: `func2` expects a non-`constant` type
+func2(myType4 as mutable)       // ERROR: `func2` expects a non-`readonly` type
                                 // and the `type` is already `mutable`
 func3(myType4 as immutable)     // OKAY - the `mutable` is converted to
                                 // an `immutable` `type` by the `as` operator;
-                                // the `constant` qualifier becomes redundant
+                                // the `readonly` qualifier becomes redundant
 func4(myType4)                  // allowed
 ````
 
 
 ### `mutable` variables
 
-Variables contained with types qualified as `immutable` or `constant` cannot have their values changed. In both of these cases, not changing contained values is both a promise and enforced by a compiler. However, cases do exist where a variable might need its contents changed despite promising contents of a type do not change.
+Variables contained with types qualified as `immutable` or `readonly` cannot have their values changed. In both of these cases, not changing contained values is both a promise and enforced by a compiler. However, cases do exist where a variable might need its contents changed despite promising contents of a type do not change.
 
-To circumvent a compiler's enforcement of non-changeable contained types, a `mutable` keyword must be declared on a variable inside a type's definition. Declaring a variable as `mutable` is not the same as declaring a type as `mutable`. A variable declared as `mutable` implies a type's variable will be treated as non-`constant` even if the calling function is executed in a from `constant` function or from within an `immutable` type.
+To circumvent a compiler's enforcement of non-changeable contained types, a `mutable` keyword must be declared on a variable inside a type's definition. Declaring a variable as `mutable` is not the same as declaring a type as `mutable`. A variable declared as `mutable` implies a type's variable will be treated as non-`readonly` even if the calling function is executed in a from `readonly` function or from within an `immutable` type.
 
 A variable can be declared `mutable` entirely separate from a type's mutability. For example, `mutable` variable could be a pointer type to an immutable type named `SomeType`, i.e. `variable mutable : SomeType immutable *`.
 
@@ -560,11 +568,11 @@ MyType :: type {
         // ...
     }
 
-    func2 final : ()() constant = {
+    func2 final : ()() readonly = {
         // ...
 
         ++value1        // allowed as `value1` is `mutable`
-                        // despite the `constant` qualifier
+                        // despite the `readonly` qualifier
         value2 = "hi"   // ERROR: value2 cannot be modified
     }
 }
@@ -582,11 +590,11 @@ func2 final : ()(value : MyType immutable &) = {
     value.value2 = "hiya"   // ERROR: `value2` is `immutable`
 }
 
-// accept a `constant` version of a `mutable` type
-func3 final : ()(value : MyType constant &) = {
+// accept a `readonly` version of a `mutable` type
+func3 final : ()(value : MyType readonly &) = {
     ++value.value1          // allowed as `value` is `mutable`
-                            // despite the `constant` qualifier
-    value.value2 = "hiya"   // ERROR: `value2` is `constant`
+                            // despite the `readonly` qualifier
+    value.value2 = "hiya"   // ERROR: `value2` is `readonly`
 }
 ````
 

@@ -23,7 +23,7 @@ From the `Module.System.Keywords`:
 // some example keywords that are aliased in the keywords module
 [[export=always]]
 
-const :: alias keyword constant
+const :: alias keyword readonly
 property :: alias keyword mutator
 static :: alias keyword once
 
@@ -132,18 +132,18 @@ MyType :: type {
     b : String
 }
 
-DeepMyType :: alias type MyType constant & deep
+DeepMyType :: alias type MyType readonly & deep
 
 // the `shallow` qualifier will override the previous `deep` qualifier 
 ShallowMyType :: alias type DeepMyType shallow
 
 func final : ()(input : DeepMyType) = {
-    // `input` is `constant` type of `MyType` with `deep` semantics
+    // `input` is `readonly` type of `MyType` with `deep` semantics
     // ...
 }
 
 func final : ()(input : ShallowMyType) = {
-    // `input` is `constant` type of `MyType` with `shallow` semantics
+    // `input` is `readonly` type of `MyType` with `shallow` semantics
     // ...
 }
 

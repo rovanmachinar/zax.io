@@ -3,6 +3,12 @@
 
 ## Namespacing and Importing Modules
 
+Accepted one-identifier-namespace, `shadowable`, explicit instance-member access,
+and qualified-path resolution behavior are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for complete module, import, export, visibility, and
+namespace behavior.
+
 ### Zax module files and relationships
 
 #### Default `module.zax` file
@@ -175,7 +181,7 @@ MyType :: type {
                                 // the same set of sources but is hidden
                                 // when exported
 
-    addOne final :: ()() = { ++value3 }
+    addOne final : ()() = { ++_.value3 }
 }
 
 content : MyType
@@ -321,7 +327,7 @@ ThirdParty :: import Module.ThirdPartyModule {
 
     // export other compilation options for ThirdPartyModule
     Options :: type {
-        debug final : constant = true
+        debug final : readonly = true
     }
 }
 
@@ -372,7 +378,7 @@ importantNumber final : (result : Integer)() = {
 
     // In this example, this definition of options would not be used
     Options :: type {
-        debug final : constant = false
+        debug final : readonly = false
     }
 
 } else {
@@ -412,12 +418,22 @@ whatIsTheMeaningOfLife final : (result : Integer)() = {
 
 ### Variable and namespace resolution and name shadowing
 
-When a name or dotted name is encountered, a name is resolved by componentizing a name first where all components are read left to right. Each name is checked against the most local names in scope first and if that name is not found then an outer scope is checked. If that name is found then the next name component is checked (if any are present) to see if matching sub-components of the found name exist. If all component names match then a name is considered resolved. If component names are not found then outer scopes continue to be checked until a full match can be found. If no match can be made then an error is reported by a compiler.
+When a name or dotted name is encountered, its first component resolves through
+ordinary nearest-scope lookup. That selected declaration is fixed. Every
+remaining component resolves only inside the preceding component; failure does
+not make lookup retry another outer root.
 
-Since the same name can exist in an inner scope as an outer scope, an outer name might end up becoming shadowed and hidden from view. By intentional design, the language can only check from inner to outer scope. Once a match is found any hidden names will not be visible from that scope. No language operator can be used to start a search from the global scope. However, all global scope types and variables are visible within the built-in scope named `Module` (which is a referenced alias to the current module's global scope). An `alias` keyword can be used to give a new name to a shadowed name so items can be located by an `alias` name rather than a hidden shadowed name.
+If a selected prefix is incomplete, resolution of its suffix may remain pending
+until the prefix is completed. If the suffix still does not exist when the
+dependency graph must be finalized, the path is unresolved.
+
+An inner declaration may shadow an outer declaration only when the outer
+declaration is `shadowable`. Once hidden, an outer name is not available through
+ordinary lookup. No language operator starts a parent-scope search. A stable root
+such as `Module` or an alias established before shadowing can preserve access.
 
 ````zax
-MyType :: type {
+MyType shadowable :: type {
     value1 : Integer
     value2 : String
 }

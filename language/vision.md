@@ -365,7 +365,10 @@ The pre-existing topic pages at the repository root predate this ownership model
 and remain design input until individually reviewed. Reviewed concept owners
 under `language/` state the accepted concerns assigned to them. Accepted
 statement-level newlines, continuation, body formation, layout, and comments are
-owned by [Zax source structure](source-structure.md).
+owned by [Zax source structure](source-structure.md). Accepted declaration,
+initialization, binding visibility, qualifier, name-resolution, and assignment
+boundaries are owned by
+[Zax declarations and bindings](declarations-and-bindings.md).
 
 Exact behavior outside the accepted concept owners, along with formal
 guarantees, diagnostic contracts, and implementation contracts, remains later

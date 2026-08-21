@@ -183,6 +183,30 @@ Important:
 
 ---
 
+## Preserved declaration-model constraint
+
+[Zax declarations and bindings](../../language/declarations-and-bindings.md)
+establishes current conceptual behavior for member declarations without deciding
+structural identity or equivalence.
+
+A future structural-typing review must decide whether these declaration
+properties participate in identity, equivalence, layout, conversion, and
+reflection:
+
+- member names;
+- `final`/`varying` place qualifications;
+- `mutable`/`immutable` value qualifications;
+- `writable`/`readonly` access qualifications;
+- default and explicit initializers;
+- inferred member types;
+- forwarded declarations; and
+- recursive `Self` forms.
+
+This section preserves a required future question. It does not amend or accept
+the candidate proposal below.
+
+---
+
 ## Open questions (to resolve in follow-up RFCs or an appendix)
 1. **Width subtyping**: exact-shape only vs explicit projection vs implicit subtyping (`<:`). What’s the intended ergonomics?
 2. **Shape-relevant attributes**: do `mut`, `const`, visibility, alignment, padding, or “noalias” qualifiers participate in equivalence?

@@ -406,11 +406,11 @@ Normally references and pointers `lease` their ownership to other functions for 
 
 Alternatively, references and pointers can have a `last` qualifier. A `last` qualifier on a reference or pointer indicates a receiver of this type will inherit all contents of a type as this reference or pointer is the very `last` owner to an underlying type's contents. Contents contained in a `type` will be discarded if not claimed. When a `last` qualifier is specified on a `type`'s instance, ownership of any contents can be claimed by a receiving function. This helps optimization by transferring contents out of one `type`'s instance into another prior to an instance's disposal rather than making content copies. Later when an instance is disposed, any claimed contents will have already been transferred out of a reference or pointer. This saves contents from having to be cloned first only to have any original contents disposed moments later. 
 
-Types qualified as `last` cannot be `constant` or `immutable` types as these types cannot have their contents transferred out due to internal their contents being effectively `immutable`. A `lease` option is required (and defaulted) for any `constant` and `immutable` references or pointers and a `last` qualifier is incompatible.
+Types qualified as `last` cannot be `readonly` or `immutable` types as these types cannot have their contents transferred out due to internal their contents being effectively `immutable`. A `lease` option is required (and defaulted) for any `readonly` and `immutable` references or pointers and a `last` qualifier is incompatible.
 
 Types passed by-value do not require a `last` qualifier as arguments passed by-value can always have their contents transferred out already. Passing by-value always causes a fresh copy of a `type`'s instance's contents rather than providing any `lease` reference or pointer to an existing type's contents (except `strong` or `handle` pointers which are designed implicitly to have shared ownership of a common instance).
 
-An `as` operator can be used to change a `last` or `lease` qualifier on a type. The `last` and `lease` qualifiers are mutually exclusive and a `last` cannot be applied to a `type`'s value that is currently qualified as `constant` or `immutable`.
+An `as` operator can be used to change a `last` or `lease` qualifier on a type. The `last` and `lease` qualifiers are mutually exclusive and a `last` cannot be applied to a `type`'s value that is currently qualified as `readonly` or `immutable`.
 
 
 #### Temporary variables
@@ -439,7 +439,7 @@ func final : (result : MyType)() = {
     return result
 }
 
-augmentFunc final : (result : MyType)(input : MyType constant &) = {
+augmentFunc final : (result : MyType)(input : MyType readonly &) = {
     result.value = input.value
     result.name = "Big " + input.name
 

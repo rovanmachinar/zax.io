@@ -3,9 +3,15 @@
 
 ## Operator Overloading
 
+Accepted declaration-versus-assignment and qualified operator-candidate
+selection boundaries are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for complete operator declaration, overload resolution,
+conversion, and result behavior.
+
 ### Basic overloading
 
-Overloadable operators (e.g. greater than (`>`), less than (`<`>), equal to (`=`)) can be augmented with new functions. This allows types to support additional operations in symbolic form rather than requiring natural language function calls. Operators can be declared in a global scope where two arguments will be required for binary operations and one operator is required for unary operators.
+Overloadable operators (e.g. greater than (`>`), less than (`<`), equal to (`==`)) can be augmented with new functions. This allows types to support additional operations in symbolic form rather than requiring natural language function calls. Operators can be declared in a global scope where two arguments will be required for binary operations and one operator is required for unary operators.
 
 The resulting type for an operator is entirely arbitrary but the recommendation is to follow the normal expectations of a consumer of the programming interface. For example, comparison operators are expected to return `Boolean` values and thus returning a String from these operations would be unexpected.
 
@@ -97,16 +103,16 @@ MyType :: type {
         return result
     }
 
-    operator binary '>' final : (result : Boolean)(rhs : Integer) constant = {
+    operator binary '>' final : (result : Boolean)(rhs : Integer) readonly = {
         return value1 > rhs
     }
 
-    operator binary '<' final : (result : Boolean)(rhs : Integer) constant = {
+    operator binary '<' final : (result : Boolean)(rhs : Integer) readonly = {
         return value1 < rhs
     }
 }
 
-operator binary '>' final : (result : Boolean)(lhs : Integer, rhs : MyType constant &) = {
+operator binary '>' final : (result : Boolean)(lhs : Integer, rhs : MyType readonly &) = {
     return lhs > rhs.value1
 }
 

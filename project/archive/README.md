@@ -31,3 +31,4 @@ project/archive/work/00n-<concept>.md
 | --- | --- | --- |
 | [001](work/001-concept.md) | Zax purpose and design principles | Promoted to the current language vision and indexed raw future-work inputs |
 | [002](work/002-source-structure.md) | Source and statement structure | Promoted to the current source-structure owner and reconciled affected legacy routes, examples, and warning classifications |
+| [003](work/003-declarations-and-bindings.md) | Declarations, bindings, and assignment | Promoted to the current declarations-and-bindings owner and reconciled qualifier terminology, lookup, shadowing, and affected legacy examples |

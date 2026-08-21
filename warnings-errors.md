@@ -258,7 +258,7 @@ The following are registered warnings, default states, and their meaning:
     * a asset file was requested to be copied but it cannot be located
     * name=`$file$` - the file name that could not be found
 * `shadowing` (always)
-    * a declaration was made which hides another declaration from being accessible
+    * a declaration hides another declaration that was not declared as `shadowable`
 * `uninitialized-data` (always)
     * an attempt was made to access data believed to be uninitialized
 * `lifetime-linkage-to-unrelated-pointer` (always)
@@ -270,7 +270,7 @@ The following are registered warnings, default states, and their meaning:
 * `variable-declared-but-not-used` (error)
     * every declared variable must be used (unless marked with `#`)
 * `duplicate-specifier` (always)
-    * a duplicate qualifier was specified, e.g. `constant`, `immutable`, `mutable`, `deep`, etc.
+    * a duplicate qualifier was specified, e.g. `readonly`, `immutable`, `mutable`, `deep`, etc.
 * `type-mutability-qualifier-not-supported`
     * a specific `type` mutability qualifier was selected which is not supported
 * `specifier-ignored` (always)

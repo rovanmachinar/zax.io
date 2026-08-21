@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [003: Declarations, bindings, and assignment](work/003-declarations-and-bindings.md) |
-| Next work number | `004` |
+| Active work item | [004: Qualifiers, mutability, and access capabilities](work/004-qualifiers-and-mutability.md) |
+| Next work number | `005` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

@@ -3,6 +3,13 @@
 
 ## Nothing Type Instances
 
+Accepted default function-binding behavior requires obvious calls of an
+unreplaced `Nothing` function to be diagnosed and otherwise unhandled calls to
+panic, as defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md).
+Complete `Nothing` representation, construction, pointer, and custom fallback
+behavior remains legacy input on this page.
+
 ### Basic Overview
 
 Zax allows types to have a special `Nothing` instance of a type. Whenever a pointer to `Nothing` is created for a type that supports a `Nothing` instance, the pointer is automatically set to point to the `Nothing` instance. This ensures that a pointer always points to a real instance of a type even when no allocated instance of a type was ever created.

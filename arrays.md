@@ -3,7 +3,7 @@
 
 ## Arrays
 
-Zax arrays are multi dimensional. Arrays can be of a fixed size or they can be of a dynamic size. All array dimensions have an implicit `length` `mutator` to indicate the length of an array. Arrays are zero based indexes for their lookup. Once arrays are allocated they cannot be resized but their contents can be replaced if an array is `mutable` and `inconstant`.
+Zax arrays are multi dimensional. Arrays can be of a fixed size or they can be of a dynamic size. All array dimensions have an implicit `length` `mutator` to indicate the length of an array. Arrays are zero based indexes for their lookup. Once arrays are allocated they cannot be resized but their contents can be replaced if an array is `mutable` and `writable`.
 
 ````zax
 randomNumber final : (result : Integer)() = {
@@ -298,7 +298,7 @@ myOtherArrayCopy : @ = myArray
 
 ### Slicing arrays
 
-Arrays include a implicit `constant` and `final` function named `slice` that extracts a subset of elements out of an array and returns a newly created array slice view. If `slice` is passed values that exceed an array's available indexed range, an array slice view of reduced length or even a completely empty array slice view is returned. The `length` `mutator` should be checked by a programmer should a programmer wish to ensure all values in a requested range will be satisfied by a `slice` operation in advance.
+Arrays include a implicit `readonly` and `final` function named `slice` that extracts a subset of elements out of an array and returns a newly created array slice view. If `slice` is passed values that exceed an array's available indexed range, an array slice view of reduced length or even a completely empty array slice view is returned. The `length` `mutator` should be checked by a programmer should a programmer wish to ensure all values in a requested range will be satisfied by a `slice` operation in advance.
 
 ````zax
 myArray : Integer[1000]

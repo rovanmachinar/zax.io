@@ -11,8 +11,12 @@ newlines, explicit continuation, simple and composed statements, block and body
 formation, mandatory layout validation, and ordinary, raw, and documentation
 comments.
 
+Accepted value declarations, initialization, binding visibility, qualifier
+axes, name resolution, and assignment boundaries are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md).
+
 This legacy basics page no longer defines those concerns. The remaining sections
-preserve unreviewed design input for keywords, operators, declarations, types,
+preserve unreviewed design input for keywords, detailed operators, types,
 literals, and related concepts.
 
 
@@ -33,7 +37,7 @@ catch
 channel
 continue
 collect
-constant
+readonly
 copy
 deep
 default
@@ -60,7 +64,7 @@ if
 if / else
 immutable
 import
-inconstant
+writable
 last
 lazy
 lease
@@ -93,7 +97,7 @@ unique
 unpliable
 until
 using
-varies
+varying
 weak
 while
 yield
@@ -106,12 +110,12 @@ yield suspend
 Keywords are reserved only within the context of where the keyword is allowed and legal. To disambiguate keywords from variables, variables can be postfixed with an underscore (`_`) but otherwise the underscore postfix (`_`) should never be used. Usage of keywords as variables is discouraged and usage of postfix underscores are also discouraged.
 
 ````zax
-// legal name because `constant` is a keyword in some contexts
-constant_ : Type constant
+// legal name because `readonly` is a keyword in some contexts
+readonly_ : Type readonly
 
 // foobar_ is not a legal name because it contains an _ postfix on a name
 // that is not a keyword
-foobar_ : Type constant
+foobar_ : Type readonly
 ````
 
 

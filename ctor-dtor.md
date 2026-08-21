@@ -3,6 +3,13 @@
 
 ## [Constructors and Destructors](ctor-dtor.md)
 
+Accepted declaration-level default, direct, and explicitly bypassed
+initialization, including the guaranteed-destruction boundary for `???`, is
+defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for complete constructor, destructor, allocation,
+ordering, and failure behavior.
+
 ### Basic constructors and destructors
 
 Default initialization, default allocation, initialization with function calls, and `defer` mostly eliminate the need for constructors and destructors. However, some types might require additional steps to prepare the type or the programmer has decided that ensuring some guaranteed pre/post configuration is a good model for their code. Whatever the reason, constructors adn destructors can be added to a type which are always executed upon construction and always executed at destruction.
@@ -555,7 +562,7 @@ MyType :: type {
     value2 : String
 
     // the default copy constructor is disabled
-    +++ final : ()( : MyType constant &)
+    +++ final : ()( : MyType readonly &)
 }
 
 // a default empty constructor is created
@@ -582,7 +589,7 @@ MyType :: type {
     // of the function can be automatically generated still
 
     +++ final : ()( : MyType & last)
-    +++ final : ()( : MyType constant & deep)
+    +++ final : ()( : MyType readonly & deep)
 }
 
 // a default empty constructor is created
@@ -608,14 +615,14 @@ MyType :: type {
     // the default copy constructor is still available since that version
     // of the function can be automatically generated still
 
-    +++ final : ()( : MyType constant &)
+    +++ final : ()( : MyType readonly &)
     +++ final : ()( : MyType & last) = default
-    +++ final : ()( : MyType & deep constant) = default
+    +++ final : ()( : MyType & deep readonly) = default
 
     // ERROR: this version would not create a default as the = #: would
     // cause the type to point to an empty version of its own type (i.e.
     // a function pointer to nothing)
-    // +++ final : ()( : MyType & deep constant) = #:
+    // +++ final : ()( : MyType & deep readonly) = #:
 }
 
 // a default empty constructor is created

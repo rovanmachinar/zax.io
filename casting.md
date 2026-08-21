@@ -371,17 +371,17 @@ Other considerations:
     * captured data types must be identical and in the same type order (otherwise value copy of the captured data cannot work)
 * pointers and references must be of equivalent types
 * reference can become pointers of the same `type` but pointers cannot become references (due to the assumption that pointers might point to `Nothing` whereas references always point to a valid instance)
-* values declared which are `constant` or `final` are ignored where no storage inside the `type` is required
+* values declared which are `readonly` or `final` are ignored where no storage inside the `type` is required
 * the source `type` can have more contained values than the `destination` type and still match
 * type [slicing](https://en.wikipedia.org/wiki/Object_slicing) can occur if a by-value copy casting is done (which may be desirable in some circumstances to extract the data out of a container safely)
 * casting `as` a by-value type will treat the source `type` as a `type` of `destination` and will use the copy constructor of the destination type to fulfill `unsafe as` request
 * casting `as` a by-value `type` will not be allowed if the destination `type` has disabled copy construction
 * a variable's `private` keyword is ignored and a `private` value can be accessed as non-`private` values in the destination (if the destination does not declare the new variable for the `type` as `private`)
     * `private` is used to hide variables from view and should never be used as a method to keep data secret
-* `constant` qualification cannot be lost during the conversion
-    * in by-reference / by-pointer conversions, any contained values must remain `constant` in the destination if the source had the `type` as `constant`
-    * in by-reference / by-pointer conversions the `type` must remain constant if the source was constant
-    * by-value conversions are not required to maintain `constant` qualification for contained types if the `type`'s values are copied and the contained types are not references or pointers
+* `readonly` qualification cannot be lost during the conversion
+    * in by-reference / by-pointer conversions, any contained values must remain `readonly` in the destination if the source had the `type` as `readonly`
+    * in by-reference / by-pointer conversions the `type` must remain readonly if the source was readonly
+    * by-value conversions are not required to maintain `readonly` qualification for contained types if the `type`'s values are copied and the contained types are not references or pointers
 * using `as` to convert from `mutable` and `immutable` is legal if the underlying types are deemed compatible
 * by-reference / by-pointer converting from an `immutable` to `mutable` is not allowed (even if the types are compatible)
 * by-value converting from an `immutable` to `mutable` is allowed (if the types are compatible)
@@ -482,7 +482,7 @@ MyType :: type {
     // than an actual value to the `as` operator; if a variable name were
     // specified instead of a discard (`#`) then a type would not be allowed
     // as an input argument to this operator function;
-    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) constant = {
+    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) readonly = {
         result.name = name
         return result
     }
@@ -520,19 +520,19 @@ MyType :: type {
     name : String
     height : Float
 
-    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) constant = {
+    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) readonly = {
         result.name = name
         return result
     }
 
     // explicitly enable the reference conversion and auto-generate the function
-    operator binary 'as' final : (result : AnotherCompatibleType &)(# : AnotherCompatibleType &) constant = default
+    operator binary 'as' final : (result : AnotherCompatibleType &)(# : AnotherCompatibleType &) readonly = default
 
     // all `as` operators that are not explicitly defined will match this
     // lower priority casting meta-function where the compiler will
     // issue an error if this `as` operator is utilized (as no implementation
     // is defined, nor possible to define later as the function is final)
-    operator binary 'as' final : (result : )(# : ) constant
+    operator binary 'as' final : (result : )(# : ) readonly
 }
 
 CompatibleType :: type {

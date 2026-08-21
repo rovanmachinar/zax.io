@@ -276,6 +276,20 @@ Indexes route by task. Owner documents teach. Each owner should make its
 prerequisites and adjacent boundaries clear without an exhaustive "see also"
 list.
 
+### Cross-linking
+
+Links should help a reader follow ownership, migration, or a concrete conceptual
+dependency. They are not a substitute for router documents.
+
+- A legacy document may link to a current owner to identify which of its concerns
+  migrated or was superseded.
+- Current owners may link when one document's concern depends on, constrains, or
+  hands ownership to another specific concern.
+- A raw or deferred input may link to the owner or pressure that must consume it.
+- Generic sibling discovery belongs in `README.md` and index routers.
+- Do not add "nice to know" sibling links or exhaustive related-document lists
+  without a reader task or ownership reason.
+
 Repository-wide reading is not required before contributing. Raw, public,
 implementation, research, and historical material remain available when a
 concrete consequence establishes relevance. Archived material remains
@@ -286,6 +300,28 @@ material that may become relevant. If discussion or a finding crosses into
 another concern, inspect the smallest relevant owner or section, state why it
 became necessary, and capture the impact. Avoid unbounded scans and speculative
 reading.
+
+### Correcting legacy examples
+
+Legacy snippets may intentionally omit surrounding declarations or other context.
+Determine their intended semantics from nearby prose and the concern being
+illustrated rather than assuming every isolated fragment is a complete program.
+
+During a focused review or promotion:
+
+- preserve assignment examples that assume existing names;
+- correct declaration punctuation when doing so clarifies the example's existing
+  intent;
+- add only the smallest useful declaration or comment when omitted context is
+  unnecessarily confusing;
+- record ambiguity instead of choosing new language behavior silently;
+- defer correction when the right form depends on an unreviewed concern; and
+- avoid unrelated corpus-wide cleanup merely to make every fragment independently
+  compilable.
+
+Changing `x = y` to `x := y` is a semantic change from assignment to declaration,
+not a mechanical completeness fix. Apply it only when introduction of `x` is the
+stated or strongly evidenced intent.
 
 ## Numbered work
 

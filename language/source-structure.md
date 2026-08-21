@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Statement-level newlines, explicit continuation, effective statements and bodies, semicolon composition, mandatory layout validation, and comment forms and attachment |
-| Does Not Own | Declaration syntax, expression precedence, the complete delimiter catalog, compiler-directive placement or attachment, detailed flow-control semantics, exact lifetime and scope-exit behavior, documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), expression precedence, the complete delimiter catalog, compiler-directive placement or attachment, detailed flow-control semantics, exact lifetime and scope-exit behavior, documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -446,6 +446,11 @@ forward to the following construct at the same structural indentation:
 doSomething()
 ```
 
+When the target introduces one or more bindings, documentation attaches to the
+complete declaration construct rather than to one individual name. Declaration
+meaning and multi-binding behavior are defined by
+[Zax declarations and bindings](declarations-and-bindings.md).
+
 Documentation is prefix metadata rather than a statement. It does not consume a
 body position:
 
@@ -601,7 +606,8 @@ construct on the next do not use `\` merely to express that relationship.
 Explicit continuation retains its single purpose of continuing one statement
 across physical lines.
 
-Exact declaration syntax, expression semantics, individual flow-control
+[Declaration and binding behavior](declarations-and-bindings.md) is defined by
+its current conceptual owner. Expression semantics, individual flow-control
 behavior, scope-exit effects, literal continuation semantics, and documentation
 payload interpretation remain later design work. Those later concepts must fit
 the source structure established here.

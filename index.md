@@ -16,12 +16,16 @@ producing them.
 - Read [Zax source structure](language/source-structure.md) for statement-level
   newlines, continuation, bodies, semicolon composition, mandatory layout, and
   comments.
+- Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
+  declaration, initialization, binding visibility, qualifiers, and assignment
+  boundaries.
 - Use the grouped design notes below when exploring a specific proposed concept.
 
 ## Current conceptual design
 
 - [Language vision](language/vision.md)
 - [Source structure](language/source-structure.md)
+- [Declarations and bindings](language/declarations-and-bindings.md)
 
 ## Legacy language-design notes
 

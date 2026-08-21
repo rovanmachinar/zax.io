@@ -3,6 +3,12 @@
 
 ## Type Definition
 
+Accepted value and member declaration forms, default and explicitly bypassed
+initialization, `forward`, and `Self` boundaries are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for complete type-definition, construction, union, and
+function-type behavior.
+
 ### Trivial type definitions
 
 Trivial types contain basic types such as booleans, integers, and floats, raw pointers and other trivial types. Trivial types can be cloned with a memory copy of a `type`'s instance.

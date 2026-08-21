@@ -412,14 +412,14 @@ myValue1 *= 2 + myValue2
 
 ### `compile` directive
 
-A `compile` directive can be used on input arguments to indicate a value must be pre-evaluated at compile-time or an error will be issued. Any input argument declared with a `compile` directive must also be declared as either `constant` or `immutable`. Any variadic types are treated as `constant` or `immutable`.
+A `compile` directive can be used on input arguments to indicate a value must be pre-evaluated at compile-time or an error will be issued. Any input argument declared with a `compile` directive must also be declared as either `readonly` or `immutable`. Any variadic types are treated as `readonly` or `immutable`.
 
 ````zax
 func print : ()([[compile]] ...) = {
     // ... all input arguments must resolve at compile-time ...
 }
 
-func final : ()(input [[compile]] : Integer constant) = {
+func final : ()(input [[compile]] : Integer readonly) = {
     // ... `input` argument must resolve at compile-time ...
 }
 
@@ -1326,13 +1326,13 @@ A `[[variables=<option>]]` directive declares defaults when declaring variables.
 
 The options are:
 * `final` - all declared variable are `final`
-* `varies` (default if `variables` directive has not been declared) - all declared variables are declared as `varies`
-* `pliable` - all declared variables are `pliable` (thus `constant` declarations will not be respected)
-* `unpliable` (default if `variables` directive has not been declared) - all declared variables are `unpliable` (thus `constant` declarations will be ignored)
+* `varying` (default if `variables` directive has not been declared) - all declared variables are declared as `varying`
+* `pliable` - all declared variables are `pliable` (thus `readonly` declarations will not be respected)
+* `unpliable` (default if `variables` directive has not been declared) - all declared variables are `unpliable` (thus `readonly` declarations will be ignored)
 * `push` - push a current `variables` state onto a compiler's `variables` stack
 * `pop` - pop a previous `variables` state from a compiler's `variables` stack
 
-Example of how `varies` / `final` default applied to variables:
+Example of how `varying` / `final` default applied to variables:
 
 ````zax
 MyType :: type {
@@ -1340,7 +1340,7 @@ MyType :: type {
     value2 : String = "hello"
 }
 
-[[variables=varies]] 
+[[variables=varying]]
 
 x1 := 5
 x1 = 6          // OKAY
@@ -1348,7 +1348,7 @@ x1 = 6          // OKAY
 x2 final := 5
 x2 = 6          // ERROR: variable value is `final`
 
-x3 varies := 5
+x3 varying := 5
 x3 = 6          // OKAY
 
 mx1 : MyType
@@ -1357,7 +1357,7 @@ mx1.value1 = 6  // OKAY
 mx2 final : MyType
 mx2.value1 = 6  // OKAY
 
-mx3 varies : MyType
+mx3 varying : MyType
 mx3.value1 = 6  // OKAY
 
 
@@ -1369,7 +1369,7 @@ y1 = 6          // ERROR: variable value is `final`
 y2 final := 5
 y2 = 6          // ERROR: variable value is `final`
 
-y3 varies := 5
+y3 varying := 5
 y3 = 6          // OKAY
 
 my1 : MyType
@@ -1378,7 +1378,7 @@ my1.value1 = 6  // OKAY
 my2 final : MyType
 my2.value1 = 6  // OKAY
 
-my3 varies : MyType
+my3 varying : MyType
 my3.value1 = 6  // OKAY
 ````
 
@@ -1395,19 +1395,19 @@ MyType :: type {
 x1 := 5
 x1 = 6          // OK (unpliable variables respect a type's mutability)
 
-x2 : constant = 5
-x2 = 6          // ERROR: type is `constant`
+x2 : readonly = 5
+x2 = 6          // ERROR: type is `readonly`
 
-x3 : inconstant = 6
+x3 : writable = 6
 x3 = 6          // OK (unpliable variables respect a type's mutability)
 
 mx1 : MyType
 mx1.value1 = 6  // OKAY
 
-mx2 final : MyType constant
-mx2.value1 = 6  // ERROR: type is `constant`
+mx2 final : MyType readonly
+mx2.value1 = 6  // ERROR: type is `readonly`
 
-mx3 varies : MyType inconstant
+mx3 varying : MyType writable
 mx3.value1 = 6  // OKAY
 
 
@@ -1416,22 +1416,22 @@ mx3.value1 = 6  // OKAY
 y1 := 5
 y1 = 6          // OKAY
 
-y2 : constant = 5
-y2 = 6          // OKAY (type is constant but value is pliable)
+y2 : readonly = 5
+y2 = 6          // OKAY (type is readonly but value is pliable)
 
-y3 : inconstant = 6
+y3 : writable = 6
 y3 = 6          // OKAY
 
 my1 : MyType
 my1.value1 = 6  // OKAY
 
-my2 final : MyType constant
-my2.value1 = 6  // OKAY (type is constant but value is pliable)
+my2 final : MyType readonly
+my2.value1 = 6  // OKAY (type is readonly but value is pliable)
 
-my3 varies : MyType inconstant
+my3 varying : MyType writable
 my3.value1 = 6  // OKAY
 
-my4 varies : MyType immutable
+my4 varying : MyType immutable
 my4.value1 = 6  // ERROR: even though a value is `pliable` the underlying
                 // `immutable` `type` qualifier is not affected by `pliable`
 ````
@@ -1444,8 +1444,8 @@ The `[[types=<options>]]` directive declares defaults for the declaration of all
 The options are:
 * `mutable` (default if `types` directive has not been declared) - if a default is not specified for a type, a declared type is assumed to be `mutable`
 * `immutable` - if a default is not specified for a type, a declared type is assumed to be `immutable`
-* `constant` - if a `mutable` type is declared, the type is assumed to be `constant` once constructed
-* `inconstant` (default if `types` directive has not been declared) - if a `mutable` type is declared, the type is assumed to remain `mutable` (unless `constant` is applied)
+* `readonly` - if a `mutable` type is declared, the type is assumed to be `readonly` once constructed
+* `writable` (default if `types` directive has not been declared) - if a `mutable` type is declared, the type is assumed to remain `mutable` (unless `readonly` is applied)
 * `push` - push the current `types` state onto the stack
 * `pop` - pop the previous `types` state from the stack
 
@@ -1501,7 +1501,7 @@ my3.value1 = 6  // ERROR: type is immutable
 ````
 
 
-Example of how `constant` / `inconstant` default applied to types:
+Example of how `readonly` / `writable` default applied to types:
 
 ````zax
 MyType :: type {
@@ -1509,64 +1509,64 @@ MyType :: type {
     value2 : String = "hello"
 }
 
-[[types=inconstant]] 
+[[types=writable]]
 
 x1 := 5
 x1 = 6          // OKAY
 
-x2 : inconstant = 5
+x2 : writable = 5
 x2 = 6          // OKAY
 
-x3 : constant = 5
-x3 = 6          // ERROR: type is constant
+x3 : readonly = 5
+x3 = 6          // ERROR: type is readonly
 
 mx1 : MyType
 mx1.value1 = 6  // OKAY
 
-mx2 : MyType inconstant
+mx2 : MyType writable
 mx2.value1 = 6  // OKAY
 
-mx3 : MyType constant
-mx3.value1 = 6  // ERROR: type is constant
+mx3 : MyType readonly
+mx3.value1 = 6  // ERROR: type is readonly
 
 
-[[types=constant]]
+[[types=readonly]]
 
 y1 := 5
-y1 = 6          // ERROR: type is constant
+y1 = 6          // ERROR: type is readonly
 
-y2 : inconstant = 5
+y2 : writable = 5
 y2 = 6          // OKAY
 
-y3 : constant = 5
-y3 = 6          // ERROR: type is constant
+y3 : readonly = 5
+y3 = 6          // ERROR: type is readonly
 
 my1 : MyType
-my1.value1 = 6  // ERROR: type is constant
+my1.value1 = 6  // ERROR: type is readonly
 
-my2 : MyType inconstant
+my2 : MyType writable
 my2.value1 = 6  // OKAY
 
-my3 : MyType constant
-my3.value1 = 6  // ERROR: type is constant
+my3 : MyType readonly
+my3.value1 = 6  // ERROR: type is readonly
 ````
 
 
 #### `functions` default directives
 
-A `[[functions=<options>]]` directive declares default `constant`/`inconstant` qualifier for all functions with a `type`. See the [mutability](mutable.md) section for more details. This directive only applies to source code following a `functions` directive and does not change a default for an imported modules.
+A `[[functions=<options>]]` directive declares default `readonly`/`writable` qualifier for all functions with a `type`. See the [mutability](mutable.md) section for more details. This directive only applies to source code following a `functions` directive and does not change a default for an imported modules.
 
 The options are:
-* `constant` - a function declared on a type is `constant` by default
-* `inconstant` (default if `types` directive has not been declared) - a function declared on a type is `inconstant` by default
+* `readonly` - a function declared on a type is `readonly` by default
+* `writable` (default if `types` directive has not been declared) - a function declared on a type is `writable` by default
 * `push` - push a current `functions` state onto a compiler's functions stack
 * `pop` - pop a previous `functions` state from a compiler's functions stack
 
-Example of how `constant` / `inconstant` default applied to functions:
+Example of how `readonly` / `writable` default applied to functions:
 
 ````zax
 
-[[functions=inconstant]] 
+[[functions=writable]]
 
 MyType1 :: type {
     value1 : Integer = 5
@@ -1576,34 +1576,34 @@ MyType1 :: type {
         value1 = 6              // OKAY
     }
 
-    func2 : ()() inconstant = {
+    func2 : ()() writable = {
         value1 = 6              // OKAY
     }
 
-    func3 : ()() constant = {
-        value1 = 6              // ERROR: value1 is `constant`
-                                // (as function is constant)
+    func3 : ()() readonly = {
+        value1 = 6              // ERROR: value1 is `readonly`
+                                // (as function is readonly)
     }
 }
 
-[[functions=constant]] 
+[[functions=readonly]]
 
 MyType2 :: type {
     value1 : Integer = 5
     value2 : String = "hello"
 
     func1 : ()() = {
-        value1 = 6              // ERROR: value1 is `constant` (as function is
-                                //  `constant`)
+        value1 = 6              // ERROR: value1 is `readonly` (as function is
+                                //  `readonly`)
     }
 
-    func2 : ()() inconstant = {
+    func2 : ()() writable = {
         value1 = 6              // OKAY
     }
 
-    func3 : ()() constant = {
-        value1 = 6              // ERROR: value1 is `constant` (as function is
-                                // `constant`)
+    func3 : ()() readonly = {
+        value1 = 6              // ERROR: value1 is `readonly` (as function is
+                                // `readonly`)
     }
 }
 ````

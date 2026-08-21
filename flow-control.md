@@ -11,8 +11,11 @@ Accepted body formation, semicolon composition, braces, clause-visible scope,
 and mandatory layout validation are defined by
 [Zax source structure](language/source-structure.md). A flow-control clause
 consumes one effective body statement, which may be simple, composed, or a
-braced block. This page remains legacy input for the exact behavior of `if`,
-loops, `switch`, `using`, and other control forms.
+braced block. Accepted declaration visibility and flow-initializer binding scope
+are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for the exact behavior of `if`, loops, `switch`,
+`using`, `;;`, and other control forms.
 
 ````zax
 isNegativeOrGreaterThan10 : (negative : Boolean)(input : Integer) = {
@@ -337,14 +340,14 @@ doStuff final : (output : Integer)() = {
 
     // OKAY: an initialization, condition statement, and repeatable code block
     // are present but no post loop statement is present
-    while i: ;; i < 100 {
+    while i : Integer ;; i < 100 {
         ++i
         ++total
     }
 
     // OKAY: an initialization and a post loop statement are present followed by
     // a repeatable code block
-    while i: ;; i < 100 ;; ++i {
+    while i : Integer ;; i < 100 ;; ++i {
         ++total
     }
 
@@ -353,7 +356,7 @@ doStuff final : (output : Integer)() = {
     // treated as the post loop statement by the compiler, and the compiler
     // continues to attempt to locate a repeatable code block which isn't
     // present; thus the compiler will issue an error.
-    while i: ;; i < 100 ;; {
+    while i : Integer ;; i < 100 ;; {
         print(i)
         ++i
         ++total
@@ -361,10 +364,10 @@ doStuff final : (output : Integer)() = {
 
     // OKAY: an initialization and a post loop statement are present and a
     // an empty scope is used in place for the repeatable code block
-    while i: ;; i < 100 ;; ++i {}
+    while i : Integer ;; i < 100 ;; ++i {}
 
     // OKAY: a post loop statement is empty but present
-    while i: ;; i < 100 ;; {} {
+    while i : Integer ;; i < 100 ;; {} {
         print(i)
         ++i
         ++total
@@ -373,14 +376,14 @@ doStuff final : (output : Integer)() = {
     // OKAY: an initialization is present and a post loop statement is empty but
     // present; the repeatable code block is present (although it will repeat
     // forever since `i` is always `< 100`)
-    while i: ;; i < 100 ;; {}
+    while i : Integer ;; i < 100 ;; {}
         print(i)
 
     // OKAY: An initialization, condition, and post loop statement are present
     // and the repeatable code block is present. The `;` operator causes
     // multiple statements to be combined together and treated as a single
     // statement at the same scope.
-    while i: ;; i < 100 ;; ++i; ++total
+    while i : Integer ;; i < 100 ;; ++i; ++total
         print(i)
 
     // OKAY: An initialization, condition, and post loop statements are present
@@ -389,7 +392,7 @@ doStuff final : (output : Integer)() = {
     // statement at the same scope. The repeatable code block is using the `;`
     // operator to indicate that all the loop statements are part of the same
     // statement at the same scope.
-    while i: ;; i < 100 ;; ++i; ++total
+    while i : Integer ;; i < 100 ;; ++i; ++total
         print(i);
         print(i % 10)
 
@@ -397,7 +400,7 @@ doStuff final : (output : Integer)() = {
     // and the repeatable code block are all present. The `;` operator causes
     // multiple statements to be combined together and treated as a single
     // statement at the same scope.
-    while i: ;; i < 100 ;; ++i; ++total {
+    while i : Integer ;; i < 100 ;; ++i; ++total {
         print(i)
     }
 
@@ -1435,7 +1438,7 @@ An `if` statement can also be used in a function declaration to indicate that a 
 
 If some value polymorphic functions are declared using an `if` statement then a single polymorphic version function using the same types can be declared as a catch-all if none of the other conditions succeed (i.e. the logical equivalent of a `switch` `default` statement). If no function was found a panic may be issued.
 
-Only functions marked as `final` support value polymorphism. A conditional check on a function cannot be replaced and any assignment of a changeable functions would be ambiguous to which value polymorphic version should be replaced. However, a function without any value polymorphism `if` condition can be `varies` allowing the function to be reassigned to a new function implementation that will assume to replace only a default non-conditional version (i.e. a version that does not contain value polymorphism).
+Only functions marked as `final` support value polymorphism. A conditional check on a function cannot be replaced and any assignment of a changeable functions would be ambiguous to which value polymorphic version should be replaced. However, a function without any value polymorphism `if` condition can be `varying` allowing the function to be reassigned to a new function implementation that will assume to replace only a default non-conditional version (i.e. a version that does not contain value polymorphism).
 
 ````zax
 random final : (value : Integer)() = {

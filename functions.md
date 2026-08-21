@@ -3,6 +3,12 @@
 
 ## Functions
 
+Accepted function-value declaration, recursive-binding, qualifier, and
+assignment boundaries are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for complete parameter, result, capture, invocation,
+overload, and function-lifetime behavior.
+
 Functions are data types just like other variables and all functions are effectively lambdas. They can be assigned, and potentially reassigned depending on needs. Functions can capture data or be entirely raw functions pointers depending on needs.
 
 ````zax
@@ -75,7 +81,7 @@ accountId:, secretCode: = welcome("Pat", "Jones", "Would you like some water?")
 
 ### Function polymorphism
 
-Zax supports polymorphism based on strong type matching. Two (or more) functions can share the same name and a compiler will select a function with the best match of input arguments. Types, references, pointers, mutability, `constant` types, return types, and other factors are considered during a function selection process. A full discussion for what is considered a best match is beyond the scope of this section. 
+Zax supports polymorphism based on strong type matching. Two (or more) functions can share the same name and a compiler will select a function with the best match of input arguments. Types, references, pointers, mutability, `readonly` types, return types, and other factors are considered during a function selection process. A full discussion for what is considered a best match is beyond the scope of this section.
 
 [Value polymorphism](flow-control.md) is also supported which is discussed in the [flow control](flow-control.md) section.
 
@@ -802,7 +808,7 @@ Functions marked as `once` will only have a single function definition for all i
 MyType :: type {
     value : Integer
 
-    func1 final once : ()(value : Integer) constant = {
+    func1 final once : ()(value : Integer) readonly = {
         // do something...
     }
 
@@ -832,12 +838,12 @@ myType.func2(42)
 ````
 
 
-### Functions qualified as `constant` in function types
+### Functions qualified as `readonly` in function types
 
-Functions qualified as `constant` inside a type may not change any values or call any of the type's functions that are not qualified as `constant`. This advertises a type's function as being safe to call without any risk that the underlying data will change within the type as a result of calling the function.
+Functions qualified as `readonly` inside a type may not change any values or call any of the type's functions that are not qualified as `readonly`. This advertises a type's function as being safe to call without any risk that the underlying data will change within the type as a result of calling the function.
 
 ````zax
-saveToDisk final :: ()(value : Integer) = {
+saveToDisk final : ()(value : Integer) = {
     // ...
 }
 
@@ -846,13 +852,13 @@ MyType :: type {
     value2 := 0
     value3 := 0
 
-    bucket final : (output : Integer)() constant = {
+    bucket final : (output : Integer)() readonly = {
         // allowed to access variables since the contents of the variables
         // are not changed
         return (value1 + value2 + value3) % 17
     }
 
-    save final : ()() constant = {
+    save final : ()() readonly = {
         saveToDisk(value1)
         saveToDisk(value2)
         saveToDisk(value3)
@@ -864,13 +870,13 @@ MyType :: type {
         value3 = value
     }
 
-    saveThenResetValues final : ()(value := 0) constant = {
-        // allowed to call save since the function is declared as `constant`.
+    saveThenResetValues final : ()(value := 0) readonly = {
+        // allowed to call save since the function is declared as `readonly`.
         save()
 
-        // ERROR: The function was qualified as `constant` thus changing any of
-        // the type's values or calling non-constant type function for the
-        // `constant` type is disallowed.
+        // ERROR: The function was qualified as `readonly`, so changing any of
+        // the type's values or calling a type function that is not qualified as
+        // `readonly` is disallowed.
         resetValues(value)
     }
 }
@@ -885,10 +891,10 @@ bucket := myType.bucket()
 ````
 
 
-#### Variables qualified as `pliable` in relation to `constant` function types
+#### Variables qualified as `pliable` in relation to `readonly` function types
 
 ````zax
-saveToDisk final :: ()(value : Integer) = {
+saveToDisk final : ()(value : Integer) = {
     // ...
 }
 
@@ -908,8 +914,8 @@ MyType :: type {
     value2 := 0
     value3 := 0
 
-    save final : ()() constant = {
-        // allowed to call non-`constant` functions on the `constant`
+    save final : ()() readonly = {
+        // allowed to call non-`readonly` functions on the `readonly`
         // mutex value since the variable is qualified as `pliable`
         mutex.lock()
         saveToDisk(value1)

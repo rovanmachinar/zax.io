@@ -7,7 +7,10 @@ Scopes can be used to help flow control by breaking or continuing out of a neste
 
 Accepted block formation, flow-body extent, and the source-visible clause scope
 are defined by [Zax source structure](language/source-structure.md). The detailed
-scope, lifetime, destruction, capture, `break`, and `continue` claims below
+binding visibility, same-scope redeclaration, shadow permission, explicit member
+access, and qualified lookup model are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). The
+detailed lifetime, destruction, capture, `break`, and `continue` claims below
 remain legacy design input until their own focused review.
 
 

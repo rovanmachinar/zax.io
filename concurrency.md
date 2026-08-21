@@ -26,7 +26,7 @@ MyType :: type {
     animal : String = "alligator"
     // ...
 
-    +++ final : ()(rhs : MyType constant &) = {
+    +++ final : ()(rhs : MyType readonly &) = {
         // this version of the constructor will be called under normal
         // conditions where a copy of the type needs to be made
         animal = rhs.animal
@@ -37,14 +37,14 @@ MyType :: type {
         // type to the destination type
         animal = rhs.animal
     }
-    +++ final : ()(rhs : MyType constant & deep) = {
+    +++ final : ()(rhs : MyType readonly & deep) = {
         // this version of the constructor will be called when a `deep`
         // copy of the contents must be performed (as `deep` qualifier applies
         // to all types contained within the reference type passed)
         animal = rhs.animal    // rhs.animal is `deep`
     }
 
-    merge : (result : MyType &)(rhs : MyType constant &) deep = {
+    merge : (result : MyType &)(rhs : MyType readonly &) deep = {
         // ...
         return _.
     }

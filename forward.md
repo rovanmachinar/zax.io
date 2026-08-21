@@ -3,6 +3,12 @@
 
 ## Forward
 
+Accepted forward-completion, recursive-type, `Self`, and pending qualified-path
+constraints are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md). This
+page remains legacy input for the complete forward-declaration catalog,
+dependency behavior, and generated forward material.
+
 ### Basic forwarding concept
 
 A compiler will attempt to resolve dependencies in late-binding processes but the programmer may have to give hints to the compiler so that all the symbols are recognizable as their appropriate type. Giving hints will assist the compiler to better recognize symbols and categorize these symbols appropriately during the compilation process.
