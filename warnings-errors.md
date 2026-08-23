@@ -8,6 +8,10 @@ Mandatory source-structure errors are defined conceptually by
 warnings. Exact diagnostic identifiers and presentation remain future
 diagnostics design; the registries below are otherwise legacy input.
 
+Duplicate qualifier tokens at one syntactic point and conflicting qualifier
+stances at one entity/layer are source errors under
+[Zax qualifiers](language/qualifiers.md), not configurable warnings.
+
 ### `error` directive
 
 #### Forcing the compiler to issue an error
@@ -269,8 +273,6 @@ The following are registered warnings, default states, and their meaning:
     * every return result needs to be captured (unless marked with `#`)
 * `variable-declared-but-not-used` (error)
     * every declared variable must be used (unless marked with `#`)
-* `duplicate-specifier` (always)
-    * a duplicate qualifier was specified, e.g. `readonly`, `immutable`, `mutable`, `deep`, etc.
 * `type-mutability-qualifier-not-supported`
     * a specific `type` mutability qualifier was selected which is not supported
 * `specifier-ignored` (always)

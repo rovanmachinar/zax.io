@@ -19,6 +19,11 @@ producing them.
 - Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
   declaration, initialization, binding visibility, qualifiers, and assignment
   boundaries.
+- Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
+  mutability, access capabilities, defaults, indirection, and unsafe escape
+  behavior.
+- Use [Zax language-design terms](language/terms.md) for cross-cutting
+  descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
 
 ## Current conceptual design
@@ -26,6 +31,8 @@ producing them.
 - [Language vision](language/vision.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
+- [Qualifiers](language/qualifiers.md)
+- [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes
 
@@ -48,7 +55,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 - [Alias](alias.md)
 - [Composition](composition.md)
-- [Mutability](mutable.md)
 - [Optional types](optional.md)
 - [Nothing type instances](nothing.md)
 - [Partial types](partial.md)

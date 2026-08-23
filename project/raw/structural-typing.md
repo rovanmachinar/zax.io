@@ -200,7 +200,7 @@ reflection:
 - default and explicit initializers;
 - inferred member types;
 - forwarded declarations; and
-- recursive `Self` forms.
+- recursive uses of a type's own name.
 
 This section preserves a required future question. It does not amend or accept
 the candidate proposal below.

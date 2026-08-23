@@ -3,11 +3,16 @@
 
 ## Forward
 
-Accepted forward-completion, recursive-type, `Self`, and pending qualified-path
+Accepted forward-completion, named self-reference, recursive-layout, and pending qualified-path
 constraints are defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md). This
 page remains legacy input for the complete forward-declaration catalog,
 dependency behavior, and generated forward material.
+
+A named type does not require `forward` merely to refer to its own incomplete
+name inside its body. `forward` remains relevant when a different name is needed
+before its declaration, for mutual or separately completed definitions, and
+when a suffix must remain pending below an incomplete forwarded prefix.
 
 ### Basic forwarding concept
 

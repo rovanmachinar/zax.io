@@ -11,7 +11,7 @@ randomNumber final : (result : Integer)() = {
 }
 
 // all types are automatically initialized to a `type`'s default value (unless
-// an `???` operator is used to leave an underlying `type`'s memory
+// `unsafe ???` is used to leave an underlying `type`'s memory
 // uninitialized).
 myArray : Integer[1000]
 
@@ -33,14 +33,15 @@ yetAnotherArray2 : Integer[5000] = myArray
 
 // copy the first 1000 array elements into a new array (all other elements
 // will contain uninitialized memory)
-yetAnotherArray3 : Integer[5000] = [{ myArray, ??? }]
+// Conceptual spelling: exact aggregate-initialization grammar remains future work.
+yetAnotherArray3 : Integer[5000] = [{ myArray, unsafe ??? }]
 
 // copy the first 10 array elements into a new array, followed by 50 elements
 // starting at the 50th element and leave the remaining values uninitialized
 // (all other elements following will contain uninitialized values)
 yetAnotherArray5 : Integer[5000] = [{ myArray.slice(0, 9),
                                       myArray.slice(50, 99),
-                                      ??? }]
+                                      unsafe ??? }]
 
 // fill the initial part of the array with the literal values from the `1`
 // through `10` array slice and then fill the remainder of the array with a
@@ -188,7 +189,6 @@ myType3 : MyType[3] = [
     2,                      // ERROR: switching to single value constructor
     [{ 3, "automobiles" }]  // ERROR: switching back to multi-value constructor
 ]
-````
 
 // OKAY: mixing an matching different constructor selection from within
 // different array slices is perfectly legal
@@ -298,7 +298,11 @@ myOtherArrayCopy : @ = myArray
 
 ### Slicing arrays
 
-Arrays include a implicit `readonly` and `final` function named `slice` that extracts a subset of elements out of an array and returns a newly created array slice view. If `slice` is passed values that exceed an array's available indexed range, an array slice view of reduced length or even a completely empty array slice view is returned. The `length` `mutator` should be checked by a programmer should a programmer wish to ensure all values in a requested range will be satisfied by a `slice` operation in advance.
+Arrays include a `slice` function whose binding is final and whose receiver
+operand is readonly. It extracts a subset of elements and returns a newly
+created array-slice view. If `slice` receives values outside the available
+index range, it returns a reduced or empty view. A programmer can inspect the
+`length` mutator first when the complete requested range is required.
 
 ````zax
 myArray : Integer[1000]

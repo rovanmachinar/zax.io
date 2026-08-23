@@ -9,6 +9,10 @@ selection boundaries are defined by
 page remains legacy input for complete operator declaration, overload resolution,
 conversion, and result behavior.
 
+All three qualifier axes may constrain a type-defined operator's
+[receiver operand](language/terms.md#receiver-operand), as defined by
+[Zax qualifiers](language/qualifiers.md#receiver-operands).
+
 ### Basic overloading
 
 Overloadable operators (e.g. greater than (`>`), less than (`<`), equal to (`==`)) can be augmented with new functions. This allows types to support additional operations in symbolic form rather than requiring natural language function calls. Operators can be declared in a global scope where two arguments will be required for binary operations and one operator is required for unary operators.
@@ -75,9 +79,28 @@ myValue2++
 
 ### Operator overloading from within types
 
-Rather than declaring a global scope operator, operators can be declared within types. In this scenario, the left hand side in binary operations of the operator is always assumed to be the current type's instance, and the right or left hand side of the operator is assumed to be the current type's instance for unary operations.
+Rather than declaring a global-scope operator, operators can be declared within
+types. The type-defined operator has a receiver operand representing the current
+instance. Its relationship to the explicit operands depends on the operator
+form.
 
-If a different type instance is required on the left handed side of an operator then a global scope will be required declaring both types for the left and right side of an operator.
+If an operation requires only explicit operands and no receiver operand, a
+global-scope declaration supplies all operand types.
+
+Operators do not receive conventional qualifier behavior merely from traditional
+spelling. `final`/`varying`, `mutable`/`immutable`, and
+`writable`/`readonly` requirements participate in viability like the
+qualifications of other operands.
+
+The generated reconstructive `=` scenario is a narrower compiler-recognized
+lifetime case: an existing destination must be varying and the current path must
+be writable. It does not force ordinary assignment meaning on domain-specific
+`=` candidates. Whether a replacement constructor, generated fallback, or
+another future construction rule makes reconstruction viable remains constructor
+design. See
+[Zax qualifiers](language/qualifiers.md#reconstructive-replacement). Complete
+candidate generation, priority, ambiguity, and ranking remain future operator
+work.
 
 Operators declared on types are always selected over globally scope operators if both a type operator and a global operator satisfy the match criteria during operator selection.
 

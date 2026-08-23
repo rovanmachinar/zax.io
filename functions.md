@@ -9,6 +9,10 @@ assignment boundaries are defined by
 page remains legacy input for complete parameter, result, capture, invocation,
 overload, and function-lifetime behavior.
 
+Current qualifier behavior for parameters, results, captures, and
+[receiver operands](language/terms.md#receiver-operand) is defined by
+[Zax qualifiers](language/qualifiers.md).
+
 Functions are data types just like other variables and all functions are effectively lambdas. They can be assigned, and potentially reassigned depending on needs. Functions can capture data or be entirely raw functions pointers depending on needs.
 
 ````zax
@@ -838,9 +842,15 @@ myType.func2(42)
 ````
 
 
-### Functions qualified as `readonly` in function types
+### Readonly receiver operands in function types
 
-Functions qualified as `readonly` inside a type may not change any values or call any of the type's functions that are not qualified as `readonly`. This advertises a type's function as being safe to call without any risk that the underlying data will change within the type as a result of calling the function.
+A function qualified as `readonly` inside a type receives readonly access
+through its receiver operand. Ordinary safe operations may not mutate the
+current value or reconstruct a varying place through that path, nor call a
+function requiring writable access to the same receiver operand. An explicitly
+varying readonly path may still observe replacement performed through another
+writable path. Other paths may also mutate a mutable value, and an explicit
+`unsafe pliable` path may bypass the retained restriction.
 
 ````zax
 saveToDisk final : ()(value : Integer) = {
@@ -891,7 +901,7 @@ bucket := myType.bucket()
 ````
 
 
-#### Variables qualified as `pliable` in relation to `readonly` function types
+#### Explicit unsafe pliability in readonly functions
 
 ````zax
 saveToDisk final : ()(value : Integer) = {
@@ -909,14 +919,14 @@ Mutex :: type {
 
 MyType :: type {
 
-    mutex pliable : Mutex
+    mutex unsafe pliable : Mutex
     value1 := 0
     value2 := 0
     value3 := 0
 
     save final : ()() readonly = {
-        // allowed to call non-`readonly` functions on the `readonly`
-        // mutex value since the variable is qualified as `pliable`
+        // Explicitly bypass the readonly receiver-operand path for this member.
+        // The retained qualifications remain visible through ordinary paths.
         mutex.lock()
         saveToDisk(value1)
         saveToDisk(value2)

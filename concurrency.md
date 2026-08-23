@@ -3,6 +3,12 @@
 
 ## Concurrency
 
+Current immutable and unsafe-pliability behavior is defined by
+[Zax qualifiers](language/qualifiers.md). Immutability addresses value change,
+not lifetime, shared backing storage, synchronization, allocation, safe
+transfer, or reference-count safety. The remaining concurrency mechanisms on
+this page are legacy input.
+
 ### Using a `deep` type qualifier as a method to ensure data safety across threads
 
 For speed and efficiency reasons, types may utilize a `shallow` copy methodology and data sharing across `type` instances when a variable is copied from one instance to another instance. A true copy of a `type` may never actually be performed in such a scenario as copying data may be expensive and not desirable, especially for types that require heap allocations (e.g. variable length strings).
@@ -11,6 +17,10 @@ For speed and efficiency reasons, types may utilize a `shallow` copy methodology
 #### Efficient `immutable` type data sharing and concurrency
 
 Types qualified as `immutable` are an excellent example of how qualifiers can help optimization. An `immutable` type might need to allocate data for storage. Once allocated the contents are not modify ever again. Needlessly copying `immutable` variables from one instance to another could be expensive given each copy would need another allocation, a copy of the contents, and a deallocation when an `immutable` type is no longer needed.
+
+An explicit `unsafe pliable` path can invalidate stability assumptions made by
+ordinary aliases. A compiler must preserve that possible mutation, and the
+programmer remains responsible for synchronization and resulting invariants.
 
 Rather than performing a copy whenever an `immutable` type is passed to a function, a simple `handle` pointer to the real data might be utilized. A `handle` pointer keeps a simple reference count to a type and disposes of the data when the final instance of a type is disposed (and thus is perfectly suitable for `immutable` data sharing). While a `strong` pointer could be used instead of a `handle` type, a `strong` pointer incurs additional concurrency overhead every time a reference count is incremented or decremented since `strong` pointer reference counts must be thread-safe across CPU cores. This overhead can cause a CPU to operate less efficiently as it can disrupt things like CPU branch predictability and invalidate CPU caches.
 

@@ -198,7 +198,7 @@ d := 30
 e := a > b ?? c ;; d
 
 // the above ternary operation is approximately equivalent to the following:
-e : Integer = ???
+e : Integer = unsafe ???
 if a > b
     e = c
 else

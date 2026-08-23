@@ -1,0 +1,745 @@
+# Zax qualifiers
+
+| Field | Value |
+| --- | --- |
+| Status | Current conceptual design |
+| Audience | Human developers reading, writing, or evaluating Zax |
+| Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
+| Implementation State | Not established by this repository |
+| Owns | Place-replacement, value-mutability, and access qualifiers; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, replacement field-transition analysis, constructor/destructor sequencing, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+
+## Mental model
+
+Zax separates three questions that other languages often combine:
+
+1. May this storage place receive another value lifetime?
+2. May the current value lifetime's contained state change?
+3. May this particular access path perform an otherwise available change?
+
+Each question has its own qualifier axis:
+
+| Axis | Stances | Governs |
+| --- | --- | --- |
+| Place replacement | `final` / `varying` | Whether the immediately qualified storage place may ordinarily receive another value lifetime |
+| Value mutability | `mutable` / `immutable` | Whether the current value lifetime's contained state may change through ordinary behavior |
+| Access capability | `writable` / `readonly` | Whether the current path may perform an otherwise permitted content mutation or place replacement |
+
+These are called **place-replacement qualifiers**, **value-mutability
+qualifiers**, and **access qualifiers**.
+
+Begin with omitted value and access defaults:
+
+```zax
+source final : Buffer = makeBuffer()
+
+source.append(data)   // legal: mutable and writable are defaulted
+source = makeBuffer() // error: source's place is final
+
+reader : Buffer readonly final & = source
+reader.append(data)   // error: this path is readonly
+```
+
+`final` governs replacement of `source`'s place. It does not prevent mutation of
+the defaulted mutable value through the defaulted writable source path.
+`readonly` removes change authority from `reader` without changing the value's
+mutability or the place's final stance.
+
+## What each axis promises
+
+### `final` and `varying`
+
+`final` says the immediately qualified place is not ordinarily replaceable.
+`varying` says it may receive another value lifetime when a writable path and a
+viable replacement operation are available.
+
+An ordinary alias to the same place preserves that actual stance. A varying
+referent may not be presented as final merely to restrict one access path;
+readonly supplies that access restriction.
+
+```zax
+config final : Config mutable = makeConfig()
+
+config = makeOtherConfig() // error: config is final
+config.refresh()           // legal when this access is writable
+```
+
+### `mutable` and `immutable`
+
+`mutable` permits the current value lifetime's contained state to change. It
+does not grant every access path permission to perform that change.
+
+`immutable` guarantees recursively that the value and its contained values do
+not mutate through ordinary safe behavior after construction completes. A
+varying place may later end that immutable lifetime and begin another; that is
+place reconstruction, not mutation of either instance.
+
+```zax
+value : Document mutable = makeDocument()
+reader : Document mutable readonly & = value
+```
+
+The value is mutable, but `reader` cannot mutate it.
+
+### `writable` and `readonly`
+
+`writable` permits the current path to perform a change when the applicable place
+or value axis and a viable operation also permit it.
+
+`readonly` prevents the current path from mutating the value or reconstructing
+the place. It does not freeze the underlying value, make a varying place final,
+or suspend independent writable aliases:
+
+```zax
+source : Counter
+reader : Counter readonly & = source
+
+source.increment() // legal through the original writable path
+reader.increment() // error: reader is readonly
+```
+
+`reader` remains readonly for its lifetime. Writable access is not recovered
+from it when the view ends; `source` retained a separate writable path
+throughout.
+
+The axes combine when deciding whether a change is available:
+
+| Operation | Required qualifications |
+| --- | --- |
+| Mutate the current value lifetime's contents | `mutable` + `writable` |
+| Reconstruct a place with another value lifetime | `varying` + `writable` |
+| Observe a stable immutable place | `immutable` + `readonly` + `final` |
+| Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + explicit `varying` |
+
+## Varying places with immutable lifetimes
+
+A varying place may hold successive immutable values:
+
+```zax
+message varying : Message immutable = makeMessage("first")
+
+observer final :
+    Message immutable readonly varying & = message
+
+replacer final :
+    Message immutable writable varying & = message
+
+display(observer)                 // "first"
+replacer = makeMessage("second")  // reconstructive replacement
+display(observer)                 // "second"
+```
+
+Neither immutable instance mutates. The first lifetime ends and another
+immutable lifetime begins in the same storage.
+
+The referent's `varying` stance must be explicit when creating an immutable
+place-tracking reference. Omission must not silently introduce this unusual
+behavior:
+
+```zax
+implicit : Message immutable readonly & = message
+// error: varying place tracking must be explicit
+```
+
+A final referent view is also unavailable:
+
+```zax
+stable : Message immutable readonly final & = message
+// error: message's place is varying
+```
+
+A future lifetime strategy could temporarily prevent replacement while a stable
+borrow exists. Baseline qualifier behavior does not require that alias-tracking
+mechanism.
+
+## Qualifier attachment
+
+Qualification follows the entity being constrained:
+
+- a declared binding has its own place qualification;
+- a directly stored value has a value-mutability qualification;
+- an alias or projection has an access qualification;
+- a referenced or pointed-to place has a place qualification independent from
+  the binding that stores the reference or pointer; and
+- every further pointer or reference level may introduce another independently
+  qualified place and access path.
+
+The syntax must therefore distinguish a final pointer binding from a pointer to
+a final place. A varying pointer may point to a final pointer that in turn points
+to another final place. Replacing the outer pointer replaces neither inner
+place.
+
+The exact grammar for multiple pointer and reference levels remains later
+indirection design. Whatever spelling is selected must preserve these distinct
+layers.
+
+## Defaults and resolution
+
+The baseline omission defaults are:
+
+- place replacement: `varying`;
+- value mutability: `mutable`; and
+- access capability: `writable`.
+
+Each default may be changed for an applicable source context. Exact directive
+syntax, lexical scope, stacking, and precedence between future default sources
+belong to compiler-directive design.
+
+Qualifiers resolve independently at every applicable layer:
+
+1. preserve inherent or inherited qualifications supplied by the source,
+   referent, or resolved type;
+2. apply explicit qualifications at their stated layers;
+3. apply contextual defaults only to still-unresolved axes; and
+4. diagnose contradictions in the resulting combination.
+
+A default never overrides a qualification carried by the source:
+
+```zax
+source final : Payload immutable = makePayload()
+
+sameView : Payload immutable final & = source
+reader : Payload readonly final & = source
+writer : Payload writable final & = source // error
+```
+
+If `immutable` and `writable` are configured simultaneously as defaults, the
+configuration itself is legal. A declaration to which both become applicable is
+contradictory and fails at that declaration. This allows a project to force an
+explicit choice in selected contexts.
+
+A possible future mode with no fallback for an axis is deferred. Baseline Zax
+provides sensible defaults.
+
+## Restatement, duplication, and conflict
+
+Compatible qualification may reach one entity from distinct sources:
+
+```zax
+source final : Payload immutable = makePayload()
+reader : Payload immutable final & = source
+```
+
+The explicit `immutable` on `reader` restates the qualification inherited from
+`source`. This is legal and may be useful for aliases, generic substitution, or
+deliberate clarity.
+
+The same word may also appear at multiple pointer or reference levels because it
+qualifies different entities.
+
+Repeating one qualifier token at one syntactic point is an error:
+
+```zax
+value final final : Payload = makePayload() // error
+```
+
+Opposing stances applied to the same entity and layer are also errors. A
+diagnostic must identify the entity and layer rather than treating identical
+words at distinct indirection levels as duplicates.
+
+## Canonical ordering
+
+On the declaration-name side, canonical ordering is:
+
+1. place replacement;
+2. `unsafe pliable` or explicit `unpliable`; and
+3. the declaration colon.
+
+On the type-use side, read outward from the base type:
+
+1. base type;
+2. value mutability;
+3. access capability;
+4. referent-place replacement; and
+5. pointer or reference marker.
+
+```zax
+source final : Payload immutable = makePayload()
+view final unpliable : Payload immutable readonly final & = source
+escape final unsafe pliable : Payload immutable readonly final & = source
+```
+
+A formatter may normalize ordering, spacing, and layout. It must not add or
+remove explicit qualifiers. A linter may identify compatible restatement or an
+explicit default as redundant without changing source.
+
+## Ordinary promise strengthening
+
+Ordinary views may narrow authority and strengthen the promise made by the new
+path:
+
+- `writable` to `readonly`;
+- a mutable value to a readonly path; and
+- an immutable value to a readonly path.
+
+The reverse directions weaken promises and are not ordinary conversions:
+
+- `readonly` to `writable`;
+- `immutable` to `mutable`.
+
+Mutable or readonly state does not thereby become immutable. Readonly constrains
+one path; immutable makes a guarantee about one value lifetime.
+
+Final/varying is not an ordinary same-place authority conversion. An alias
+preserves the actual referent-place stance. A new independent destination place
+resolves its own stance:
+
+```zax
+source varying : Payload = makePayload()
+copy final : Payload = source
+```
+
+`copy` is a new final place; `source` remains varying.
+
+## Unsafe casts and new values
+
+An explicit unsafe cast may weaken qualification, including producing mutable
+or writable pointer/reference access from immutable or readonly input. The
+complete cast lattice and exact cast syntax remain later casting design.
+
+An ordinary mutable alias cannot safely become an immutable alias. Other mutable
+aliases may still change the same value. Mutable-to-readonly access is safe
+because it constrains only the new path.
+
+A new immutable value may be produced safely from mutable input when the
+operation establishes the complete deep-immutability guarantee. This may
+involve:
+
+- constructing an independent immutable value;
+- making a sufficiently independent copy; or
+- consuming mutable storage for which the compiler proves exclusive authority
+  over all storage covered by the immutable guarantee.
+
+A consuming transition ends the former mutable capability. A scoped
+non-mutating view that later permits mutation again is readonly, not temporarily
+immutable. Exact uniqueness proofs, freezing operations, copy selection, cost
+visibility, and syntax remain future work.
+
+## Construction and deep immutability
+
+Immutability is recursively deep over contained values. Pointer and reference
+levels retain their own qualifications; deep immutability does not silently
+rewrite every externally referenced pointee.
+
+Construction has authority to establish final and immutable state without an
+unsafe bypass. The guarantees activate when the full instance, including all
+contained parts, has completed construction and becomes ordinarily observable.
+
+If construction does not complete, no fully constructed instance becomes live.
+Constructor cleanup, panic behavior, premature publication, and escaped
+construction-time aliases remain construction and lifetime work.
+
+## Reconstructive replacement
+
+`=` has one compiler-recognized lifetime scenario in addition to arbitrary
+domain-specific operator candidates. When an existing destination is varying
+and the current path is writable, the compiler may select a generated
+**reconstructive replacement** candidate.
+
+The generated candidate ends one enclosing value lifetime and establishes
+another in the same storage. Its lifecycle skeleton is compiler-owned and cannot
+be replaced by an ordinary user-defined `=` body. A type customizes the
+transition with a [replacement constructor](terms.md#replacement-constructor):
+
+```zax
+replacement +++ final : ()(
+    rhs : Input readonly &
+) = {
+    // `_` initially contains the previous receiver state.
+}
+```
+
+`replacement` is contextual syntax only when it immediately precedes `+++`
+where a constructor declaration is legal. Elsewhere it remains an ordinary
+identifier:
+
+```zax
+replacement := makeValue()
+value.replacement()
+
+Example :: type {
+    replacement : String
+}
+```
+
+The replacement constructor:
+
+- uses the destination's existing allocation;
+- receives `_` with the old representation and resources;
+- has transitional mutable and writable construction authority without
+  `unsafe pliable`;
+- may retain, destroy, replace, move, copy, or initialize members in place;
+- selects its declared right-hand operand through ordinary parameter and
+  overload rules;
+- cannot return results; and
+- must establish a complete valid instance before returning normally.
+
+An untouched resource may remain in its existing field and allocation. Reusing
+an address does not automatically preserve raw interior pointers when a
+contained pointee lifetime ends or is reconstructed.
+
+This document owns why reconstructive replacement is required by the qualifier
+model and its programmer-visible boundary. Complete member-transition analysis,
+fallback generation, aliasing, destructor ordering, move/copy/`last`
+interaction, candidate ranking, recoverable panic, callbacks, reentrancy, async,
+and concurrency belong to future constructor, lifetime, operator, and safety
+work.
+
+If panic is terminal, partially transitioned storage does not return to ordinary
+execution. Any future recoverable panic model must define separate partial
+cleanup behavior.
+
+## Type-family boundary
+
+This qualifier model does not decide whether one named type may provide distinct
+mutable and immutable implementations. Such variants could have different
+layouts, stored state, operations, and construction strategies.
+
+If a future type-family design adopts that capability:
+
+- readonly access retains the selected variant's underlying mutability;
+- a mutable readonly variant remains distinct from an immutable readonly
+  variant;
+- differently represented variants cannot be ordinary requalified views; and
+- conversion requires construction, copying, or a consuming transformation that
+  establishes the destination representation and guarantees.
+
+Exact family identity, shared APIs, defaults, self-reference inside family
+variants, conversion, reflection, structural compatibility, and syntax remain
+future type-definition and structural-typing work.
+
+## `unsafe pliable`
+
+`unsafe pliable` creates an explicit access path that locally ignores final,
+readonly, and immutable restrictions while retaining the underlying
+qualifications.
+
+```zax
+source final : LegacyValue immutable = makeLegacyValue()
+escape final unsafe pliable :
+    LegacyValue immutable readonly final & = source
+```
+
+`unsafe pliable` also bypasses the declaring binding's own final stance for
+operations through that path. The final, readonly, and immutable qualifications
+remain recorded, but none is exempt from the explicit local bypass.
+
+This escape supports narrow cases such as mutex use, hidden caches, lazy
+bookkeeping, and legacy integration. It must be used with extreme caution:
+other aliases may continue relying on the retained qualifications.
+
+### `unpliable`
+
+`unpliable` is ordinary behavior. An unpliable path respects all retained
+qualifications. The word may be written explicitly but is normally omitted.
+
+`unsafe pliable` cannot be selected through an omission default or a default
+directive. Its purpose requires a local `unsafe` marker. Because `unpliable` is
+the only ordinary behavior, no directive is needed to select it.
+
+### Difference from an unsafe cast
+
+An unsafe cast produces a differently qualified view. `unsafe pliable` retains
+the original qualifications and ignores them locally:
+
+```zax
+source final : Payload readonly = makePayload()
+escape unsafe pliable : Payload readonly final & = source
+
+explicitView unpliable : Payload readonly final & = escape
+ordinaryView : Payload readonly final & = escape
+```
+
+Both new views respect the retained readonly qualification.
+
+### Non-propagation
+
+Pliability is removed at every new boundary unless explicitly reintroduced:
+
+- assigning or aliasing from an `unsafe pliable` source does not make the
+  destination `unsafe pliable`;
+- dereferencing does not carry pliability into another pointer or reference
+  level;
+- an operator may use an `unsafe pliable` operand's bypass for the current
+  operation, but its result receives only the selected candidate's declared
+  qualifications;
+- function results cannot carry pliability as a returned property; and
+- captures preserve the source qualifications but do not inherit source
+  pliability.
+
+An explicit capture may create a new `unsafe pliable` capture binding. The
+capture clause is then the visible unsafe introduction site. Exact capture
+syntax remains function design.
+
+### Local aliases and members
+
+A local alias can minimize the unsafe region:
+
+```zax
+useValue final : ()(input : LegacyValue immutable) = {
+    local unsafe pliable : LegacyValue immutable & = input
+    local.callMutableFunction()
+}
+```
+
+A member may advertise an interior-mutation escape:
+
+```zax
+CacheOwner :: type {
+    cache unsafe pliable : LegacyCache
+}
+```
+
+`mutable` on a member describes that member value's mutability. It does not
+authorize mutation through a readonly or immutable container path. Such a bypass
+must be written `unsafe pliable`.
+
+### Parameters
+
+A parameter may introduce a local bypass:
+
+```zax
+useValue final : ()(
+    input unsafe pliable : LegacyValue immutable
+) = {
+    input.callMutableFunction()
+}
+```
+
+Candidate selection uses the parameter's declared `LegacyValue immutable`
+requirement. After binding, the parameter path gains the explicit unsafe bypass.
+The caller need not pass an `unsafe pliable` argument, and the bypass does not
+cascade through every source-level caller.
+
+A function may instead accept writable access, with its caller creating a
+localized `unsafe pliable` alias before the call. A local alias minimizes the
+unsafe region; an `unsafe pliable` parameter advertises a function-wide argument
+escape at the declaration boundary.
+
+Compiler and tooling analysis must preserve the possibility of mutation through
+transitive aliases. It may track an internal effect without requiring every
+source-level caller to repeat `unsafe pliable`.
+
+### Safety and optimization
+
+`unsafe pliable` has defined mechanical semantics: the compiler must preserve
+the requested access and mutation. The operation is not itself undefined
+behavior.
+
+The programmer assumes responsibility for consequences. Broken invariants, data
+races, invalid states, lifetime violations, or other misuse may produce
+undefined behavior. Debug tooling may insert checks and panic when it detects a
+problem, but such instrumentation is not a language guarantee.
+
+An `unsafe pliable` escape is an optimization invalidation boundary. A compiler
+may rely on immutable stability only where it proves that no relevant unsafe
+escape may mutate the storage. Ordinary aliases remain typed immutable, but
+their observed values cannot be assumed unchanged across a potentially aliasing
+unsafe mutation.
+
+Language documentation owns this programmer-visible requirement, not any
+particular implementation or backend mapping.
+
+## Parameters, results, and captures
+
+Parameters resolve all three axes at the layers expressed by their prototypes.
+Ordinary call matching may preserve or strengthen promises but may not silently
+weaken an argument's qualifications.
+
+Function results are governed by the resolved prototype:
+
+- a returned pointer or reference carries the prototype's per-level
+  qualifications;
+- a returned by-value value carries its declared value mutability; and
+- the caller's destination introduces an independently resolved place.
+
+An inferred or generic result ultimately resolves to such a prototype. Complete
+generic result resolution remains later function design.
+
+Captures preserve or strengthen the captured source qualifications and never
+inherit pliability implicitly.
+
+## Receiver operands
+
+The [receiver operand](terms.md#receiver-operand) is the implicit operand
+representing the instance on which a type-defined function or operator acts.
+All three qualifier axes may constrain it and participate in candidate
+selection.
+
+No operator, including `=` or `+=`, receives conventional qualifier behavior
+merely because of traditional meaning. The reconstructive `=` scenario is
+special only because the compiler recognizes an existing varying, writable
+place whose lifetime is being replaced. A domain-specific operator may still
+accept a final, readonly, or immutable receiver operand when its declaration is
+compatible.
+
+```zax
+MyType :: type {
+    x : Integer
+
+    operator binary '=' final :
+        (result : Boolean)(lhs : Integer, rhs : String) writable final = {
+        _.x = 42
+        return true
+    }
+}
+```
+
+`_` has the declared receiver-operand qualifications like any other qualified
+place. `final` does not prohibit an operator named `=`. An operation involving
+`_` selects only candidates compatible with its final stance. Likewise,
+readonly prevents selection only of a candidate requiring writable access
+through that operand; it does not prohibit arbitrary effects elsewhere.
+
+The generated reconstructive candidate requires both varying and writable. It is
+unavailable through a readonly receiver operand even when the underlying place
+is varying.
+
+A temporary supplies the qualifications of its resolved result and
+compiler-managed temporary place. An operation through a pointer or reference
+uses the dereferenced instance's qualifications, not the pointer binding's place
+qualification.
+
+Omitted receiver-operand qualifiers use the defaults applicable where the
+operation is defined. Complete operator generation, viability, ranking,
+temporary lifetime, and default-source precedence remain future work.
+
+## Indirection
+
+Dereferencing does not change the qualifications of the dereferenced instance.
+Converting between pointer and reference forms preserves pointee-level
+qualifications.
+
+An ordinary alias to the same referent preserves that place's final/varying
+stance. Changing indirection form cannot present a varying referent as final or
+a final referent as varying.
+
+The place qualification of the pointer or reference binding itself does not
+transfer to a newly declared binding. A final pointer may produce a separately
+varying reference binding, and a final reference binding may produce a
+separately varying pointer binding, while the referent's final stance remains
+intact.
+
+Changing indirection form may not silently strip referent qualifications or
+increase ordinary access authority. Complete pointer/reference grammar,
+rebinding, ownership, and alias analysis remain later work.
+
+## Members and nested access
+
+A readonly path to a container ordinarily produces readonly paths to projected
+members:
+
+```zax
+source final : Container
+view : Container readonly final & = source
+
+view.member = 5 // error
+source.member = 5 // legal through the original writable path
+```
+
+A member requiring mutation through readonly or immutable access must introduce
+explicit `unsafe pliable`.
+
+## Move-out and destruction
+
+A final live place cannot be ordinarily replaced. Move and copy are contextual
+operations rather than persistent qualifier axes.
+
+A final place may permit destructive move-out when the operation truly consumes
+the source as part of ending its lifetime. This supports reclaiming or recycling
+expensive resources. It does not permit transfer from a still-live readonly or
+immutable source into mutable or writable state without an explicit unsafe
+operation.
+
+During destruction, the current instance receives terminal mutable and writable
+authority without requiring `unsafe pliable`. Destruction may dismantle the
+value and extract resources because its lifetime is ending. That authority
+cannot create an alias usable after the instance's lifetime.
+
+Destructor sequencing, moved-from states, partial destruction, and proof of
+terminal consumption remain lifetime and ownership work.
+
+## Concurrency boundary
+
+Immutable qualification addresses value change, not lifetime, shared backing
+storage, synchronization, safe transfer, allocation, or reference-count safety.
+It may make sharing easier but is not a complete thread-safety guarantee.
+
+Lifetime management must independently ensure that an instance outlives every
+reference to it. Mutable shared state requires synchronization. An
+`unsafe pliable` path can additionally invalidate assumptions made by other
+aliases and requires particular caution across threads.
+
+## Structural-typing boundary
+
+Qualifier-preserving conversion and structural identity are different
+questions. Conversion may not increase ordinary authority. Future
+structural-typing work must decide separately whether qualifiers participate in:
+
+- nominal identity;
+- name-and-type shape compatibility;
+- qualifier-aware layout compatibility;
+- qualifier-erased layout compatibility;
+- reflection; and
+- safe substitutability at a particular use site.
+
+Zax should eventually provide an explicit anonymization operation for
+intentional use of compatible differently named structures. Anonymization may
+not become a qualifier-elevation mechanism. Exact syntax and equivalence rules
+remain deferred.
+
+## Diagnostics and formatting
+
+Diagnostics should:
+
+- identify the entity and indirection level carrying each qualification;
+- distinguish unavailable authority from a conflicting qualification;
+- reject duplicate qualifier tokens at one syntactic point;
+- report contradictions where contextual defaults become concrete;
+- explain required and available receiver-operand qualifications when no
+  candidate is viable; and
+- distinguish an unsafe bypass from ordinary promise strengthening.
+
+Canonical ordering is a formatting rule, not semantic precedence. Formatters
+preserve explicit qualification. Linters may identify compatible restatement or
+explicit defaults as redundant.
+
+## Costs and risks
+
+The qualifier model makes useful promises visible, but those promises have
+costs:
+
+- additional indirection levels require additional qualification decisions;
+- configurable defaults make omitted source context-dependent;
+- deep immutable construction may require copying, exclusive authority, or
+  specialized construction;
+- readonly aliases do not prevent mutation through other paths;
+- explicitly varying references may observe successive value lifetimes in one
+  place;
+- reconstructive replacement introduces constructor, lifetime, and alias
+  constraints;
+- `unsafe pliable` can invalidate invariants and optimization assumptions relied
+  upon elsewhere; and
+- qualifier-sensitive overload selection can make candidate sets more complex.
+
+These costs are reasons to keep defaults sensible and unsafe escape paths local,
+not reasons to combine the three axes.
+
+## Boundaries and maturity
+
+This document is accepted conceptual design, not a formal grammar,
+implementation mapping, compatibility contract, or conformance specification.
+
+Later work may refine syntax and adjacent mechanisms while preserving:
+
+- the independence of place, value, and access qualification;
+- per-layer attachment through indirection;
+- defaults filling only unresolved axes;
+- ordinary conversions never increasing authority;
+- same-place aliases preserving the referent's actual final/varying stance;
+- mutation requiring mutable + writable;
+- reconstructive replacement requiring varying + writable;
+- deep immutability under ordinary safe behavior;
+- explicit, non-propagating unsafe pliability;
+- qualifier-aware receiver-operand selection; and
+- the separation of mutability from lifetime and thread safety.

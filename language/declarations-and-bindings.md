@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; binding, value, and access qualifier axes; the declaration-versus-assignment boundary; the general non-value definition family; `forward` and `Self` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, function and capture semantics, operator resolution, constructors and lifetimes, move/copy and ownership, detailed mutability, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete inference, function and capture semantics, operator resolution, replacement-constructor internals, constructors and lifetimes, move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -40,7 +40,7 @@ declaration.
 | `name : Type = value` | Declare `name` with an explicit type and initialize or construct it directly from `value`. |
 | `name := value` | Declare `name`, infer its type from `value`, and initialize it. |
 | `name = value` | Invoke an assignment operator using an already declared destination. |
-| `name : Type = ???` | Declare live storage while explicitly and unsafely bypassing ordinary value initialization and construction. |
+| `name : Type = unsafe ???` | Declare live storage while explicitly and unsafely bypassing ordinary value initialization and construction. |
 
 ### Inferred declarations
 
@@ -131,10 +131,10 @@ It is not an initialize-later form.
 
 ### Explicitly uninitialized storage
 
-`???` is an explicit unsafe escape from ordinary initialization:
+`unsafe ???` is an explicit escape from ordinary initialization:
 
 ```zax
-item : Item = ???
+item : Item = unsafe ???
 ```
 
 This form:
@@ -151,7 +151,7 @@ It supports low-level initialization:
 
 ```zax
 if condition {
-    item : Item = ???
+    item : Item = unsafe ???
     initializeThroughAssembly(item)
 } // Item's destructor runs
 ```
@@ -398,13 +398,17 @@ This is dependency-directed later resolution, not speculative rebinding.
 
 ## Qualifier axes
 
-Zax distinguishes three independent programmer-facing concerns:
+Complete programmer-facing qualifier behavior is defined by
+[Zax qualifiers](qualifiers.md). This section establishes the declaration-facing
+axes and attachment boundaries.
+
+Zax distinguishes three independent concerns:
 
 | Pair | Governs |
 | --- | --- |
 | `final` / `varying` | Whether a storage place may be replaced |
 | `mutable` / `immutable` | Whether the underlying value may ever change |
-| `writable` / `readonly` | Whether the current access path may modify the value |
+| `writable` / `readonly` | Whether the current access path may perform an otherwise permitted content mutation or place replacement |
 
 In short:
 
@@ -462,7 +466,7 @@ foo = other       // ordinary replacement is unavailable
 foo.member = 200  // legal when Bar and this access are mutable and writable
 ```
 
-Place capability survives references and captures:
+Place truth survives references and captures:
 
 ```zax
 source final : Foo = makeFoo()
@@ -473,24 +477,34 @@ Normal replacement through `stableView` remains unavailable because the
 referenced place is final. A qualifier on the reference variable itself cannot
 strip that referent qualification.
 
-A varying place may provide a final view:
+An alias to a varying place preserves that stance:
 
 ```zax
-source : Foo = makeFoo()
-stableView : Foo final & = source
+source varying : Foo = makeFoo()
+trackingView : Foo varying & = source
 ```
 
-The reverse elevation is not available through an ordinary conversion:
+A final view of that same referent would be false:
 
 ```zax
-source final : Foo = makeFoo()
-replacementView : Foo varying & = source // error
+falseView : Foo final & = source // error: source's place is varying
 ```
 
-Reference bindings and their referents may eventually have independent place
-qualifications. Exact reference rebinding, assignment, and qualifier syntax
-remain later reference design. This document establishes only that an alias
-preserves or reduces the source place's capability; it never increases it.
+Reference bindings and their referents have independent places:
+
+```zax
+view final : Foo varying & = source
+```
+
+The name-side `final` applies to `view`'s reference binding. The type-side
+`varying` describes the referent.
+
+An immutable reference tracking a varying place must spell `varying`
+explicitly. Omission must not silently introduce a path that may observe
+successive immutable lifetimes.
+
+Exact reference rebinding, assignment, and qualifier syntax remain later
+reference design. An ordinary alias preserves the source place's actual stance.
 
 Copying by value creates a new place with its own declaration stance.
 
@@ -517,9 +531,11 @@ reader : Foo readonly & = value
 No access may modify the underlying value. An immutable value cannot provide a
 writable view.
 
-The ordinary unqualified access default may be writable. Explicit `writable`
-remains useful where a positive capability must be stated, selected, reflected,
-or restored. Exact qualifier grammar is later design.
+The baseline unqualified access default is writable and may be changed for an
+applicable source context. Explicit `writable` remains useful where a positive
+capability must be stated, selected, reflected, or restored. Defaults fill only
+unresolved axes and never override qualifications supplied by a source,
+referent, or resolved type. Exact default-directive syntax is later design.
 
 ### Capability conversions
 
@@ -527,13 +543,16 @@ An ordinary conversion may remove permissions or request weaker access:
 
 - immutable values may provide readonly access;
 - writable access may be viewed as readonly;
-- varying places may be viewed as final;
-- final places may not become varying;
 - readonly access may not become writable; and
 - mutable or readonly values do not thereby become immutable.
 
+Final/varying is preserved for an alias of the same place. A new by-value
+destination, constructed result, copy, or move destination resolves its own
+independent place stance.
+
 The complete cast lattice, unsafe conversions, reference projection, and capture
-projection remain later design.
+projection remain later design. They must preserve the constraints established
+by [Zax qualifiers](qualifiers.md).
 
 ### Move, copy, and future capabilities
 
@@ -570,11 +589,19 @@ the compiler:
 
 No operator can introduce an unresolved operand as a declaration.
 
-Generated operators are ordinary candidates with capability requirements. A
-normal replacement candidate requires a varying destination and is unavailable
-for a final place. A domain-specific `=` candidate that accepts a final or
-readonly left operand may remain selectable because the token itself is not
-banned:
+Generated operators participate in ordinary candidate selection with qualifier
+requirements. The compiler-recognized reconstructive `=` scenario requires both
+a varying destination and a writable path. It is unavailable for a final place
+or through readonly access.
+
+The reconstructive candidate has a compiler-owned lifetime skeleton and may
+select a contextual
+[`replacement +++` constructor](qualifiers.md#reconstructive-replacement).
+User-defined code does not replace that skeleton with an ordinary `=` body.
+
+A domain-specific `=` candidate that accepts a final or readonly left operand
+may remain selectable because the token itself is not assigned conventional
+meaning in every scenario:
 
 ```zax
 foo final : Bar = makeBar()
@@ -595,7 +622,8 @@ selects construction or initialization behavior for the new `Bar`. Later
 `foo = source` performs operator selection against an existing destination.
 
 Exact built-in results, expression value categories, overload ranking,
-conversion, and generated operator sets remain later operator design.
+conversion, reconstructive-candidate priority, and generated operator sets
+remain later operator design.
 
 ## Non-value definitions
 
@@ -614,6 +642,18 @@ The family does not imply one runtime behavior. In particular, `::` does not mea
 functions, inputs, directives, and evaluation context. Build-time values use
 ordinary `:` or `:=` bindings.
 
+A named type becomes visible as an incomplete type before its body is resolved:
+
+```zax
+Node :: type {
+    next : Node *
+}
+```
+
+The self-name resolves and pointer representation is finite. Operations
+requiring the completed size, layout, or member set remain pending until the
+definition completes.
+
 Functions and ordinary values use `:`, including values with anonymous types:
 
 ```zax
@@ -625,23 +665,30 @@ value final : :: type {
 
 ### `forward`
 
-Named recursive types use an explicit forward declaration:
+`forward` introduces a name before its complete declaration is otherwise
+encountered. A named type does not need `forward` merely to refer to its own name
+inside its body.
+
+Forward declaration remains useful for out-of-order and mutually recursive
+names:
 
 ```zax
-Node :: forward type
+OtherNode :: forward type
 
 Node :: type {
+    next : OtherNode *
+}
+
+OtherNode :: type {
     next : Node *
 }
 ```
 
-The later definition completes the forwarded declaration.
+The later definition completes `OtherNode`.
 
 Direct infinitely recursive layout remains an error:
 
 ```zax
-Node :: forward type
-
 Node :: type {
     next : Node // error: infinitely recursive layout
 }
@@ -649,23 +696,13 @@ Node :: type {
 
 Mutually recursive named types can forward each required name.
 
-### `Self`
+### Anonymous recursive type syntax
 
-`Self` denotes the innermost enclosing type. It permits self-reference when no
-declared type name exists:
+Named types use their own incomplete names for self-reference. Anonymous
+recursive type syntax is not established by this design.
 
-```zax
-value : :: type {
-    next : Self *
-}
-```
-
-It may also express explicit innermost-type intent inside a named type.
-Automatically making a type's own unforwarded name incomplete inside its body is
-not part of the baseline.
-
-Complete forward categories, recursive-type identity, and dependency algorithms
-remain later type and name-resolution work.
+Complete forward categories, anonymous recursive types, recursive-type identity,
+and dependency algorithms remain later type and name-resolution work.
 
 ## Declaration contexts
 
@@ -756,6 +793,10 @@ Diagnostics should distinguish:
 - same-scope redeclaration;
 - shadowing without permission from the hidden declaration;
 - use of an ordinary binding before initialization completes;
+- an implicit immutable reference to a varying place where explicit `varying`
+  acknowledgement is required;
+- a same-place alias whose final/varying stance conflicts with its referent;
+- duplicate qualifier tokens at one syntactic point;
 - conflicting explicit place qualifiers;
 - a type mismatch or unavailable initializer;
 - an unavailable operator candidate for the qualified operands;
@@ -782,7 +823,8 @@ anonymous final : :: type { }
 
 A formatter may canonicalize `: =` to `:=`. It must preserve the separation
 among binding, value, access, and referent-place qualifiers and must not silently
-resolve contradictory source intent.
+resolve contradictory source intent. It may normalize qualifier ordering and
+spacing but must not add or remove explicit qualifiers.
 
 ## Boundaries and maturity
 
@@ -795,8 +837,10 @@ It establishes constraints that later work must preserve:
   earlier inferred declaration;
 - functions and captures may refine recursive bindings without allowing
   executable ordinary self-initialization;
+- named non-value definitions may expose incomplete self-names without making
+  ordinary value initializers self-referential;
 - constructors and lifetime policies must preserve default, direct, and explicit
-  `???` distinctions;
+  `unsafe ???` distinctions;
 - move, copy, ownership, and qualifier design must preserve independent binding,
   value, and access capabilities;
 - operator design must not permit operator overloads to introduce unresolved

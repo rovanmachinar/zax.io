@@ -79,12 +79,13 @@ operator pre unary
 operator post unary
 override
 own
-pliable
+unsafe pliable
 private
 promise
 raw
 redo until
 redo while
+replacement +++
 return
 scope
 shallow
@@ -108,6 +109,10 @@ yield suspend
 #### Keyword disambiguation
 
 Keywords are reserved only within the context of where the keyword is allowed and legal. To disambiguate keywords from variables, variables can be postfixed with an underscore (`_`) but otherwise the underscore postfix (`_`) should never be used. Usage of keywords as variables is discouraged and usage of postfix underscores are also discouraged.
+
+`replacement` is contextual only when immediately followed by `+++` where a
+constructor declaration is legal. In every other context it remains an ordinary
+identifier and requires no underscore disambiguation.
 
 ````zax
 // legal name because `readonly` is a keyword in some contexts
@@ -201,7 +206,7 @@ The operators have built-in interpretations that cannot be overridden. The langu
 ?                   // post-unary optional type operator
 ??                  // binary ternary operator (combined with sub-statement
                     // separator operator `;;`)
-???                 // unary uninitialized type operator
+unsafe ???          // explicit unsafe uninitialized type operator
 >>                  // binary function composition
 |>                  // binary function invocation chaining
 ->                  // post-unary argument combine operator (combine remaining

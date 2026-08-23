@@ -3,11 +3,27 @@
 
 ## Pointers and References
 
+Current per-level qualifier-preservation constraints are defined by
+[Zax qualifiers](language/qualifiers.md#indirection). This page remains legacy
+input for complete pointer/reference grammar, ownership, lifetime, `lease`,
+`last`, and rebinding behavior.
+
 ### Basics
 
 #### Pointer basics
 
 Pointers do not contain data directly. Instead pointers contain an address in memory where real data is located. Pointers are defaulted to point to nothing and can be reset to point to nothing. Pointers can also point to garbage data or invalid memory if a value being pointed to has been previously discarded.
+
+Dereferencing does not change the qualifications of the dereferenced instance.
+Changing between pointer and reference forms preserves pointee/referent
+qualifications. The newly declared pointer or reference binding receives its own
+place qualification; a final source binding does not make that new binding
+final.
+
+The referent place's own final/varying stance is preserved. An ordinary
+conversion cannot present a varying referent as final or a final referent as
+varying. This referent stance is distinct from the independently resolved place
+of the pointer or reference binding itself.
 
 ````zax
 A :: type {
@@ -169,7 +185,7 @@ func final : ()() = {
 
 ### Pointer property overhead
 
-Pointers can have additional properties associated with them and may contain additional overhead data more than a `raw` pointer typically would contain. For example, additional keywords such as `own` when applied to a pointer will indicate additional functionality is associated with a pointer. See [Memory Allocation](memory-allocation.html) for additional keywords that can add functionality to pointers.
+Pointers can have additional properties associated with them and may contain additional overhead data more than a `raw` pointer typically would contain. For example, additional keywords such as `own` when applied to a pointer will indicate additional functionality is associated with a pointer. See [Memory Allocation](memory-allocation.md) for additional keywords that can add functionality to pointers.
 
 In the example below, pointers aren't just `raw` pointers but can contain ownership properties (which allows the pointer type to deallocate the memory associated with the pointer automatically when a variable owning a pointer to a value is discarded). A programmer must acknowledge any property overhead they wish to include on their pointers as desired/needed. 
 
@@ -406,11 +422,17 @@ Normally references and pointers `lease` their ownership to other functions for 
 
 Alternatively, references and pointers can have a `last` qualifier. A `last` qualifier on a reference or pointer indicates a receiver of this type will inherit all contents of a type as this reference or pointer is the very `last` owner to an underlying type's contents. Contents contained in a `type` will be discarded if not claimed. When a `last` qualifier is specified on a `type`'s instance, ownership of any contents can be claimed by a receiving function. This helps optimization by transferring contents out of one `type`'s instance into another prior to an instance's disposal rather than making content copies. Later when an instance is disposed, any claimed contents will have already been transferred out of a reference or pointer. This saves contents from having to be cloned first only to have any original contents disposed moments later. 
 
-Types qualified as `last` cannot be `readonly` or `immutable` types as these types cannot have their contents transferred out due to internal their contents being effectively `immutable`. A `lease` option is required (and defaulted) for any `readonly` and `immutable` references or pointers and a `last` qualifier is incompatible.
+`last` alone does not authorize weakening readonly or immutable qualification.
+Contents may be extracted from such a value only when the operation truly
+consumes the source as part of ending its lifetime. Whether and how `last` proves
+that terminal condition remains future lifetime and ownership work.
 
 Types passed by-value do not require a `last` qualifier as arguments passed by-value can always have their contents transferred out already. Passing by-value always causes a fresh copy of a `type`'s instance's contents rather than providing any `lease` reference or pointer to an existing type's contents (except `strong` or `handle` pointers which are designed implicitly to have shared ownership of a common instance).
 
-An `as` operator can be used to change a `last` or `lease` qualifier on a type. The `last` and `lease` qualifiers are mutually exclusive and a `last` cannot be applied to a `type`'s value that is currently qualified as `readonly` or `immutable`.
+An `as` operator is proposed for changing `last` or `lease` qualification. Those
+qualifiers are mutually exclusive in the legacy model. Such a conversion may
+not use `last` as an implicit escape from readonly or immutable qualification;
+terminal consumption or an explicit unsafe operation is required.
 
 
 #### Temporary variables

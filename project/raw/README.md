@@ -23,6 +23,8 @@ background.
 | [Legacy feature catalog](feature-catalog.md) | Existing language topics are inventoried or routed into accepted owners | Disposition each feature claim, then retire the catalog |
 | [Assembly and foreign interoperability](interop.md) | Assembly, FFI, ABI, or binding behavior is designed | Consume through a subject-specific work item |
 | [Lifetime strategies](lifetimes.md) | Pointer and lifetime documentation is reviewed | Consume through a subject-specific work item |
+| [Mutability-indexed type families](mutability-indexed-type-families.md) | Type definitions, qualifier-indexed representation, structural compatibility, reflection, generics, or mutable/immutable conversion are reviewed | Evaluate distinct variants against separately named types and composition, then move accepted behavior or explicitly reject and retire the input |
+| [Replacement construction](replacement-construction.md) | Constructors, lifetime transitions, generated replacement, move/copy, aliasing, panic, async, or concurrent replacement are reviewed | Move each accepted rule to its construction, lifetime, operator, pointer, safety, async, or concurrency owner, then retire the input |
 | [Safety boundaries](safety.md) | Public guarantees or unsafe-boundary behavior is designed | Consume through a subject-specific work item |
 | [Language similarity guide](similarity.md) | Enough accepted Zax concepts exist to compare semantics accurately | Consume through a future numbered work item, then move or retire based on that work's documentation fit dry run |
 | [Structural typing](structural-typing.md) | Structural identity, equivalence, layout, conversion, or subtyping is reviewed | Treat the preserved agent-authored proposal as candidate input, then retire it |

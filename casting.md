@@ -3,6 +3,11 @@
 
 ## Casting
 
+Current qualifier-preservation, ordinary promise-strengthening, and explicit
+unsafe-weakening constraints are defined by
+[Zax qualifiers](language/qualifiers.md). The complete cast catalog and the
+structural compatibility proposals on this page remain legacy input.
+
 ### Intrinsic system literal conversion
 
 Zax does not perform type conversion, promotion or demotion of intrinsic compatible types. Casting operators `as` or `unsafe as` must be used to convert from one intrinsic type to another type.
@@ -363,28 +368,41 @@ funcByRef(myTypePointerToNothing.)                  // PANIC AT RUNTIME
 
 ### `type` casting using `as`
 
-A `type` deemed compatible with another `type` can be converted from one `type` to another `type` using the `as` operator. Compatibility is determined by ensuring the destination type contains all of the same types in the same order occupying the same space in memory. The variable names for a `type` need not be the same but all underlying `type`s must all be compatible. Likewise important qualifiers must not be lost.
+The legacy material below explores layout-based conversion between structurally
+compatible types. Structural identity, name relevance, layout equivalence,
+qualifier-aware and qualifier-erased compatibility, and anonymization remain
+future design. The details in this section are therefore candidate input rather
+than current compatibility rules.
 
-Other considerations:
+Current qualifier constraints still apply:
+
+- ordinary conversions may strengthen promises but may not increase authority;
+- `writable` may become `readonly`;
+- ordinary pointer/reference conversion may not change `readonly` to `writable`,
+  the final/varying stance of the same referent place, or `immutable` to
+  `mutable`;
+- explicit unsafe conversion may weaken those qualifications;
+- a mutable alias does not safely become immutable while mutable aliases may
+  remain; and
+- a new by-value result may use different mutability only when construction,
+  copying, or a consuming transition establishes the required guarantee.
+
+A newly constructed by-value destination has its own independently resolved
+final/varying stance. That is not a conversion of the source place.
+
+Legacy structural considerations:
 * types declared as `once` are ignored
 * functions declared as `final` do not need to match in declaration with the exception of that captured data must also match
     * captured data types must be identical and in the same type order (otherwise value copy of the captured data cannot work)
 * pointers and references must be of equivalent types
 * reference can become pointers of the same `type` but pointers cannot become references (due to the assumption that pointers might point to `Nothing` whereas references always point to a valid instance)
-* values declared which are `readonly` or `final` are ignored where no storage inside the `type` is required
+* whether non-storage qualifications participate in structural compatibility remains unresolved
 * the source `type` can have more contained values than the `destination` type and still match
 * type [slicing](https://en.wikipedia.org/wiki/Object_slicing) can occur if a by-value copy casting is done (which may be desirable in some circumstances to extract the data out of a container safely)
-* casting `as` a by-value type will treat the source `type` as a `type` of `destination` and will use the copy constructor of the destination type to fulfill `unsafe as` request
+* casting `as` a by-value type will treat the source `type` as a `type` of `destination` and will use the copy constructor of the destination type to fulfill the request
 * casting `as` a by-value `type` will not be allowed if the destination `type` has disabled copy construction
 * a variable's `private` keyword is ignored and a `private` value can be accessed as non-`private` values in the destination (if the destination does not declare the new variable for the `type` as `private`)
     * `private` is used to hide variables from view and should never be used as a method to keep data secret
-* `readonly` qualification cannot be lost during the conversion
-    * in by-reference / by-pointer conversions, any contained values must remain `readonly` in the destination if the source had the `type` as `readonly`
-    * in by-reference / by-pointer conversions the `type` must remain readonly if the source was readonly
-    * by-value conversions are not required to maintain `readonly` qualification for contained types if the `type`'s values are copied and the contained types are not references or pointers
-* using `as` to convert from `mutable` and `immutable` is legal if the underlying types are deemed compatible
-* by-reference / by-pointer converting from an `immutable` to `mutable` is not allowed (even if the types are compatible)
-* by-value converting from an `immutable` to `mutable` is allowed (if the types are compatible)
 * the memory layout and alignment of a `type` up to the final type of the destination must be identical
 * narrowing or broadening of intrinsic types during a conversion is not allowed on contained types as the conversion would not be legal (since the types do not share a common memory layout)
 

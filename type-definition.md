@@ -4,10 +4,14 @@
 ## Type Definition
 
 Accepted value and member declaration forms, default and explicitly bypassed
-initialization, `forward`, and `Self` boundaries are defined by
+initialization, named type self-reference, and `forward` boundaries are defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md). This
 page remains legacy input for complete type-definition, construction, union, and
 function-type behavior.
+
+A named type resolves its own incomplete name inside its body. Direct recursive
+storage remains a layout error. Anonymous recursive type syntax is not
+established by current design.
 
 ### Trivial type definitions
 
@@ -60,14 +64,17 @@ Error :: type {
 
 ### Uninitialized values
 
-Types by default will automatically initialize to a known default value. However, for optimization (or other) reasons, types can be left uninitialized using a triple question mark (`???`). Whatever random bits happen to be in memory when a type is instantiated will become embedded into a `type`'s instance value.
+Types automatically initialize to a known default value. For low-level or
+optimization-sensitive work, `unsafe ???` explicitly bypasses initialization.
+The storage representation remains indeterminate until the programmer
+establishes a valid value.
 
 ````zax
 :: import Module.System.Types
 
 A :: type {
-    a : Integer = ???   // reading uninitialized values is undefined behavior
-    b : Float = ???
+    a : Integer = unsafe ??? // reading before initialization is undefined behavior
+    b : Float = unsafe ???
     c : Float = 2.0     // only the `c` value has a initialized value
 }
 ````

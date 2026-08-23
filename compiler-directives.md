@@ -1318,19 +1318,25 @@ func5 final : ()(a : MyType, b : MyType) deep [[asynchronous]] = {
 ````
 
 
-### `variables` and `types` mutability defaults directive
+### `variables` and `types` qualifier defaults directive
 
 #### `variables` default directive
 
-A `[[variables=<option>]]` directive declares defaults when declaring variables. See the [mutability](mutable.md) section for more details. This directive only applies to all source code following a `variables` directive and does not change any defaults for an imported module.
+A `[[variables=<option>]]` directive declares place-replacement defaults when
+declaring variables. See [Zax qualifiers](language/qualifiers.md) for how
+contextual defaults combine with inherited and explicit qualification. This
+directive applies only to source following it and does not change defaults for
+an imported module.
 
 The options are:
 * `final` - all declared variable are `final`
 * `varying` (default if `variables` directive has not been declared) - all declared variables are declared as `varying`
-* `pliable` - all declared variables are `pliable` (thus `readonly` declarations will not be respected)
-* `unpliable` (default if `variables` directive has not been declared) - all declared variables are `unpliable` (thus `readonly` declarations will be ignored)
 * `push` - push a current `variables` state onto a compiler's `variables` stack
 * `pop` - pop a previous `variables` state from a compiler's `variables` stack
+
+`pliable` and `unpliable` are not variable-default options. Unsafe pliability
+must be introduced locally with explicit `unsafe pliable`; ordinary behavior is
+unpliable without a directive.
 
 Example of how `varying` / `final` default applied to variables:
 
@@ -1382,75 +1388,30 @@ my3 varying : MyType
 my3.value1 = 6  // OKAY
 ````
 
-Example of how `pliable` / `unpliable` default applied to variables:
-
-````zax
-MyType :: type {
-    value1 : Integer = 5
-    value2 : String = "hello"
-}
-
-[[variables=unpliable]] 
-
-x1 := 5
-x1 = 6          // OK (unpliable variables respect a type's mutability)
-
-x2 : readonly = 5
-x2 = 6          // ERROR: type is `readonly`
-
-x3 : writable = 6
-x3 = 6          // OK (unpliable variables respect a type's mutability)
-
-mx1 : MyType
-mx1.value1 = 6  // OKAY
-
-mx2 final : MyType readonly
-mx2.value1 = 6  // ERROR: type is `readonly`
-
-mx3 varying : MyType writable
-mx3.value1 = 6  // OKAY
-
-
-[[variables=pliable]]
-
-y1 := 5
-y1 = 6          // OKAY
-
-y2 : readonly = 5
-y2 = 6          // OKAY (type is readonly but value is pliable)
-
-y3 : writable = 6
-y3 = 6          // OKAY
-
-my1 : MyType
-my1.value1 = 6  // OKAY
-
-my2 final : MyType readonly
-my2.value1 = 6  // OKAY (type is readonly but value is pliable)
-
-my3 varying : MyType writable
-my3.value1 = 6  // OKAY
-
-my4 varying : MyType immutable
-my4.value1 = 6  // ERROR: even though a value is `pliable` the underlying
-                // `immutable` `type` qualifier is not affected by `pliable`
-````
-
-
 #### `types` default directives
 
-The `[[types=<options>]]` directive declares defaults for the declaration of all types (and not a type's definition). See the [mutability](mutable.md) section for more details. This directive only applies to all source code following the directive and does not change the defaults for any imported modules.
+The `[[types=<options>]]` directive declares value-mutability and access defaults
+for type uses, not for a type's definition. See
+[Zax qualifiers](language/qualifiers.md) for qualifier resolution. This
+directive applies only to source following it and does not change defaults for
+an imported module.
 
 The options are:
 * `mutable` (default if `types` directive has not been declared) - if a default is not specified for a type, a declared type is assumed to be `mutable`
 * `immutable` - if a default is not specified for a type, a declared type is assumed to be `immutable`
-* `readonly` - if a `mutable` type is declared, the type is assumed to be `readonly` once constructed
-* `writable` (default if `types` directive has not been declared) - if a `mutable` type is declared, the type is assumed to remain `mutable` (unless `readonly` is applied)
+* `readonly` - an unresolved access path is `readonly`
+* `writable` (default if `types` directive has not been declared) - an unresolved access path is `writable`
 * `push` - push the current `types` state onto the stack
 * `pop` - pop the previous `types` state from the stack
 
+Defaults fill only unresolved axes. They never override qualifications inherited
+from a source or referent. A directive state containing both `immutable` and
+`writable` is legal, but a declaration to which both defaults apply is
+contradictory and fails at that declaration. Explicit qualification may resolve
+the axes before those defaults apply.
 
-Example of how `mutable` / `mutable` default applied to types:
+
+Example of how `mutable` / `immutable` defaults apply to type uses:
 
 ````zax
 MyType :: type {
@@ -1554,11 +1515,15 @@ my3.value1 = 6  // ERROR: type is readonly
 
 #### `functions` default directives
 
-A `[[functions=<options>]]` directive declares default `readonly`/`writable` qualifier for all functions with a `type`. See the [mutability](mutable.md) section for more details. This directive only applies to source code following a `functions` directive and does not change a default for an imported modules.
+A `[[functions=<options>]]` directive declares the default
+`readonly`/`writable` access requirement for receiver operands of type-defined
+functions. See [Zax qualifiers](language/qualifiers.md#receiver-operands). This
+directive applies only to source following it and does not change defaults for
+an imported module.
 
 The options are:
 * `readonly` - a function declared on a type is `readonly` by default
-* `writable` (default if `types` directive has not been declared) - a function declared on a type is `writable` by default
+* `writable` (default if a `functions` directive has not been declared) - a function declared on a type is `writable` by default
 * `push` - push a current `functions` state onto a compiler's functions stack
 * `pop` - pop a previous `functions` state from a compiler's functions stack
 
