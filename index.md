@@ -22,6 +22,9 @@ producing them.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
+- Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
+  for constructors, construction packets, generated lifecycle operations,
+  same-storage replacement, and destruction.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -32,6 +35,7 @@ producing them.
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
 - [Qualifiers](language/qualifiers.md)
+- [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes

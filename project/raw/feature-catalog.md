@@ -112,6 +112,20 @@ Do not use this file as onboarding or as evidence that a feature is committed.
 - Runtime panics with selective disabling
 - Harmonized warning-suppression mechanisms across compilers
 
+## Recorded dispositions
+
+Focused construction work has dispositioned these catalog entries:
+
+| Catalog input | Disposition |
+| --- | --- |
+| Constructors and destructors | Current conceptual behavior is owned by [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md) |
+| Default type initialization | Declaration forms are owned by [Zax declarations and bindings](../../language/declarations-and-bindings.md); member and lifecycle behavior is owned by the construction owner |
+| Allocation versus initialization control | Storage-versus-value lifecycle separation is owned by the construction owner; complete allocation policy remains legacy/future work |
+| Uninitialized memory type control | `unsafe ???` declaration behavior is owned by declarations and bindings; construction interaction is owned by the construction owner |
+| Harmonized warning-suppression mechanisms across compilers | Preserved for future work in [raw analysis-control input](analysis-controls.md) |
+
+These dispositions do not accept the remaining catalog items.
+
 ## Activation and retirement
 
 Use this file when inventorying existing concepts or checking whether legacy

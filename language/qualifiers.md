@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, replacement field-transition analysis, constructor/destructor sequencing, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -107,7 +107,7 @@ The axes combine when deciding whether a change is available:
 | Operation | Required qualifications |
 | --- | --- |
 | Mutate the current value lifetime's contents | `mutable` + `writable` |
-| Reconstruct a place with another value lifetime | `varying` + `writable` |
+| Use generated reconstructive replacement for an immutable value | `immutable` + `varying` + `writable` |
 | Observe a stable immutable place | `immutable` + `readonly` + `final` |
 | Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + explicit `varying` |
 
@@ -326,26 +326,32 @@ unsafe bypass. The guarantees activate when the full instance, including all
 contained parts, has completed construction and becomes ordinarily observable.
 
 If construction does not complete, no fully constructed instance becomes live.
-Constructor cleanup, panic behavior, premature publication, and escaped
-construction-time aliases remain construction and lifetime work.
+Member sequencing, completion, panic boundaries, premature publication, and
+escaped construction-time aliases are defined or bounded by
+[Zax construction, replacement, and destruction](construction-and-destruction.md).
 
 ## Reconstructive replacement
 
 `=` has one compiler-recognized lifetime scenario in addition to arbitrary
-domain-specific operator candidates. When an existing destination is varying
-and the current path is writable, the compiler may select a generated
-**reconstructive replacement** candidate.
+domain-specific operator candidates. When an existing destination is immutable
+and varying and the current path is writable, the compiler may select a
+generated **reconstructive replacement** candidate.
 
-The generated candidate ends one enclosing value lifetime and establishes
-another in the same storage. Its lifecycle skeleton is compiler-owned and cannot
-be replaced by an ordinary user-defined `=` body. A type customizes the
-transition with a [replacement constructor](terms.md#replacement-constructor):
+A mutable, varying destination uses ordinary operator selection. It does not
+receive this generated immutable-value lifecycle transition merely because its
+place is varying.
+
+The generated candidate ends one enclosing immutable value lifetime and
+establishes another in the same storage. Its lifecycle skeleton is
+compiler-owned and cannot be replaced by an ordinary user-defined `=` body. A
+type customizes the transition with a
+[replacement constructor](terms.md#replacement-constructor):
 
 ```zax
 replacement +++ final : ()(
     rhs : Input readonly &
 ) = {
-    // `_` initially contains the previous receiver state.
+    // `_` initially contains the previous current-instance state.
 }
 ```
 
@@ -371,7 +377,7 @@ The replacement constructor:
 - may retain, destroy, replace, move, copy, or initialize members in place;
 - selects its declared right-hand operand through ordinary parameter and
   overload rules;
-- cannot return results; and
+- may return additional declared results; and
 - must establish a complete valid instance before returning normally.
 
 An untouched resource may remain in its existing field and allocation. Reusing
@@ -379,11 +385,11 @@ an address does not automatically preserve raw interior pointers when a
 contained pointee lifetime ends or is reconstructed.
 
 This document owns why reconstructive replacement is required by the qualifier
-model and its programmer-visible boundary. Complete member-transition analysis,
-fallback generation, aliasing, destructor ordering, move/copy/`last`
-interaction, candidate ranking, recoverable panic, callbacks, reentrancy, async,
-and concurrency belong to future constructor, lifetime, operator, and safety
-work.
+model and its qualification boundary. Complete fallback, member transition,
+resource retention, result, destruction, and alias behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
+Complete move/copy/`last`, arbitrary operator ranking, recoverable panic,
+callbacks, reentrancy, async, and concurrency remain future focused work.
 
 If panic is terminal, partially transitioned storage does not return to ordinary
 execution. Any future recoverable panic model must define separate partial
@@ -568,8 +574,8 @@ selection.
 
 No operator, including `=` or `+=`, receives conventional qualifier behavior
 merely because of traditional meaning. The reconstructive `=` scenario is
-special only because the compiler recognizes an existing varying, writable
-place whose lifetime is being replaced. A domain-specific operator may still
+special only because the compiler recognizes an immutable value in an existing
+varying place through a writable path. A domain-specific operator may still
 accept a final, readonly, or immutable receiver operand when its declaration is
 compatible.
 
@@ -591,9 +597,9 @@ place. `final` does not prohibit an operator named `=`. An operation involving
 readonly prevents selection only of a candidate requiring writable access
 through that operand; it does not prohibit arbitrary effects elsewhere.
 
-The generated reconstructive candidate requires both varying and writable. It is
-unavailable through a readonly receiver operand even when the underlying place
-is varying.
+The generated reconstructive candidate requires immutable, varying, and
+writable. It is unavailable for a mutable value or through a readonly receiver
+operand even when the underlying place is varying.
 
 A temporary supplies the qualifications of its resolved result and
 compiler-managed temporary place. An operation through a pointer or reference
@@ -656,8 +662,10 @@ authority without requiring `unsafe pliable`. Destruction may dismantle the
 value and extract resources because its lifetime is ending. That authority
 cannot create an alias usable after the instance's lifetime.
 
-Destructor sequencing, moved-from states, partial destruction, and proof of
-terminal consumption remain lifetime and ownership work.
+Destructor sequencing is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#destruction).
+Moved-from states and proof of terminal consumption remain lifetime and
+ownership work.
 
 ## Concurrency boundary
 
@@ -716,8 +724,8 @@ costs:
 - readonly aliases do not prevent mutation through other paths;
 - explicitly varying references may observe successive value lifetimes in one
   place;
-- reconstructive replacement introduces constructor, lifetime, and alias
-  constraints;
+- immutable reconstructive replacement introduces constructor, lifetime, and
+  alias constraints;
 - `unsafe pliable` can invalidate invariants and optimization assumptions relied
   upon elsewhere; and
 - qualifier-sensitive overload selection can make candidate sets more complex.
@@ -738,7 +746,7 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - ordinary conversions never increasing authority;
 - same-place aliases preserving the referent's actual final/varying stance;
 - mutation requiring mutable + writable;
-- reconstructive replacement requiring varying + writable;
+- generated reconstructive replacement requiring immutable + varying + writable;
 - deep immutability under ordinary safe behavior;
 - explicit, non-propagating unsafe pliability;
 - qualifier-aware receiver-operand selection; and

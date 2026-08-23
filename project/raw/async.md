@@ -36,8 +36,36 @@ These costs should remain visible and selectable where practical.
 Async I/O, coroutines, concurrency, scheduling, and parallelism are related but
 distinct. A future design must not collapse them merely because they interact.
 
+## Suspending lifecycle pressure
+
+Current construction, replacement, and destruction are synchronous. A future
+suspending constructor would expose partial state across a suspension:
+
+```zax
++++ final async : ()() = {
+    _.first.+++()
+    await acquireResource()
+    _.second.+++()
+}
+```
+
+Before adopting such behavior, future async work must define:
+
+- where the partial current instance is stored;
+- which access paths may exist across suspension;
+- cancellation after only some members are live;
+- cleanup and allocator responsibility;
+- which executor or thread resumes the lifecycle operation;
+- whether callbacks or other tasks may observe the storage;
+- when final and immutable guarantees activate; and
+- whether replacement or destruction may also suspend.
+
+An async factory can perform asynchronous work and then invoke synchronous
+construction. That pattern remains available without making lifecycle operations
+suspend.
+
 ## Activation and retirement
 
-Activate this input before promoting async documentation or defining the
-language/runtime lowering boundary. Consume its findings through that work and
-retire or archive this placeholder afterward.
+Activate this input before promoting async documentation, defining the
+language/runtime lowering boundary, or permitting lifecycle suspension. Consume
+its findings through that work and retire or archive this placeholder afterward.

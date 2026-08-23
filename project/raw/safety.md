@@ -42,6 +42,61 @@ safe wrappers around unsafe implementations require evaluation.
 The last categories may be explicit non-guarantees rather than properties the
 compiler can prove.
 
+## Construction-derived safety pressure
+
+[Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+requires static lifecycle reasoning without mandatory runtime state flags.
+
+Future safety work must decide which cases the language contract guarantees the
+compiler will reject, including:
+
+- use before member construction;
+- use after member destruction;
+- missing construction or destruction on one normal path;
+- two operations affecting the same member lifetime;
+- normal return with an incomplete enclosing instance;
+- conflicting call-site and constructor-body member construction;
+- unsafe manual lifecycle operations hidden behind opaque code;
+- incomplete current-instance access; and
+- publication or reentrant observation before construction completes.
+
+Bounded helper access and publication are different:
+
+```zax
++++ final : ()() = {
+    _.first.+++()
+    initializeRemaining(_)
+}
+```
+
+```zax
++++ final : ()() = {
+    registerGlobally(_)
+}
+```
+
+The second call may retain an access path, notify subscribers, or reenter through
+another path. A control that permits the first must not automatically permit the
+second.
+
+An unsafe assertion may override incomplete proof or assert the result of an
+opaque operation. It cannot make known use after an ended lifetime valid.
+Detailed source-control and provenance questions are preserved in
+[raw analysis-control input](analysis-controls.md).
+
+`unsafe ???` already acknowledges bypassed initialization. It can satisfy a
+containing constructor through programmer responsibility and may later receive
+explicit `+++` without another unsafe marker.
+
+## Panic boundary
+
+Unresolved panic is currently fatal graceful crashing. If a panic resolves and
+execution continues within construction or replacement, ordinary completion
+obligations still apply.
+
+Do not infer general exception-style rollback or recoverable partial-construction
+unwinding. Reopen that design only for a concrete nonfatal panic use case.
+
 ## Comparative input
 
 Rust is a comparison point, not an opponent.
@@ -67,6 +122,6 @@ Future work must define Zax's promises first, then compare them carefully.
 
 ## Activation and retirement
 
-Activate this input before publishing safety guarantees or defining unsafe
-boundaries. Consume its findings through that work and retire or archive this
-placeholder afterward.
+Activate this input before publishing safety guarantees, defining unsafe
+boundaries, or making construction lifecycle diagnostics mandatory. Consume its
+findings through that work and retire or archive this placeholder afterward.

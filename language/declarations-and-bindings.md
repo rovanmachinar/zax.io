@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, function and capture semantics, operator resolution, replacement-constructor internals, constructors and lifetimes, move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete inference, function and capture semantics, operator resolution, [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -94,7 +94,8 @@ It does not default-initialize `item` and then invoke later assignment. That
 alternative could introduce an extra constructor, destructor, allocation, or
 other visible operation.
 
-Initializer and constructor selection remain type and construction concerns.
+Initializer and constructor selection are defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md).
 The declaration guarantees only that `item` is introduced and initialized
 directly from the supplied source.
 
@@ -108,10 +109,11 @@ item : Item
 ```
 
 Default initialization may initialize contained values, execute constructors,
-allocate storage, or perform other visible work. Constructors and destructors do
-not report errors through return results, and Zax does not use exceptions.
-Initialization may nevertheless encounter a panic such as allocation failure or
-stack exhaustion.
+allocate storage, or perform other visible work. Ordinary constructors and
+destructors do not report errors through return results, and Zax does not use
+exceptions. A replacement constructor may return additional results while still
+being required to complete the destination. Initialization may nevertheless
+encounter a panic such as allocation failure or stack exhaustion.
 
 A declaration followed by assignment performs two operations:
 
@@ -158,6 +160,15 @@ if condition {
 
 The low-level operation must leave `item` in a state accepted by every later
 operation and by its destructor. Failure to do so is unsafe programmer behavior.
+
+`unsafe ???` may also appear in a stored-member declaration. It explicitly
+bypasses, rather than performs, that member's ordinary initialization. The
+member satisfies the containing constructor's initialization obligation through
+explicit unsafe responsibility: the compiler neither default-initializes it nor
+requires an explicit member `+++`. A later explicit `+++` remains legal delayed
+construction.
+Complete member and delayed-construction behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#manual-and-delayed-construction).
 
 The compiler should diagnose obvious misuse when practical. Complete
 definite-initialization analysis, low-level initialization contracts, relocation,
@@ -590,14 +601,15 @@ the compiler:
 No operator can introduce an unresolved operand as a declaration.
 
 Generated operators participate in ordinary candidate selection with qualifier
-requirements. The compiler-recognized reconstructive `=` scenario requires both
-a varying destination and a writable path. It is unavailable for a final place
-or through readonly access.
+requirements. The compiler-recognized reconstructive `=` scenario requires an
+immutable value in a varying destination through a writable path. It is
+unavailable for a mutable value, a final place, or through readonly access.
 
 The reconstructive candidate has a compiler-owned lifetime skeleton and may
-select a contextual
-[`replacement +++` constructor](qualifiers.md#reconstructive-replacement).
+select a contextual [`replacement +++` constructor](construction-and-destruction.md#custom-replacement).
 User-defined code does not replace that skeleton with an ordinary `=` body.
+Complete fallback, result, resource-retention, and alias behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
 
 A domain-specific `=` candidate that accepts a final or readonly left operand
 may remain selectable because the token itself is not assigned conventional
@@ -621,9 +633,10 @@ The `:` introduces `foo`; user code cannot overload that act. The initializer
 selects construction or initialization behavior for the new `Bar`. Later
 `foo = source` performs operator selection against an existing destination.
 
-Exact built-in results, expression value categories, overload ranking,
-conversion, reconstructive-candidate priority, and generated operator sets
-remain later operator design.
+Replacement-constructor result forwarding is defined by the construction owner.
+Exact results for other built-in operators, expression value categories,
+overload ranking, conversion, reconstructive-candidate priority, and generated
+operator sets remain later operator design.
 
 ## Non-value definitions
 
@@ -840,7 +853,7 @@ It establishes constraints that later work must preserve:
 - named non-value definitions may expose incomplete self-names without making
   ordinary value initializers self-referential;
 - constructors and lifetime policies must preserve default, direct, and explicit
-  `unsafe ???` distinctions;
+  `unsafe ???` distinctions, including stored-member and delayed construction;
 - move, copy, ownership, and qualifier design must preserve independent binding,
   value, and access capabilities;
 - operator design must not permit operator overloads to introduce unresolved

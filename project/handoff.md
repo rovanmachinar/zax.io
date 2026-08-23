@@ -41,7 +41,7 @@ edit.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 3 |
+| Operating guidance revision | 4 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Legacy design input under review; not a formal specification |
@@ -165,6 +165,13 @@ and update the project current-work index. The creating agent stops before
 analyzing `n+1`. A new session may take over, or the language maintainer may
 explicitly reassign the same session.
 
+During disposition, promotion, and closure, update cross-cutting terminology and
+distinguish a complete operation from its hooks or component mechanisms. Before
+retiring raw input, check every live reading path and preserve provenance.
+Disposition legacy material by value: retain continuing future evidence, and
+retire material or pages after all useful input is promoted, deferred elsewhere,
+rejected, or superseded.
+
 ## Default working style
 
 Use one deep-reasoning agent by default. Research, design, feasibility, and
@@ -175,6 +182,17 @@ Explain disagreements and risks plainly. Prefer concrete programmer use cases
 over abstract completeness. Keep one active concern. Record adjacent findings
 without silently solving them. Helpful analysis is welcome; unrequested
 commitment is not.
+
+For reviewability:
+
+- Lead with concrete Zax examples. Distinguish the current understanding, the
+  demonstrated concern, and the decision still needed.
+- Do not introduce a concern or nuance for the first time in a conclusion or
+  summary. When reporting remaining concerns, distinguish genuinely new issues
+  from questions already under discussion.
+- Recover Zax-specific intent first. Other languages may supply ideas,
+  inspiration, comparisons, counterexamples, implementation pressure, and
+  candidate solutions; do not assume their choices are correct for Zax.
 
 ## Initial working-record authorization
 

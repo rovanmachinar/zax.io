@@ -5,8 +5,11 @@
 
 Accepted value and member declaration forms, default and explicitly bypassed
 initialization, named type self-reference, and `forward` boundaries are defined by
-[Zax declarations and bindings](language/declarations-and-bindings.md). This
-page remains legacy input for complete type-definition, construction, union, and
+[Zax declarations and bindings](language/declarations-and-bindings.md). Current
+member construction, construction packets, generated lifecycle operations, and
+`unsafe ???` member behavior are defined by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md).
+This page remains legacy input for complete type-definition, union, and
 function-type behavior.
 
 A named type resolves its own incomplete name inside its body. Direct recursive

@@ -3,6 +3,12 @@
 
 ## Custom Allocators
 
+Current storage-versus-construction and explicit manual lifecycle boundaries are
+defined by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md).
+This page remains legacy input for complete allocator interfaces, arenas,
+ownership, and deallocation behavior.
+
 ### Overview
 
 Custom allocators can be used to allocate and deallocate types in custom [allocation arenas](https://en.wikipedia.org/wiki/Region-based_memory_management). This allows for features where partition regions of memory can be used to hold storage for types and then be disposed when the memory is no longer required (and the types allocated within the region are known to be fully destructed).

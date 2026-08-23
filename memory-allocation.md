@@ -3,6 +3,12 @@
 
 ## Memory Allocation
 
+Current storage-versus-value lifetime, construction, same-storage replacement,
+and destruction boundaries are defined by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md).
+This page remains legacy input for complete allocation syntax, ownership
+policies, allocator selection, and deallocation behavior.
+
 ### Simple allocation with automatic destruction
 
 Types can be allocated and de-allocated automatically when `own` or `unique` pointers fall out of scope. Allocated types with the `@`, `@@` or `@!` allocators are implicitly qualified as `unique`. The `own` qualification requires explicit definition (as `own` pointers have additional control block overhead not present with `unique` pointers). If a pointer is allocated at the same time as being declared then the pointer is implicitly flagged as a `unique` pointer type.

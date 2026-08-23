@@ -207,6 +207,44 @@ the candidate proposal below.
 
 ---
 
+## Construction packet versus anonymous structural value
+
+Current construction packets contain constructor arguments and direct member
+initializers:
+
+```zax
+animal : Animal = [{
+    : first,
+    kind: "grizzly",
+    .legs = 2
+}]
+```
+
+A future anonymous structural expression would instead create one value:
+
+```zax
+animal : Animal = {{
+    value: first,
+    kind: "grizzly",
+    legs: 2
+}}
+```
+
+The doubled-brace spelling is illustrative only. Future structural work must
+preserve the semantic distinction:
+
+- a construction packet maps several entries to constructor parameters and
+  stored members; and
+- an anonymous structural expression produces one value that may become one
+  constructor input through an accepted conversion.
+
+The future review must decide the anonymous value's type identity, member
+inference, layout, conversion eligibility, temporary lifetime, and whether a
+conversion can select a constructor. It must not reinterpret current packet
+entries as an anonymous structure merely because both forms use named content.
+
+---
+
 ## Open questions (to resolve in follow-up RFCs or an appendix)
 1. **Width subtyping**: exact-shape only vs explicit projection vs implicit subtyping (`<:`). What’s the intended ergonomics?
 2. **Shape-relevant attributes**: do `mut`, `const`, visibility, alignment, padding, or “noalias” qualifiers participate in equivalence?

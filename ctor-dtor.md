@@ -3,17 +3,16 @@
 
 ## [Constructors and Destructors](ctor-dtor.md)
 
-Accepted declaration-level default, direct, and explicitly bypassed
-initialization, including the guaranteed-destruction boundary for `unsafe ???`, is
-defined by
-[Zax declarations and bindings](language/declarations-and-bindings.md). This
-page remains legacy input for complete constructor, destructor, allocation,
-ordering, and failure behavior.
+Current constructor, construction-packet, generated lifecycle, replacement, and
+destructor behavior is defined by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md).
+Declaration initialization and qualifier eligibility are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md) and
+[Zax qualifiers](language/qualifiers.md).
 
-Construction activation and terminal destruction constraints are defined by
-[Zax qualifiers](language/qualifiers.md#construction-and-deep-immutability).
-The compiler-recognized replacement-constructor boundary is defined by
-[reconstructive replacement](language/qualifiers.md#reconstructive-replacement).
+The remainder of this page is legacy input for unreviewed allocation, global,
+`once`, move/copy/`last`, and related behavior. Its examples may use superseded
+syntax or assumptions.
 
 ### Basic constructors and destructors
 
@@ -22,36 +21,6 @@ Default initialization, default allocation, initialization with function calls, 
 The triple plus `+++` and triple minus `---` represent reserved function names on types representing their construction and destruction methods to call. Constructors are polymorphic, meaning they can have more than one constructor that is selected based on the construction arguments passed into the type. Constructors can be present without destructors and vice versa.
 
 Constructs and destructors never have return values when called. Zax does not support exceptions, thus the language cannot throw any exceptions either and errors cannot be returned during the construction or destruction process. Constructors and destructors cannot be deferred asynchronously to another thread as they must execute and complete from the thread they are called.
-
-Construction may establish final and immutable state without an unsafe bypass.
-Those guarantees activate when the full instance and all contained parts finish
-construction and become ordinarily observable. During destruction, the current
-instance has terminal mutable and writable authority so it can dismantle the
-value and extract resources. That authority cannot escape beyond the instance's
-lifetime.
-
-### Replacement constructors
-
-When generated reconstructive `=` replaces an existing varying place through a
-writable path, a type may customize the same-storage transition with contextual
-`replacement +++`:
-
-````zax
-replacement +++ final : ()(
-    rhs : Input readonly &
-) = {
-    // `_` initially contains the previous receiver state.
-    // Establish a complete valid replacement before returning.
-}
-````
-
-`replacement` is special only immediately before `+++` where a constructor
-declaration is legal. It remains an ordinary identifier elsewhere.
-
-The replacement constructor has construction authority, cannot return results,
-and may retain or transform existing resources in place. Complete member-state
-tracking, fallback generation, panic, raw-pointer, alias, move/copy, `last`,
-async, and concurrency behavior remains future constructor and lifetime design.
 
 ````zax
 generateRandomUuid final : (Uuid uuid)() = {

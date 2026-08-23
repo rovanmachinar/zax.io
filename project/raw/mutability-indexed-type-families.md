@@ -265,6 +265,27 @@ Separate representations make conversion an operation rather than a view:
 Future work must decide how these operations participate in overload selection,
 construction, move/copy policy, failure handling, and reflection.
 
+## Same-storage replacement constraint
+
+Generated reconstructive replacement reuses the existing outer storage for
+successive immutable lifetimes.
+
+If a future mutable/immutable type family uses differently represented variants,
+ordinary same-storage replacement between variants is available only when the
+existing place satisfies the selected destination representation's size,
+alignment, and layout.
+
+A differently represented destination may require:
+
+- separately suitable storage;
+- construction into that storage;
+- a copy or consuming transformation;
+- transfer of ownership and allocator provenance; and
+- retirement or deallocation of the former storage through its own policy.
+
+Same family name or structural API compatibility does not establish
+same-storage representation compatibility.
+
 ## What this input does not decide
 
 This file does not establish:
@@ -291,6 +312,7 @@ Read this file when a focused work item reviews one or more of:
 - generic constraints over type families;
 - reflection of type identity and qualifiers;
 - mutable/immutable construction and conversion;
+- same-storage cross-variant replacement;
 - recursive family-name resolution inside related implementations; or
 - common API expression through composition.
 

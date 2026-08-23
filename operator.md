@@ -93,14 +93,13 @@ spelling. `final`/`varying`, `mutable`/`immutable`, and
 qualifications of other operands.
 
 The generated reconstructive `=` scenario is a narrower compiler-recognized
-lifetime case: an existing destination must be varying and the current path must
-be writable. It does not force ordinary assignment meaning on domain-specific
-`=` candidates. Whether a replacement constructor, generated fallback, or
-another future construction rule makes reconstruction viable remains constructor
-design. See
-[Zax qualifiers](language/qualifiers.md#reconstructive-replacement). Complete
-candidate generation, priority, ambiguity, and ranking remain future operator
-work.
+lifetime case: an existing destination must be immutable and varying and the
+current path must be writable. It does not force ordinary assignment meaning on
+domain-specific `=` candidates. Replacement constructors, generated fallback,
+and replacement results are defined by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md#reconstructive-replacement).
+Complete arbitrary operator generation, priority, ambiguity, and ranking remain
+future operator work.
 
 Operators declared on types are always selected over globally scope operators if both a type operator and a global operator satisfy the match criteria during operator selection.
 

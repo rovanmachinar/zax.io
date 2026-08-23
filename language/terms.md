@@ -37,6 +37,16 @@ still being resolved.
 A binding is not the same as the value it names or the storage place holding
 that value. See [Zax declarations and bindings](declarations-and-bindings.md).
 
+## Construction packet
+
+A **construction packet** is the `[{ ... }]` construct that supplies positional
+constructor arguments, named constructor arguments, and direct stored-member
+initializers.
+
+Packet order controls input evaluation and binding. It does not reorder member
+construction. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construction-packets).
+
 ## Current instance
 
 The **current instance** is the instance whose type-defined function body is
@@ -61,6 +71,16 @@ and a value or another pointer/reference value.
 
 Each level may have its own place and access qualifications. See
 [Zax qualifiers](qualifiers.md).
+
+## Lifecycle operation
+
+A **lifecycle operation** establishes, transitions, or ends a value or member
+lifetime.
+
+Ordinary `+++`, contextual `replacement +++`, `---`, and the compiler-owned
+generated replacement skeleton participate in lifecycle operations. An
+arbitrary operator is not a lifecycle operation merely because it uses `=`.
+See [Zax construction, replacement, and destruction](construction-and-destruction.md).
 
 ## Place
 
@@ -96,16 +116,33 @@ meanings, and "receiver object" incorrectly suggests an object-oriented model.
 All three qualifier axes may constrain a receiver operand. See
 [Zax qualifiers](qualifiers.md#receiver-operands).
 
+## Reconstructive replacement
+
+**Reconstructive replacement** is the compiler-recognized generated `=`
+transition that ends one immutable value lifetime and establishes another in the
+same storage.
+
+The compiler owns the complete lifecycle skeleton. It selects a replacement
+constructor when a viable customization exists; otherwise it uses the generated
+fallback of enclosing `---` followed by ordinary `+++`.
+
+It requires an immutable value in a varying place through a writable access
+path. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement)
+and [Zax qualifiers](qualifiers.md#reconstructive-replacement).
+
 ## Replacement constructor
 
-A **replacement constructor** is the contextual constructor used by the
-compiler-recognized reconstructive `=` scenario to transition an existing place
-from one value lifetime to another in the same storage.
+A **replacement constructor** is an optional type-defined customization selected
+within the compiler-owned reconstructive-replacement operation.
 
-It is written with contextual `replacement +++`. Complete behavior is defined
-at the qualifier boundary by
-[Zax qualifiers](qualifiers.md#reconstructive-replacement); detailed
-field-transition and lifetime mechanics remain future construction work.
+It is written with contextual `replacement +++`. When selected, it runs instead
+of the generated fallback's enclosing `---` followed by ordinary `+++` and may
+recycle the previous representation and resources while establishing the
+complete replacement instance. Complete behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#custom-replacement).
+The qualification boundary is defined by
+[Zax qualifiers](qualifiers.md#reconstructive-replacement).
 
 ## Referent
 
@@ -130,3 +167,13 @@ multiple access paths.
 
 Value mutation, place replacement, and access capability are separate concerns.
 See [Zax qualifiers](qualifiers.md).
+
+## Value lifetime
+
+A **value lifetime** is the period during which one particular value exists in a
+place.
+
+Construction establishes a value lifetime. Destruction or reconstructive
+replacement ends it. Contained member lifetimes may begin or end at different
+points from the complete enclosing lifetime. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#mental-model).
