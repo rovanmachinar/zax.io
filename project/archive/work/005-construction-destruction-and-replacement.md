@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical / non-normative / audit-only |
 | Work Item | `005` |
 | Created | 2026-08-22 |
+| Closed | 2026-08-23 |
 | Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Accepted complete construction, lifetime, ownership, formal grammar, or compiler behavior |
+| Does Not Own | Current construction semantics, formal grammar, compiler behavior, or any meaning required by current documentation |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owner documents.
+This file is a completed historical working record. It remains
+non-authoritative and audit-only. Current documents do not depend on it for
+meaning; promoted behavior belongs to its lasting owners.
 
 ## Fixed initiating input
 
@@ -51,11 +51,11 @@ committing to a complete ownership or lifetime strategy.
 
 ### Known assumptions
 
-- The current [language vision](../../language/vision.md) is accepted
+- The current [language vision](../../../language/vision.md) is accepted
   foundational direction.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md)
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
   is accepted conceptual design.
-- [Zax qualifiers](../../language/qualifiers.md) is accepted conceptual design.
+- [Zax qualifiers](../../../language/qualifiers.md) is accepted conceptual design.
 - Ordinary constructor declarations use `+++`.
 - Destructor declarations use `---`.
 - Replacement constructors use contextual `replacement +++`.
@@ -177,17 +177,17 @@ alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) - governs ownership,
+- [Documentation architecture](../../documentation.md) - governs ownership,
   focused reading, numbered work, and promotion.
-- [Language vision](../../language/vision.md) - provides explicit-cost,
+- [Language vision](../../../language/vision.md) - provides explicit-cost,
   progressive-complexity, safety, readability, and data-oriented principles.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md) -
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md) -
   provides accepted initialization, assignment, generated replacement,
   incomplete-definition, and declaration constraints.
-- [Zax qualifiers](../../language/qualifiers.md) - provides accepted construction
+- [Zax qualifiers](../../../language/qualifiers.md) - provides accepted construction
   activation, reconstructive replacement, terminal destruction, place/access,
   and unsafe boundaries.
-- [Legacy constructors and destructors](../../ctor-dtor.md) - preserves the
+- [Legacy constructors and destructors](../../../ctor-dtor.md) - preserves the
   primary legacy evidence for constructor/destructor forms, selection,
   generation, arguments, ordering, and failure behavior.
 - Replacement-construction input, formerly
@@ -198,21 +198,21 @@ alignment, and authorization.
 
 ### Consequence-driven
 
-- Read focused [type-definition](../../type-definition.md) material when member
+- Read focused [type-definition](../../../type-definition.md) material when member
   initialization, generated constructors, or incomplete types become necessary.
-- Read focused [function](../../functions.md) material when constructor
+- Read focused [function](../../../functions.md) material when constructor
   parameters, multiple/named/default arguments, overload selection, callbacks,
   or captures become necessary.
-- Read focused [operator](../../operator.md) material when generated
+- Read focused [operator](../../../operator.md) material when generated
   reconstructive `=` viability or ranking becomes necessary.
-- Read focused [pointer and reference](../../pointers.md) material and the
-  [raw lifetime-strategies input](../raw/lifetimes.md) when aliases, interior
+- Read focused [pointer and reference](../../../pointers.md) material and the
+  [raw lifetime-strategies input](../../raw/lifetimes.md) when aliases, interior
   pointers, lifetime transitions, or `last` become necessary.
 - Read focused allocation material when construction requires an immediate
   storage or allocator constraint.
 - Read focused panic, safety, async, or concurrency material only when a
   construction finding crosses those boundaries.
-- Read the [raw mutability-indexed type-family input](../raw/mutability-indexed-type-families.md)
+- Read the [raw mutability-indexed type-family input](../../raw/mutability-indexed-type-families.md)
   only when variant construction or cross-variant replacement becomes material.
 - Propose an update or new raw input when useful multiple/named/default argument,
   lifetime, operator, or safety material must be preserved for later work.
