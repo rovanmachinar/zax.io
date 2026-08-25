@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working record / non-normative / audit-only |
 | Work Item | `006` |
 | Created | 2026-08-23 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Accepted complete function, ownership, lifetime, generic, async, formal grammar, or compiler behavior |
+| Completed | 2026-08-24 |
+| Owns | Historical record of the bounded review defined by the fixed initiating input |
+| Does Not Own | Current language behavior, current project guidance, accepted complete function, ownership, lifetime, generic, async, formal grammar, or compiler behavior |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owner documents.
+This file is a historical, audit-only working record. Its aligned findings were
+promoted into current owners before archival. It remains non-authoritative and
+must not be used as an ordinary source of current language behavior.
 
 ## Fixed initiating input
 
@@ -58,14 +58,14 @@ generic, variadic, or complete function-value work depends on it.
 
 ### Known assumptions
 
-- The current [language vision](../../language/vision.md) is accepted
+- The current [language vision](../../../language/vision.md) is accepted
   foundational direction.
-- [Zax source structure](../../language/source-structure.md) is accepted
+- [Zax source structure](../../../language/source-structure.md) is accepted
   conceptual design.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md)
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
   is accepted conceptual design.
-- [Zax qualifiers](../../language/qualifiers.md) is accepted conceptual design.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+- [Zax qualifiers](../../../language/qualifiers.md) is accepted conceptual design.
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
   is accepted conceptual design.
 - Parameters and results are declaration contexts using ordinary name, type,
   initialization, and qualifier concepts.
@@ -186,46 +186,46 @@ alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) - governs ownership,
+- [Documentation architecture](../../documentation.md) - governs ownership,
   focused reading, numbered work, and promotion.
-- [Language vision](../../language/vision.md) - provides explicit-cost,
+- [Language vision](../../../language/vision.md) - provides explicit-cost,
   progressive-complexity, readability, and source-stability principles.
-- [Zax source structure](../../language/source-structure.md) - provides
+- [Zax source structure](../../../language/source-structure.md) - provides
   expression, statement, body, semicolon-composition, and scope boundaries.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md) -
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md) -
   provides function-value declarations, parameters/results as declaration
   contexts, recursive bindings, name visibility, and result-capture boundaries.
-- [Zax qualifiers](../../language/qualifiers.md) - provides parameter, result,
+- [Zax qualifiers](../../../language/qualifiers.md) - provides parameter, result,
   capture, receiver-operand, and access qualification.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md) -
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md) -
   provides the accepted evaluation, binding, cursor, temporary, generated
   operation, and result precedents that ordinary invocation must test.
-- [Zax language-design terms](../../language/terms.md) - provides current
+- [Zax language-design terms](../../../language/terms.md) - provides current
   cross-cutting vocabulary.
 - `project/raw/function-invocation.md` - preserved the construction-derived
   constraints and examples consumed by this work; retired during authorized
   promotion after every retained finding received a destination.
-- [Legacy functions](../../functions.md) - preserves primary evidence for
+- [Legacy functions](../../../functions.md) - preserves primary evidence for
   parameters, results, calls, overloads, defaults, member functions, transfers,
   and argument-composition proposals.
 
 ### Consequence-driven
 
-- Read focused [operator](../../operator.md) material when callable ranking,
+- Read focused [operator](../../../operator.md) material when callable ranking,
   expected-result selection, or operator/function consistency becomes necessary.
-- Read focused [pointer and reference](../../pointers.md) material and the
-  [raw lifetime-strategies input](../raw/lifetimes.md) when reference origin,
+- Read focused [pointer and reference](../../../pointers.md) material and the
+  [raw lifetime-strategies input](../../raw/lifetimes.md) when reference origin,
   temporary extension, move/copy/`last`, or ownership becomes necessary.
-- Read the [raw analysis-controls input](../raw/analysis-controls.md) when
+- Read the [raw analysis-controls input](../../raw/analysis-controls.md) when
   invocation requires compiler proof, unsafe overrides, or diagnostic
   provenance.
-- Read the [raw safety input](../raw/safety.md) when invocation behavior crosses
+- Read the [raw safety input](../../raw/safety.md) when invocation behavior crosses
   a promised safe-subset boundary.
-- Read focused [variadic](../../variadic.md) material when fixed-arity invocation
+- Read focused [variadic](../../../variadic.md) material when fixed-arity invocation
   cannot be established without a variadic constraint.
-- Read focused [flow-control](../../flow-control.md) or [Nothing](../../nothing.md)
+- Read focused [flow-control](../../../flow-control.md) or [Nothing](../../../nothing.md)
   material when result mapping or resultless calls cross those boundaries.
-- Read the [raw async input](../raw/async.md) when call completion, suspension,
+- Read the [raw async input](../../raw/async.md) when call completion, suspension,
   cancellation, or callback behavior becomes materially async.
 - Expand beyond this list whenever discussion or a material finding establishes
   a concrete need. State why the additional reading is relevant and keep it
@@ -1036,13 +1036,13 @@ authorization to create or edit owners:
 - A current function concept owner would own ordinary call syntax, parameter
   mapping, defaults, result shapes, return completion, function-value invocation,
   overload viability/preference, and synchronous call completion.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md)
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
   would continue to own declaration versus assignment and could own only the
   declaration-facing shape of result-capture bindings.
-- [Zax qualifiers](../../language/qualifiers.md) would continue to own
+- [Zax qualifiers](../../../language/qualifiers.md) would continue to own
   qualification propagation and capability constraints, while the function
   owner would apply them at call selection and binding.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
   would retain construction packets, stored-member entries, and lifecycle
   operation details while referring to the general function owner for shared
   parameter defaults, overload selection, and call-boundary timing.
@@ -1051,7 +1051,7 @@ authorization to create or edit owners:
 - A future operator owner would own operator lookup domains and operator-specific
   ranking while preserving the shared no-source-order and qualified-callable
   constraints.
-- [Zax language-design terms](../../language/terms.md) may eventually need
+- [Zax language-design terms](../../../language/terms.md) may eventually need
   concise definitions for callable, overload group, parameter slot, result
   shape, and call completion if those terms remain cross-cutting.
 
@@ -2784,22 +2784,22 @@ Likely lasting owner impacts, to be tested by the later dry run, include:
 - a function concept owner for ordinary invocation, callable contracts,
   parameter mapping/defaults, result slots, return completion, result routing,
   overload structure, and synchronous call completion;
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md) for
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md) for
   declaration-facing result captures, existing destinations, and the revised
   label/declaration boundary;
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
   for revised packet punctuation, construction-only stored-member entries,
   member lifecycle plans, and use of shared call behavior;
-- [Zax source structure](../../language/source-structure.md) for comma-list
+- [Zax source structure](../../../language/source-structure.md) for comma-list
   continuation, redundant `\`, grouping-expression boundaries, and mandatory
   indentation intent;
-- [Zax qualifiers](../../language/qualifiers.md) for per-layer parameter,
+- [Zax qualifiers](../../../language/qualifiers.md) for per-layer parameter,
   receiver, result, reference, and pointer constraints;
 - future pointer/lifetime owners for post-call alias validity, temporary
   destruction order, move/`last` ownership, and async lifetime extension;
 - a future operator owner for operator lookup domains while preserving shared
   partial-order and no-source-order constraints; and
-- [Zax language-design terms](../../language/terms.md) for cross-cutting terms
+- [Zax language-design terms](../../../language/terms.md) for cross-cutting terms
   such as callable, parameter slot, result slot, result shape, result-routing
   group, and call completion if they remain broadly useful.
 
@@ -2816,20 +2816,20 @@ must not drop the finding merely because it crosses the initiating boundary.
 | Finding or pressure | Current disposition before the dry run |
 | --- | --- |
 | Flexible call forms are available when intent is clear; ambiguous calls require explicit disambiguation | Preserve through the concrete function examples; test whether a concise cross-cutting form also belongs in the language vision |
-| Promotion must teach progressively through examples rather than reproduce working findings | Preserve as `006` promotion guidance; test whether the general guidance warrants an update to [documentation architecture](../documentation.md) |
-| Language-specific primers such as guidance for C++, Rust, or Java programmers are useful only after enough Zax concepts are accepted | Preserve through the indexed [language-similarity input](../raw/similarity.md); do not turn the function owner into a comparison guide |
-| Shared ordinary call and construction positional syntax, with `.member = expression` remaining construction-only | Promote coherently through the function and [construction](../../language/construction-and-destruction.md) owners |
-| Result labels, label/declaration adjacency, mixed capture, and declaration-expression scope revise current declaration-facing behavior | Promote coherently through the function and [declaration](../../language/declarations-and-bindings.md) owners |
-| Comma-list continuation, one continuation reason per newline, grouping-expression boundaries, and mandatory intent indentation | Promote through [source structure](../../language/source-structure.md) in the same coherent change set |
+| Promotion must teach progressively through examples rather than reproduce working findings | Preserve as `006` promotion guidance; test whether the general guidance warrants an update to [documentation architecture](../../documentation.md) |
+| Language-specific primers such as guidance for C++, Rust, or Java programmers are useful only after enough Zax concepts are accepted | Preserve through the indexed [language-similarity input](../../raw/similarity.md); do not turn the function owner into a comparison guide |
+| Shared ordinary call and construction positional syntax, with `.member = expression` remaining construction-only | Promote coherently through the function and [construction](../../../language/construction-and-destruction.md) owners |
+| Result labels, label/declaration adjacency, mixed capture, and declaration-expression scope revise current declaration-facing behavior | Promote coherently through the function and [declaration](../../../language/declarations-and-bindings.md) owners |
+| Comma-list continuation, one continuation reason per newline, grouping-expression boundaries, and mandatory intent indentation | Promote through [source structure](../../../language/source-structure.md) in the same coherent change set |
 | Adapted visible prototypes may relabel compatible slots, replace defaults, and change result acknowledgement without adapting the implementation body | Preserve in `006` and promote through the function-value and callable-contract owner |
 | Parameter and result label changes are source-contract changes; aliases, deprecation windows, reflection, and compatibility tooling may mitigate evolution | Preserve as an explicit function/source-evolution deferral until the dry run identifies a lasting compatibility or tooling owner |
 | A slot intentionally unavailable to named routing needs an eventual anonymous/private-label form | Preserve as deferred function syntax; do not infer a spelling from current anonymous declaration or discard markers |
 | Several currently valid anonymous typed declaration escapes need canonical formatting without losing their distinct parsing roles | Preserve in function documentation and formatter consequences; canonical preference remains later syntax/formatting refinement |
-| A future explicit operation should promote a multiple-result sequence into one anonymous structural value | Preserve in `006` and route to the existing indexed [structural-typing input](../raw/structural-typing.md); do not reinterpret ordinary mapping or construction as packing |
+| A future explicit operation should promote a multiple-result sequence into one anonymous structural value | Preserve in `006` and route to the existing indexed [structural-typing input](../../raw/structural-typing.md); do not reinterpret ordinary mapping or construction as packing |
 | Same-family value, qualified value, reference, pointer, copy, move, and `last` result/input relations need an acyclic precedence table | Preserve the established partial-order structure in `006`; defer the detailed table to function, qualifier, and lifetime work |
-| Temporary survival, returned-reference escape, moved-from state, source authority, and resource disposition require complete lifetime rules | Preserve current call-boundary constraints and route detailed work through the indexed [lifetime input](../raw/lifetimes.md) |
-| Proof of result completion, use-after-transfer, alias escape, lifecycle validity, and unsafe override provenance require later analysis and safety mechanisms | Preserve diagnostics and constraints here; route future controls through indexed [analysis-controls](../raw/analysis-controls.md) and [safety](../raw/safety.md) inputs |
-| Async suspension, cancellation, delayed destinations, and post-initiation callbacks require a broader completion boundary | Preserve the synchronous boundary here and route async pressure through the indexed [async input](../raw/async.md) |
+| Temporary survival, returned-reference escape, moved-from state, source authority, and resource disposition require complete lifetime rules | Preserve current call-boundary constraints and route detailed work through the indexed [lifetime input](../../raw/lifetimes.md) |
+| Proof of result completion, use-after-transfer, alias escape, lifecycle validity, and unsafe override provenance require later analysis and safety mechanisms | Preserve diagnostics and constraints here; route future controls through indexed [analysis-controls](../../raw/analysis-controls.md) and [safety](../../raw/safety.md) inputs |
+| Async suspension, cancellation, delayed destinations, and post-initiation callbacks require a broader completion boundary | Preserve the synchronous boundary here and route async pressure through the indexed [async input](../../raw/async.md) |
 | Exact multiline behavior of future `[]` and other constructs must remain coherent with open-delimiter and comma continuation rules | Preserve as a source-structure follow-up; `006` decides only the concrete invocation/result-list consequences |
 | Hidden `mutator` invocation, runtime value-polymorphic dispatch, variadics, partial application, composition, chaining, and split/combine transforms are distinct mechanisms | Preserve their separation from ordinary fixed-arity calls and route each through its later function, flow, operator, or variadic owner |
 | Reflection should eventually expose visible labels, defaults, result discardability, adapted contracts, and declared/generated/unavailable distinctions | Preserve as future function/reflection/tooling pressure; do not let reflection needs redefine current invocation syntax |
@@ -2865,12 +2865,12 @@ them to invalidate current conclusions:
   respective owners.
 - Explicit promotion of several results into one anonymous or structural value is
   desirable future structural-type work preserved through the indexed
-  [structural-typing input](../raw/structural-typing.md). Ordinary mapping and
+  [structural-typing input](../../raw/structural-typing.md). Ordinary mapping and
   construction must keep that operation visible rather than performing it
   implicitly.
 - Language-specific onboarding and migration primers remain future comparison
   work preserved through the indexed
-  [language-similarity input](../raw/similarity.md). Function documentation
+  [language-similarity input](../../raw/similarity.md). Function documentation
   teaches Zax directly.
 - Anonymous/private parameter and result labels, label aliases, canonical
   anonymous typed declaration formatting, and reflection metadata remain later
@@ -2951,10 +2951,10 @@ language/
 because the aligned work does not own complete captures, closure representation,
 function reassignment, variadics, async calls, value-polymorphic dispatch,
 `mutator` access, or every function-like mechanism. The narrower name states the
-actual accepted scope and leaves the root [legacy functions page](../../functions.md)
+actual accepted scope and leaves the root [legacy functions page](../../../functions.md)
 available for continuing future evidence.
 
-No `language/README.md` is needed. The public [website entry point](../../index.md)
+No `language/README.md` is needed. The public [website entry point](../../../index.md)
 already routes current conceptual design and can add the new owner directly.
 
 No formal specification file should be created. The current owner must preserve
@@ -3001,7 +3001,7 @@ syntax, and discovery chronology remain in this work record.
 | --- | --- |
 | Ordinary call syntax and invocation phases | New `language/function-invocation.md` |
 | Positional, named, explicit positional, omitted, and type-default inputs | New function owner |
-| Parameter and result labels as visible call-contract elements | New function owner; declaration-facing syntax summarized in [declarations and bindings](../../language/declarations-and-bindings.md) |
+| Parameter and result labels as visible call-contract elements | New function owner; declaration-facing syntax summarized in [declarations and bindings](../../../language/declarations-and-bindings.md) |
 | Caller source-entry order and selected-callee default order | New function owner |
 | Declaration expressions used as inputs and mixed result captures | Declaration owner defines declaration behavior; function owner defines call/result mapping |
 | Visible defaults and result `#` metadata on adapted prototypes | New function owner |
@@ -3012,13 +3012,13 @@ syntax, and discovery chronology remain in this work record.
 | Result labels, same-name shorthand, remapping, discard, omission, and existing destinations | New function owner; declaration owner owns introduced/existing binding distinctions |
 | Narrow complete-declaration result selection and API discoverability | New function owner |
 | Fixed-arity viability, partial-order dominance, fewer-default preference, ambiguity, and unavailable best candidates | New function owner |
-| Detailed type/qualifier/reference/pointer/copy/move/`last` relations | [Qualifiers](../../language/qualifiers.md) retains qualification truth; detailed precedence remains future function/lifetime work |
+| Detailed type/qualifier/reference/pointer/copy/move/`last` relations | [Qualifiers](../../../language/qualifiers.md) retains qualification truth; detailed precedence remains future function/lifetime work |
 | Receiver-operand qualification and temporary qualification | Qualifier owner defines axes; new function owner applies them to invocation |
-| Construction packet's revised ordinary positional input and `.member` distinction | [Construction, replacement, and destruction](../../language/construction-and-destruction.md) |
+| Construction packet's revised ordinary positional input and `.member` distinction | [Construction, replacement, and destruction](../../../language/construction-and-destruction.md) |
 | Shared construction-call defaults, evaluation, binding, and overload behavior | New function owner owns the general rule; construction owner shows packet-specific use and member lifecycle order |
-| Comma-list continuation, grouping-expression boundary, redundant `\`, and indentation intent | [Source structure](../../language/source-structure.md) |
-| Cross-cutting callable/result terminology | [Language-design terms](../../language/terms.md), only for terms used across several owners |
-| Layered teachability and preservation of material detail | [Documentation architecture](../documentation.md) |
+| Comma-list continuation, grouping-expression boundary, redundant `\`, and indentation intent | [Source structure](../../../language/source-structure.md) |
+| Cross-cutting callable/result terminology | [Language-design terms](../../../language/terms.md), only for terms used across several owners |
+| Layered teachability and preservation of material detail | [Documentation architecture](../../documentation.md) |
 | Immediate temporary survival and post-call escape boundary | New function owner states the synchronous boundary; future detail goes to indexed lifetime input |
 | Unsafe proof/override and mandatory safe-subset guarantees | Existing indexed analysis-control and safety inputs |
 | Async suspension and delayed completion | Existing indexed async input |
@@ -3030,15 +3030,15 @@ syntax, and discovery chronology remain in this work record.
 
 The ordinary public reading path would be:
 
-1. [Website entry point](../../index.md);
+1. [Website entry point](../../../index.md);
 2. `language/function-invocation.md`;
 3. a linked prerequisite only when the reader needs its concern:
-   - [source structure](../../language/source-structure.md) for multiline and
+   - [source structure](../../../language/source-structure.md) for multiline and
      intent layout;
-   - [declarations and bindings](../../language/declarations-and-bindings.md) for
+   - [declarations and bindings](../../../language/declarations-and-bindings.md) for
      declaration expressions, introduced names, and assignment;
-   - [qualifiers](../../language/qualifiers.md) for value/access/place truth; or
-   - [construction](../../language/construction-and-destruction.md) for packets,
+   - [qualifiers](../../../language/qualifiers.md) for value/access/place truth; or
+   - [construction](../../../language/construction-and-destruction.md) for packets,
      stored members, and lifecycle operations.
 
 The function owner should teach ordinary use without requiring readers to open
@@ -3059,7 +3059,7 @@ ordinary public language reading path.
 
 Create the teachable current owner described above. This is the only new file.
 
-#### [Zax source structure](../../language/source-structure.md) — modify
+#### [Zax source structure](../../../language/source-structure.md) — modify
 
 - Add comma-list continuation as a recognized statement-level continuation
   reason.
@@ -3076,7 +3076,7 @@ Create the teachable current owner described above. This is the only new file.
 The source owner can absorb these rules without changing its basic
 grammar-versus-layout model.
 
-#### [Zax declarations and bindings](../../language/declarations-and-bindings.md) — modify
+#### [Zax declarations and bindings](../../../language/declarations-and-bindings.md) — modify
 
 - Add the new function owner to the ownership boundary.
 - Keep default function-value initialization here but route invocation of
@@ -3094,7 +3094,7 @@ grammar-versus-layout model.
 These changes resolve a current direct conflict rather than creating duplicate
 function semantics.
 
-#### [Zax qualifiers](../../language/qualifiers.md) — modify
+#### [Zax qualifiers](../../../language/qualifiers.md) — modify
 
 - Add the function owner to the ownership boundary.
 - Retain the authoritative per-layer parameter, result, reference, pointer,
@@ -3107,7 +3107,7 @@ function semantics.
 - Update diagnostics and maturity wording where invocation now has a current
   owner.
 
-#### [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md) — modify
+#### [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md) — modify
 
 - Add the new function owner to the ownership boundary.
 - Revise construction packets so ordinary positional inputs use bare expressions;
@@ -3126,7 +3126,7 @@ function semantics.
 - Update replacement-result, diagnostics, costs, formatting, and maturity
   sections.
 
-#### [Zax language-design terms](../../language/terms.md) — modify
+#### [Zax language-design terms](../../../language/terms.md) — modify
 
 Add concise cross-cutting terms only where several current owners use them:
 
@@ -3140,7 +3140,7 @@ Add concise cross-cutting terms only where several current owners use them:
 Each term links to the function owner for behavior. Do not turn the terms page
 into another invocation definition.
 
-#### [Documentation architecture](../documentation.md) — modify
+#### [Documentation architecture](../../documentation.md) — modify
 
 Extend human-developer-facing depth guidance to state:
 
@@ -3156,7 +3156,7 @@ Extend human-developer-facing depth guidance to state:
 
 This is general project guidance learned through `006`, not language semantics.
 
-#### [Language vision](../../language/vision.md) — retain unchanged
+#### [Language vision](../../../language/vision.md) — retain unchanged
 
 The current readability, explicit-cost, and source-stability principles already
 support the aligned invocation design. Adding invocation mechanics or another
@@ -3164,7 +3164,7 @@ abstract philosophy statement would overload the foundational owner.
 
 ### Public router change
 
-#### [Website entry point](../../index.md) — modify
+#### [Website entry point](../../../index.md) — modify
 
 - Add `language/function-invocation.md` to **Start here** after declarations and
   qualifiers or after construction according to the final teaching route.
@@ -3173,10 +3173,10 @@ abstract philosophy statement would overload the foundational owner.
 - Describe the new owner narrowly enough that readers do not assume complete
   captures, generics, variadics, async, or function representation are accepted.
 
-The root [README](../../README.md) remains unchanged because it already routes
+The root [README](../../../README.md) remains unchanged because it already routes
 language readers through the website entry point.
 
-The [project router](../README.md) remains unchanged during promotion because it
+The [project router](../../README.md) remains unchanged during promotion because it
 must continue to identify active work `006` until separately authorized closure.
 
 ### Legacy material disposition
@@ -3184,7 +3184,7 @@ must continue to identify active work `006` until separately authorized closure.
 Legacy pages remain public evidence only where they retain future value. Fully
 consumed or rejected sections should not continue teaching a competing model.
 
-#### [Legacy functions](../../functions.md) — modify and prune by value
+#### [Legacy functions](../../../functions.md) — modify and prune by value
 
 Update the preamble to identify `language/function-invocation.md` as the current
 owner for ordinary calls, argument/default mapping, results, routing, fixed-arity
@@ -3216,7 +3216,7 @@ Retain clearly labeled future evidence for:
 The page remains a legacy future-input page rather than a competing current
 owner.
 
-#### [Legacy constructors and destructors](../../ctor-dtor.md) — modify and prune
+#### [Legacy constructors and destructors](../../../ctor-dtor.md) — modify and prune
 
 - Add the new function owner to the current-routing preamble for shared call
   behavior.
@@ -3225,7 +3225,7 @@ owner.
 - Retain future allocation, global, `once`, move/copy/`last`, and other explicitly
   unreviewed evidence already named by the page.
 
-#### [Legacy discard operator](../../discard.md) — modify and prune
+#### [Legacy discard operator](../../../discard.md) — modify and prune
 
 - Add a current-owner preamble.
 - Remove or replace legacy function-result and input-placeholder sections now
@@ -3233,13 +3233,13 @@ owner.
   behavior.
 - Retain unrelated local/type/memory discard evidence for future review.
 
-#### [Legacy flow control](../../flow-control.md) — modify routing note only
+#### [Legacy flow control](../../../flow-control.md) — modify routing note only
 
 Add the new function owner to the current-routing preamble for calls, return
 completion, result labels, and capture used by flow examples. Do not redesign
 flow-control behavior during this promotion.
 
-#### [Legacy operator overloading](../../operator.md) — modify
+#### [Legacy operator overloading](../../../operator.md) — modify
 
 - Link the new function owner for shared callable viability, partial-order
   dominance, result-context limits, and ambiguity.
@@ -3248,37 +3248,37 @@ flow-control behavior during this promotion.
 - Retain operator lookup domains, word/literal operators, and operator-specific
   priority as future operator input.
 
-#### [Legacy pointers and references](../../pointers.md) — modify routing note
+#### [Legacy pointers and references](../../../pointers.md) — modify routing note
 
 Link the new function owner for immediate call-boundary reference, pointer, move,
 `last`, temporary, and result behavior. Retain complete ownership, origin,
 provenance, and transfer precedence as future pointer/lifetime evidence.
 
-#### [Legacy Nothing](../../nothing.md) — modify routing note
+#### [Legacy Nothing](../../../nothing.md) — modify routing note
 
 Route invocation of default-`Nothing` function values to the new function owner
 while retaining unreviewed general `Nothing` representation and instance behavior.
 
-#### [Legacy variadics](../../variadic.md) — add boundary preamble
+#### [Legacy variadics](../../../variadic.md) — add boundary preamble
 
 State that current fixed-arity invocation and overload behavior is owned by the
 new function owner. Keep variadic expansion, enumeration, and selection as
 legacy future input that must fit that base model.
 
-#### [Legacy meta-functions](../../meta-functions.md) — add boundary preamble
+#### [Legacy meta-functions](../../../meta-functions.md) — add boundary preamble
 
 State that ordinary expected-result context and callable preference are owned by
 the new function owner. Keep omitted meta types and compile-time specialization
 as legacy future input; they may not broaden ordinary result inference silently.
 
-#### [Legacy except handling](../../except.md) — add boundary preamble
+#### [Legacy except handling](../../../except.md) — add boundary preamble
 
 State that ordinary result slots, labels, routing, conversion boundaries, and
 completion are owned by the new function owner. Keep `except`/`catch`
 short-circuit behavior as unreviewed future input and do not let its legacy
 constructor-graph matching redefine ordinary result selection.
 
-#### [Legacy warnings and errors](../../warnings-errors.md) — modify routing note
+#### [Legacy warnings and errors](../../../warnings-errors.md) — modify routing note
 
 Link current invocation validity and diagnostic categories to the new function
 owner while preserving the registry and exact identifiers as legacy future
@@ -3300,10 +3300,10 @@ Every retained construction-derived constraint is now:
 - explicitly deferred with future pressure.
 
 Delete this file during promotion and remove its row from the
-[raw-input index](../raw/README.md). Keeping it would create a stale competing
+[raw-input index](../../raw/README.md). Keeping it would create a stale competing
 input after its retirement criteria are satisfied.
 
-#### [Raw feature catalog](../raw/feature-catalog.md) — modify
+#### [Raw feature catalog](../../raw/feature-catalog.md) — modify
 
 Add recorded dispositions for:
 
@@ -3316,7 +3316,7 @@ Add recorded dispositions for:
 Keep captures, variadics, value polymorphism, async calling, anonymous types, and
 other unreviewed catalog entries unresolved.
 
-#### [Raw lifetime strategies](../raw/lifetimes.md) — modify
+#### [Raw lifetime strategies](../../raw/lifetimes.md) — modify
 
 Add invocation-derived pressure covering:
 
@@ -3327,7 +3327,7 @@ Add invocation-derived pressure covering:
 - moved-from source states; and
 - async calls requiring a broader lifetime boundary.
 
-#### [Raw analysis controls](../raw/analysis-controls.md) — modify
+#### [Raw analysis controls](../../raw/analysis-controls.md) — modify
 
 Add invocation-derived future proof/override pressure for:
 
@@ -3340,7 +3340,7 @@ Add invocation-derived future proof/override pressure for:
 
 Do not invent final unsafe-control syntax or identifiers.
 
-#### [Raw safety boundaries](../raw/safety.md) — modify
+#### [Raw safety boundaries](../../raw/safety.md) — modify
 
 Add invocation-derived safety questions for:
 
@@ -3351,7 +3351,7 @@ Add invocation-derived safety questions for:
 - reentrant observation between explicit bindings; and
 - which cases the future safe subset guarantees are rejected.
 
-#### [Raw async](../raw/async.md) — modify
+#### [Raw async](../../raw/async.md) — modify
 
 Add ordinary-call suspension pressure:
 
@@ -3361,7 +3361,7 @@ Add ordinary-call suspension pressure:
 - callbacks after the initiating expression returns; and
 - how async calls expose their runtime cost.
 
-#### [Raw structural typing](../raw/structural-typing.md) — modify
+#### [Raw structural typing](../../raw/structural-typing.md) — modify
 
 Add the explicit future pressure for promoting a multiple-result sequence into
 one anonymous structural value. Preserve the distinction from:
@@ -3370,7 +3370,7 @@ one anonymous structural value. Preserve the distinction from:
 - constructor-parameter forwarding; and
 - `.member` construction inputs.
 
-#### [Raw similarity guide](../raw/similarity.md) — retain unchanged
+#### [Raw similarity guide](../../raw/similarity.md) — retain unchanged
 
 It already preserves future language-specific primers, bounded comparison, and
 the rule that concept owners teach Zax itself.
@@ -3388,37 +3388,37 @@ authorized, and applied as recorded in the promotion outcome below:
 
 #### Modify current owners and routers
 
-2. [Website entry point](../../index.md)
-3. [Documentation architecture](../documentation.md)
-4. [Zax source structure](../../language/source-structure.md)
-5. [Zax declarations and bindings](../../language/declarations-and-bindings.md)
-6. [Zax qualifiers](../../language/qualifiers.md)
-7. [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
-8. [Zax language-design terms](../../language/terms.md)
+2. [Website entry point](../../../index.md)
+3. [Documentation architecture](../../documentation.md)
+4. [Zax source structure](../../../language/source-structure.md)
+5. [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
+6. [Zax qualifiers](../../../language/qualifiers.md)
+7. [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
+8. [Zax language-design terms](../../../language/terms.md)
 
 #### Modify or prune affected legacy pages
 
-9. [Legacy functions](../../functions.md)
-10. [Legacy constructors and destructors](../../ctor-dtor.md)
-11. [Legacy discard operator](../../discard.md)
-12. [Legacy flow control](../../flow-control.md)
-13. [Legacy operator overloading](../../operator.md)
-14. [Legacy pointers and references](../../pointers.md)
-15. [Legacy Nothing](../../nothing.md)
-16. [Legacy variadics](../../variadic.md)
-17. [Legacy meta-functions](../../meta-functions.md)
-18. [Legacy except handling](../../except.md)
-19. [Legacy warnings and errors](../../warnings-errors.md)
+9. [Legacy functions](../../../functions.md)
+10. [Legacy constructors and destructors](../../../ctor-dtor.md)
+11. [Legacy discard operator](../../../discard.md)
+12. [Legacy flow control](../../../flow-control.md)
+13. [Legacy operator overloading](../../../operator.md)
+14. [Legacy pointers and references](../../../pointers.md)
+15. [Legacy Nothing](../../../nothing.md)
+16. [Legacy variadics](../../../variadic.md)
+17. [Legacy meta-functions](../../../meta-functions.md)
+18. [Legacy except handling](../../../except.md)
+19. [Legacy warnings and errors](../../../warnings-errors.md)
 
 #### Modify indexed raw material
 
-20. [Raw-input index](../raw/README.md)
-21. [Raw feature catalog](../raw/feature-catalog.md)
-22. [Raw lifetime strategies](../raw/lifetimes.md)
-23. [Raw analysis controls](../raw/analysis-controls.md)
-24. [Raw safety boundaries](../raw/safety.md)
-25. [Raw async](../raw/async.md)
-26. [Raw structural typing](../raw/structural-typing.md)
+20. [Raw-input index](../../raw/README.md)
+21. [Raw feature catalog](../../raw/feature-catalog.md)
+22. [Raw lifetime strategies](../../raw/lifetimes.md)
+23. [Raw analysis controls](../../raw/analysis-controls.md)
+24. [Raw safety boundaries](../../raw/safety.md)
+25. [Raw async](../../raw/async.md)
+26. [Raw structural typing](../../raw/structural-typing.md)
 
 #### Delete consumed raw material
 
@@ -3426,10 +3426,10 @@ authorized, and applied as recorded in the promotion outcome below:
 
 #### Explicitly unchanged during promotion
 
-- [Repository entry point](../../README.md)
-- [Project router and active-work index](../README.md)
-- [Language vision](../../language/vision.md)
-- [Raw similarity guide](../raw/similarity.md)
+- [Repository entry point](../../../README.md)
+- [Project router and active-work index](../../README.md)
+- [Language vision](../../../language/vision.md)
+- [Raw similarity guide](../../raw/similarity.md)
 - handoff and rehydration prompt sources;
 - archive contents;
 - unrelated legacy topic pages; and
@@ -3518,9 +3518,9 @@ Validation confirmed:
 - no duplicate current invocation owner is required; and
 - a skeptical consistency review found no promotion blocker.
 
-The active work item remains open for maintainer review. Closure, archival, work
-item `007`, staging, committing, and pushing are not authorized by this
-promotion.
+At this promotion checkpoint, the active work item remained open for maintainer
+review. Closure, archival, work item `007`, staging, committing, and pushing
+were not authorized by that promotion.
 
 ## Raw philosophy statement inventory
 
@@ -3564,12 +3564,12 @@ ordinary function calls.
 
 | # | Raw statement | Weight | Current capture and audit | Recommendation |
 | --- | --- | --- | --- | --- |
-| 1 | Zax can provide flexible syntax and matching when the programmer's intended operation remains clear. | Language-wide design principle | **Narrowed.** [Function invocation](../../language/function-invocation.md#mental-model) says flexible *call forms* are available when call intent is clear. | Add the original broad statement to [language vision](../../language/vision.md) as a short design-principle bullet. Keep the call-specific application locally. |
+| 1 | Zax can provide flexible syntax and matching when the programmer's intended operation remains clear. | Language-wide design principle | **Narrowed.** [Function invocation](../../../language/function-invocation.md#mental-model) says flexible *call forms* are available when call intent is clear. | Add the original broad statement to [language vision](../../../language/vision.md) as a short design-principle bullet. Keep the call-specific application locally. |
 | 2 | Be explicit about intent. | Language-wide design principle | **Narrowed.** Labels, declaration spacing, transfer markers, and mapping make invocation intent explicit, but no broad owner states the principle. | Add a separate concise vision statement. Do not fold it into a catalogue of invocation mechanisms. |
 | 3 | Stop when intent becomes ambiguous; require the programmer to disambiguate. | Language-wide matching and source principle | **Narrowed.** Callable ambiguity is current, but the wider principle is unstated. | Add a separate vision statement that Zax requires explicit disambiguation instead of guessing when several meanings remain plausible. |
 | 7 | Similar mechanisms should use similar syntax; different mechanisms should remain visibly distinct. | Language-wide consistency principle | **Implicit.** Calls and construction now share inputs, while `.member`, expression mode, and mapping remain distinct. | Add a concise statement to the vision's familiarity/readability principle. Keep concrete syntax in local owners. |
 | 8 | Visible source order should remain trustworthy. | Language-wide predictability principle | **Narrowed.** Invocation and construction define observable order, but the wider principle is not stated. | Add a concise vision statement that observable ordering follows visible source rules and hidden work must have a documented position. |
-| 20 | Pay only for behavior that is used. | Foundational cost principle | **Superseded capture.** The broad principle moved from the vision into [Zax language principles](../../language/principles.md#costs-follow-chosen-behavior-and-remain-discoverable); [function invocation](../../language/function-invocation.md#costs) applies it to contracts and defaults. | No further change required. |
+| 20 | Pay only for behavior that is used. | Foundational cost principle | **Superseded capture.** The broad principle moved from the vision into [Zax language principles](../../../language/principles.md#costs-follow-chosen-behavior-and-remain-discoverable); [function invocation](../../../language/function-invocation.md#costs) applies it to contracts and defaults. | No further change required. |
 | 22 | Optimization may remove work only when it preserves the programmer-visible operation. | Language-wide semantic-preservation principle | **Narrowed.** Invocation states the local rule; no broad current owner states it. | Add a short vision-level statement. Future formal semantics may define exact equivalence, but the conceptual direction should not remain call-only. |
 | 23 | Consequential costs and risks should remain discoverable. | Foundational cost/documentation principle | **Full.** The vision owns visible cost; function, construction, qualifier, and documentation owners expose local consequences. | No change required. |
 
@@ -3580,19 +3580,19 @@ vision merely because they are important.
 
 | # | Raw statement | Weight | Current capture and audit | Recommendation |
 | --- | --- | --- | --- | --- |
-| 4 | Choose a best overload only when it is obviously better. | Callable-selection principle | **Full.** [Partial-order preference](../../language/function-invocation.md#partial-order-preference) defines dominance and incomparability. | Retain in the function owner. |
+| 4 | Choose a best overload only when it is obviously better. | Callable-selection principle | **Full.** [Partial-order preference](../../../language/function-invocation.md#partial-order-preference) defines dominance and incomparability. | Retain in the function owner. |
 | 5 | Do not use source, declaration, import, or generation order to guess among equal matches. | Callable/operator selection principle | **Full.** Function and legacy operator routing reject order-based ties. | Retain in function and future operator owners. |
-| 6 | Parsing should not depend on the current overload set. | Call/source parsing principle | **Full.** [Whitespace and intent](../../language/function-invocation.md#whitespace-and-intent) states that overload changes cannot reinterpret the parse. | Retain locally; source structure may link if later parsing work needs the general boundary. |
-| 9 | Omission and explicit type-default initialization are different operations. | Invocation principle | **Full.** [Omitted inputs and defaults](../../language/function-invocation.md#omitted-inputs-and-defaults) teaches both forms and order. | No change required. |
+| 6 | Parsing should not depend on the current overload set. | Call/source parsing principle | **Full.** [Whitespace and intent](../../../language/function-invocation.md#whitespace-and-intent) states that overload changes cannot reinterpret the parse. | Retain locally; source structure may link if later parsing work needs the general boundary. |
+| 9 | Omission and explicit type-default initialization are different operations. | Invocation principle | **Full.** [Omitted inputs and defaults](../../../language/function-invocation.md#omitted-inputs-and-defaults) teaches both forms and order. | No change required. |
 | 10 | Inputs may be flexible, but every normal result is complete. | Invocation/result mental model | **Implicit.** The rules are complete, but the simple contrast is not stated. | Add one short mental-model paragraph to the function owner before detailed result rules. |
 | 11 | Multiple results are an ordered result sequence, not one hidden value. | Result-model principle | **Full.** Result slots, expression/mapping modes, and construction forwarding preserve it. | No change required. |
-| 12 | Packing several results into one value must be explicit. | Result/structural boundary | **Full.** Function and construction owners preserve the boundary; [raw structural input](../raw/structural-typing.md#promoting-multiple-results-into-one-structural-value) owns future pressure. | No change required. |
+| 12 | Packing several results into one value must be explicit. | Result/structural boundary | **Full.** Function and construction owners preserve the boundary; [raw structural input](../../raw/structural-typing.md#promoting-multiple-results-into-one-structural-value) owns future pressure. | No change required. |
 | 13 | Parentheses are not cosmetic at a multiple-result boundary. | Invocation/source principle | **Full.** Function and source-structure owners teach expression mode. | No change required. |
-| 14 | A comma and `\` communicate different continuation intent. | Source-structure principle | **Full.** [Comma-list continuation](../../language/source-structure.md#comma-list-continuation) and invocation return examples own it. | No change required. |
+| 14 | A comma and `\` communicate different continuation intent. | Source-structure principle | **Full.** [Comma-list continuation](../../../language/source-structure.md#comma-list-continuation) and invocation return examples own it. | No change required. |
 | 15 | Do not write defensive continuation punctuation just in case. | Source-intent principle | **Full.** Source structure rejects redundant continuation. | No change required. |
 | 16 | Explicit result types can improve API naming and discoverability. | Invocation/API-design principle | **Full.** Narrow result selection preserves the `parseValue` rationale. | No change required. |
-| 17 | Result-directed selection must remain narrow and must not search arbitrary conversion graphs. | Invocation-selection principle | **Full.** [Narrow expected-result selection](../../language/function-invocation.md#narrow-expected-result-selection) owns it. | No change required. |
-| 18 | A public callable contract can improve labels, defaults, and acknowledgement without rewriting the implementation. | Callable-contract principle | **Full.** [Compatible visible prototypes](../../language/function-invocation.md#compatible-visible-prototypes) owns it. | No change required. |
+| 17 | Result-directed selection must remain narrow and must not search arbitrary conversion graphs. | Invocation-selection principle | **Full.** [Narrow expected-result selection](../../../language/function-invocation.md#narrow-expected-result-selection) owns it. | No change required. |
+| 18 | A public callable contract can improve labels, defaults, and acknowledgement without rewriting the implementation. | Callable-contract principle | **Full.** [Compatible visible prototypes](../../../language/function-invocation.md#compatible-visible-prototypes) owns it. | No change required. |
 | 19 | Direct compatibility means no executable adaptation is needed. | Callable-compatibility principle | **Full.** The function owner requires a wrapper or lambda when transformation is needed. | No change required. |
 | 21 | Results should not pay an automatic default-construction penalty. | Result/cost principle | **Full.** Result slots begin unconstructed and opt into initialization. | No change required. |
 
@@ -3603,24 +3603,24 @@ owner is project guidance rather than a language concept page.
 
 | # | Raw statement | Weight | Current capture and audit | Recommendation |
 | --- | --- | --- | --- | --- |
-| 24 | Implementation feasibility is legitimate design pressure even when implementation is not owned here. | Project design-method principle | **Working-only.** `006` records it, and promoted syntax reflects it, but wider project guidance does not state it. | Add a concise rule to [documentation architecture](../documentation.md): implementation feasibility may pressure conceptual design, while implementation mappings remain outside language owners. |
+| 24 | Implementation feasibility is legitimate design pressure even when implementation is not owned here. | Project design-method principle | **Working-only.** `006` records it, and promoted syntax reflects it, but wider project guidance does not state it. | Add a concise rule to [documentation architecture](../../documentation.md): implementation feasibility may pressure conceptual design, while implementation mappings remain outside language owners. |
 | 25 | Do not put compiler implementation mappings into language teaching. | Documentation/ownership principle | **Full.** Documentation architecture and current-owner boundaries preserve it. | No change required. |
-| 26 | Follow necessary consequences wherever they lead; that is not improper scope expansion. | Numbered-work principle | **Full.** [Focused reading](../documentation.md#focused-reading) and consequence guidance require this. | No change required. |
+| 26 | Follow necessary consequences wherever they lead; that is not improper scope expansion. | Numbered-work principle | **Full.** [Focused reading](../../documentation.md#focused-reading) and consequence guidance require this. | No change required. |
 | 27 | Do not lose a finding because its lasting owner lies outside the active work item. | Numbered-work/disposition principle | **Full.** Documentation architecture requires explicit disposition and the `006` ledger demonstrates it. | No change required. |
-| 28 | A deferral must preserve why it matters and what pressure reopens it. | Numbered-work principle | **Full.** [Consequences and deferrals](../documentation.md#consequences-and-deferrals) owns it. | No change required. |
+| 28 | A deferral must preserve why it matters and what pressure reopens it. | Numbered-work principle | **Full.** [Consequences and deferrals](../../documentation.md#consequences-and-deferrals) owns it. | No change required. |
 | 29 | A contradiction cannot be hidden through deferral. | Numbered-work correctness principle | **Full.** Documentation architecture states this directly. | No change required. |
 
 ### Documentation and teaching principles
 
 | # | Raw statement | Weight | Current capture and audit | Recommendation |
 | --- | --- | --- | --- | --- |
-| 30 | Promotion is for teaching the selected model, not reproducing the design meeting. | Documentation principle | **Full.** [Human-developer-facing depth](../documentation.md#human-developer-facing-depth) separates current teaching from working history. | No change required. |
+| 30 | Promotion is for teaching the selected model, not reproducing the design meeting. | Documentation principle | **Full.** [Human-developer-facing depth](../../documentation.md#human-developer-facing-depth) separates current teaching from working history. | No change required. |
 | 31 | Examples are essential teaching tools. | Documentation principle | **Implicit.** Current owners begin with examples, but project guidance does not state the importance plainly. | Add a short explicit examples rule to documentation architecture. |
 | 32 | Introduce concepts in prerequisite order. | Documentation principle | **Implicit.** Focused reading and layered depth exist, but teaching order is not stated directly. | Add a concise rule that examples and sections introduce prerequisites before depending on them. |
 | 33 | Assume a competent programmer rather than teaching programming from first principles. | Audience principle | **Implicit.** Documentation says human-first is not introductory or simplified, but it does not positively state the assumed baseline. | Strengthen the existing audience guidance with a bounded competent-programmer baseline while retaining clear explanations of Zax-specific behavior. |
 | 34 | Teach Zax directly rather than organizing it around another language. | Documentation principle | **Full.** Documentation architecture states this directly. | No change required. |
 | 35 | Compare with another language only when it resolves a concrete misunderstanding. | Documentation principle | **Full.** Documentation architecture states this directly. | No change required. |
-| 36 | Language-specific primers may come later as separate reader routes. | Documentation/reader-route principle | **Full.** Documentation architecture and [raw similarity input](../raw/similarity.md) preserve it. | No change required. |
+| 36 | Language-specific primers may come later as separate reader routes. | Documentation/reader-route principle | **Full.** Documentation architecture and [raw similarity input](../../raw/similarity.md) preserve it. | No change required. |
 | 37 | Do not teach rejected bad ideas merely to reject them. | Documentation principle | **Full.** Working history remains in project records; promoted teaching omits rejected alternatives. | No change required. |
 | 38 | Teach accepted, likely-to-surprise boundaries with counterexamples. | Documentation principle | **Full.** Documentation architecture states the exception and function/source owners use counterexamples. | No change required. |
 | 39 | Simple teaching does not mean omitting important detail. | Documentation principle | **Full.** Material rules, diagnostics, costs, corner cases, and advanced behavior remain current. | No change required. |
@@ -3658,7 +3658,7 @@ The twelve statements needing wider-document attention are:
 
 Do not create a new philosophy or principles document yet.
 
-[Language vision](../../language/vision.md) already explicitly owns Zax design
+[Language vision](../../../language/vision.md) already explicitly owns Zax design
 principles. Creating `language/design-principles.md` now would split that
 authority without demonstrated pressure that the vision cannot absorb concise
 statements.
@@ -3697,7 +3697,8 @@ The language-behavior promotion remains technically coherent, but philosophy
 preservation is incomplete. Work item `006` should not close until the maintainer
 reviews and aligns the twelve recommended wider-document corrections above.
 
-No wider-document correction is authorized or applied by this audit.
+No wider-document correction was authorized or applied by this initial audit.
+Its recommendation was refined and later promoted as recorded below.
 
 ## Revised principle-catalog audit
 
@@ -3750,7 +3751,7 @@ full weight.
 
 ### Why a dedicated principles catalog is justified
 
-[Language vision](../../language/vision.md) currently owns design principles,
+[Language vision](../../../language/vision.md) currently owns design principles,
 but it also owns purpose, audience, goals, advantages, non-goals, inspiration,
 and high-level tradeoffs. The principles emerging from focused concept work are
 becoming a reusable catalog with a different reader task:
@@ -3792,7 +3793,7 @@ supplemental dry run must disposition each one:
 No principle may retain competing full definitions in both files.
 
 This is not analogous to a glossary semantically. The useful analogy to
-[language-design terms](../../language/terms.md) is discoverability: one
+[language-design terms](../../../language/terms.md) is discoverability: one
 maintained catalog gives future work a known place to find and contribute
 cross-cutting insights.
 
@@ -3987,11 +3988,11 @@ promote each rule into a foundational slogan.
 
 | Raw # | Local principle | Current owner |
 | --- | --- | --- |
-| 6 | Parsing a call does not depend on the current overload set | [Function invocation](../../language/function-invocation.md#whitespace-and-intent) |
-| 9 | Omission and explicit type-default initialization are distinct | [Function invocation](../../language/function-invocation.md#omitted-inputs-and-defaults) |
+| 6 | Parsing a call does not depend on the current overload set | [Function invocation](../../../language/function-invocation.md#whitespace-and-intent) |
+| 9 | Omission and explicit type-default initialization are distinct | [Function invocation](../../../language/function-invocation.md#omitted-inputs-and-defaults) |
 | 10 | Inputs may be selected/defaulted flexibly, but every normal result is complete | Function mental model needs one plain statement; detailed behavior is current |
 | 13 | Parentheses choose one expression at a multiple-result boundary | Function invocation and source structure |
-| 14 | Comma and `\` express different continuation intent | [Source structure](../../language/source-structure.md#comma-list-continuation) |
+| 14 | Comma and `\` express different continuation intent | [Source structure](../../../language/source-structure.md#comma-list-continuation) |
 | 15 | Redundant continuation punctuation is an intent error | Source structure |
 
 Raw statement `21` also has a local result application—no automatic
@@ -4002,7 +4003,7 @@ principle 6.
 
 These statements are principles for conducting design work, not principles a
 programmer needs in order to understand Zax source. They remain in
-[documentation architecture](../documentation.md) or need a targeted addition
+[documentation architecture](../../documentation.md) or need a targeted addition
 there:
 
 | Raw # | Guidance | Current disposition |
@@ -4020,7 +4021,7 @@ details remain project guidance.
 ### Documentation principles
 
 These statements govern how Zax is taught and documented. They belong in
-[documentation architecture](../documentation.md), not the language principles
+[documentation architecture](../../documentation.md), not the language principles
 catalog:
 
 | Raw # | Documentation principle | Current disposition |
@@ -4059,18 +4060,18 @@ This audit recommends a supplemental pre-promotion documentation fit dry run for
 principle ownership before `006` closes. The likely change set is:
 
 1. create `language/principles.md`;
-2. update [language vision](../../language/vision.md) to summarize and route to
+2. update [language vision](../../../language/vision.md) to summarize and route to
    the catalog while narrowing its `Owns` field from the complete principles
    catalog to foundational purpose/direction and a principles summary;
 3. disposition every current `Design principles` subsection in the vision as
    stay, migrate, or summarize-and-link, including explicit treatment of
    `Visible and selectable cost` and
    `Familiarity, readability, and elegance`;
-4. update the public [website entry point](../../index.md);
+4. update the public [website entry point](../../../index.md);
 5. add the missing process and teaching guidance to
-   [documentation architecture](../documentation.md);
+   [documentation architecture](../../documentation.md);
 6. add the plain flexible-inputs/complete-results statement to
-   [function invocation](../../language/function-invocation.md); and
+   [function invocation](../../../language/function-invocation.md); and
 7. link local concept owners to catalog principles only where a concrete
    dependency helps a reader.
 
@@ -4100,8 +4101,8 @@ Work item `006` should remain open until:
 3. the selected principles and documentation additions are aligned; and
 4. any resulting wider-document edit is separately authorized and validated.
 
-No principles-catalog or wider-document edit is authorized or applied by this
-revised audit.
+No principles-catalog or wider-document edit was authorized or applied by this
+revised audit alone. The later authorized promotion is recorded below.
 
 ## Supplemental principles documentation fit and promotion
 
@@ -4178,12 +4179,12 @@ Promotion also:
 The authorized principles promotion changed exactly:
 
 1. `language/principles.md` — created;
-2. [language vision](../../language/vision.md) — ownership realigned and
+2. [language vision](../../../language/vision.md) — ownership realigned and
    reusable principles summarized/linked;
-3. [website entry point](../../index.md) — current principles route added;
-4. [documentation architecture](../documentation.md) — missing process and
+3. [website entry point](../../../index.md) — current principles route added;
+4. [documentation architecture](../../documentation.md) — missing process and
    teaching guidance added;
-5. [function invocation](../../language/function-invocation.md) — local
+5. [function invocation](../../../language/function-invocation.md) — local
    application and complete-result mental model added; and
 6. this active work record — supplemental fit, disposition, and outcome recorded.
 
@@ -4202,5 +4203,27 @@ The principles promotion is successful:
 - future numbered work has a known place to propose newly discovered reusable
   principles.
 
-Work item `006` remains open for maintainer review. Closure, archival, work item
-`007`, staging, committing, and pushing remain separately authorized actions.
+The language maintainer subsequently authorized closure, archival, and
+preparation of work item `007`. Staging, committing, and pushing remained
+separate actions.
+
+## Closure record
+
+Work item `006` closed after:
+
+- promoting ordinary function invocation, argument/default binding, results,
+  routing, fixed-arity selection, compatible visible prototypes, synchronous
+  completion, diagnostics, costs, and formatting into current owners;
+- creating the human-facing reusable language-principles catalog and realigning
+  vision ownership;
+- updating affected declaration, qualifier, construction, source-structure,
+  terminology, documentation, router, legacy, and raw surfaces;
+- retiring consumed raw function-invocation input after preserving every useful
+  finding and provenance path;
+- validating the authorized promotion sets; and
+- preparing work item `007` for core flow-control review without beginning its
+  analysis.
+
+Current documents own all accepted behavior. Explicit deferrals remain in their
+indexed raw inputs or current owner boundaries. This archived file exists only
+for targeted discovery and audits.

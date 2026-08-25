@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [006: Function invocation, argument binding, and results](work/006-function-invocation.md) |
-| Next work number | `007` |
+| Active work item | [007: Core flow control, clause headers, and exits](work/007-core-flow-control.md) |
+| Next work number | `008` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
