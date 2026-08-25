@@ -32,7 +32,7 @@ been lost. Recover them before continuing.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 4 |
+| Operating guidance revision | 5 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Legacy design input under review; not a formal specification |
@@ -45,6 +45,9 @@ high-level capabilities and low-level control with explicit cost. It is
 presently being refined into a conceptually sound, technically thorough,
 human-developer-readable language design. Producing a formal specification and
 implementing a compiler or transpiler are future concerns.
+
+Implementation feasibility may pressure conceptual design, but implementation
+mappings do not belong in language documentation.
 
 Existing language pages, RFCs, examples, plans, summaries, and agent-authored
 material are evidence according to their maturity, not automatic authority.
@@ -73,6 +76,13 @@ maintainer may use staging only as a before/after comparison boundary. Staged
 content does not imply acceptance, approval, or readiness to commit. Do not
 alter that boundary without explicit authorization.
 
+The agent performs all authorized repository edits unless the language
+maintainer explicitly says they edited files. The maintainer normally provides
+feedback, alignment, authorization, and staged review boundaries rather than
+modifying the agent's work directly. Do not routinely ask whether the maintainer
+changed an edit. Continue to inspect staged and unstaged state, preserve review
+boundaries, and stop when unexpected conflicting changes actually appear.
+
 ## Recovery procedure
 
 1. Inspect and report the branch and staged/unstaged working-tree state.
@@ -90,6 +100,12 @@ alter that boundary without explicit authorization.
 8. Wait for the language maintainer to confirm or correct the recovery before
    continuing.
 
+Recover explicit "capture this" commitments, cross-cutting principle candidates,
+unresolved owner recommendations, known holes, and promised follow-up audits.
+Verify that the working record still provides an actionable review entry point.
+If a commitment or disposition is uncertain, report that uncertainty before
+continuing promotion or closure.
+
 Do not repeat completed work. Do not infer authorization from summaries, stale
 task text, changed files, staged files, silence, or the presence of an active
 work item.
@@ -106,6 +122,15 @@ material consequences far enough to test coherence. Detailed numbered-work,
 pre-promotion, archival, and documentation rules are owned by
 `project/documentation.md`.
 
+The fixed initiating concern prevents uncontrolled redesign; it does not confine
+the work to one file or owner when necessary consequences cross that boundary.
+Follow each material consequence far enough to understand and disposition it.
+When findings are aligned and promotion is authorized, update every affected
+current owner, router, legacy page, terminology surface, and raw input in one
+coherent change set. Do not leave necessary integration to an unspecified future
+agent. Defer it explicitly only when the language design remains coherent
+without resolving it now.
+
 If recovery shows that item `n` is closing, remember that the cycle must prepare
 the aligned initiating input and reading scope for `n+1`. Creating `n+1` does not
 authorize beginning it. A new session may take over, or the language maintainer
@@ -117,6 +142,13 @@ retiring raw input, check every live reading path and preserve provenance.
 Disposition legacy material by value: retain continuing future evidence, and
 retire material or pages after all useful input is promoted, deferred elsewhere,
 rejected, or superseded.
+
+Promotion produces human-developer-facing teaching, not a transcription of the
+working discussion. Lead with a usable mental model and examples, then layer
+material rules, diagnostics, costs, corner cases, advanced behavior, and
+reference details. Remove discovery chronology and rejected alternatives when
+they do not help a programmer, but do not omit behavior that future
+specification work would otherwise have to rediscover.
 
 ## Default working style
 
@@ -135,5 +167,20 @@ For reviewability:
 - Recover Zax-specific intent first. Other languages may supply ideas,
   inspiration, comparisons, counterexamples, implementation pressure, and
   candidate solutions; do not assume their choices are correct for Zax.
+- A working record may be technically dense, but it must remain reviewable.
+  Preserve important findings first in plain language with concrete examples;
+  place detailed edge cases, diagnostics, and dispositions underneath them.
+- When the maintainer says something should be captured, treat that as an
+  explicit obligation. Preserve the recognizable finding, its intended scope or
+  weight, and one owner, raw destination, deferral, or rejection.
+- Distinguish a local semantic rule from a reusable language principle, a
+  language-design process lesson, and a documentation lesson. Do not narrow a
+  broad insight merely because it was discovered while reviewing one feature.
+- Do not combine several simple findings into an agent-authored umbrella
+  principle unless that synthesis is itself discussed and aligned. A ledger or
+  summary supports findings; it does not replace them.
+- Keep discussion actionable. Show the current understanding, demonstrated
+  concern or hole, needed refinement or expansion, and next decision. Do not
+  replace one reviewable concern with an exhaustive summary.
 
 <!-- end zax rehydration -->

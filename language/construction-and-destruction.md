@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general function-call syntax and overload ranking, arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -47,7 +47,8 @@ An ordinary constructor:
 
 - has no result values;
 - accepts zero or more ordinary input parameters;
-- participates in ordinary parameter qualification and overload selection;
+- participates in ordinary parameter qualification and
+  [callable selection](function-invocation.md#candidate-selection);
 - receives `_` as the current instance under construction;
 - may establish final and immutable state without `unsafe pliable`; and
 - must establish a complete instance on every normal return.
@@ -133,14 +134,22 @@ constructor arguments, and stored-member initializers:
 
 ```zax
 [{
-    : positionalExpression,
+    positionalExpression,
     parameterName: namedExpression,
+    : explicitlyPositionalExpression,
+    :,
+    parameterWithDefault:,
     .memberName = memberExpression
 }]
 ```
 
-- `: expression` supplies a positional constructor argument.
+- `expression` supplies an ordinary positional constructor argument.
 - `parameterName: expression` supplies a named constructor argument.
+- `: expression` makes positional intent explicit.
+- empty `:` or `parameterName:` explicitly omits a parameter and requires its
+  declared default.
+- `: :` or `parameterName: :` explicitly supplies the parameter type's default
+  value at that packet position.
 - `.memberName = expression` supplies direct call-site initialization for a
   stored member.
 
@@ -163,28 +172,35 @@ An entry expression may itself declare a temporary:
 }]
 ```
 
-The outer `:` or `name:` categorizes the packet entry. The nested expression
-introduces and evaluates the temporary. Formatting may add parentheses where
-the nesting would otherwise be difficult to read.
+The outer `:` or `name:` categorizes the packet entry. The nested declaration
+expression introduces and evaluates the temporary. A bare declaration
+expression in a label-capable entry is an intent error; explicit positional
+intent or grouping disambiguates it. See
+[Zax function invocation](function-invocation.md#argument-declaration-expressions).
 
 ### Positional cursor
 
 Argument mapping is tested separately for each constructor candidate:
 
 1. At packet entry, the positional cursor points to the first parameter.
-2. `: expression` binds the current positional parameter and advances.
+2. A bare or explicitly positional expression binds the current positional
+   parameter and advances.
 3. `name: expression` binds that named parameter and resets the cursor to the
    parameter following it.
-4. `.member = expression` does not establish a constructor position and
+4. An empty positional or named omission maps its parameter and advances or
+   resets the cursor in the same way, but evaluates no value during the explicit
+   input phase.
+5. `.member = expression` does not establish a constructor position and
    invalidates the positional cursor.
-5. A later named constructor argument may establish the cursor again.
-6. A positional entry while the cursor is invalid is not viable.
+6. A later named constructor argument may establish the cursor again.
+7. A positional entry while the cursor is invalid is not viable.
+8. A positional entry does not skip a defaulted parameter.
 
 ```zax
 [{
     .legs = 2,
     kind: "grizzly",
-    : afterKind
+    afterKind
 }]
 ```
 
@@ -199,16 +215,17 @@ require care.
 
 Constructors and replacement constructors use the ordinary parameter-default
 and omission model. A packet may omit an input only when the tested candidate
-supplies it through those shared rules. Complete default-expression syntax and
-general overload ranking remain future function work.
+declares a default. Complete omission, default evaluation, and fixed-arity
+preference are defined by
+[Zax function invocation](function-invocation.md#omitted-inputs-and-defaults).
 
 ### Evaluation and binding order
 
-Packet entries evaluate strictly from left to right. The comma is a
+Every value-producing packet entry evaluates strictly from left to right. The comma is a
 non-overloadable sequencing operation for this purpose. Other expression
 precedence rules still apply inside each entry.
 
-For each entry in source order:
+For each value-producing entry in source order:
 
 1. evaluate its expression;
 2. immediately initialize or bind the selected input slot according to its
@@ -216,8 +233,13 @@ For each entry in source order:
 3. complete the observable effects of that binding before evaluating the next
    entry.
 
-After every input is ready, member construction follows the selected
-constructor's plan. Packet order does not reorder members.
+Empty omission entries perform no evaluation in packet order. After all explicit
+value-producing entries, including stored-member inputs, complete, declared
+defaults for still-unbound constructor parameters evaluate in the selected
+constructor prototype's parameter order.
+
+After every input is ready, member construction follows the selected constructor
+plan. Packet order does not reorder members.
 
 - A copied input captures the source value when that entry is evaluated.
 - A reference input binds at evaluation but observes later changes to its
@@ -232,7 +254,7 @@ source : Integer = 1
 
 value : Example = [{
     .snapshot = source,
-    : changeSourceToTwo(source)
+    changeSourceToTwo(source)
 }]
 ```
 
@@ -249,6 +271,22 @@ selected lifecycle call. Other packet temporaries survive until their values
 have been transferred and their specified destruction point is reached.
 Complete temporary and full-expression rules remain future function and
 lifetime work.
+
+### Multiple-result inputs
+
+A bare multiple-result invocation in a packet may supply consecutive constructor
+parameters:
+
+```zax
+pair : Pair = [{
+    produceTwo()
+}]
+```
+
+This uses the shared
+[result-forwarding model](function-invocation.md#forwarding-results). It does not
+pack the results into one structural value and does not initialize stored members
+by result label.
 
 ### Mixed call-site member initialization
 
@@ -824,6 +862,7 @@ Programmers must be able to discover:
 
 - automatic versus explicit member lifecycle operations;
 - temporaries retained while a construction packet evaluates;
+- declared constructor defaults evaluated after explicit packet inputs;
 - copy, move, `last`, and reference binding performed for packet entries;
 - generated fallback replacement as `---` followed by `+++`;
 - resources retained or reconstructed by custom replacement;
@@ -839,6 +878,8 @@ Diagnostics should distinguish:
 - no viable ordinary or replacement constructor;
 - missing, duplicate, unknown, or ambiguously mapped packet entries;
 - a positional entry with no current positional cursor;
+- omission of a parameter that has no declared default;
+- label-versus-declaration intent that is unclear;
 - equal viable overloads;
 - unresolved existing-versus-generated behavior at an actual use;
 - use of a `forbidden` operation;
@@ -862,12 +903,16 @@ Canonical formatting should preserve:
 - contextual adjacency in `replacement +++`;
 - visible construction-packet entry categories;
 - left-to-right packet entry order;
+- explicit positional intent;
+- omission versus explicit type-default input;
 - ordinary qualifier and parameter ordering;
 - explicit `= default`, `= existing`, and `= forbidden`; and
 - narrow unsafe-control documentation when those controls are later defined.
 
 Formatters must not reorder packet entries because evaluation order is
-observable.
+observable. They must not add or remove explicit positional intent, convert
+omission into type-default initialization, or parenthesize a bare multiple-result
+invocation in a way that changes it into one expression.
 
 ## Boundaries and maturity
 
@@ -881,7 +926,12 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - declaration-order automatic construction and reverse automatic destruction;
 - arbitrary control-flow order for explicit member lifecycle calls;
 - static lifecycle tracking without mandatory runtime flags;
-- current construction-packet categories and strict evaluation/binding order;
+- shared ordinary-call input forms while `.member = expression` remains
+  construction-specific;
+- strict packet evaluation/binding order;
+- constructor defaults after explicit packet inputs and before member
+  construction;
+- packet multiple-result forwarding remaining distinct from structural packing;
 - ordinary constructors remaining resultless;
 - demand-driven generated/existing/default/forbidden resolution;
 - immutable + writable + varying generated reconstructive replacement;

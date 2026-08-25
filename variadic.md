@@ -3,6 +3,12 @@
 
 ## Variadic Functions
 
+Current fixed-arity calls, argument/default binding, result routing, and callable
+selection are defined by
+[Zax function invocation](language/function-invocation.md). This page remains
+legacy input for variadic expansion, enumeration, and variadic-specific
+selection, which must fit that fixed-arity base model.
+
 ### Enumerating the `...` arguments with `each`
 
 Variadic functions allow a variable list of arguments to be passed into a function. The `each` statement can be used to enumerate all of a variadic function's arguments. For each type of variable in a `...` list, a compiler will create a type safe block of code.

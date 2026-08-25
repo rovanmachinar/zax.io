@@ -7,7 +7,7 @@
 | Applies To | Source-local semantic permissions and assertions, analysis provenance, contract-version evolution, and the boundary between unsafe controls and lint suppression |
 | Owns | Preservation of construction-derived requirements, concrete examples, unresolved syntax, activation pressure, and retirement criteria |
 | Does Not Own | Accepted unsafe syntax, safety guarantees, diagnostic identifiers, lint syntax, language contracts, compiler extensions, or implementation |
-| Source / Provenance | Work item `005`, construction, destruction, and replacement review |
+| Source / Provenance | Work items `005` and `006`, construction/lifecycle and invocation/result analysis pressure |
 
 ## Reading posture
 
@@ -98,6 +98,17 @@ generated code or the compiler's semantic state.
 | `lifetime-escape` | Permit an access path to cross a boundary whose lifetime cannot be proved sufficiently bounded |
 | `replacement-alias` | Permit replacement despite unresolved possible aliasing between the destination and a right-hand operand |
 | `terminal-reconstruction` | Permit reconstruction of a member during enclosing destruction |
+
+Invocation and result work adds future proof categories without establishing
+their final identifiers:
+
+- completing every result slot on every normal path;
+- constructing each result slot at most once per lifetime;
+- preventing use after move or `last`;
+- preventing a returned reference from escaping a temporary;
+- consuming each source-result and destination slot at most once; and
+- preserving diagnostic provenance for the contract or analysis that rejected a
+  call.
 
 These names identify future-work concerns. They are not accepted keywords.
 

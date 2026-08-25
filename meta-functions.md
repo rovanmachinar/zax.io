@@ -2,6 +2,13 @@
 
 ## Meta-Functions
 
+Current ordinary expected-result context, fixed-arity callable preference, and
+ambiguity are defined by
+[Zax function invocation](language/function-invocation.md). This page remains
+legacy input for omitted meta types, compile-time specialization, and other
+meta-function behavior; those mechanisms may not silently broaden ordinary
+runtime result inference.
+
 ### Meta-functions with omitted meta argument types
 
 The compile-time language requires that types are known as the compiler doesn't not support runtime variable typed parameters. However, function types can be omitted and caller usage can be determined. Functions will only be considered as valid callee choice if their function signature is compatible with the caller's signature. If the signature of the function is compatible with the caller then the function is considered a candidate so long as a better candidate was not found. Better is subjective, but in Zax it means the function with the best exact match to the input and return types expected.

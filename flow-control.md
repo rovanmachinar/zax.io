@@ -17,6 +17,10 @@ are defined by
 page remains legacy input for the exact behavior of `if`, loops, `switch`,
 `using`, `;;`, and other control forms.
 
+Current call evaluation, result slots, return completion, result labels, and
+capture behavior used by these examples are defined by
+[Zax function invocation](language/function-invocation.md).
+
 ````zax
 isNegativeOrGreaterThan10 : (negative : Boolean)(input : Integer) = {
 

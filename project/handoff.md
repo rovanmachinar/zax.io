@@ -41,7 +41,7 @@ edit.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 4 |
+| Operating guidance revision | 5 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Legacy design input under review; not a formal specification |
@@ -116,6 +116,13 @@ The language maintainer may stage changes to create a before/after comparison
 boundary. Staging does not imply acceptance, approval, or readiness to commit.
 Report staged and unstaged state and preserve that boundary.
 
+The agent performs all authorized repository edits unless the language
+maintainer explicitly says they edited files. The maintainer normally provides
+feedback, alignment, authorization, and staged review boundaries rather than
+modifying the agent's work directly. Do not routinely ask whether the maintainer
+changed an edit. Continue to inspect staged and unstaged state, preserve review
+boundaries, and stop when unexpected conflicting changes actually appear.
+
 ## Decision maturity
 
 Keep raw input, candidates, tentative proposals, open questions, aligned
@@ -156,6 +163,15 @@ an immutable, possibly incomplete anchor. Keep that focus stable while following
 material consequences far enough to test coherence. Capture defensible
 deferrals rather than ignoring consequences or redesigning the entire language.
 
+The fixed initiating concern prevents uncontrolled redesign; it does not confine
+the work to one file or owner when necessary consequences cross that boundary.
+Follow each material consequence far enough to understand and disposition it.
+When findings are aligned and promotion is authorized, update every affected
+current owner, router, legacy page, terminology surface, and raw input in one
+coherent change set. Do not leave necessary integration to an unspecified future
+agent. Defer it explicitly only when the language design remains coherent
+without resolving it now.
+
 Detailed numbered-work, pre-promotion, archival, and documentation rules are
 owned by `project/documentation.md`.
 
@@ -171,6 +187,13 @@ retiring raw input, check every live reading path and preserve provenance.
 Disposition legacy material by value: retain continuing future evidence, and
 retire material or pages after all useful input is promoted, deferred elsewhere,
 rejected, or superseded.
+
+Promotion produces human-developer-facing teaching, not a transcription of the
+working discussion. Lead with a usable mental model and examples, then layer
+material rules, diagnostics, costs, corner cases, advanced behavior, and
+reference details. Remove discovery chronology and rejected alternatives when
+they do not help a programmer, but do not omit behavior that future
+specification work would otherwise have to rediscover.
 
 ## Default working style
 
@@ -193,6 +216,21 @@ For reviewability:
 - Recover Zax-specific intent first. Other languages may supply ideas,
   inspiration, comparisons, counterexamples, implementation pressure, and
   candidate solutions; do not assume their choices are correct for Zax.
+- A working record may be technically dense, but it must remain reviewable.
+  Preserve important findings first in plain language with concrete examples;
+  place detailed edge cases, diagnostics, and dispositions underneath them.
+- When the maintainer says something should be captured, treat that as an
+  explicit obligation. Preserve the recognizable finding, its intended scope or
+  weight, and one owner, raw destination, deferral, or rejection.
+- Distinguish a local semantic rule from a reusable language principle, a
+  language-design process lesson, and a documentation lesson. Do not narrow a
+  broad insight merely because it was discovered while reviewing one feature.
+- Do not combine several simple findings into an agent-authored umbrella
+  principle unless that synthesis is itself discussed and aligned. A ledger or
+  summary supports findings; it does not replace them.
+- Keep discussion actionable. Show the current understanding, demonstrated
+  concern or hole, needed refinement or expansion, and next decision. Do not
+  replace one reviewable concern with an exhaustive summary.
 
 ## Initial working-record authorization
 
@@ -211,6 +249,19 @@ initial reconstruction for review. That reconstruction may include:
 - open questions, corner cases, and risks;
 - immediate consequences and defensible deferrals; and
 - likely documentation-owner boundaries.
+
+The initial reconstruction must give the maintainer an actionable review entry
+point rather than only a comprehensive evidence summary. Make it easy to find:
+
+- the current candidate programmer model;
+- the most important contradiction or uncertainty;
+- concrete examples demonstrating the concern;
+- known holes requiring refinement or expansion;
+- decisions that need maintainer review; and
+- adjacent findings that were captured but deliberately deferred.
+
+Preserve technical depth, but do not require the maintainer to reconstruct the
+active questions from dense prose.
 
 Treat every addition as raw input or candidate analysis, not as an aligned
 finding or accepted language design. Incorrect guesses are acceptable when they

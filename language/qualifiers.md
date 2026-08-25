@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [function invocation, result routing, and callable preference](function-invocation.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -565,6 +565,15 @@ generic result resolution remains later function design.
 Captures preserve or strengthen the captured source qualifications and never
 inherit pliability implicitly.
 
+The invocation owner applies these qualification truths to parameter binding,
+result routing, expected-result matching, compatible prototype adaptation, and
+partial-order candidate preference. See
+[Zax function invocation](function-invocation.md).
+
+Changing the labels, defaults, or result-acknowledgement policy of a compatible
+visible prototype does not permit its ordered implementation slots to gain
+authority or require qualification-changing executable adaptation.
+
 ## Receiver operands
 
 The [receiver operand](terms.md#receiver-operand) is the implicit operand
@@ -607,8 +616,13 @@ uses the dereferenced instance's qualifications, not the pointer binding's place
 qualification.
 
 Omitted receiver-operand qualifiers use the defaults applicable where the
-operation is defined. Complete operator generation, viability, ranking,
-temporary lifetime, and default-source precedence remain future work.
+operation is defined. Complete operator generation, operator-specific lookup and
+priority, temporary destruction beyond synchronous call completion, and
+default-source precedence remain future work.
+
+Ordinary member-call evaluation, fixed-arity viability, and ambiguity are
+defined by [Zax function invocation](function-invocation.md). Operator-specific
+lookup domains remain future operator work.
 
 ## Indirection
 
@@ -706,7 +720,10 @@ Diagnostics should:
 - report contradictions where contextual defaults become concrete;
 - explain required and available receiver-operand qualifications when no
   candidate is viable; and
-- distinguish an unsafe bypass from ordinary promise strengthening.
+- distinguish an unsafe bypass from ordinary promise strengthening;
+- show the qualification layer that makes an invocation or result transfer
+  unavailable; and
+- distinguish an incomparable transfer from a strictly worse match.
 
 Canonical ordering is a formatting rule, not semantic precedence. Formatters
 preserve explicit qualification. Linters may identify compatible restatement or
@@ -749,5 +766,7 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - generated reconstructive replacement requiring immutable + varying + writable;
 - deep immutability under ordinary safe behavior;
 - explicit, non-propagating unsafe pliability;
-- qualifier-aware receiver-operand selection; and
+- qualifier-aware receiver-operand selection;
+- function invocation applying qualification truth without silently increasing
+  authority; and
 - the separation of mutability from lifetime and thread safety.

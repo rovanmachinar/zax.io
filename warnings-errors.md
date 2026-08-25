@@ -12,6 +12,11 @@ Duplicate qualifier tokens at one syntactic point and conflicting qualifier
 stances at one entity/layer are source errors under
 [Zax qualifiers](language/qualifiers.md), not configurable warnings.
 
+Current function-invocation validity and diagnostic categories are defined
+conceptually by
+[Zax function invocation](language/function-invocation.md). Exact identifiers
+and the registries below remain legacy diagnostics input.
+
 ### `error` directive
 
 #### Forcing the compiler to issue an error

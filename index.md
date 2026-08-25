@@ -12,7 +12,9 @@ producing them.
 ## Start here
 
 - Read the [Zax language vision](language/vision.md) for its purpose, audience,
-  principles, goals, advantages, non-goals, and accepted tradeoffs.
+  foundational direction, goals, advantages, non-goals, and accepted tradeoffs.
+- Read [Zax language principles](language/principles.md) for the reusable
+  principles that guide source, APIs, and future language decisions.
 - Read [Zax source structure](language/source-structure.md) for statement-level
   newlines, continuation, bodies, semicolon composition, mandatory layout, and
   comments.
@@ -22,6 +24,8 @@ producing them.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
+- Read [Zax function invocation](language/function-invocation.md) for ordinary
+  calls, arguments, defaults, results, result routing, and callable selection.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
   for constructors, construction packets, generated lifecycle operations,
   same-storage replacement, and destruction.
@@ -32,9 +36,11 @@ producing them.
 ## Current conceptual design
 
 - [Language vision](language/vision.md)
+- [Language principles](language/principles.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
 - [Qualifiers](language/qualifiers.md)
+- [Function invocation](language/function-invocation.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Language-design terms](language/terms.md)
 

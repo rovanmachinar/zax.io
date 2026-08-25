@@ -6,8 +6,8 @@
 | Audience | Human developers evaluating, learning, or contributing to Zax |
 | Applies To | Intended language direction; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Zax's purpose, audience, design principles, foundational goals, intended advantages, non-goals, and accepted high-level tradeoffs |
-| Does Not Own | Exact syntax, feature semantics, safety guarantees, ABI rules, runtime design, or compiler implementation |
+| Owns | Zax's purpose, audience, foundational language direction, goals, intended advantages, non-goals, accepted high-level tradeoffs, and summary route to reusable language principles |
+| Does Not Own | Full reusable [language-principle definitions](principles.md), exact syntax, feature semantics, safety guarantees, ABI rules, runtime design, or compiler implementation |
 
 ## What Zax is
 
@@ -64,44 +64,24 @@ Zax cannot eliminate those tradeoffs. Its goal is to make them more visible and
 more selectable. When a cost or risk changes, the language should help the
 programmer understand where it moved rather than describing it as gone.
 
-## Design principles
+## Reusable language principles
 
-### High-level expression without hidden fundamentals
+The full human-facing [Zax language principles](principles.md) catalog guides
+source, APIs, and future concept work. In summary, Zax:
 
-Zax should provide high-level types, functions, resource management,
-metaprogramming, and asynchronous facilities while keeping consequential
-behavior understandable.
+- provides high-level expression without hiding consequential fundamentals;
+- makes meaningful costs visible and selectable;
+- supports explicit policy choices rather than one compulsory policy;
+- favors expressive flexibility that makes programmer intent clear and rejects
+  ambiguous source rather than guessing;
+- keeps observable order and optimization behavior trustworthy; and
+- prefers familiar, readable forms when they fit the design.
 
-Low-level control is not merely an emergency escape hatch. It is part of the
-language's normal range. Higher-level code should remain available without
-requiring a developer to work at the lowest level everywhere.
+The principles catalog owns the complete reusable statements, their programmer
+value, representative applications, and tensions. This vision owns the
+foundational direction and feature commitments below.
 
-### Visible and selectable cost
-
-Meaningful costs should be understandable, including:
-
-- allocation and deallocation;
-- copying and movement;
-- indirection and reference counting;
-- synchronization and scheduling;
-- runtime type information;
-- bounds and validity checks;
-- generated code and executable size; and
-- build-time computation.
-
-If a program does not use a facility, it should not incur that facility's
-runtime cost. A programmer may deliberately choose a more expensive mechanism
-when its safety, convenience, or flexibility is worth the tradeoff.
-
-### Explicit policy rather than one compulsory policy
-
-Different domains need different balances among performance, memory, safety,
-portability, and convenience.
-
-Zax should support explicit choices for concerns such as lifetime, allocation,
-mutability, copying, concurrency, runtime information, and low-level access. The
-language may provide strong defaults and opinions without making one policy
-mandatory for every program.
+## Foundational language direction
 
 ### Data-oriented organization and composition
 
@@ -157,19 +137,6 @@ representations, conversion rules, and failure modes remain future design work.
 
 The plurality is intentional. The language and documentation must make the
 choice among strategies understandable.
-
-### Familiarity, readability, and elegance
-
-Zax should prefer familiar forms when they express the design cleanly. It may
-depart from convention when a concrete improvement justifies the learning and
-tooling cost.
-
-Elegance does not mean terseness alone. Ordinary code should remain readable
-without expert-level knowledge, and advanced code should expose its complexity
-rather than compressing it into cryptic forms.
-
-Clean-slate design is an opportunity to remove inherited accidents, not a reason
-to make recognizable ideas unfamiliar without benefit.
 
 ### First-class asynchronous programming
 
@@ -364,6 +331,8 @@ promise.
 The pre-existing topic pages at the repository root predate this ownership model
 and remain design input until individually reviewed. Reviewed concept owners
 under `language/` state the accepted concerns assigned to them. Accepted
+reusable cross-cutting principles are owned by
+[Zax language principles](principles.md). Accepted
 statement-level newlines, continuation, body formation, layout, and comments are
 owned by [Zax source structure](source-structure.md). Accepted declaration,
 initialization, binding visibility, qualifier, name-resolution, and assignment

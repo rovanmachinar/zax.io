@@ -8,6 +8,10 @@ Current per-level qualifier-preservation constraints are defined by
 input for complete pointer/reference grammar, ownership, lifetime, `lease`,
 `last`, and rebinding behavior.
 
+Current immediate call-boundary reference, pointer, result, temporary, and
+synchronous-completion behavior is defined by
+[Zax function invocation](language/function-invocation.md).
+
 ### Basics
 
 #### Pointer basics

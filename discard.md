@@ -3,6 +3,11 @@
 
 ## Discard Operator
 
+Current function-result acknowledgement, discardable results, omitted inputs,
+and result routing are defined by
+[Zax function invocation](language/function-invocation.md). This page remains
+legacy input for local, type, and memory-policy uses of `#`.
+
 ### discard operator on previously declared variables
 
 The discard operator (`#`) can be applied to values after declaration which will force the compiler to treat the type as unimportant and not complain if the type was not referenced.
@@ -19,155 +24,6 @@ func = {
     # input
     // ...
 }
-````
-
-
-### Functions with discard operator on return results
-
-Return result arguments on functions marked as discard using the discard operator (`#`) may be ignored by the caller and will not require the compiler to enforce capturing of the function call's result. Without this directive the `result-not-captured` warning will occur if a function result is not captured.
-
-````zax
-pushToQueue final : (
-    newQueueSize : Integer
-)(
-    value : Integer
-) = {
-    // insert code that pushes to the queue and returns the new queue size
-}
-
-// ERROR: The newQueueSize was not captured by the caller and thus will cause
-// a compiler error
-pushToQueue(42)
-
-// OKAY: The result is acknowledged as existing; the caller is ignoring the
-// result using the discard operator as a placeholder
-# := pushToQueue(42)
-
-// This is allowed as the value is captured (even if the value is never used)
-ignoredResult := pushToQueue(42)
-
-
-pushToQueueVersion2 final : (
-    newQueueSize # : Integer
-)(
-    value : Integer
-) = {
-    return pushToQueue(value)
-}
-
-// This is allowed as the value is marked as `#` and thus does not
-// require the result is captured
-pushToQueueVersion2(42 * 2)
-
-// An alternative version which is also allowed where the result type is
-// declared with an empty name but not captured into a variable using the
-// discard operator (`#`) as a placeholder
-# := pushToQueueVersion2(42 * 2)
-````
-
-Functions with multiple arguments can optionally mark each argument with `#` to ensure which arguments must be captured by default and which arguments can be discarded and ignored.
-
-````zax
-queuedValue final : (value : Integer)() = {
-    // ...
-}
-
-queueSize final : (size : Integer)() = {
-    // ...
-}
-
-readNextValue final : (
-    nextValue : Integer,
-    remaining : Integer
-)() = {
-    return queuedValue(), queueSize()
-}
-
-// Allowed sa both results are captured
-nextValue:, remaining: = readNextValue()
-
-// ERROR: The function returns two values with no results being marked
-// as `#` thus both result must be captured
-nextValue2 := readNextValue()
-
-// OKAY: An acknowledgement is made of the second argument, the
-// argument is not captured but the variable is intentionally discarded
-nextValue3:, # = readNextValue()
-
-readNextValueVersion2 final : (
-    nextValue : Integer,
-    remaining # : Integer
-)() = {
-    return queuedValue(), queueSize()
-}
-
-// Allowed to discard the second return result argument as the value
-// is marked as `#`
-nextValue4 := readNextValueVersion2()
-
-// An alternative allowed version where the second argument is acknowledged
-// as existing but is not captured
-nextValue5: , # = readNextValueVersion2()
-````
-
-
-### Functions with discard operator on input arguments
-
-````zax
-func final : ()(input : Integer) = {
-    // ERROR: The variable named `input` is declared but never used
-}
-
-funcVersion2 final : ()(input # : Integer) = {
-    // this allows the input argument to be optional and when the input argument
-    // is not specified then the value is defaulted to the default value of the
-    // type 
-}
-
-funcVersion3 final : ()(ignoredButRequired : Integer) = {
-    // the argument is requires as an argument but the value is discarded
-    // internally within the function
-    # ignoredButRequired
-}
-
-funcVersion4 final : ()(# : Integer, # : Integer) = {
-    // the arguments are not important and any values passed in are entirely
-    // discarded; alternatively the argument can be specified by a type and
-    // not a value
-}
-
-funcVersion5 final : ()(# : Integer) = {
-    // the argument is not important and any values passed in are entirely
-    // discarded; alternatively the argument can be specified by a type and
-    // not a value
-}
-
-funcVersion5 final : ()(# : String) = {
-    // the argument is not important and any values passed in are entirely
-    // discarded; alternatively the argument can be specified by a type and
-    // not a value
-}
-
-func(42)
-funcVersion2(42)
-funcVersion3(42)
-funcVersion4(42)
-funcVersion4(42, 52)
-
-// ERROR: An input argument was declared but not acknowledged and thus the
-// compiler will issue an error. The local discard has no impact on the caller
-// of the function.
-funcVersion3()  // ERROR
-
-// OKAY: both arguments are discarded
-funcVersion4()
-
-// this version selects the function based on a type being specified but no
-// value is actually sent into the function
-funcVersion5(42)         // Integer version called and value is discarded
-funcVersion5("hello")    // String version called and value is discarded
-funcVersion5(Integer)    // Integer version is called with no value to discard
-funcVersion5(String)     // String version is called with no value to discard
 ````
 
 

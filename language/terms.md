@@ -37,6 +37,26 @@ still being resolved.
 A binding is not the same as the value it names or the storage place holding
 that value. See [Zax declarations and bindings](declarations-and-bindings.md).
 
+## Call completion
+
+**Call completion** is the synchronous boundary after the selected callable has
+bound all parameters, executed its body, completed its declared results, and
+mapped those results into the surrounding context.
+
+An argument or result temporary required by the call remains live through the
+part of this boundary that uses it. Async suspension requires a broader future
+completion model. See [Zax function invocation](function-invocation.md).
+
+## Callable
+
+A **callable** is a function value, declared function, constructor, operator, or
+other language-defined entity that has a prototype and may be selected and
+invoked.
+
+The callable category determines discovery and any category-specific behavior.
+Ordinary argument binding, results, and fixed-arity selection are defined by
+[Zax function invocation](function-invocation.md).
+
 ## Construction packet
 
 A **construction packet** is the `[{ ... }]` construct that supplies positional
@@ -82,6 +102,15 @@ generated replacement skeleton participate in lifecycle operations. An
 arbitrary operator is not a lifecycle operation merely because it uses `=`.
 See [Zax construction, replacement, and destruction](construction-and-destruction.md).
 
+## Parameter slot
+
+A **parameter slot** is one ordered input position declared by a callable
+prototype.
+
+Positional, named, omitted, or routed source input may bind the slot. The slot is
+complete before the callable body begins. See
+[Zax function invocation](function-invocation.md).
+
 ## Place
 
 A **place** is storage that can hold a value. Replacing a place changes which
@@ -115,6 +144,31 @@ meanings, and "receiver object" incorrectly suggests an object-oriented model.
 
 All three qualifier axes may constrain a receiver operand. See
 [Zax qualifiers](qualifiers.md#receiver-operands).
+
+## Result-routing group
+
+A **result-routing group** evaluates one producer, then maps or discards its
+ordered results through explicit source-result and destination cursors.
+
+The producer executes once. See
+[Zax function invocation](function-invocation.md#result-routing-groups).
+
+## Result shape
+
+A **result shape** is the ordered sequence of zero or more result slots declared
+by a callable prototype.
+
+Several results are not implicitly one tuple or structural value. See
+[Zax function invocation](function-invocation.md#result-slots).
+
+## Result slot
+
+A **result slot** is one ordered output position declared by a callable
+prototype.
+
+The slot begins as an output obligation and must contain one complete value on
+every normal exit. A result initializer may opt into construction before body
+entry. See [Zax function invocation](function-invocation.md#result-slots).
 
 ## Reconstructive replacement
 

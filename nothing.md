@@ -3,12 +3,14 @@
 
 ## Nothing Type Instances
 
-Accepted default function-binding behavior requires obvious calls of an
-unreplaced `Nothing` function to be diagnosed and otherwise unhandled calls to
-panic, as defined by
+Default function-value initialization is defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md).
 Complete `Nothing` representation, construction, pointer, and custom fallback
 behavior remains legacy input on this page.
+
+Current invocation of function values in their default `Nothing` state is
+defined by
+[Zax function invocation](language/function-invocation.md#default-nothing-function-values).
 
 ### Basic Overview
 

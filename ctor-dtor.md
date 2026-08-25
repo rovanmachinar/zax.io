@@ -9,6 +9,9 @@ destructor behavior is defined by
 Declaration initialization and qualifier eligibility are defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md) and
 [Zax qualifiers](language/qualifiers.md).
+Shared constructor-call inputs, defaults, evaluation, result forwarding, and
+fixed-arity selection are defined by
+[Zax function invocation](language/function-invocation.md).
 
 The remainder of this page is legacy input for unreviewed allocation, global,
 `once`, move/copy/`last`, and related behavior. Its examples may use superseded
@@ -637,60 +640,6 @@ myType2 : MyType = myType1
 
 // The `deep` copy constructor was declared
 myType3 : MyType = myType1 as deep
-````
-
-
-### Named initialization as an alternative to constructors with arguments
-
-Rather than creating a constructor that takes arguments for all the data being initialized, or worse, creating a polymorphic set of constructors for each variant of arguments that a type might want initialized, named value initialization can be used. When a type is instantiated, the contained arguments can be initialized with values by specifying the names of each value to initialized prefixed with a dot operator `.` and the value to initialize. All initialized values must be enclosed in curly braces `{}` so the are distinguished for a constructor argument list. Named arguments need not be in the same order as their listing in the type being initialized.
-
-````zax
-Animal :: type {
-    animal : String
-    legs : Integer
-    canFly : Boolean
-    slimy : Boolean
-}
-
-animal1 : Animal = [{ .animal = "bear", .legs = 2 }]
-animal2 : Animal = [{ .animal = "spider", .legs = 8 }]
-animal3 : Animal = [{ .animal = "bird", .canFly = true, .legs = 2 }]
-animal4 : Animal = [{ .animal = "worm", .slimy = true }]
-````
-
-
-### Mixed named initialization with constructors arguments
-
-Named initialization can be preformed with constructors in a mixed fashion. When a type is instantiated, the contained arguments can be initialized with values by specifying the names of each value to initialized prefixed with a dot operator `.` and the value to initialize. Those parameters without `.` prefixed name will assume to be constructor arguments. Named arguments need not be in the same order as their listing in the type being initialized and can be intermixed with values without name declarations. The name can match either a constructor argument name, or the name can match an initialized type's name. Priority is given to matching a name to the constructor argument name over the named initializer but best matching rules are applied to all constructors.
-
-````zax
-Animal :: type {
-    animal : String
-    legs : Integer
-    canFly : Boolean
-    slimy : Boolean
-
-    +++ final : ()(animal : String, kind : String) = {
-        // ...
-    }
-}
-
-// the `animal` and `kind` argument names match the constructor and the
-// other values are name initialized
-animal1 : Animal = [{ .animal = "bear", .legs = 2, .kind = "grizzly" }]
-
-// the `animal` argument name matches the constructor and the
-// "recluse" value matches the missing second argument
-animal2 : Animal = [{ .animal = "spider", .legs = 8, "recluse" }]
-
-// the `animal` argument name matches the constructor and the
-// "chickadee" matches the missing second argument and the other values
-// are named initialized
-animal3 : Animal = [{ "chickadee", .animal = "bird", .canFly = true, .legs = 2 }]
-
-// the constructor is not matched as the `kind` argument is unmatched thus
-// the type is name initialized
-animal4 : Animal = [{ .animal = "worm", .slimy = true }]
 ````
 
 

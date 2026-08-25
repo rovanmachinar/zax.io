@@ -22,7 +22,6 @@ background.
 | [Asynchronous execution](async.md) | Async language documentation or lowering/runtime design begins | Consume through a subject-specific work item |
 | [Build execution and dependencies](build-and-dependencies.md) | Build/dependency ownership or implementation contracts are designed | Consume through a subject-specific work item |
 | [Legacy feature catalog](feature-catalog.md) | Existing language topics are inventoried or routed into accepted owners | Disposition each feature claim, then retire the catalog |
-| [Function invocation](function-invocation.md) | Ordinary call syntax, argument mapping, parameter binding, defaults, overloads, or temporary lifetime is designed | Preserve or explicitly revise construction-derived constraints through function and lifetime owners, then retire the input |
 | [Assembly and foreign interoperability](interop.md) | Assembly, FFI, ABI, or binding behavior is designed | Consume through a subject-specific work item |
 | [Lifetime strategies](lifetimes.md) | Pointer/lifetime policy, reference origin, replacement aliasing, pointer preservation, move/copy, or `last` is reviewed | Consume through a subject-specific work item |
 | [Mutability-indexed type families](mutability-indexed-type-families.md) | Type definitions, qualifier-indexed representation, structural compatibility, reflection, generics, or mutable/immutable conversion are reviewed | Evaluate distinct variants against separately named types and composition, then move accepted behavior or explicitly reject and retire the input |

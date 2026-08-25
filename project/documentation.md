@@ -47,7 +47,8 @@ using the language with the language maintainer who decides its design.
 | --- | --- | --- |
 | `README.md` | Repository entry point | Router |
 | `index.md` | Public website entry point | Router and legacy-note index |
-| `language/vision.md` | Accepted foundational language direction | Current conceptual owner for purpose, audience, principles, goals, advantages, non-goals, and high-level tradeoffs |
+| `language/vision.md` | Accepted foundational language direction | Current conceptual owner for purpose, audience, foundational direction, goals, advantages, non-goals, high-level tradeoffs, and the summary route to reusable principles |
+| `language/principles.md` | Reusable cross-cutting design and use principles | Current conceptual owner for the full human-facing principles catalog |
 | Root language-topic pages | Public human-developer-facing language material | Legacy design input until individually reviewed and promoted |
 | `project/README.md` | Project-guidance router and current-work index | Current routing and numbered-work state |
 | `project/handoff.md` | Generic source for the new-session copy/paste prompt | Current source; agents do not proactively read it |
@@ -69,12 +70,21 @@ repository. This repository may document implementation constraints when they
 affect the language design or programmer-visible behavior, but it does not own
 implementation source or internal architecture.
 
+Parser, tooling, analysis, and implementation feasibility are legitimate
+pressures when evaluating conceptual language design. Lasting language
+documentation states the resulting programmer-visible behavior and constraints,
+not a speculative compiler mapping.
+
 ## Audiences
 
 ### Human developers
 
 They need to understand why Zax exists, how its concepts work, what tradeoffs
 they make, how to use them, and which areas remain unsettled.
+
+Concept owners may assume a competent general programmer. They need not teach
+programming from first principles, but they must explain Zax-specific behavior,
+costs, terminology, and surprising differences clearly.
 
 ### Zax language maintainer
 
@@ -192,6 +202,27 @@ programmer needs it to:
 Details that primarily serve compiler conformance, formal proof, lowering, or
 internal implementation belong in future owners unless they change the
 programmer's model.
+
+Current concept owners begin with a usable mental model and common examples, but
+they do not stop at introductory teaching. Material rules, diagnostics, costs,
+corner cases, advanced behavior, and future-specification pressure remain in
+current documentation when programmers need them or when omitting them would
+force later specification work to rediscover accepted behavior.
+
+Examples are essential teaching tools. Introduce prerequisite concepts before
+examples depend on them, and use concrete Zax source to demonstrate behavior,
+ordering, costs, and accepted surprising boundaries.
+
+Layer that depth so ordinary use remains readable. A cohesive owner may progress
+through common behavior, advanced behavior, diagnostics, costs, and reference
+details without splitting into a premature specification. Working history,
+rejected alternatives, and discovery chronology stay in project records unless
+an accepted, likely-to-surprise boundary requires a counterexample.
+
+Teach Zax directly. Comparison with another language belongs in a concept owner
+only when it resolves a concrete likely misunderstanding. Language-specific
+onboarding and migration guides are separate reader routes created only when
+accepted Zax concepts and real reader pressure justify them.
 
 Do not discard a useful idea merely because it is too detailed or immature for a
 public concept owner. Give it another explicit disposition before the working
@@ -443,6 +474,11 @@ The dry run:
    to hold every disposition without creating duplicate authority or orphaned
    material.
 9. Produces the exact proposed promotion change set.
+
+A disposition ledger or ownership map supports this work but does not replace
+understandable findings. Preserve each material finding in plain language with
+enough examples and reasoning for the maintainer to recognize what the later
+owner must teach.
 
 Resolve architecture gaps through discussion before promotion. The dry run does
 not edit files, promote findings, or authorize later edits.

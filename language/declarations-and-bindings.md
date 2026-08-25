@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, function and capture semantics, operator resolution, [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, operator resolution, [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -244,6 +244,9 @@ Its default value is the function type's `Nothing` state. The compiler should
 diagnose an invocation it can prove still targets that default state. An
 otherwise unhandled invocation panics rather than manufacturing arbitrary
 results or executing undefined code.
+
+Call-boundary behavior for that state is defined by
+[Zax function invocation](function-invocation.md#callable-prototypes-and-visible-contracts).
 
 Future explicit behavior may permit selected function types to request a no-op
 or default-result `Nothing` implementation. Exact directives and complete
@@ -759,22 +762,89 @@ once merely because it appears once in a type definition.
 
 ### Default parameters
 
-Default parameter expressions remain later function design. The declaration
-constraint is that an explicit argument or the default expression initializes
-the parameter, not both. This document does not reserve `=` or another spelling
-for that future behavior.
+An input parameter may declare a default expression:
+
+```zax
+connect final : ()(
+    host : Host,
+    attempts : Integer = 3
+) = {
+}
+```
+
+The parameter is a declaration context. Exactly one source establishes it for a
+call:
+
+- an explicit argument; or
+- its declared default after all explicit value-producing arguments complete.
+
+The new parameter name becomes visible to later parameter defaults only after
+its own binding completes. It is not visible in its own default.
+
+Complete omission syntax, default evaluation order, and call-contract ownership
+are defined by
+[Zax function invocation](function-invocation.md#omitted-inputs-and-defaults).
 
 ### Multiple results
 
-Contextual multiple-result declarations may share one initializer:
+Results are specialized declaration contexts and ordered output obligations. A
+result declaration does not default-construct a body local merely because it
+names a type:
 
 ```zax
-first:, second: = produceTwo()
+make final : (
+    result : Item
+)() = {
+    return source
+}
 ```
 
-Each `name:` declares a binding. Result mapping must be unambiguous, and
-duplicate names remain errors. Optional and discarded results, construction
-order, and cleanup after panic remain function and lifetime work.
+`return source` directly constructs the result slot. A result initializer opts
+into construction before body entry:
+
+```zax
+make final : (
+    result : Item = :
+)() = {
+    result.name = "example"
+}
+```
+
+At a result-routing site, adjacent `name:` selects the result label and may
+introduce a same-named inferred binding:
+
+```zax
+number:, text: = produce()
+```
+
+The labels must exist in the selected callable prototype. Declaration spacing
+expresses a different intent:
+
+```zax
+number :, text: = produce() // error: incomplete declaration-like intent
+```
+
+A complete typed capture introduces ordinary declarations:
+
+```zax
+number : Integer, text : String = produce()
+```
+
+New declarations and existing destinations may coexist:
+
+```zax
+number:, existingText = produce()
+```
+
+The first result initializes a new binding. The next result performs ordinary
+assignment into `existingText`. Earlier effects remain observable if a later
+destination panics.
+
+Duplicate introduced names remain errors. Ordinary declaration visibility,
+same-scope redeclaration, and declaration-versus-assignment rules continue to
+apply. Complete result labels, routing, omission, construction order, and
+completion are defined by
+[Zax function invocation](function-invocation.md#result-labels-and-acknowledgement).
 
 ## Documentation attachment
 
@@ -787,7 +857,7 @@ x := makeValue()
 
 ```zax
 /// Describes the produced pair.
-first:, second: = produceTwo()
+number:, text: = produce()
 ```
 
 The second block documents the complete multi-binding declaration rather than
@@ -819,7 +889,10 @@ Diagnostics should distinguish:
 - use of an incomplete type where completed layout is required;
 - ambiguous multi-result mapping;
 - implicit instance-member access without `_.`; and
-- a declaration form used in a source position that does not accept it.
+- a declaration form used in a source position that does not accept it;
+- declaration-like spacing that conflicts with label intent;
+- duplicate bindings introduced by a result-routing construct; and
+- use of an unconstructed result slot as a live value.
 
 Exact identifiers, wording, and presentation remain later diagnostics design.
 
@@ -850,6 +923,10 @@ It establishes constraints that later work must preserve:
   earlier inferred declaration;
 - functions and captures may refine recursive bindings without allowing
   executable ordinary self-initialization;
+- function invocation may use declarations as inputs and result destinations
+  without changing when a declared binding becomes visible;
+- result slots may delay construction as a specialized output obligation without
+  creating an initialize-later form for ordinary local declarations;
 - named non-value definitions may expose incomplete self-names without making
   ordinary value initializers self-referential;
 - constructors and lifetime policies must preserve default, direct, and explicit

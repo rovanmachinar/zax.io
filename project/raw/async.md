@@ -7,7 +7,7 @@
 | Applies To | Async I/O, coroutines, concurrency, scheduling, and optional runtime support |
 | Owns | Preservation of aligned pressures and unresolved boundaries |
 | Does Not Own | Accepted async semantics or runtime contracts |
-| Source / Provenance | Work item `001`, Zax purpose and design principles |
+| Source / Provenance | Work items `001`, `005`, and `006`; foundational async, lifecycle, and invocation completion pressure |
 
 ## Aligned pressure
 
@@ -63,6 +63,21 @@ Before adopting such behavior, future async work must define:
 An async factory can perform asynchronous work and then invoke synchronous
 construction. That pattern remains available without making lifecycle operations
 suspend.
+
+## Ordinary-call suspension pressure
+
+[Zax function invocation](../../language/function-invocation.md) defines call
+completion only for synchronous calls. Future async work must decide:
+
+- when an initiating async call is considered complete;
+- where parameters, delayed defaults, argument temporaries, and result
+  destinations live across suspension;
+- what cancellation does after only some inputs or results are complete;
+- whether callbacks may run after the initiating expression returns;
+- how references into caller or producer temporaries remain valid;
+- which executor or thread performs result mapping; and
+- how coroutine, allocation, scheduling, and synchronization costs remain
+  visible.
 
 ## Activation and retirement
 

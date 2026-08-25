@@ -7,7 +7,7 @@
 | Applies To | Intentional lifetime-policy plurality and its costs |
 | Owns | Preservation of aligned direction and required future decisions |
 | Does Not Own | Accepted policy names, representations, or conversion rules |
-| Source / Provenance | Work item `001`, Zax purpose and design principles |
+| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, construction/replacement aliasing, and invocation lifetime pressure |
 
 ## Aligned direction
 
@@ -72,6 +72,27 @@ A future owner must define:
 - replacement while place-tracking or stable references exist; and
 - pointer behavior when an address remains but the intended pointee lifetime
   changes.
+
+## Invocation-derived lifetime pressure
+
+[Zax function invocation](../../language/function-invocation.md) establishes the
+synchronous call boundary:
+
+- explicit arguments bind at their source evaluation point;
+- an argument temporary bound to a reference survives through the selected call;
+- nested producer results survive through their transfer into an outer call; and
+- that temporary extension does not automatically make a returned reference
+  valid after completion.
+
+Future lifetime and ownership work must define:
+
+- exact destruction order among caller argument and result temporaries;
+- reference origin through nested result routing;
+- when a returned reference aliases argument or result temporary storage;
+- moved-from source state after copy, move, or `last`;
+- source-shell destruction and resource disposition;
+- when a lifetime strategy may extend, reject, or unsafely permit an escape; and
+- how an async call broadens the synchronous completion boundary.
 
 ## Activation and retirement
 

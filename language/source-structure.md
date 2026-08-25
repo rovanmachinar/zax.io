@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Statement-level newlines, explicit continuation, effective statements and bodies, semicolon composition, mandatory layout validation, and comment forms and attachment |
-| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), expression precedence, the complete delimiter catalog, compiler-directive placement or attachment, detailed flow-control semantics, exact lifetime and scope-exit behavior, documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), expression precedence, the complete delimiter catalog, compiler-directive placement or attachment, detailed flow-control semantics, exact lifetime and scope-exit behavior, documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -132,6 +132,94 @@ incomplete in isolation when the joined statement is valid:
 value = 1 + 2 \
         + 3
 ```
+
+## Comma-list continuation
+
+A comma already recognized as a separator in a comma-list implicitly continues
+that list across the following physical newline:
+
+```zax
+return first: number:,
+    second: text: = produce()
+```
+
+This is a narrow list rule, not general continuation for incomplete
+expressions:
+
+```zax
+value := first +
+    second // error: `+` does not continue the statement
+```
+
+The continuation line must be hanging-indented beyond the structural indentation
+of the statement:
+
+```zax
+return first: number:,
+second: text: = produce() // error: continuation is not hanging-indented
+```
+
+A blank or comment-only physical line breaks comma-list continuation. A
+continuation-only `\` line may carry the list across one additional newline:
+
+```zax
+return \
+    first: number:,
+    \
+    second: text: = produce()
+```
+
+### One continuation reason per newline
+
+Each continued physical newline has one sufficient reason:
+
+1. an open delimiter permits the newline;
+2. a recognized comma-list separator continues it; or
+3. `\` explicitly suppresses an otherwise significant newline.
+
+An explicit `\` is an error when another rule already continues that same
+newline:
+
+```zax
+return \
+    first: number:, \ // error: the comma already continues the list
+    second: text: = produce()
+```
+
+```zax
+consume(
+    first, \ // error: the open `(` already permits the newline
+    second
+)
+```
+
+The explicit marker is not harmless defensive punctuation. Redundancy makes
+source intent contradictory.
+
+When a list begins on the line after an otherwise complete construct such as a
+bare `return`, the first newline still needs explicit continuation:
+
+```zax
+return \
+    first: number:,
+    second: text: = produce()
+```
+
+Once the list exists, each comma carries its following newline.
+
+### Grouping and list contexts
+
+Grouping parentheses require their contents to form one expression. They do not
+preserve or introduce multiple-result mapping:
+
+```zax
+return (produce()) // one expression
+```
+
+Call argument delimiters, construction packets, and naked return-result lists
+are distinct syntactic contexts that may accept their applicable mapping forms.
+Complete expression-versus-result-mapping behavior is defined by
+[Zax function invocation](function-invocation.md#expression-mode-and-result-mapping-mode).
 
 ## Statements, blocks, and bodies
 
@@ -577,6 +665,9 @@ applicable:
 
 - a missing `\`;
 - a broken or unterminated continuation;
+- redundant explicit continuation where an open delimiter or comma already
+  continues the newline;
+- a broken comma-list continuation;
 - a missing semicolon operand;
 - redundant vertical composition;
 - missing braces around a nested control statement;
@@ -605,6 +696,11 @@ compiler-directive design. A directive on one physical line and a related
 construct on the next do not use `\` merely to express that relationship.
 Explicit continuation retains its single purpose of continuing one statement
 across physical lines.
+
+Comma-list continuation is the one accepted statement-level implicit
+continuation because the parsed comma already establishes a list requiring
+another element. It does not establish a general rule that incomplete
+expressions continue automatically.
 
 [Declaration and binding behavior](declarations-and-bindings.md) is defined by
 its current conceptual owner. Expression semantics, individual flow-control

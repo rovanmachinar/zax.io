@@ -3,6 +3,12 @@
 
 ## Except Error Handling
 
+Current result slots, labels, routing, explicit conversion boundaries, and normal
+call completion are defined by
+[Zax function invocation](language/function-invocation.md). This page remains
+legacy input for `except` and `catch` short-circuit behavior. Its legacy
+constructor-graph matching does not define ordinary result selection.
+
 The `except` is not the same as exception handling. All return results are normal output arguments on functions and can be treated as such. However, the `except` keyword can help create quick function exits and perform exit error chaining and the `catch` keyword can help create quick handlers for error conditions. Otherwise, error results are the same as normal results in every way.
 
 
@@ -421,4 +427,3 @@ myFunc final : (
     return result
 }
 ````
-

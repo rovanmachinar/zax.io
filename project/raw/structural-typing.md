@@ -7,7 +7,7 @@
 | Applies To | Preserved agent-authored proposal and unresolved structural-typing questions |
 | Owns | Provenance and candidate input only |
 | Does Not Own | Accepted structural typing, syntax, layout, conversion, or reflection behavior |
-| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence` |
+| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions |
 
 ## Provenance and reading posture
 
@@ -242,6 +242,24 @@ The future review must decide the anonymous value's type identity, member
 inference, layout, conversion eligibility, temporary lifetime, and whether a
 conversion can select a constructor. It must not reinterpret current packet
 entries as an anonymous structure merely because both forms use named content.
+
+### Promoting multiple results into one structural value
+
+[Zax function invocation](../../language/function-invocation.md) keeps an
+ordered multiple-result sequence distinct from one tuple or structural value.
+A future anonymous structural expression should be able to consume such a
+sequence explicitly and produce one structural value.
+
+That review must decide:
+
+- how result labels map to structural member names;
+- whether every result must have a usable label;
+- how duplicate, omitted, discarded, or renamed results behave;
+- how member types and the anonymous structural identity are inferred;
+- whether positional promotion is available;
+- what construction, conversion, and temporary-lifetime costs occur; and
+- how the syntax remains distinct from ordinary result routing, constructor
+  parameter forwarding, and `.member` construction inputs.
 
 ---
 

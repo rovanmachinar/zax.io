@@ -7,7 +7,7 @@
 | Applies To | Safe-subset guarantees, unsafe mechanisms, and comparative safety input |
 | Owns | Preservation of aligned pressures and unresolved comparison material |
 | Does Not Own | Accepted safety guarantees or unsafe syntax |
-| Source / Provenance | Work item `001`, Zax purpose and design principles |
+| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, lifecycle, and invocation safety pressure |
 
 ## Aligned direction
 
@@ -87,6 +87,23 @@ Detailed source-control and provenance questions are preserved in
 `unsafe ???` already acknowledges bypassed initialization. It can satisfy a
 containing constructor through programmer responsibility and may later receive
 explicit `+++` without another unsafe marker.
+
+## Invocation-derived safety pressure
+
+[Zax function invocation](../../language/function-invocation.md) requires static
+reasoning about:
+
+- use before a result slot is constructed;
+- incomplete or duplicate result completion;
+- use after a move or `last` transfer;
+- references returned from argument or result temporaries;
+- source and destination result slots consumed more than once; and
+- reentrant observation between completed earlier bindings and not-yet-bound
+  later parameters.
+
+Future safe-subset work must decide which cases the language guarantees are
+rejected, which rely on a selected lifetime strategy, and which narrow unsafe
+control can acknowledge an unproved but valid operation.
 
 ## Panic boundary
 

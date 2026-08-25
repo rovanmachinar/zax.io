@@ -12,6 +12,9 @@ conversion, and result behavior.
 All three qualifier axes may constrain a type-defined operator's
 [receiver operand](language/terms.md#receiver-operand), as defined by
 [Zax qualifiers](language/qualifiers.md#receiver-operands).
+Shared fixed-arity callable viability, partial-order dominance, result-context
+limits, ambiguity, and unavailable-best behavior are defined by
+[Zax function invocation](language/function-invocation.md).
 
 ### Basic overloading
 
@@ -101,9 +104,10 @@ and replacement results are defined by
 Complete arbitrary operator generation, priority, ambiguity, and ranking remain
 future operator work.
 
-Operators declared on types are always selected over globally scope operators if both a type operator and a global operator satisfy the match criteria during operator selection.
-
-When an operator is imported from a module, the imported operators are selected with lower priority over a type operators, and also with lower priority than global operators within the current module. If the current type and global scope do not define an operator but two different imported modules define an implementation then the best match is assumed (where type qualifiers matter), or the first module imported will be assumed to be the correct match based on order of importation.
+Type, global, imported, and future operator lookup domains require focused
+operator design. Source or import order does not resolve an otherwise equal
+callable match. An unresolved undominated set is ambiguous under the shared
+callable model.
 
 ````zax
 MyType :: type {

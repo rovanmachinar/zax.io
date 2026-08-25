@@ -122,6 +122,11 @@ Focused construction work has dispositioned these catalog entries:
 | Default type initialization | Declaration forms are owned by [Zax declarations and bindings](../../language/declarations-and-bindings.md); member and lifecycle behavior is owned by the construction owner |
 | Allocation versus initialization control | Storage-versus-value lifecycle separation is owned by the construction owner; complete allocation policy remains legacy/future work |
 | Uninitialized memory type control | `unsafe ???` declaration behavior is owned by declarations and bindings; construction interaction is owned by the construction owner |
+| Optional function arguments | Current conceptual behavior is owned by [Zax function invocation](../../language/function-invocation.md) |
+| Multiple function results | Current result slots, completion, acknowledgement, and routing are owned by the function-invocation owner |
+| Polymorphic functions | Current fixed-arity callable viability and partial-order preference are owned by the function-invocation owner; generics, value polymorphism, variadics, and operator-specific lookup remain future work |
+| Member functions | Current receiver-call behavior is owned by the function-invocation owner and receiver qualification by [Zax qualifiers](../../language/qualifiers.md); complete `once`, capture, and reassignment behavior remains future work |
+| Result discard acknowledgement | Current caller acknowledgement and omission behavior is owned by the function-invocation owner; unrelated local, type, and memory-policy discard remains future input |
 | Harmonized warning-suppression mechanisms across compilers | Preserved for future work in [raw analysis-control input](analysis-controls.md) |
 
 These dispositions do not accept the remaining catalog items.
