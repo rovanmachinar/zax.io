@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), [flow-transfer target selection and post-operation behavior](core-flow-control.md), [the optional presence operation and `&&` short-circuit eligibility](operators.md), complete optional representation, construction, reset, or unwrapping, arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, static-analysis contract selection, conservative proof-override and lint syntax, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -37,9 +37,9 @@ An ordinary constructor is a type-owned `+++` declaration:
 
 ```zax
 Connection :: type {
-    +++ final : ()(endpoint : Endpoint) = {
-        // Establish the Connection.
-    }
+  +++ final : ()(endpoint : Endpoint) = {
+    // Establish the Connection.
+  }
 }
 ```
 
@@ -80,21 +80,21 @@ are under explicit construction control.
 
 ```zax
 MyType :: type {
-    t : T
-    u : U
-    x : X
-    y : Y
-    z : Z
+  t : T
+  u : U
+  x : X
+  y : Y
+  z : Z
 
-    +++ final : ()() = {
-        _.t.+++()
-        _.t = makeAT()
+  +++ final : ()() = {
+    _.t.+++()
+    _.t = makeAT()
 
-        _.u = makeAU()
+    _.u = makeAU()
 
-        _.z.+++()
-        _.x.+++()
-    }
+    _.z.+++()
+    _.x.+++()
+  }
 }
 ```
 
@@ -106,11 +106,11 @@ constructor:
 
 ```zax
 Session :: type {
-    connection : Connection
+  connection : Connection
 
-    +++ final : ()(endpoint : Endpoint) = {
-        _.connection.+++(endpoint)
-    }
+  +++ final : ()(endpoint : Endpoint) = {
+    _.connection.+++(endpoint)
+  }
 }
 ```
 
@@ -134,12 +134,12 @@ constructor arguments, and stored-member initializers:
 
 ```zax
 [{
-    positionalExpression,
-    parameterName: namedExpression,
-    : explicitlyPositionalExpression,
-    :,
-    parameterWithDefault:,
-    .memberName = memberExpression
+  positionalExpression,
+  parameterName: namedExpression,
+  : explicitlyPositionalExpression,
+  :,
+  parameterWithDefault:,
+  .memberName = memberExpression
 }]
 ```
 
@@ -166,9 +166,9 @@ An entry expression may itself declare a temporary:
 
 ```zax
 [{
-    : myValue : String,
-    name: temporary : String,
-    .member = makeMember()
+  : myValue : String,
+  name: temporary : String,
+  .member = makeMember()
 }]
 ```
 
@@ -198,9 +198,9 @@ Argument mapping is tested separately for each constructor candidate:
 
 ```zax
 [{
-    .legs = 2,
-    kind: "grizzly",
-    afterKind
+  .legs = 2,
+  kind: "grizzly",
+  afterKind
 }]
 ```
 
@@ -253,8 +253,8 @@ plan. Packet order does not reorder members.
 source : Integer = 1
 
 value : Example = [{
-    .snapshot = source,
-    changeSourceToTwo(source)
+  .snapshot = source,
+  changeSourceToTwo(source)
 }]
 ```
 
@@ -279,7 +279,7 @@ parameters:
 
 ```zax
 pair : Pair = [{
-    produceTwo()
+  produceTwo()
 }]
 ```
 
@@ -311,9 +311,9 @@ A future anonymous-structure expression would produce one structural value:
 
 ```zax
 animal : Animal = {{
-    value: first,
-    kind: "grizzly",
-    legs: 2
+  value: first,
+  kind: "grizzly",
+  legs: 2
 }}
 ```
 
@@ -372,7 +372,7 @@ myFunc : ()() = default // error: no language-defined default implementation
 
 ```zax
 +++ final : ()(value : Value copy) = {
-    // Programmer-defined copy behavior.
+  // Programmer-defined copy behavior.
 }
 
 +++ final : ()(value : Value move) = existing
@@ -386,7 +386,7 @@ cost behavior might otherwise differ.
 
 ```zax
 replacement +++ final :
-    ()(source : Source) = forbidden
+  ()(source : Source) = forbidden
 ```
 
 ### Demand-driven generation
@@ -464,24 +464,24 @@ A custom replacement constructor uses contextual `replacement +++`:
 
 ```zax
 Registration :: type {
-    id : RegistrationId
+  id : RegistrationId
+  settings : Settings
+
+  +++ final : ()(settings : Settings) = {
+    _.id = registry.register(settings)
+    _.settings = settings
+  }
+
+  --- final : ()() = {
+    registry.unregister(_.id)
+  }
+
+  replacement +++ final : ()(
     settings : Settings
-
-    +++ final : ()(settings : Settings) = {
-        _.id = registry.register(settings)
-        _.settings = settings
-    }
-
-    --- final : ()() = {
-        registry.unregister(_.id)
-    }
-
-    replacement +++ final : ()(
-        settings : Settings
-    ) = {
-        registry.reconfigure(_.id, settings)
-        _.settings = settings
-    }
+  ) = {
+    registry.reconfigure(_.id, settings)
+    _.settings = settings
+  }
 }
 ```
 
@@ -512,19 +512,19 @@ A replacement constructor may declare zero or more results:
 
 ```zax
 BufferOwner :: type {
-    buffer : Buffer
-    format : Format
+  buffer : Buffer
+  format : Format
 
-    replacement +++ final :
-        (retainedCapacity : Boolean)(
-            nextFormat : Format
-        ) = {
-        capacityWasRetained := _.buffer.canReuseFor(nextFormat)
+  replacement +++ final :
+    (retainedCapacity : Boolean)(
+      nextFormat : Format
+    ) = {
+    capacityWasRetained := _.buffer.canReuseFor(nextFormat)
 
-        // Establish the complete replacement instance.
+    // Establish the complete replacement instance.
 
-        return capacityWasRetained
-    }
+    return capacityWasRetained
+  }
 }
 
 retained := owner = newFormat
@@ -538,7 +538,7 @@ A resultless replacement declaration supplies no result:
 
 ```zax
 replacement +++ final : ()(rhs : Source) = {
-    // Complete replacement.
+  // Complete replacement.
 }
 ```
 
@@ -576,7 +576,7 @@ Construction and replacement may be controlled independently:
 +++ final : ()(source : Source) = default
 
 replacement +++ final :
-    ()(source : Source) = forbidden
+  ()(source : Source) = forbidden
 ```
 
 This type permits construction from `Source` while prohibiting replacement from
@@ -593,18 +593,18 @@ independence. A reference result may point into the destination:
 
 ```zax
 Document :: type {
-    text : String
+  text : String
 
-    replacement +++ final : ()(
-        source : String readonly &
-    ) = {
-        _.text = source
-    }
+  replacement +++ final : ()(
+    source : String readonly &
+  ) = {
+    _.text = source
+  }
 
-    stringViewFrom final :
-        (result : String readonly &)() = {
-        return _.text
-    }
+  stringViewFrom final :
+    (result : String readonly &)() = {
+    return _.text
+  }
 }
 
 document : Document immutable writable varying
@@ -673,7 +673,7 @@ A concrete type has at most one destructor:
 
 ```zax
 --- final : ()() = {
-    // Dismantle the current instance.
+  // Dismantle the current instance.
 }
 ```
 
@@ -705,10 +705,10 @@ A destructor may reconstruct a member:
 
 ```zax
 --- final : ()() = {
-    _.member.---()
-    _.member.+++()
-    use(_.member)
-    _.member.---()
+  _.member.---()
+  _.member.+++()
+  use(_.member)
+  _.member.---()
 }
 ```
 
@@ -722,6 +722,89 @@ depends on tracked member state at normal exit, not merely on the presence of a
 
 The exact severity of optional diagnostics and any runtime debugging checks
 remain future safety and tooling work.
+
+## Scope-exit destruction and flow transfers
+
+Local, body, and flow-header lifetimes end automatically when their scope exits,
+whether that exit is a normal completion or an abrupt transfer. Destruction runs
+in reverse construction order.
+
+On normal body completion:
+
+1. body-local bindings are destroyed;
+2. the construct runs its post operation when it requires one, while header
+   bindings remain alive;
+3. the construct tests, re-enters, or exits; and
+4. header bindings are destroyed when the complete construct exits.
+
+An abrupt transfer such as `break`, `continue`, `next`, or `return` destroys every
+body or nested scope it leaves, in reverse construction order, before control
+arrives at the target:
+
+```zax
+while i := 0 ;; i < 100 ;; ++i {
+  resource := acquire()
+  if done(resource)
+    break // resource is destroyed, then i, as control leaves the loop
+}
+```
+
+`break` and `return` skip ordinary post operations but still perform this
+destruction. `next` runs the target's post operation before proceeding, while
+`continue` skips it; both keep the target's own header bindings alive because the
+complete target construct has not exited. A target header binding survives a
+`next` or `continue` re-entry and is destroyed only when the complete target flow
+statement exits.
+
+Which scopes a transfer crosses, whether the post operation runs, and how targets
+are selected are owned by
+[core flow control](core-flow-control.md#unwinding-destruction-and-completion).
+This document owns the automatic local and header lifetime order that results.
+Construction and result completeness must still hold on every normal path a
+branch, loop, or transfer produces.
+
+## Conditionally live storage and access proof
+
+Some storage may or may not hold a live value on a given path. Access through
+such storage requires proof that a live value exists on that path:
+
+> Access through storage whose value lifetime may not be active requires proof
+> that a live value exists on that path.
+
+The concern is whether a value lifetime is active, not how a particular feature
+spells its presence test. It covers conditionally live versus merely
+unconstructed storage, use before construction, and proof that a value lifetime
+is active before access.
+
+Optional stored-value dereference is one application. Postfix optional
+dereference produces a reference to the stored value and requires static proof
+that the optional holds a live value on the dereferencing path. Absent that
+proof, the dereference is a semantic error rather than a runtime hazard:
+
+```zax
+if ?optionalValue
+  use(optionalValue.) // proven live on this path
+```
+
+Test presence first and dereference inside the proven body. A compound proof such
+as `?optionalValue && ?optionalValue.` proves nothing unless the right expression
+is unambiguously exactly `Boolean`, because only then does the protected
+short-circuit operation skip the dereference; see
+[operators](operators.md#optional-presence-operation).
+
+The proof need not be immediately adjacent. Construction, earlier control flow, a
+preceding presence test, or another recognized presence contract may establish
+it. An arbitrary user-defined Boolean-returning `?` does not by itself prove
+initialization; the analyzer needs a recognized presence contract.
+
+The presence operation `?value` itself is owned by [operators](operators.md), and
+condition placement is owned by [core flow control](core-flow-control.md). This
+document owns only the programmer-visible lifetime obligation: access proves a
+live value. Detailed proof algorithms, assertion syntax, contract provenance, and
+lint separation remain future analysis work, and validity follows the selected
+static-analysis contract rather than one compiler's current cleverness.
+Complete optional construction, reset, and unwrapping remain
+[legacy optional](../optional.md) input.
 
 ## Manual and delayed construction
 
@@ -756,12 +839,12 @@ disposition:
 
 ```zax
 MyType :: type {
-    s : S = unsafe ???
-    t : T
+  s : S = unsafe ???
+  t : T
 
-    +++ final : ()() = {
-        _.t.+++()
-    }
+  +++ final : ()() = {
+    _.t.+++()
+  }
 }
 ```
 
@@ -795,8 +878,8 @@ A helper may receive the current instance while construction is incomplete:
 
 ```zax
 +++ final : ()() = {
-    _.first.+++()
-    initializeRemaining(_)
+  _.first.+++()
+  initializeRemaining(_)
 }
 ```
 
@@ -814,7 +897,7 @@ Publishing an incomplete current instance is a stronger operation:
 
 ```zax
 +++ final : ()() = {
-    registerGlobally(_)
+  registerGlobally(_)
 }
 ```
 
@@ -867,6 +950,9 @@ Programmers must be able to discover:
 - generated fallback replacement as `---` followed by `+++`;
 - resources retained or reconstructed by custom replacement;
 - copies or snapshots required to avoid alias hazards;
+- scope-exit destruction of local and header bindings on normal and abrupt exits;
+- post operations run on `next` and normal completion but skipped on `break`,
+  `continue`, and `return`;
 - allocator retention and deallocation behavior;
 - static-analysis and unsafe-override boundaries; and
 - synchronization or async machinery when future facilities use them.
@@ -887,6 +973,8 @@ Diagnostics should distinguish:
 - conflicting call-site and constructor-body member construction;
 - use before construction or after destruction where required analysis proves
   it;
+- an access through conditionally live storage, such as an optional stored-value
+  dereference, without proof that a live value exists on that path;
 - missing or duplicate lifecycle transitions on normal paths;
 - normal completion with an incomplete instance or result;
 - possible self or interior alias conflict during replacement;
@@ -924,6 +1012,10 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 
 - separate storage, member-lifetime, and complete-instance states;
 - declaration-order automatic construction and reverse automatic destruction;
+- automatic local and header lifetime ending and destruction order across normal
+  and abrupt scope exits;
+- the programmer-visible obligation to prove a live value before access through
+  conditionally live storage;
 - arbitrary control-flow order for explicit member lifecycle calls;
 - static lifecycle tracking without mandatory runtime flags;
 - shared ordinary-call input forms while `.member = expression` remains

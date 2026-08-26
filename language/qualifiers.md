@@ -119,10 +119,10 @@ A varying place may hold successive immutable values:
 message varying : Message immutable = makeMessage("first")
 
 observer final :
-    Message immutable readonly varying & = message
+  Message immutable readonly varying & = message
 
 replacer final :
-    Message immutable writable varying & = message
+  Message immutable writable varying & = message
 
 display(observer)                 // "first"
 replacer = makeMessage("second")  // reconstructive replacement
@@ -349,9 +349,9 @@ type customizes the transition with a
 
 ```zax
 replacement +++ final : ()(
-    rhs : Input readonly &
+  rhs : Input readonly &
 ) = {
-    // `_` initially contains the previous current-instance state.
+  // `_` initially contains the previous current-instance state.
 }
 ```
 
@@ -364,7 +364,7 @@ replacement := makeValue()
 value.replacement()
 
 Example :: type {
-    replacement : String
+  replacement : String
 }
 ```
 
@@ -423,7 +423,7 @@ qualifications.
 ```zax
 source final : LegacyValue immutable = makeLegacyValue()
 escape final unsafe pliable :
-    LegacyValue immutable readonly final & = source
+  LegacyValue immutable readonly final & = source
 ```
 
 `unsafe pliable` also bypasses the declaring binding's own final stance for
@@ -483,8 +483,8 @@ A local alias can minimize the unsafe region:
 
 ```zax
 useValue final : ()(input : LegacyValue immutable) = {
-    local unsafe pliable : LegacyValue immutable & = input
-    local.callMutableFunction()
+  local unsafe pliable : LegacyValue immutable & = input
+  local.callMutableFunction()
 }
 ```
 
@@ -492,7 +492,7 @@ A member may advertise an interior-mutation escape:
 
 ```zax
 CacheOwner :: type {
-    cache unsafe pliable : LegacyCache
+  cache unsafe pliable : LegacyCache
 }
 ```
 
@@ -506,9 +506,9 @@ A parameter may introduce a local bypass:
 
 ```zax
 useValue final : ()(
-    input unsafe pliable : LegacyValue immutable
+  input unsafe pliable : LegacyValue immutable
 ) = {
-    input.callMutableFunction()
+  input.callMutableFunction()
 }
 ```
 
@@ -590,13 +590,13 @@ compatible.
 
 ```zax
 MyType :: type {
-    x : Integer
+  x : Integer
 
-    operator binary '=' final :
-        (result : Boolean)(lhs : Integer, rhs : String) writable final = {
-        _.x = 42
-        return true
-    }
+  operator binary '=' final :
+    (result : Boolean)(lhs : Integer, rhs : String) writable final = {
+    _.x = 42
+    return true
+  }
 }
 ```
 

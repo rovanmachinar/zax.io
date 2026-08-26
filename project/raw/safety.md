@@ -5,7 +5,7 @@
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item defining safety guarantees and unsafe boundaries |
 | Applies To | Safe-subset guarantees, unsafe mechanisms, and comparative safety input |
-| Owns | Preservation of aligned pressures and unresolved comparison material |
+| Owns | Preservation of aligned pressures, the contract-qualified prove-or-narrowly-assert philosophy, and unresolved comparison material |
 | Does Not Own | Accepted safety guarantees or unsafe syntax |
 | Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, lifecycle, and invocation safety pressure |
 
@@ -22,6 +22,30 @@ restrictive ownership model.
 The final mechanism need not use an `unsafe { ... }` scope. Narrow operation
 markers, unsafe declarations or interfaces, effect propagation, and reviewed
 safe wrappers around unsafe implementations require evaluation.
+
+## Prove or narrowly assert, qualified by contract
+
+The generalized philosophy behind Zax's static analysis is:
+
+> For every property mandatory under the selected language contract, Zax attempts
+> to prove the operation valid. If proof cannot be established, the operation is
+> rejected unless a narrow semantic assertion explicitly accepts responsibility
+> for an unproved but valid boundary. An assertion cannot make a known violation
+> valid.
+
+Two consequences must survive into the future safety owner:
+
+1. what must be proved is decided by the selected contract, not by how clever the
+   executable compiler happens to be; and
+2. an assertion is a claim about an unproved but valid boundary, never a way to
+   permit a known violation.
+
+The contract also decides what a now-redundant control means: advisory when the
+contract does not require the case, potentially a hard error when the selected
+contract requires the case to be recognized as safe, and nonconforming when a
+compiler demands an assertion for a contract-mandated passing case. The detailed
+matrix and provenance questions are preserved in
+[raw analysis-control input](analysis-controls.md#contract-dependent-redundant-controls).
 
 ## Guarantee categories to investigate
 
@@ -64,14 +88,14 @@ Bounded helper access and publication are different:
 
 ```zax
 +++ final : ()() = {
-    _.first.+++()
-    initializeRemaining(_)
+  _.first.+++()
+  initializeRemaining(_)
 }
 ```
 
 ```zax
 +++ final : ()() = {
-    registerGlobally(_)
+  registerGlobally(_)
 }
 ```
 
@@ -80,8 +104,9 @@ another path. A control that permits the first must not automatically permit the
 second.
 
 An unsafe assertion may override incomplete proof or assert the result of an
-opaque operation. It cannot make known use after an ended lifetime valid.
-Detailed source-control and provenance questions are preserved in
+opaque operation. It cannot make known use after an ended lifetime valid, and it
+cannot make any known violation valid. Detailed source-control and provenance
+questions are preserved in
 [raw analysis-control input](analysis-controls.md).
 
 `unsafe ???` already acknowledges bypassed initialization. It can satisfy a

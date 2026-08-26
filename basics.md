@@ -15,6 +15,11 @@ Accepted value declarations, initialization, binding visibility, qualifier
 axes, name resolution, and assignment boundaries are defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md).
 
+The accepted rule for when a spelling counts as a keyword is defined by
+[Zax source structure](language/source-structure.md#contextual-keyword-recognition),
+and the term itself by
+[Zax language-design terms](language/terms.md#contextual-keyword).
+
 This legacy basics page no longer defines those concerns. The remaining sections
 preserve unreviewed design input for keywords, detailed operators, types,
 literals, and related concepts.
@@ -107,6 +112,13 @@ yield suspend
 
 
 #### Keyword disambiguation
+
+The accepted rule is that a spelling has keyword status only where that keyword's
+construct is grammatically permitted; outside those positions the spelling is not
+a keyword. That rule is owned by
+[Zax source structure](language/source-structure.md#contextual-keyword-recognition).
+The remaining material on this page is unreviewed legacy evidence for the
+underscore convention.
 
 Keywords are reserved only within the context of where the keyword is allowed and legal. To disambiguate keywords from variables, variables can be postfixed with an underscore (`_`) but otherwise the underscore postfix (`_`) should never be used. Usage of keywords as variables is discouraged and usage of postfix underscores are also discouraged.
 

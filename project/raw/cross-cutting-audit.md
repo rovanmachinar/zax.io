@@ -1,0 +1,292 @@
+# Raw input: cross-cutting audit
+
+| Field | Value |
+| --- | --- |
+| Status | Raw live audit input / non-authoritative |
+| Audience | The Zax language maintainer and agents performing cross-owner audits and repository sweeps |
+| Applies To | Concerns that cross several owners and must survive numbered-work archival |
+| Owns | An indexed, live list of cross-cutting audit entries, each with a concern, why local review misses it, likely owners, resolution criteria, activation pressure, current constraints, and eventual disposition; the durable-queue purpose, future-agent workflow, add/do-not-add criteria, and retirement model |
+| Does Not Own | Accepted language design, a miscellaneous design dump, ordinary local TODOs, or competing authority over any concept owner |
+| Source / Provenance | Work item `007` promotion and its corrective promotion |
+
+## Purpose
+
+This file is a durable queue of repository-wide verification obligations that
+cannot be completed responsibly inside one local concept review. It exists so
+those obligations survive numbered-work archival and are eventually tested
+against every affected owner.
+
+An entry is not a design decision, a TODO, or a substitute for an owner. It
+records a concern whose correctness can only be established by inspecting
+several owners together.
+
+## Future-agent workflow
+
+An agent assigned work that activates an entry should:
+
+1. read only the entries the assigned task activates;
+2. inspect the owners and evidence the entry names;
+3. determine whether the concern remains valid under current design;
+4. identify every current or legacy surface affected;
+5. discuss the finding and obtain authorization for edits;
+6. apply corrections to the real owners rather than treating raw input as
+   authority;
+7. record evidence that the concern was resolved, narrowed, superseded, or
+   remains open; and
+8. remove the entry once it is resolved.
+
+## When to add and when not to add
+
+Add an entry only when all of the following hold:
+
+- a concrete concern crosses several owners;
+- local, single-owner review cannot prove repository-wide consistency;
+- representative examples or evidence exist; and
+- resolution criteria and activation pressure can be stated.
+
+Do not use this file for ordinary local TODOs, speculation, personal notes, or
+unresolved design that belongs in numbered work or a raw subject input.
+
+## Reading posture
+
+This file stays live across numbered-work archival. Unlike a numbered work item,
+it is not consumed and archived as a unit: each entry is dispositioned
+individually, and the file retires only after every entry is resolved.
+
+It must not become a general design scratchpad or a competing authority. Every
+immediately necessary question is still resolved in its owner or numbered work.
+Read or update it when a cross-owner concern is discovered or an audit sweep is
+performed.
+
+## Entry shape
+
+Each entry preserves:
+
+- a concrete concern and a representative example;
+- why local, single-owner review may miss it;
+- affected or likely owners;
+- what would count as resolution;
+- activation pressure;
+- current constraints; and
+- eventual disposition.
+
+## Entries
+
+### Ternary convergence forms
+
+- **Concern.** Conditional expressions (`a ?? c ;; d`) must converge to one
+  statically usable result shape per complete operation, including inferred
+  bindings, typed destinations, nested operators, and Boolean-producing paths
+  inside a condition.
+- **Representative example.** `whatAmI := (a < b ?? c ;; d)` must error when `c`
+  and `d` remain different types, while `whatAmI : KnownType = (a < b ?? c ;; d)`
+  converges through construction and
+  `myType : MyType? = (a < b ?? : MyType = a ;; : MyType?)` converges through a
+  typed optional destination.
+- **Why local review misses it.** Convergence spans core flow, function
+  invocation (selection), operators (node classification), and construction
+  (destination lifetime); no single owner sees every form.
+- **Likely owners.** [Core flow control](../../language/core-flow-control.md),
+  [function invocation](../../language/function-invocation.md),
+  [operators](../../language/operators.md),
+  [construction, replacement, and destruction](../../language/construction-and-destruction.md).
+- **Resolution.** A reviewed catalog of valid convergence forms and their errors,
+  cross-checked across those owners.
+- **Activation pressure.** Value-polymorphism, generics, or richer inference
+  design.
+- **Current constraints.** Statement composition does not extend convergence into
+  a later statement; a stored branch-dependent runtime type is deferred.
+- **Disposition.** Open.
+
+### Branch-specific overload selection and visible cost
+
+- **Concern.** A conditional-expression arm may select a different overload or
+  code path, and one `&&` or `||` node may be classified differently per path:
+  the protected exact `Boolean`/`Boolean` short-circuit operation on one path and
+  an ordinary eager overload on another. Diagnostics and cost tooling should show
+  branch-specific selections and per-path short-circuit behavior without implying
+  duplicated evaluation of the surrounding operation.
+- **Representative example.** `e := f + (condition ?? c ;; d)` evaluates `f`
+  once and selects `f + c` or `f + d`. In
+
+  ```zax
+  result5 :=
+    (?a1) ||
+    (c < d ?? (?a2) ;; e) ||
+    (?a3) ||
+    (g < h ?? (?a3) ;; f)
+  ```
+
+  some paths may use protected short-circuit nodes while others require ordinary
+  eager overloads, yet every path is validated at compile time and must converge.
+- **Why local review misses it.** Cost visibility is a tooling and diagnostics
+  concern layered over invocation selection, operator classification, and flow
+  evaluation order.
+- **Likely owners.**
+  [Function invocation](../../language/function-invocation.md),
+  [operators](../../language/operators.md), future analysis/diagnostics work.
+- **Resolution.** Branch-specific selection, per-path operator classification,
+  and cost are shown, and a possible future lint flags different overloads
+  selected before convergence.
+- **Activation pressure.** Diagnostics/tooling design or a reported surprise.
+- **Current constraints.** `f` is evaluated exactly once; `??` is sufficient
+  source acknowledgement; compile-time resolution never implies early runtime
+  evaluation.
+- **Disposition.** Open.
+
+### Repository-wide two-space source and legacy-example repair
+
+- **Concern.** Promotion reformatted current conceptual examples to exact
+  two-space structural indentation and aligned separators, but legacy remainder
+  pages still use older indentation and some superseded spellings.
+- **Representative example.** Legacy pages using four-space indentation, bare
+  optional conditions in untouched sections, or old label and target spellings.
+- **Why local review misses it.** The sweep spans every legacy page; a focused
+  review touches only the page it is on.
+- **Likely owners.** Every legacy root page; ultimately their future focused
+  reviews.
+- **Resolution.** Each legacy page is either promoted, corrected, or explicitly
+  retired, at which point no stale example remains.
+- **Activation pressure.** Each legacy page's own focused review.
+- **Current constraints.** Directly corrected or touched examples must already
+  follow aligned semantics; untouched remainders may keep older layout until
+  their review.
+- **Disposition.** Open.
+
+### Live owner for every deferred consequence
+
+- **Concern.** Every deferred consequence must have a live, non-archive owner or
+  indexed raw destination, so nothing is lost when numbered work is archived.
+- **Representative example.** The `case next` selection consequence, optional
+  proof pressure, and flow-derived analysis controls.
+- **Why local review misses it.** The check is about the set of deferrals as a
+  whole, not any one owner.
+- **Likely owners.** [Documentation architecture](../documentation.md), the raw
+  index, and this file.
+- **Resolution.** A confirmed mapping from each deferred consequence to a live
+  destination.
+- **Activation pressure.** Any archival of numbered work.
+- **Current constraints.** Design may be deferred, but capture may not; archived
+  work may not be a current owner's source of meaning.
+- **Disposition.** Open.
+
+### Legacy claims contradicted by promoted behavior
+
+- **Concern.** Legacy pages contain condition, optional, error-exit, and
+  operator claims contradicted by the promoted exact-`Boolean`, presence-proof,
+  and exit model.
+- **Representative example.** Bare optional or captured-error conditions,
+  unchecked-dereference prose that conflicts with mandatory static proof, and
+  prose implying that `&&` and `||` are globally `Boolean`-only rather than
+  ordinary eager overloads outside the protected exact `Boolean`/`Boolean`
+  operations.
+- **Why local review misses it.** Contradictions span core flow, operators,
+  optional, and except pages.
+- **Likely owners.** [Optional types](../../optional.md),
+  [except error handling](../../except.md), [Nothing](../../nothing.md),
+  [operator overloading](../../operator.md), and their future reviews.
+- **Resolution.** Every contradicted legacy claim is corrected or routed to a
+  current owner.
+- **Activation pressure.** Each affected page's focused review, or a reported
+  contradiction.
+- **Current constraints.** Known contradictions touched during promotion have
+  already been corrected; remaining untouched claims are tracked here.
+- **Disposition.** Open.
+
+### Example prerequisite and placement audit
+
+- **Concern.** Each current owner must read correctly top to bottom for a new
+  programmer: examples must be understandable where they are placed, untaught
+  pieces must be safely treatable as placeholders, and no explanation may depend
+  on a concept introduced only later.
+- **Representative example.** A complex labeled `if` with an initializer,
+  condition, post operation, and targeted `break` placed in an opening mental
+  model before labels and post operations are taught; the same example belongs in
+  the section that owns those concepts. Likewise, an example with a known compile
+  error must carry an inline `// error` comment rather than relying on prose:
+
+  ```zax
+  if condition ;; postOperation()
+    body() // error unless postOperation() returns Boolean
+  ```
+
+- **Why local review misses it.** A focused review edits one section, while
+  prerequisite order and diagnostic visibility are properties of the complete
+  reading path across every owner.
+- **Likely owners.** Every current owner in `language/`, with criteria owned by
+  [documentation architecture](../documentation.md).
+- **Resolution.** Each current owner is read end to end as a new programmer
+  would, and its examples are confirmed short, prerequisite-safe, and
+  inline-annotated where a diagnostic or cost is critical.
+- **Activation pressure.** Any promotion, any reported reader confusion, or a
+  periodic teaching sweep.
+- **Current constraints.** Examples must be as short as possible but no shorter
+  than the behavior being taught; a known compile error must be marked in code.
+- **Disposition.** Open.
+
+### Numbered-work provenance in current owners
+
+- **Concern.** Current programmer-facing owners must not cite numbered work items
+  or archived project records for provenance or meaning, because those files are
+  eventually archived and are not reader destinations.
+- **Representative example.** A `Source / Provenance` row reading
+  `Work item 007; legacy operator overloading evidence`, or body prose accepting
+  behavior "aligned during work item `007`".
+- **Why local review misses it.** The occurrences are metadata and passing
+  sentences spread across every promoted owner, and each looks harmless locally.
+- **Likely owners.** Every current owner in `language/`, plus public routes such
+  as [index](../../index.md); criteria owned by
+  [documentation architecture](../documentation.md).
+- **Resolution.** No current or public owner cites a numbered work item or
+  archive, and every such owner instead cites current predecessors or live legacy
+  evidence. Recurrence is caught during promotion validation.
+- **Activation pressure.** Any promotion, any archival of numbered work, or a
+  repository-wide link sweep.
+- **Current constraints.** `project/` records, including active numbered work and
+  `project/raw/` inputs, may retain numbered provenance; current and public owners
+  may not, and may not route ordinary readers into project raw material.
+- **Disposition.** Open.
+
+### Protected operations, required support, and toolchain consistency
+
+- **Concern.** The protected exact `Boolean`/`Boolean` `&&` and `||` operations
+  are required language support rather than optional library content. Every
+  surface that discusses libraries, the compiler/library split, builds, or
+  linkage must agree, and none may promise a particular lowering.
+- **Representative example.** Rejecting "one mandatory system library" as a
+  non-goal while source still depends on protected operations that a toolchain
+  must supply:
+
+  ```zax
+  // error: the protected Boolean || Boolean operation cannot be replaced
+  operator binary '||' final :
+    (result : Boolean)(lhs : Boolean, rhs : Boolean) = {
+    return asmCompare(lhs, rhs)
+  }
+  ```
+
+- **Why local review misses it.** The promise is split between the operator
+  owner, the vision's non-goals and build model, and future build/toolchain work,
+  so any one page can look self-consistent while the set disagrees.
+- **Likely owners.** [Operators](../../language/operators.md),
+  [language vision](../../language/vision.md),
+  [raw build and dependency input](build-and-dependencies.md), and future
+  toolchain work.
+- **Resolution.** Required language support and optional library APIs are
+  distinguished consistently everywhere, missing required support is described as
+  an incomplete toolchain, and no surface promises instructions, intrinsics,
+  emitted code, or helper linkage as a language guarantee.
+- **Activation pressure.** Build/toolchain design, freestanding or
+  cross-compilation targets, or a reported contradiction.
+- **Current constraints.** The implementation may choose instructions, constant
+  folding, emitted code, an intrinsic, or an automatically linked helper; the
+  programmer-visible guarantee is only availability and semantics.
+- **Disposition.** Open.
+
+## Activation and retirement
+
+Add an entry when a concrete concern crosses several owners, local review cannot
+prove repository-wide consistency, representative examples exist, and resolution
+criteria and activation pressure can be stated. Disposition entries individually
+as their owners consume them. Retire this file only after every entry is
+dispositioned and no cross-cutting concern remains open.

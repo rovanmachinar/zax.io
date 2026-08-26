@@ -8,7 +8,7 @@
 | Implementation State | Not applicable |
 | Owns | The human-facing catalog and full definitions of accepted reusable Zax design and use principles |
 | Does Not Own | Exact feature semantics, project cooperation rules, documentation process, formal conformance, compiler implementation, or unreviewed aphorisms |
-| Source / Provenance | Foundational direction from the language vision and reusable principles recovered through work item `006` |
+| Source / Provenance | Foundational direction from the language vision and reusable principles recovered from legacy design material |
 
 ## Purpose
 

@@ -12,6 +12,11 @@ Current invocation of function values in their default `Nothing` state is
 defined by
 [Zax function invocation](language/function-invocation.md#default-nothing-function-values).
 
+The pre-unary `?` and `!` operator behavior these examples use, such as `if !_`
+to fast-fail on a `Nothing` self pointer, is owned by
+[Zax operators](language/operators.md), and the exact-`Boolean` condition
+boundary is owned by [Zax core flow control](language/core-flow-control.md).
+
 ### Basic Overview
 
 Zax allows types to have a special `Nothing` instance of a type. Whenever a pointer to `Nothing` is created for a type that supports a `Nothing` instance, the pointer is automatically set to point to the `Nothing` instance. This ensures that a pointer always points to a real instance of a type even when no allocated instance of a type was ever created.

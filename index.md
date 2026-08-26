@@ -29,6 +29,12 @@ producing them.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
   for constructors, construction packets, generated lifecycle operations,
   same-storage replacement, and destruction.
+- Read [Zax core flow control](language/core-flow-control.md) for exact-`Boolean`
+  conditions, `if`/`else`, loops, explicit `scope`, flow labels, and
+  `break`/`continue`/`next`/`return`.
+- Read [Zax operators](language/operators.md) for arbitrary operator results,
+  direct `?` and `!` selection with opposite-operator fallback, ordinary eager
+  `&&` and `||` overloads, and the protected `Boolean` short-circuit operations.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -42,6 +48,8 @@ producing them.
 - [Qualifiers](language/qualifiers.md)
 - [Function invocation](language/function-invocation.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
+- [Core flow control](language/core-flow-control.md)
+- [Operators](language/operators.md)
 - [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes

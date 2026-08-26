@@ -228,6 +228,45 @@ Do not discard a useful idea merely because it is too detailed or immature for a
 public concept owner. Give it another explicit disposition before the working
 file is archived.
 
+### Example obligations
+
+Readers often scan examples before prose, so critical teaching must appear in the
+source and its comments as well as in the surrounding explanation.
+
+- Make an example as short as possible, but no shorter than needed to preserve
+  the behavior being taught.
+- Place an example only after its prerequisites are taught, or use pieces a
+  reader can safely treat as placeholders. Do not explain an example with a
+  concept introduced only later.
+- When a compile error is known, put an inline `// error` comment, or an equally
+  clear comment, in the sample. Prose may expand the diagnosis but must not be
+  the only indication that the source is invalid.
+- Show critical diagnostics and costs in representative examples rather than only
+  in prose.
+- Repeat a complex example in the section that owns it rather than opening a
+  document with it.
+
+### Raw material carries the same obligation
+
+When deferred raw material involves source syntax or programmer-visible
+behavior, preserve representative valid examples, invalid counterexamples, and
+comments explaining the deciding distinction. Prose alone is insufficient when
+code can disambiguate the intended meaning. A raw input may omit examples only
+when no useful source form exists yet, and it should say so explicitly.
+
+### Positive-first promoted teaching
+
+Promoted programmer-facing documentation leads with valid forms and meaningful
+boundaries. Mention an invalid form only when it prevents a likely
+misunderstanding, demonstrates an intentional diagnostic, or distinguishes two
+genuinely plausible source meanings.
+
+Do not manufacture a concept merely to deny it, and do not enumerate arbitrary
+malformed source in promoted language documentation. A working record may
+preserve rejected hypotheses and diagnostic classification so that promotion
+avoids inventing an obligation; the promoted owner removes that discovery history
+and teaches the valid model.
+
 ## Authority and maturity
 
 Document location does not create authority. Checked-in prose, polished
@@ -255,6 +294,20 @@ Keep these distinctions visible:
 - aligned working findings are not authoritative until promoted;
 - historical records are not current owners;
 - decision maturity does not authorize an edit.
+
+### Current owners do not cite numbered work
+
+A current programmer-facing owner must not cite a numbered work item or an
+archived project record for its provenance or its meaning. Numbered work is a
+process artifact whose file is eventually archived, and a public owner that
+depends on it sends ordinary readers into project records or dead ends.
+
+- Cite current conceptual predecessors or live legacy evidence instead.
+- State a boundary as future work by its subject rather than by a work number.
+- Keep numbered-work provenance in `project/` records, including active work
+  files and `project/raw/` inputs, which may retain it freely.
+- Do not route ordinary readers from a current or public owner into
+  `project/raw/` material.
 
 New or materially rewritten owner documents should state the applicable parts
 of:
@@ -446,6 +499,12 @@ Do not use "out of scope" to erase a material finding. A useful deferral records
 
 An unresolved contradiction cannot be hidden by deferral if it invalidates the
 current proposal.
+
+Design may be deferred, but capture may not. Record every material consequence,
+assign it a live owner or indexed raw destination, identify what reactivates it,
+and state any constraint it places on current work. A deferred consequence must
+not lose its home when numbered work is archived, and archived work must not
+become a current owner's source of meaning.
 
 The active work file evolves only through discussed, aligned, and explicitly
 authorized edits.

@@ -5,9 +5,9 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
 | Applies To | Source-local semantic permissions and assertions, analysis provenance, contract-version evolution, and the boundary between unsafe controls and lint suppression |
-| Owns | Preservation of construction-derived requirements, concrete examples, unresolved syntax, activation pressure, and retirement criteria |
+| Owns | Preservation of construction-derived requirements, concrete examples, the contract-dependent severity of redundant controls, unresolved syntax, activation pressure, and retirement criteria |
 | Does Not Own | Accepted unsafe syntax, safety guarantees, diagnostic identifiers, lint syntax, language contracts, compiler extensions, or implementation |
-| Source / Provenance | Work items `005` and `006`, construction/lifecycle and invocation/result analysis pressure |
+| Source / Provenance | Work items `005`, `006`, and `007`; construction/lifecycle, invocation/result, and core-flow analysis pressure |
 
 ## Reading posture
 
@@ -43,7 +43,7 @@ Illustrative syntax:
 ```zax
 /// The callback consumes the view synchronously and stores nothing.
 unsafe <lifetime-escape> {
-    myCaptureBeyondLifetime(myType.view())
+  myCaptureBeyondLifetime(myType.view())
 }
 ```
 
@@ -54,8 +54,8 @@ future construct is non-scoping or it uses the established descope mechanism:
 
 ```zax
 unsafe <lifetime-escape> [[descope]] {
-    x : Integer
-    myCaptureBeyondLifetime(myType.view())
+  x : Integer
+  myCaptureBeyondLifetime(myType.view())
 }
 
 x = 5
@@ -119,14 +119,43 @@ because initialization was bypassed.
 An unsafe assertion may override incomplete proof or assert the result of an
 opaque operation. It cannot make a known-ended lifetime live again.
 
+## Flow-derived proof pressure
+
+Core flow control adds cross-cutting proof pressure without accepting any
+override syntax:
+
+- **Optional presence and dereference.** Access through conditionally live
+  storage, including a postfix optional dereference, requires proof that a live
+  value exists on that path; the proof may come from a preceding presence test,
+  construction, earlier control flow, or a recognized presence contract, and need
+  not be immediately adjacent. A `&&` proof is only a proof when the right operand
+  is unambiguously exactly `Boolean` and the node is therefore the protected
+  short-circuit operation.
+- **Reachability and accidental nontermination.** Obvious unreachable code and an
+  obviously non-terminating loop, such as one whose empty body never changes its
+  condition, are diagnosable without a complete termination proof.
+- **Loop-sensitive result completion.** Result and instance completeness must
+  hold on every normal path a loop, branch, or transfer produces.
+- **Branch-dependent construction.** A conditional expression's arms may
+  construct or select differently and must converge to one statically usable
+  result shape per complete operation.
+- **Obsolete proof assertions.** A smarter compiler may make a previously required
+  proof override redundant. Whether that redundancy is advisory or an error
+  follows the selected static-analysis contract; see
+  [Contract-dependent redundant controls](#contract-dependent-redundant-controls).
+
+These are future analysis concerns. A semantic assertion may override incomplete
+proof, while lint suppression may not change semantics; the two mechanisms remain
+distinct as described below.
+
 ## Partial access and publication are distinct
 
 A helper may use an incomplete current instance without retaining it:
 
 ```zax
 +++ final : ()() = {
-    _.first.+++()
-    initializeRemaining(_)
+  _.first.+++()
+  initializeRemaining(_)
 }
 ```
 
@@ -134,7 +163,7 @@ Publishing the same instance is stronger:
 
 ```zax
 +++ final : ()() = {
-    registerGlobally(_)
+  registerGlobally(_)
 }
 ```
 
@@ -168,17 +197,46 @@ unknown unsafe semantic extension may be accepted only when the compiler
 independently proves the code valid without it; otherwise the compiler reports
 that the required extension is unsupported.
 
-## Redundant unsafe controls
+## Contract-dependent redundant controls
 
-A newer compiler may prove something that an older compiler could not. Source
-must not break merely because the executable compiler became smarter while the
-selected language contract stayed the same.
+The mental model for any analysis the selected contract mandates is
+prove-or-narrowly-assert:
 
-- Under the older contract, a newly redundant control is at most an advisory
-  diagnostic.
-- A later contract may mandate the proof and make the obsolete control a hard
-  error for source adopting that contract.
-- Compiler experimentation does not silently change portable source validity.
+> For every property mandatory under the selected language contract, Zax attempts
+> to prove the operation valid. If proof cannot be established, the operation is
+> rejected unless a narrow semantic assertion explicitly accepts responsibility
+> for an unproved but valid boundary. An assertion cannot make a known violation
+> valid.
+
+Redundant-control validity is not absolute; it follows the selected contract:
+
+| Situation | Severity of the now-redundant control |
+| --- | --- |
+| The contract does not require proof of that case | Implementation improvement may make the assertion redundant, but it is at most advisory |
+| The selected contract requires that case to be recognized as safe | The redundant assertion may be a hard error |
+| A compiler demands an assertion for a contract-mandated passing case | That compiler is nonconforming |
+| Source adopts a later contract that newly mandates the proof | Source may need to remove a control that was valid under the earlier contract |
+
+Source validity therefore follows the selected contract, not merely the executable
+compiler's current cleverness. Compiler experimentation does not silently change
+portable source validity, and a newly clever compiler does not by itself break
+source whose contract did not change.
+
+This rule is general. It applies to every static analysis, not only conditional
+live-storage presence or one lifecycle feature.
+
+Concrete example shapes that must survive into the future owner:
+
+```zax
+if ?optionalValue
+  use(optionalValue.) // proven; no assertion is required under any contract
+```
+
+```zax
+// unsafe <construction-path-complete> _.prop2
+// Advisory when the contract does not mandate this proof;
+// a hard error under a contract that mandates recognizing the case.
+```
 
 ## Lint suppression is a separate mechanism
 
@@ -193,8 +251,8 @@ Lint suppression:
 
 ```zax
 MyType :: type {
-    bar : Foo
-    foo : Bar // A naming lint may be intentionally suppressed here.
+  bar : Foo
+  foo : Bar // A naming lint may be intentionally suppressed here.
 }
 ```
 

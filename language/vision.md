@@ -222,7 +222,8 @@ locking, provenance, signing, and sandbox policies remain future design work.
   build decisions.
 - Reuse code and types across build time and runtime.
 - Integrate source dependency resolution into the build.
-- Keep compiler and library responsibilities separable.
+- Keep compiler and library responsibilities separable, while still providing the
+  language support that source depends on.
 - Make self-contained and durable builds achievable without mandatory external
   package or build infrastructure.
 
@@ -281,6 +282,23 @@ Zax does not aim to require:
 These boundaries do not prohibit optional libraries, tools, services, adapters,
 or programming styles. They prevent those choices from becoming mandatory
 language-wide policy.
+
+### Required language support is not an optional library
+
+Rejecting one mandatory conventional system library does not remove the support
+the language itself requires. Distinguish:
+
+- optional library APIs such as collections, I/O, networking, and frameworks,
+  which a program may decline entirely; and
+- required language support for fundamental types, protected primitive
+  operations, and the runtime or lifetime behavior that source actually uses.
+
+An implementation may satisfy a required operation through instructions, constant
+folding, emitted target code, an intrinsic, or an automatically linked helper.
+Zax does not promise which of those an implementation chooses; the
+programmer-visible guarantee is only that the operation and its semantics are
+available. A toolchain that cannot supply required support is incomplete rather
+than a program that failed to link an optional library.
 
 ## Accepted tradeoffs
 

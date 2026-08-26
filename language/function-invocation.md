@@ -8,7 +8,7 @@
 | Implementation State | Not established by this repository |
 | Owns | Ordinary call syntax; visible callable contracts; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; synchronous call completion; invocation diagnostics, costs, and formatting |
 | Does Not Own | Complete function declaration, capture, reassignment, or representation; complete copy, move, or `last` precedence; pointer/reference provenance; generics; variadics; hidden `mutator` access; runtime value polymorphism; arbitrary operator lookup domains; async; ABI; formal grammar; compiler implementation |
-| Source / Provenance | Promoted from work item `006` using legacy function material and current declaration, qualifier, construction, and source-structure constraints |
+| Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
 
@@ -23,11 +23,11 @@ parameters second:
 
 ```zax
 double final : (
-    result : Integer
+  result : Integer
 )(
-    input : Integer
+  input : Integer
 ) = {
-    return input * 2
+  return input * 2
 }
 
 doubled := double(21)
@@ -115,11 +115,11 @@ body, current-instance member access remains explicit through `_`:
 
 ```zax
 Document :: type {
-    save final : ()(
-        path : Path
-    ) readonly = {
-        writeTo(path, _.contents)
-    }
+  save final : ()(
+    path : Path
+  ) readonly = {
+    writeTo(path, _.contents)
+  }
 }
 ```
 
@@ -159,9 +159,9 @@ Given:
 
 ```zax
 configure final : ()(
-    host : Host,
-    retries : Integer = 3,
-    verbose : Boolean
+  host : Host,
+  retries : Integer = 3,
+  verbose : Boolean
 ) = {
 }
 ```
@@ -239,8 +239,8 @@ An input expression may introduce a binding:
 
 ```zax
 send(
-    : temporary : Buffer,
-    inspect(temporary)
+  : temporary : Buffer,
+  inspect(temporary)
 )
 ```
 
@@ -270,8 +270,8 @@ next input begins:
 source : Integer = 1
 
 observe(
-    source,
-    action: changeSourceToTwo(source)
+  source,
+  action: changeSourceToTwo(source)
 )
 ```
 
@@ -305,9 +305,9 @@ A parameter may declare a default expression:
 
 ```zax
 connect final : ()(
-    host : Host,
-    attempts : Integer = 3,
-    trace : Boolean = false
+  host : Host,
+  attempts : Integer = 3,
+  trace : Boolean = false
 ) = {
 }
 ```
@@ -337,9 +337,9 @@ prototype.
 
 ```zax
 operation(
-    third:,
-    first: makeFirst(),
-    second: makeSecond()
+  third:,
+  first: makeFirst(),
+  second: makeSecond()
 )
 ```
 
@@ -350,9 +350,9 @@ This order allows deterministic dependent defaults:
 
 ```zax
 operation final : ()(
-    first : A,
-    second : B = makeB(),
-    third : C = makeC(second)
+  first : A,
+  second : B = makeB(),
+  third : C = makeC(second)
 ) = {
 }
 ```
@@ -386,7 +386,7 @@ Defaults belong to the visible callable contract used at the call site:
 
 ```zax
 callback : ()(
-    timeout : Duration = configuredTimeout()
+  timeout : Duration = configuredTimeout()
 ) = implementation
 ```
 
@@ -417,9 +417,9 @@ An ordinary result slot begins unconstructed:
 
 ```zax
 make final : (
-    result : Item
+  result : Item
 )() = {
-    return source
+  return source
 }
 ```
 
@@ -432,9 +432,9 @@ A result can request construction before body entry:
 
 ```zax
 make final : (
-    result : Item = :
+  result : Item = :
 )() = {
-    result.name = "example"
+  result.name = "example"
 }
 ```
 
@@ -443,11 +443,11 @@ constructs from its expression:
 
 ```zax
 make final : (
-    result : Item = makeItem(input)
+  result : Item = makeItem(input)
 )(
-    input : Input
+  input : Input
 ) = {
-    result.finishInitialization()
+  result.finishInitialization()
 }
 ```
 
@@ -459,10 +459,10 @@ An initially unconstructed result may instead be constructed later:
 
 ```zax
 make final : (
-    result : Item
+  result : Item
 )() = {
-    result.+++(source)
-    return
+  result.+++(source)
+  return
 }
 ```
 
@@ -498,9 +498,9 @@ Falling through the closing brace is equivalent to a bare return:
 
 ```zax
 make final : (
-    result : Item = :
+  result : Item = :
 )() = {
-    result.name = "example"
+  result.name = "example"
 }
 ```
 
@@ -508,14 +508,14 @@ A function uses one complete mechanism on each path:
 
 ```zax
 make final : (
-    result : Item
+  result : Item
 )() = {
-    if condition {
-        result.+++(first)
-        return
-    }
+  if condition {
+    result.+++(first)
+    return
+  }
 
-    return second
+  return second
 }
 ```
 
@@ -529,16 +529,64 @@ Partial value-bearing result lists are unavailable. Either:
 the output. Use bare return or fallthrough rather than suggesting a transfer from
 the slot into itself.
 
+### Position-specific `return #`
+
+`#` in a value-bearing return occupies one result position and means that no new
+explicit value is supplied for that slot. For that position it:
+
+1. preserves an already completed result;
+2. preserves a result initialized by its declaration;
+3. otherwise requests type-default construction; and
+4. diagnoses the return if that type cannot be default-constructed.
+
+```zax
+foo final : (
+  first : Integer = 5,
+  second : String
+)() = {
+  return #, "apple" // preserve 5
+}
+
+bar final : (
+  first : Integer,
+  second : String
+)() = {
+  first.+++(42)
+  return #, "apple" // preserve 42
+}
+
+foobar final : (
+  first : Integer,
+  second : String
+)() = {
+  return #, "apple" // type-default first
+}
+```
+
+Because `#` occupies a result position, the complete-result-shape rule still
+holds: a `#` slot is completed, not omitted. This keeps the broad meaning of `#`
+as an explicit "do not supply or retain a value here" acknowledgement while
+giving it position-specific behavior:
+
+- result declarations use `#` to permit caller omission;
+- caller mapping uses `#` to discard a produced result; and
+- return lists use `#` to preserve or default-complete the corresponding slot.
+
+`return #` differs materially from a bare return: `return #` may default-complete
+an unconstructed slot, while a bare return requires every slot to be complete
+already. Local, type, and memory-policy uses of `#` remain
+[legacy discard](../discard.md) input.
+
 ## Result labels and acknowledgement
 
 Result declarations use ordinary declaration spacing:
 
 ```zax
 produce final : (
-    number : Integer,
-    text : String
+  number : Integer,
+  text : String
 )() = {
-    return 42, "answer"
+  return 42, "answer"
 }
 ```
 
@@ -566,10 +614,10 @@ A result marked with `#` may be silently omitted by the caller:
 
 ```zax
 measure final : (
-    requiredValue : Integer,
-    diagnostic # : String
+  requiredValue : Integer,
+  diagnostic # : String
 )() = {
-    return calculateValue(), describeMeasurement()
+  return calculateValue(), describeMeasurement()
 }
 ```
 
@@ -641,8 +689,8 @@ An explicit routing group ends with one producer:
 
 ```zax
 consume(
-    first: number:,
-    second: text: = produce()
+  first: number:,
+  second: text: = produce()
 )
 ```
 
@@ -668,8 +716,8 @@ Named and positional routing may mix:
 
 ```zax
 consume(
-    first: number:,
-    : text: = produce()
+  first: number:,
+  : text: = produce()
 )
 ```
 
@@ -706,8 +754,8 @@ result label:
 
 ```zax
 consume(
-    first: number:,
-    second: text : String = produce()
+  first: number:,
+  second: text : String = produce()
 )
 ```
 
@@ -721,8 +769,8 @@ use two clear steps:
 number:, text: = produce()
 
 consume(
-    first: number,
-    second: widget : Widget = text
+  first: number,
+  second: widget : Widget = text
 )
 ```
 
@@ -748,9 +796,9 @@ Source and destination discard act on different cursors:
 
 ```zax
 consume(
-    #: #,
-    first: number:,
-    second: text: = produce()
+  #: #,
+  first: number:,
+  second: text: = produce()
 )
 ```
 
@@ -767,14 +815,14 @@ Several groups execute in source order:
 
 ```zax
 consume(
-    first: number:,
-    : text: = before(),
+  first: number:,
+  : text: = before(),
 
-    third:,
-    fourth: = produce(),
+  third:,
+  fourth: = produce(),
 
-    fifth:,
-    #: # = after()
+  fifth:,
+  #: # = after()
 )
 ```
 
@@ -795,8 +843,8 @@ remain unused only when it permits omission.
 
 ```zax
 consumeFour(
-    produceThreeWithLastOptional(),
-    produceTwoMore()
+  produceThreeWithLastOptional(),
+  produceTwoMore()
 )
 ```
 
@@ -832,10 +880,10 @@ A bare invocation can forward a compatible complete result sequence:
 
 ```zax
 wrapper final : (
-    number : Integer,
-    text : String
+  number : Integer,
+  text : String
 )() = {
-    return produce()
+  return produce()
 }
 ```
 
@@ -857,8 +905,8 @@ Result routing itself cannot be grouped as an expression:
 
 ```zax
 return (
-    outputText: text:,
-    outputNumber: number: = produce()
+  outputText: text:,
+  outputNumber: number: = produce()
 )
 // error: result routing cannot be grouped as an expression
 ```
@@ -871,7 +919,7 @@ A construction packet may forward several results as constructor inputs:
 
 ```zax
 pair : Pair = [{
-    produceTwo()
+  produceTwo()
 }]
 ```
 
@@ -919,6 +967,20 @@ consume(parseValue(source))
 The inner call must resolve independently unless source introduces a complete
 typed declaration or explicit result-label constraint.
 
+A flow condition is not one of these contexts. A condition validates the result
+already selected under ordinary rules rather than supplying an expected
+`Boolean`, so an operator whose direct candidates are ambiguous is an error there.
+An anonymous typed declaration is the accepted way to supply that context:
+
+```zax
+if : Boolean = ?value
+  useValue(value)
+```
+
+Which operator that selects, and when the opposite operator may supply a
+fallback, are owned by
+[operators](operators.md#direct-selection-ambiguity-and-opposite-operator-fallback).
+
 ### Same-family matching
 
 Expected-result matching considers:
@@ -951,6 +1013,42 @@ widget : Widget = (: Integer = makeRandom())
 
 The anonymous `Integer` declaration selects the result family. Ordinary `Widget`
 construction then consumes that completed value.
+
+### Branch-specific selection under a conditional expression
+
+A conditional expression (`condition ?? c ;; d`) evaluates its condition once and
+then only the selected arm. The surrounding operation may resolve a different
+callable, overload, or constructor for each arm:
+
+```zax
+e := f + (condition ?? c ;; d)
+```
+
+This may invoke `f + c` or `f + d`, including different overload bodies, while
+preserving strict source evaluation:
+
+1. evaluate `f` exactly once in its original position;
+2. evaluate `condition` once;
+3. evaluate only `c` or `d`; and
+4. invoke the operation selected for that path.
+
+Branch-specific selection does not introduce a second inference model. The narrow
+expected-result rule still applies independently on each arm from the same direct,
+complete, explicitly typed declaration boundary; the conditional expression does
+not propagate an expected result backward from a later statement or outer call.
+Each runtime path must converge to one statically usable result shape before the
+complete operation completes. The shared condition, single-arm evaluation, and
+convergence requirement are owned by
+[core flow control](core-flow-control.md#conditional-expression-and-branch-convergence);
+this document owns which callable each arm selects.
+
+An operator node under a conditional expression may also be classified
+differently on different paths, so one `&&` or `||` may be a protected
+short-circuit operation on one path and an ordinary eager overload on another.
+Every path is still validated at compile time. That per-path operator-node
+behavior is owned by
+[operators](operators.md#branch-dependent-short-circuiting) and is not restated
+here.
 
 ## Candidate selection
 
@@ -1062,7 +1160,7 @@ An exact prototype can select one member of an overload group:
 
 ```zax
 selected final : ()(
-    value : Document readonly &
+  value : Document readonly &
 ) = consume
 
 selected(document)
@@ -1073,17 +1171,17 @@ acknowledgement while invoking the same body:
 
 ```zax
 operation final : (
-    poorlyNamedResult : Widget
+  poorlyNamedResult : Widget
 )(
-    timeout : Duration = configuredTimeout()
+  timeout : Duration = configuredTimeout()
 ) = {
-    // One implementation body.
+  // One implementation body.
 }
 
 betterOperation final : (
-    result # : Widget
+  result # : Widget
 )(
-    expires : Duration = anotherConfiguredTimeout()
+  expires : Duration = anotherConfiguredTimeout()
 ) = operation
 ```
 
@@ -1168,7 +1266,7 @@ physical newline:
 
 ```zax
 return first: number:,
-    second: text: = produce()
+  second: text: = produce()
 ```
 
 When the first result begins after an otherwise complete bare `return`, explicit
@@ -1176,8 +1274,8 @@ continuation is necessary:
 
 ```zax
 return \
-    first: number:,
-    second: text: = produce()
+  first: number:,
+  second: text: = produce()
 ```
 
 The comma already continues the next newline. Adding `\` there is an intent
@@ -1185,17 +1283,17 @@ error:
 
 ```zax
 return \
-    first: number:, \ // error: comma already continues this newline
-    second: text: = produce()
+  first: number:, \ // error: comma already continues this newline
+  second: text: = produce()
 ```
 
 A continuation-only line can visibly carry the list across another newline:
 
 ```zax
 return \
-    first: number:,
-    \
-    second: text: = produce()
+  first: number:,
+  \
+  second: text: = produce()
 ```
 
 Complete continuation and indentation behavior is defined by
@@ -1219,7 +1317,10 @@ Invocation diagnostics should distinguish:
 - parenthesized expression mode where mapping was intended;
 - unconsumed required results;
 - incomplete or duplicate result construction;
+- a `return #` slot whose type cannot be default-constructed;
 - result context without a complete declaration;
+- branch-dependent conditional-expression arms that select incompatible callables
+  or fail to converge;
 - incomparable undominated candidates;
 - a uniquely best but unavailable candidate;
 - use after an earlier move or `last`;
@@ -1247,6 +1348,9 @@ Programmers must be able to discover:
 - indirect function-value calls;
 - environments retained for closures or default expressions;
 - result construction, remapping, omission, and discard;
+- a `return #` slot preserved, declaration-initialized, or type-default
+  constructed;
+- branch-specific callable selection under a conditional expression;
 - generated or unavailable candidate involvement; and
 - future allocation, async, or synchronization machinery used by a call.
 
@@ -1272,9 +1376,9 @@ Canonical formatting preserves:
 
 ```zax
 send(
-    stream,
-    encoding: utf8,
-    trace: true
+  stream,
+  encoding: utf8,
+  trace: true
 )
 ```
 
@@ -1297,6 +1401,9 @@ Even deterministic selection cannot prevent every API evolution hazard:
 - reordering parameters or results changes positional cursors;
 - changing result arity or discardability changes mappings;
 - adding a result-only overload may make inferred calls ambiguous;
+- adding or changing an overload may change a conditional-expression arm's
+  selected callable;
+- changing a result type's default-constructibility changes `return #` validity;
 - changing transfer or qualification requirements changes viability, cost, and
   post-call source availability; and
 - adding or removing parentheses can change expression mode versus mapping.
@@ -1320,6 +1427,10 @@ Later work must preserve:
 - the distinction between one expression and a result sequence;
 - explicit result mapping and deterministic cursors;
 - narrow complete-declaration result selection;
+- position-specific `return #` preservation or default-completion within the
+  complete-result-shape rule;
+- branch-specific callable selection under a conditional expression with
+  once-only source evaluation;
 - partial-order overload dominance without source-order ties;
 - unavailable best candidates not falling through;
 - compatible prototype adaptation without executable body adaptation;

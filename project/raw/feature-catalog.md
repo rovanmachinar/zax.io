@@ -114,7 +114,8 @@ Do not use this file as onboarding or as evidence that a feature is committed.
 
 ## Recorded dispositions
 
-Focused construction work has dispositioned these catalog entries:
+Focused construction, invocation, and core-flow work has dispositioned these
+catalog entries:
 
 | Catalog input | Disposition |
 | --- | --- |
@@ -128,6 +129,13 @@ Focused construction work has dispositioned these catalog entries:
 | Member functions | Current receiver-call behavior is owned by the function-invocation owner and receiver qualification by [Zax qualifiers](../../language/qualifiers.md); complete `once`, capture, and reassignment behavior remains future work |
 | Result discard acknowledgement | Current caller acknowledgement and omission behavior is owned by the function-invocation owner; unrelated local, type, and memory-policy discard remains future input |
 | Harmonized warning-suppression mechanisms across compilers | Preserved for future work in [raw analysis-control input](analysis-controls.md) |
+| Familiar flow controls (`if`, `else`, `while`, `until`, `redo while`, `redo until`) | Current conceptual behavior, including `forever` and explicit `scope`, is owned by [Zax core flow control](../../language/core-flow-control.md) |
+| Scope control and logic grouping with `break` and `continue` | Current `break`, `continue`, `next`, and flow-label targeting are owned by [Zax core flow control](../../language/core-flow-control.md) |
+| `switch`, `case`, `default` | Deferred to future selection work; preserved with the `case next` consequence in [raw selection input](selection.md) |
+| `each in`, `each from` | Iteration protocols remain future iteration work; core flow no longer depends on their details |
+| Operator overloading | Aligned arbitrary-result behavior, direct `?`/`!` selection with ambiguity as an error and unambiguous exactly-`Boolean` opposite-operator fallback, ordinary eager `&&`/`\|\|` overloads, and the protected exact `Boolean`/`Boolean` short-circuit operations are owned by [Zax operators](../../language/operators.md); complete declaration, lookup, ranking, precedence, literals, and word operators remain [legacy operator](../../operator.md) and future work |
+| Library and compiler separation | Required language support, including the protected `Boolean` operations, is distinguished from optional library APIs by the [Zax language vision](../../language/vision.md) and [Zax operators](../../language/operators.md); toolchain, helper-linkage, and incomplete-toolchain pressure is preserved in [raw build and dependency input](build-and-dependencies.md) |
+| Value polymorphism for functions | Remains future value-polymorphism work; core flow constrains only the conditional expression's per-operation convergence |
 
 These dispositions do not accept the remaining catalog items.
 

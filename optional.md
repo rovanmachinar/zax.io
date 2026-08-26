@@ -5,6 +5,19 @@
 
 Optional values are builtin to the language. An optional value either contains a value or contains uninitialized memory. An optional value can be checked if it contains valid data or not and dereferenced when valid data is confirmed to be present inside an optional value.
 
+The exact-`Boolean` condition boundary these checks depend on is owned by
+[Zax core flow control](language/core-flow-control.md); the presence operation
+`?value` is owned by [Zax operators](language/operators.md); and the obligation
+to prove a live value before access through conditionally live storage is owned
+by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md#conditionally-live-storage-and-access-proof).
+The accepted way to produce an optional through a conditional expression is the
+convergence example owned by
+[Zax core flow control](language/core-flow-control.md#conditional-expression-and-branch-convergence);
+this page is not authoritative for conditional expressions.
+Complete optional construction, reset, and unwrapping behavior remains legacy
+input on this page.
+
 
 ### Declaring an optional type
 
@@ -107,22 +120,22 @@ An `if` statement can be used to check if an optional value contains data in the
 
 ````zax
 print final : ()(...) = {
-    // ...
+  // ...
 }
 
 MyType :: type {
-    value1 : Integer
-    value2 : String
+  value1 : Integer
+  value2 : String
 }
 
 // `valueOptional` is declared as optional and defaults to contain uninitialized
 // memory
 valueOptional : MyType?
 
-if valueOptional        // "false" will print
-    print("true")
+if ?valueOptional       // "false" will print
+  print("true")
 else
-    print("false)
+  print("false")
 
 value : MyType
 
@@ -130,27 +143,27 @@ value : MyType
 // optional now contains valid data
 valueOptional = value
 
-if valueOptional        // "true" will print
-    print("true")
+if ?valueOptional       // "true" will print
+  print("true")
 else
-    print("false)
+  print("false")
 ````
 
 
 ### Dereferencing the optional
 
-The dot (`.`) operator can be used to dereference an optional and access the optional value's contents. Care must be taken to first validate if an optional value contains valid contents otherwise a dereference operation may cause a panic or undefined behavior.
+The dot (`.`) operator can be used to dereference an optional and access the optional value's contents. Dereferencing requires static proof that the optional holds a live value on the dereferencing path, for example a preceding presence check with `?`. The obligation to prove a live value before access through conditionally live storage is owned by [Zax construction, replacement, and destruction](language/construction-and-destruction.md#conditionally-live-storage-and-access-proof).
 
-Just like pointers, optional types cannot be implicitly converted to a reference of an underlying `type`. A programmer must explicitly dereference an optional value so the programmer acknowledges the optional must contain a valid data. A compiler will not enforce a valid value must exist but runtime issues will occur if a programmer dereferences an uninitialized optional value.
+Just like pointers, optional types cannot be implicitly converted to a reference of an underlying `type`. A programmer must explicitly dereference an optional value so the programmer acknowledges the optional must contain a valid data. The compiler requires proof that a live value exists; an unproved dereference is a compile-time error rather than a deferred runtime hazard.
 
 ````zax
 MyType :: type {
-    value1 : Integer
-    value2 : String
+  value1 : Integer
+  value2 : String
 }
 
 func final : ()(input : MyType) = {
-    // ...
+  // ...
 }
 
 // `valueOptional` is declared as optional and defaults to contain
@@ -173,9 +186,9 @@ func(valueOptional)
 // memory
 anotherOptional : MyType?
 
-// PANIC: a dereferenced optional type which does not contain valid data can
-// cause a panic
-func(valueOptional.)
+// error: dereferencing anotherOptional is rejected without static proof that it
+// holds a live value
+func(anotherOptional.)
 ````
 
 
@@ -293,25 +306,25 @@ valueOptional. = value
 
 ````zax
 print final : ()(...) = {
-    // ...
+  // ...
 }
 
 MyType :: type {
-    value1 : Integer
-    value2 : String
+  value1 : Integer
+  value2 : String
 }
 
 func final : ()(input : MyType?) = {
-    // ...
+  // ...
 
-    if input {
-        print("found value: ", input.value1, input.value2)
-        // ...
-    } else {
-        print("no value")
-    }
-
+  if ?input {
+    print("found value: ", input.value1, input.value2)
     // ...
+  } else {
+    print("no value")
+  }
+
+  // ...
 }
 
 // `valueOptional` is declared as optional and defaults to contain

@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item defining build-time execution or dependency behavior |
-| Applies To | Trust, sandboxing, source resolution, immutable identity, provenance, and durable builds |
-| Owns | Preservation of aligned pressures, threats, and unresolved mechanisms |
-| Does Not Own | Accepted dependency schemas, security policy, or implementation contracts |
-| Source / Provenance | Work item `001`, Zax purpose and design principles |
+| Applies To | Trust, sandboxing, source resolution, immutable identity, provenance, durable builds, and required language support supplied by the toolchain |
+| Owns | Preservation of aligned pressures, threats, required-support and linkage questions, and unresolved mechanisms |
+| Does Not Own | Accepted dependency schemas, security policy, compiler or runtime architecture, or implementation contracts |
+| Source / Provenance | Work item `001`, Zax purpose and design principles; operator and foundational-support pressure |
 
 ## Aligned pressure
 
@@ -17,6 +17,48 @@ official package store, though optional catalogs or package schemas may exist.
 
 Build-time code is executable code. It is trusted unless the build environment
 deliberately constrains it.
+
+## Required language support and toolchain completeness
+
+Zax does not require one mandatory conventional system library, but an
+implementation cannot omit the support the language itself requires. Preserve the
+distinction between:
+
+- optional library APIs such as collections, I/O, networking, and frameworks; and
+- required language support for fundamental types, protected primitive
+  operations, and the runtime or lifetime behavior that source uses.
+
+The exact language-provided `Boolean && Boolean` and `Boolean || Boolean`
+operations are the current concrete example. They are protected, cannot be
+replaced by a user declaration, and are therefore required support rather than
+library content. Their programmer-visible behavior is owned by
+[Zax operators](../../language/operators.md), and the foundational promise by the
+[Zax language vision](../../language/vision.md).
+
+A conforming implementation may satisfy a required operation through instructions,
+constant folding, emitted target code, an intrinsic, or an automatically linked
+helper. Those are implementation choices, and no lowering is promised.
+
+```zax
+// error: the protected Boolean || Boolean operation cannot be replaced
+operator binary '||' final :
+  (result : Boolean)(lhs : Boolean, rhs : Boolean) = {
+  return asmCompare(lhs, rhs)
+}
+```
+
+Future build and toolchain work must decide:
+
+- how automatically linked helper objects or runtime fragments are located,
+  versioned, and pinned;
+- how required-support availability interacts with cross-compilation, freestanding
+  targets, and host/target separation;
+- how a toolchain reports missing required support, given that this is a broken
+  or incomplete toolchain rather than the diagnostic the source was meant to
+  produce; and
+- how required support interacts with durable, reproducible, and locked builds.
+
+Exact compiler and runtime architecture remains undecided here.
 
 ## Sandboxing approaches
 
@@ -73,6 +115,6 @@ Preserve consideration of:
 ## Activation and retirement
 
 Activate this input before defining the lasting build/dependency owner,
-dependency declaration and locking, sandbox policy, or an implementation
-contract. Consume its findings through that work and retire or archive this
-placeholder afterward.
+dependency declaration and locking, sandbox policy, required-support and helper
+linkage behavior, or an implementation contract. Consume its findings through
+that work and retire or archive this placeholder afterward.

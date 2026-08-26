@@ -153,8 +153,8 @@ It supports low-level initialization:
 
 ```zax
 if condition {
-    item : Item = unsafe ???
-    initializeThroughAssembly(item)
+  item : Item = unsafe ???
+  initializeThroughAssembly(item)
 } // Item's destructor runs
 ```
 
@@ -217,7 +217,7 @@ function value is initialized. It may refer to its own completed binding:
 
 ```zax
 factorial final : (result : Integer)(n : Integer) = {
-    return n <= 1 ?? 1 ;; n * factorial(n - 1)
+  return n <= 1 ?? 1 ;; n * factorial(n - 1)
 }
 ```
 
@@ -261,7 +261,7 @@ hidden must grant permission:
 value shadowable := 1
 
 if condition {
-    value := 2
+  value := 2
 }
 ```
 
@@ -274,11 +274,11 @@ The newly introduced inner declaration is not automatically `shadowable`:
 value shadowable := 1
 
 if outer {
-    value := 2
+  value := 2
 
-    if inner {
-        value := 3 // error: the middle value is not shadowable
-    }
+  if inner {
+    value := 3 // error: the middle value is not shadowable
+  }
 }
 ```
 
@@ -288,18 +288,20 @@ Permission can be propagated deliberately:
 value shadowable := 1
 
 if outer {
-    value shadowable := 2
+  value shadowable := 2
 
-    if inner {
-        value := 3
-    }
+  if inner {
+    value := 3
+  }
 }
 ```
 
 The rule applies to ordinary lexical declarations that can be shadowed,
 including values, types, aliases, imports, and namespaces. A forward declaration
-and its completion are one declaration rather than shadowing. Overload groups
-and labels require category-specific rules in their future owners.
+and its completion are one declaration rather than shadowing. Overload groups use
+category-specific rules in their future owners, and flow labels are a separate
+category described under
+[flow labels and the ordinary namespace](#flow-labels-and-the-ordinary-namespace).
 
 Once a name is shadowed, ordinary lookup no longer reaches it. Zax does not
 provide a general parent-scope or `..` lookup operator. A programmer who needs
@@ -336,7 +338,8 @@ Structured cases remain distinguishable:
 - a forward declaration and its completion are one declaration;
 - members occupy their containing entity's member scope;
 - operators are not ordinary identifiers; and
-- labels may require control-flow-specific treatment.
+- flow labels are a separate, explicitly shaped category that does not share
+  ordinary-identifier lookup.
 
 ### Naming intent
 
@@ -662,7 +665,7 @@ A named type becomes visible as an incomplete type before its body is resolved:
 
 ```zax
 Node :: type {
-    next : Node *
+  next : Node *
 }
 ```
 
@@ -675,7 +678,7 @@ Functions and ordinary values use `:`, including values with anonymous types:
 ```zax
 callback final : FunctionType = { }
 value final : :: type {
-    member : Integer
+  member : Integer
 }
 ```
 
@@ -692,11 +695,11 @@ names:
 OtherNode :: forward type
 
 Node :: type {
-    next : OtherNode *
+  next : OtherNode *
 }
 
 OtherNode :: type {
-    next : Node *
+  next : Node *
 }
 ```
 
@@ -706,7 +709,7 @@ Direct infinitely recursive layout remains an error:
 
 ```zax
 Node :: type {
-    next : Node // error: infinitely recursive layout
+  next : Node // error: infinitely recursive layout
 }
 ```
 
@@ -730,28 +733,61 @@ concepts without all becoming statements.
 ### Flow-control initialization
 
 A flow-control initializer accepts any effective statement. A binding introduced
-there is visible to the condition, applicable clause bodies, and corresponding
-false or `else` clauses, then leaves scope after the complete flow statement:
+there becomes visible after its own initializer completes and remains visible to
+later initializer operands, the condition, the applicable clause bodies, the
+corresponding false or `else` clauses, and the post operation, then leaves scope
+after the complete flow statement:
 
 ```zax
-if result := tryValue() ;; result.isValid()
-    use(result)
+if result := tryValue() ;; result.isValid() ;; recordAttempt(result)
+  use(result)
 ```
 
-An explicit block inside a composed initializer keeps its own nested scope:
+`result` is visible to the condition, the body, and the post operation
+`recordAttempt(result)`, and is destroyed when the complete `if` exits.
+
+An explicit block inside a composed initializer keeps its own nested scope, so a
+binding it introduces is destroyed at the block's `}` and does not escape to the
+condition, body, or post. A sibling initializer operand introduced outside the
+block belongs to the enclosing flow-header scope:
 
 ```zax
 if {
-    token := hello()
-    goodbye(token)
+  token := hello()
+  goodbye(token)
 }; value := compounding() ;; value < 1 {
-    use(value)
-    token = 5 // error: token belonged to the completed inner block
+  use(value)
+  token = 5 // error: token belonged to the completed inner block
 }
 ```
 
-Exact flow-header grammar, `;;`, and mandatory layout remain later flow-control
-and source-structure work.
+Here `token` belongs to the completed inner block, while `value` is a header
+binding visible through the condition and body. The flow-header schema, `;;`
+section roles, and phase execution are owned by
+[core flow control](core-flow-control.md); token spacing and mandatory layout are
+owned by [source structure](source-structure.md).
+
+### Flow labels and the ordinary namespace
+
+A flow label is a separate, explicitly shaped name category from the ordinary
+identifier namespace. Because the two categories do not share lookup, the same
+spelling may name both a binding and a label without ambiguity:
+
+```zax
+while outer: outer := 0 ;; outer < 100 ;; ++outer {
+  ++outer
+  break outer:
+}
+```
+
+Ordinary binding shadowing is checked only against ordinary bindings, and label
+shadowing only against labels. The one-level `shadowable` permission model
+described above applies to each category independently: an outer label may grant
+one nested reuse of its spelling, and the inner label must itself say
+`shadowable` to permit a further reuse. Complete flow-label spelling, placement,
+target eligibility, and `:` reference are owned by
+[core flow control](core-flow-control.md#flow-labels-and-transfer-targets).
+
 
 ### Stored members
 
@@ -766,8 +802,8 @@ An input parameter may declare a default expression:
 
 ```zax
 connect final : ()(
-    host : Host,
-    attempts : Integer = 3
+  host : Host,
+  attempts : Integer = 3
 ) = {
 }
 ```
@@ -793,9 +829,9 @@ names a type:
 
 ```zax
 make final : (
-    result : Item
+  result : Item
 )() = {
-    return source
+  return source
 }
 ```
 
@@ -804,9 +840,9 @@ into construction before body entry:
 
 ```zax
 make final : (
-    result : Item = :
+  result : Item = :
 )() = {
-    result.name = "example"
+  result.name = "example"
 }
 ```
 
@@ -935,7 +971,8 @@ It establishes constraints that later work must preserve:
   value, and access capabilities;
 - operator design must not permit operator overloads to introduce unresolved
   names;
-- flow-control design must preserve header-binding scope and nested block scope;
+- flow-control design must preserve header-binding scope, nested block scope, and
+  the separate flow-label category described here;
 - module and name-resolution design must preserve one lexical identifier
   namespace, fixed path roots, and pending suffix resolution; and
 - structural typing must decide explicitly whether member names, qualifiers,

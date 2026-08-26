@@ -4,9 +4,10 @@
 ## Discard Operator
 
 Current function-result acknowledgement, discardable results, omitted inputs,
-and result routing are defined by
-[Zax function invocation](language/function-invocation.md). This page remains
-legacy input for local, type, and memory-policy uses of `#`.
+result routing, and the position-specific `return #` behavior that preserves or
+default-completes a result slot are defined by
+[Zax function invocation](language/function-invocation.md#return-and-completion).
+This page remains legacy input for local, type, and memory-policy uses of `#`.
 
 ### discard operator on previously declared variables
 

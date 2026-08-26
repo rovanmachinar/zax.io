@@ -9,6 +9,14 @@ call completion are defined by
 legacy input for `except` and `catch` short-circuit behavior. Its legacy
 constructor-graph matching does not define ordinary result selection.
 
+An `if` testing a captured error must resolve to exactly `Boolean`, a boundary
+owned by [Zax core flow control](language/core-flow-control.md); the
+Boolean-producing presence operation `?value` is owned by
+[Zax operators](language/operators.md). The examples below therefore test error
+presence with `?` rather than treating an error value directly as a condition.
+Complete `except`/`catch` short-circuit behavior remains legacy input on this
+page.
+
 The `except` is not the same as exception handling. All return results are normal output arguments on functions and can be treated as such. However, the `except` keyword can help create quick function exits and perform exit error chaining and the `catch` keyword can help create quick handlers for error conditions. Otherwise, error results are the same as normal results in every way.
 
 
@@ -20,32 +28,32 @@ As the `except` captures the results from a called function, those results are n
 
 ````zax
 login final : (
-    lastLogin : String,
-    error : Error
+  lastLogin : String,
+  error : Error
 )(
-    username : String
+  username : String
 ) = {
-    if banned(username)
-        return #, # : Error = "You've been banned from our service."
+  if banned(username)
+    return #, # : Error = "You've been banned from our service."
 
-    return "October 7, 2020", #
+  return "October 7, 2020", #
 }
 
 renderAccount final : (myError except : Error)(username : String) = {
 
-    // The `except` keyword will capture a return result and if the return
-    // result evaluates to `true` the result will automatically be returned
-    // with all other results retaining their defaulted values
-    lastLogin := login(username) except error
+  // The `except` keyword will capture a return result and if the return
+  // result evaluates to `true` the result will automatically be returned
+  // with all other results retaining their defaulted values
+  lastLogin := login(username) except error
 
-    // This is equivalent to doing the following code
-    lastLogin:, capturedError: = login(username)
-    if capturedError
-        return capturedError
+  // This is equivalent to doing the following code
+  lastLogin:, capturedError: = login(username)
+  if ?capturedError
+    return capturedError
 
-    // return the default error value (which for `Error` is assumed
-    // to indicate no error in this code)
-    return #
+  // return the default error value (which for `Error` is assumed
+  // to indicate no error in this code)
+  return #
 }
 ````
 
@@ -58,45 +66,45 @@ As multiple `except` clauses can be post-pended to a function, each performs an 
 
 ````zax
 login final : (
-    lastLogin : String,
-    error : Error,
-    networkError : NetworkError
+  lastLogin : String,
+  error : Error,
+  networkError : NetworkError
 )(
-    username : String
+  username : String
 ) = {
-    if !networkConnect()
-        return #, #, # : NetworkError = "Global outage failure."
-    if banned(username)
-        return #, # : Error = "You've been banned from our service."
+  if !networkConnect()
+    return #, #, # : NetworkError = "Global outage failure."
+  if banned(username)
+    return #, # : Error = "You've been banned from our service."
 
-    return "October 7, 2020", #, #
+  return "October 7, 2020", #, #
 }
 
 renderAccount final : (
-    // notice the `except` keyword is placed on the return arguments indicating
-    // which values can accept the results of the `except` statement
-    myError except : Error,
-    myNetworkError except : NetworkError
+  // notice the `except` keyword is placed on the return arguments indicating
+  // which values can accept the results of the `except` statement
+  myError except : Error,
+  myNetworkError except : NetworkError
 )(
-    username : String
+  username : String
 ) = {
 
-    // The `except` keyword will capture a return result and if the return
-    // result evaluates to `true` the result will automatically be returned
-    // with all other results retaining their defaulted values
-    lastLogin := login(username) except error except networkError
+  // The `except` keyword will capture a return result and if the return
+  // result evaluates to `true` the result will automatically be returned
+  // with all other results retaining their defaulted values
+  lastLogin := login(username) except error except networkError
 
-    // This is equivalent to doing the following code
-    lastLogin:, capturedError:, capturedNetworkError  = login(username)
-    if capturedError
-        return capturedError, #
+  // This is equivalent to doing the following code
+  lastLogin:, capturedError:, capturedNetworkError: = login(username)
+  if ?capturedError
+    return capturedError, #
 
-    if capturedNetworkError
-        return #, capturedNetworkError
+  if ?capturedNetworkError
+    return #, capturedNetworkError
 
-    // return the default error value for Error which is assumed
-    // to indicate no error in this code.
-    return #, #
+  // return the default error value for Error which is assumed
+  // to indicate no error in this code.
+  return #, #
 }
 ````
 

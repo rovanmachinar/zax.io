@@ -9,6 +9,19 @@ selection boundaries are defined by
 page remains legacy input for complete operator declaration, overload resolution,
 conversion, and result behavior.
 
+The aligned bounded operator behavior accepted so far is now owned by
+[Zax operators](language/operators.md): operator results may be arbitrary types;
+`?` and `!` resolve directly, with ambiguity an error and opposite-operator
+fallback available only when no direct overload applies and the opposite
+selection is unambiguous and exactly `Boolean`; an anonymous typed declaration
+such as `: Boolean = ?value` supplies result context that a condition does not;
+`&&` and `||` are ordinary eager overloadable operators for operand shapes other
+than exact `Boolean`/`Boolean` and may return any type; and the exact
+language-provided `Boolean` `&&` and `||` operations are protected, cannot be
+replaced, and short-circuit left to right. Complete operator declaration syntax,
+lookup domains, ranking, precedence, literal operators, and word operators remain
+legacy input on this page.
+
 All three qualifier axes may constrain a type-defined operator's
 [receiver operand](language/terms.md#receiver-operand), as defined by
 [Zax qualifiers](language/qualifiers.md#receiver-operands).

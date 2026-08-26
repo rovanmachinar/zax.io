@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit continuation, effective statements and bodies, semicolon composition, mandatory layout validation, and comment forms and attachment |
-| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), expression precedence, the complete delimiter catalog, compiler-directive placement or attachment, detailed flow-control semantics, exact lifetime and scope-exit behavior, documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Statement-level newlines, explicit continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, the boundary between structural operands and expression continuation, `;;` and `??` header-section separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, the source-level distinction among ordinary syntax, semantic, and deliberate intent/layout diagnostics, and comment forms and attachment |
+| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), [core flow-control semantics](core-flow-control.md) including which `else` clause runs, [operator behavior](operators.md), expression precedence, the complete keyword or delimiter catalog, compiler-directive placement or attachment, [scope-exit destruction behavior](construction-and-destruction.md), documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -41,7 +41,7 @@ body owns a statement.
 
 ```zax
 value = calculate() + \
-        more()
+    more()
 ```
 
 The continuation marker must be the last non-comment code token on its line. An
@@ -49,7 +49,7 @@ ordinary `//` comment may follow it:
 
 ```zax
 value = calculate() + \ // Explain the continued expression.
-        more()
+    more()
 ```
 
 A `///` documentation comment may not follow `\` because the continued
@@ -62,7 +62,7 @@ indentation of the statement being continued:
 
 ```zax
 value = calculate() + \
-        more()
+    more()
 ```
 
 The exact expression alignment may vary:
@@ -85,8 +85,8 @@ not merely deeper than the enclosing control header:
 
 ```zax
 if condition
-    value = calculate() + \
-        more()
+  value = calculate() + \
+    more()
 ```
 
 ### Continued and continuation-only lines
@@ -95,8 +95,8 @@ A continued line may contribute source tokens and continue again:
 
 ```zax
 value = 1 + 2 \
-        + 3 + \
-        4
+    + 3 + \
+    4
 ```
 
 It may also consist only of an appropriately indented `\`. Such a line visibly
@@ -104,8 +104,8 @@ carries the continuation across another physical newline:
 
 ```zax
 value = 1 + 2 + \
-        \
-        3
+    \
+    3
 ```
 
 A continuation-only line may have an ordinary `//` comment after `\`.
@@ -115,13 +115,13 @@ A blank or comment-only line does not carry continuation:
 ```zax
 value = 1 + 2 + \
 
-        3 // error: blank line broke the continuation
+    3 // error: blank line broke the continuation
 ```
 
 ```zax
 value = 1 + 2 + \
-        // error: comment-only line does not carry continuation
-        3
+    // error: comment-only line does not carry continuation
+    3
 ```
 
 The joined physical lines must eventually form one valid statement. A
@@ -130,7 +130,7 @@ incomplete in isolation when the joined statement is valid:
 
 ```zax
 value = 1 + 2 \
-        + 3
+    + 3
 ```
 
 ## Comma-list continuation
@@ -140,7 +140,7 @@ that list across the following physical newline:
 
 ```zax
 return first: number:,
-    second: text: = produce()
+  second: text: = produce()
 ```
 
 This is a narrow list rule, not general continuation for incomplete
@@ -148,7 +148,7 @@ expressions:
 
 ```zax
 value := first +
-    second // error: `+` does not continue the statement
+  second // error: `+` does not continue the statement
 ```
 
 The continuation line must be hanging-indented beyond the structural indentation
@@ -164,9 +164,9 @@ continuation-only `\` line may carry the list across one additional newline:
 
 ```zax
 return \
-    first: number:,
-    \
-    second: text: = produce()
+  first: number:,
+  \
+  second: text: = produce()
 ```
 
 ### One continuation reason per newline
@@ -182,14 +182,14 @@ newline:
 
 ```zax
 return \
-    first: number:, \ // error: the comma already continues the list
-    second: text: = produce()
+  first: number:, \ // error: the comma already continues the list
+  second: text: = produce()
 ```
 
 ```zax
 consume(
-    first, \ // error: the open `(` already permits the newline
-    second
+  first, \ // error: the open `(` already permits the newline
+  second
 )
 ```
 
@@ -201,8 +201,8 @@ bare `return`, the first newline still needs explicit continuation:
 
 ```zax
 return \
-    first: number:,
-    second: text: = produce()
+  first: number:,
+  second: text: = produce()
 ```
 
 Once the list exists, each comma carries its following newline.
@@ -233,19 +233,19 @@ Zax distinguishes these source forms:
 
 ```zax
 if condition
-    doA()
+  doA()
 ```
 
 ```zax
 if condition
-    doA();
-    doB()
+  doA();
+  doB()
 ```
 
 ```zax
 if condition {
-    doA()
-    doB()
+  doA()
+  doB()
 }
 ```
 
@@ -255,13 +255,33 @@ escape after the clause. Operands of a composed body share the clause scope, so
 a name introduced by an earlier operand may be used by a later operand.
 
 The exact relationship between a clause scope and a braced block's scope,
-including destruction and scope-exit behavior, belongs to later scope and
-lifetime design. Braces do not make body-local names escape.
+including destruction and scope-exit behavior, is owned by
+[core flow control](core-flow-control.md) and
+[construction, replacement, and destruction](construction-and-destruction.md).
+Braces do not make body-local names escape.
 
 ## Semicolon composition
 
 `;` is a statement-composition operator, not a statement terminator. It requires
 a complete statement on both sides and produces one effective statement.
+
+`;` attaches to the complete statement on its left and requires whitespace on its
+right. Whitespace before `;`, or no whitespace after it, is a deliberate intent
+error:
+
+```zax
+foo(); bar()
+
+foo();
+bar()
+
+// foo() ; bar() // error: whitespace before ;
+// foo();bar()   // error: no whitespace after ;
+```
+
+The doubled `;;` header-section separator and the `??` conditional-expression
+separator are distinct tokens with their own surrounding-whitespace rule; see
+[Header sections and separators](#header-sections-and-separators).
 
 ### Horizontal composition
 
@@ -278,7 +298,7 @@ This differs intentionally from C in a one-statement body:
 
 ```zax
 if condition
-    doA(); doB()
+  doA(); doB()
 ```
 
 Both calls belong to the Zax `if`. In the visually similar C form, only the
@@ -291,18 +311,16 @@ statement:
 
 ```zax
 if condition
-    doA();
-    doB();
-    doC()
+  doA();
+  doB();
+  doC()
 ```
 
 Each right operand must have structural indentation consistent with the same
-body. Leading, doubled, and trailing semicolons are errors because an operand is
-missing:
+body. Leading and trailing semicolons are errors because an operand is missing:
 
 ```zax
 ; doA()       // error: missing left operand
-doA();; doB() // error: missing middle operand
 doA();        // error: missing right operand
 ```
 
@@ -311,8 +329,8 @@ composition there is redundant and is an error:
 
 ```zax
 if condition {
-    doA();
-    doB() // error: vertical composition is redundant
+  doA();
+  doB() // error: vertical composition is redundant
 }
 ```
 
@@ -321,21 +339,74 @@ statements:
 
 ```zax
 if condition {
-    doA(); doB()
+  doA(); doB()
 }
 ```
 
-Comment trivia may appear between vertical operands:
+Comment trivia may appear between vertical operands, including while `;` is still
+waiting for its right operand. No `\` is required:
 
 ```zax
 if condition
-    doA(); // The semicolon is source before this comment.
-    // Explain why the next operation belongs to the same body.
-    doB()
+  doA(); // `;` establishes that another operand follows.
+  // Comment trivia may occur before that operand.
+  doB()
 ```
 
 A physically blank line may not separate them because it visually contradicts
 their composition.
+
+The source processor must therefore preserve comment and physical-line trivia
+long enough to validate composition, blank-line boundaries, documentation
+attachment, and layout intent. It need not expose comments as ordinary semantic
+tokens, but it may not erase the relevant positions before those checks run.
+
+### Structural operands versus expression continuation
+
+Composed operands are new statements and stay at exactly one structural level:
+
+```zax
+if true
+  a();
+  b();
+  c()
+```
+
+Progressively indenting sibling operands is an error:
+
+```zax
+if true
+  a();
+    b(); // error: composed operands must share one structural level
+      c()
+```
+
+A body that begins four spaces deeper is also an error:
+
+```zax
+if true
+    a(); // error: the body must begin exactly two spaces deeper
+    b();
+    c()
+```
+
+Deeper alignment remains legal for tokens continuing the same expression once
+continuation is established, even when those expressions are then composed:
+
+```zax
+if true
+  a := 1 + 2 + 3 + 4 \
+    + 5 + 6;
+  b := 1 + 2 + \
+       3 + 4;
+  calc(a, b)
+```
+
+The lasting rule is:
+
+> Parsed continuation may use deeper alignment for tokens that continue the same
+> expression. It does not relax exact structural indentation for a new body
+> statement, composed operand, header section, or sibling declaration.
 
 ### Nested control statements
 
@@ -343,9 +414,9 @@ A semicolon after an unbraced inner body composes at the inner level:
 
 ```zax
 if outer
-    if inner
-        doA();
-        doB()
+  if inner
+    doA();
+    doB()
 ```
 
 To compose the complete inner control statement with another statement in the
@@ -353,26 +424,26 @@ outer body, braces expose the inner statement's end:
 
 ```zax
 if outer
-    if inner {
-        doA()
-    };
-    doB()
+  if inner {
+    doA()
+  };
+  doB()
 ```
 
 Without those braces, syntax and indentation disagree:
 
 ```zax
 if outer
-    if inner
-        doA();
-    doB() // error: semicolon composition and indentation disagree
+  if inner
+    doA();
+  doB() // error: semicolon composition and indentation disagree
 ```
 
 ```zax
 if outer
-    if inner
-        doA()
-    doB() // error: outer body membership is not expressed by syntax
+  if inner
+    doA()
+  doB() // error: outer body membership is not expressed by syntax
 ```
 
 ## Mandatory layout validation
@@ -384,10 +455,23 @@ After parsing explicit source structure, Zax validates that statement-start
 indentation presents that structure truthfully. Contradictory indentation is a
 mandatory error; it is not an optional lint and cannot be disabled.
 
+Structural indentation uses ASCII spaces only, and one structural level is
+exactly two spaces:
+
 ```zax
 if condition
-    doA()
-    doB() // error: indentation claims unexpressed body membership
+  doConditionalWork()
+```
+
+- statement-start indentation must use the exact two-space structural level;
+- physical tab characters are deliberate intent errors; and
+- continuation or expression alignment may be deeper only where the parsed source
+  already establishes continuation.
+
+```zax
+if condition
+  doA()
+  doB() // error: indentation claims unexpressed body membership
 ```
 
 Removing a required semicolon therefore produces an error rather than silently
@@ -396,7 +480,7 @@ right operand is also an error:
 
 ```zax
 if condition
-    doA();
+  doA();
 doB() // error: composition and indentation disagree
 ```
 
@@ -407,6 +491,289 @@ within the hanging-indentation requirement.
 
 A formatter may normalize valid source. It must not silently rescue source whose
 layout contradicts its structure.
+
+## Header sections and separators
+
+`;;` separates construct-specific flow-header sections, and `??` separates the
+arms of a conditional expression. Both require whitespace on both sides, and
+neither is `;` statement composition:
+
+```zax
+if i := 0 ;; i < 100 ;; ++i {
+  body()
+}
+
+e := a > b ?? c ;; d
+```
+
+Their flow-control and conditional-expression meaning is owned by
+[core flow control](core-flow-control.md); this document owns only their token
+spacing and their relationship to statement composition.
+
+### Header continuation
+
+Top-level operands and sections continued across a flow header use one common
+two-space continuation level rather than aligning under a variable-length keyword
+or label prefix:
+
+```zax
+if i := 0;
+  j := 1;
+  k := 2 ;;
+  i + j + k == 7 ;;
+  ++i; --j; ++k {
+  body()
+}
+```
+
+Progressively indented sibling sections contradict the header structure:
+
+```zax
+if i := 0 ;;
+    i < 100 ;;
+      ++i {
+  body()
+}
+```
+
+### Explicit continuation as the alignment escape hatch
+
+An alignment-sensitive programmer may move the whole header to the common
+continuation level with `\`:
+
+```zax
+if \
+  firstInitializer();
+  secondInitializer();
+  thirdInitializer() ;;
+  condition ;;
+  postOperation() {
+  body()
+}
+```
+
+The same form remains stable under a long label:
+
+```zax
+if shadowable extraordinarily_long_label: \
+  firstInitializer();
+  secondInitializer() ;;
+  condition {
+  body()
+}
+```
+
+A label does not itself continue the physical line, so this explicit `\` is
+necessary and legal. By contrast, a trailing `;` or `;;` already establishes
+continuation across the following newline, so `\` after `;` or `;;` is redundant
+continuation and therefore a deliberate intent error.
+
+## Braces and body boundaries
+
+A `{` used as a scope opener has whitespace on both sides, with a newline
+counting as whitespace. A braced body begins on the final physical header line,
+and a multiline body-closing `}` aligns with its flow keyword:
+
+```zax
+if condition {
+  doA()
+  doB()
+}
+```
+
+A body-opening `{` separated onto the next physical line, or a closing `}` at the
+wrong structural level, is a deliberate intent error. An unbraced body ends after
+its one effective statement, so a following dedented statement runs
+independently. An empty braced body is legal:
+
+```zax
+if condition { }
+```
+
+### Empty-header-block intent
+
+An exact empty block used as an initializer or post header is a deliberate intent
+error, because it reads more like a missing or misplaced body than meaningful
+header work:
+
+```zax
+while i := 0 ;; i < 100 ;; { } {
+  body()
+}
+```
+
+The rule is syntactic rather than an attempt to prove whether arbitrary nested
+statements have effects. A nonempty but apparently effectless header operation
+may instead become lint material.
+
+### Blocks inside composed initializers
+
+A block in an initializer keeps its ordinary nested lexical scope, so names it
+introduces do not escape to the condition or body. Binding visibility across a
+flow header is owned by
+[declarations and bindings](declarations-and-bindings.md#flow-control-initialization).
+
+```zax
+if {
+  temporary := inspectEnvironment()
+  recordInspection(temporary)
+} ;; condition {
+  body()
+}
+```
+
+When a multiline block is one operand of vertically composed header
+initialization, explicit continuation places the block and its sibling operands
+at the common level:
+
+```zax
+if \
+  {
+    temporary := inspectEnvironment()
+    recordInspection(temporary)
+  };
+  resource := getResource() ;;
+  validated(resource) ;;
+  discard(resource) {
+  use(resource)
+}
+```
+
+The compact horizontal form is also legal:
+
+```zax
+if {
+  temporary := inspectEnvironment()
+  recordInspection(temporary)
+}; resource := getResource() ;;
+  validated(resource) ;;
+  discard(resource) {
+  use(resource)
+}
+```
+
+This vertical form is a deliberate layout-intent error even though its tokens can
+be parsed, because the block closes at the flow-keyword level while `;` claims an
+indented right operand as its structural sibling:
+
+```zax
+if {
+  temporary := inspectEnvironment()
+  recordInspection(temporary)
+};
+  resource := getResource() ;;
+  validated(resource) ;;
+  discard(resource) {
+  use(resource)
+}
+```
+
+Use explicit continuation to move both operands to the header-continuation level,
+or put the right operand horizontally after `};`. Moving `}` onto the last inner
+statement line is not a workaround; a multiline block's closing delimiter returns
+to the level where that block statement began.
+
+## `else` attachment and layout
+
+An `else` clause must present its attachment to the `if` it completes.
+
+An unbraced clause aligns exactly with its owning `if`, follows the complete true
+body with no physically blank line between them, and begins its own unbraced body
+exactly two spaces deeper:
+
+```zax
+if condition
+  trueBody()
+else
+  falseBody()
+```
+
+A braced clause keeps `else` on the physical line that closes the preceding body,
+separates `}` and `else` with whitespace, opens the `else` body on the `else`
+line, and closes at the owning `if`'s level:
+
+```zax
+if condition {
+  trueBody()
+} else {
+  falseBody()
+}
+```
+
+A newline between `}` and `else` is a deliberate attachment-intent error:
+
+```zax
+if condition {
+  trueBody()
+}
+else { // error: else is visually detached from the completed if
+  falseBody()
+}
+```
+
+A blank line before an unbraced `else`, or an `else` at the wrong structural
+level, is the same class of error:
+
+```zax
+if condition
+  trueBody()
+
+else // error: a blank line detaches else from its if
+  falseBody()
+```
+
+```zax
+if condition
+  trueBody()
+  else // error: else must align with its owning if
+    falseBody()
+```
+
+`else if` places `else` and `if` on one physical line separated by whitespace, and
+every clause of the chain aligns with the owning `if`:
+
+```zax
+if firstCondition
+  firstBody()
+else if secondCondition
+  secondBody()
+else
+  finalBody()
+```
+
+Comment trivia may precede or follow a clause without weakening the attachment
+rule, because a comment line is not a blank line:
+
+```zax
+if condition
+  trueBody()
+// Explain why the alternative exists.
+else
+  falseBody()
+```
+
+Which clause runs, what a flow label names, and when a post operation runs are
+owned by [core flow control](core-flow-control.md).
+
+## Contextual keyword recognition
+
+A spelling has keyword status only where that keyword's construct is
+grammatically permitted. Outside those positions, that spelling is not a keyword:
+
+```zax
+next          // transfer keyword
+next outer:   // transfer keyword with a target
+next()        // next has no keyword status here
+
+continue          // transfer keyword
+continue outer:   // transfer keyword with a target
+continue()        // continue has no keyword status here
+```
+
+The rule is about position rather than about a reserved-word list, so a
+concept owner that shows a likely confusion should link here instead of
+restating the rule. The term itself is defined by
+[language-design terms](terms.md#contextual-keyword).
 
 ## Comment lexical modes
 
@@ -446,9 +813,9 @@ Ordinary block comments nest:
 
 ```zax
 /*
-    copiedCode()
-    /* An existing nested comment. */
-    moreCopiedCode()
+  copiedCode()
+  /* An existing nested comment. */
+  moreCopiedCode()
 */
 ```
 
@@ -486,11 +853,11 @@ same ordinary nesting depth:
 
 ```zax
 /*
-    /*
-        /*##
-        Everything here is raw, including /*, */, ///, and /*# #*/.
-        ##*/
-    */
+  /*
+    /*##
+    Everything here is raw, including /*, */, ///, and /*# #*/.
+    ##*/
+  */
 */
 ```
 
@@ -544,8 +911,8 @@ body position:
 
 ```zax
 if condition
-    /// Documentation for the body statement.
-    doSomething()
+  /// Documentation for the body statement.
+  doSomething()
 ```
 
 Misaligned documentation is an error:
@@ -553,7 +920,7 @@ Misaligned documentation is an error:
 ```zax
 if condition
 /// error: documentation does not match the body indentation
-    doSomething()
+  doSomething()
 ```
 
 Ordinary comment trivia may intervene without becoming documentation:
@@ -590,7 +957,7 @@ also completes an enclosing construct:
 
 ```zax
 if condition
-    doSomething() /// Documentation for doSomething.
+  doSomething() /// Documentation for doSomething.
 ```
 
 Leading documentation may independently attach to the enclosing `if`:
@@ -598,14 +965,14 @@ Leading documentation may independently attach to the enclosing `if`:
 ```zax
 /// Documentation for the if.
 if condition
-    doSomething() /// Documentation for doSomething.
+  doSomething() /// Documentation for doSomething.
 ```
 
 A trailing block after a braced body occurs at the outer structural level:
 
 ```zax
 if condition {
-    doSomething()
+  doSomething()
 } /// Documentation for the if.
 ```
 
@@ -614,15 +981,15 @@ attaches to the complete effective composed statement:
 
 ```zax
 if condition
-    doA();
-    doB() /// Documentation for the composed body.
+  doA();
+  doB() /// Documentation for the composed body.
 ```
 
 The target must be complete:
 
 ```zax
 if condition /// error: the if is incomplete
-    doSomething()
+  doSomething()
 
 doA(); /// error: the composition operator requires a right operand
 doB()
@@ -632,7 +999,7 @@ Documentation may appear where a multiline construct finishes:
 
 ```zax
 value = 1 + 2 + \ // Ordinary commentary is legal here.
-        3 /// Documentation for the complete assignment.
+    3 /// Documentation for the complete assignment.
 ```
 
 ### Duplicate attachment
@@ -649,8 +1016,8 @@ The rule applies independently at each structural level:
 
 ```zax
 if condition
-    /// Leading documentation for doSomething.
-    doSomething() /// error: duplicate documentation for doSomething
+  /// Leading documentation for doSomething.
+  doSomething() /// error: duplicate documentation for doSomething
 ```
 
 Several adjacent `///` lines are one block. Distinct leading blocks separated by
@@ -676,6 +1043,34 @@ applicable:
 - unattributed documentation; and
 - duplicate documentation attachment.
 
+Layout and separator diagnostics additionally distinguish:
+
+- statement-start indentation that does not use the exact two-space structural
+  level;
+- physical tab characters;
+- whitespace before `;` or missing whitespace after it;
+- missing whitespace around `;;` or `??`;
+- redundant `\` after `;` or `;;`;
+- composed operands at progressively deeper structural levels;
+- a body beginning more than one structural level deeper than its header;
+- sibling header operands or sections at conflicting continuation levels;
+- a body-opening `{` separated onto the next physical line;
+- a scope-opening `{` without whitespace on both sides;
+- a multiline closing `}` at the wrong structural level;
+- an `else` separated from a preceding `}` by a newline, preceded by a blank
+  line, or placed at a level other than its owning `if`;
+- exact `{ }` used as an initializer or post header; and
+- the parseable multiline initializer-block composition whose layout places its
+  operands at conflicting levels.
+
+Source diagnostics fall into ordinary syntax rejection (source that matches no
+legal production), semantic errors (source that parses but violates a type,
+name, or completion rule owned elsewhere), and deliberate intent or layout errors
+(a bounded set of near-miss patterns whose tokens may parse but present
+contradictory intent). Most rules in this document are the third category. The
+category is intentionally bounded and does not require recognizing every
+malformed token sequence.
+
 Exact diagnostic identifiers and presentation belong to later diagnostics
 design. These source-validity conditions remain mandatory errors rather than
 configurable warnings.
@@ -686,9 +1081,16 @@ This document owns the accepted programmer-facing source model, not a formal
 grammar, parser algorithm, formatter implementation, or syntax-highlighting
 architecture.
 
-`;;` appears in legacy flow-control material as a proposed sub-statement
-separator. It is not defined or accepted by this source-structure model and
-must not be inferred from `;` composition.
+`;;` and `??` are accepted header-section and conditional-expression separators.
+Each requires whitespace on both sides and is distinct from `;` statement
+composition; neither may be inferred from `;`. Their flow-control and
+conditional-expression meaning is owned by
+[core flow control](core-flow-control.md).
+
+Contextual keyword recognition is accepted as a positional rule: a spelling is a
+keyword only where its keyword construct is grammatically permitted. The complete
+keyword catalog and each construct's grammar remain with their own owners and
+future work.
 
 Legacy material places compiler directives adjacent to, within, or around source
 constructs, but their placement and attachment semantics remain later
