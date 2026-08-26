@@ -233,8 +233,9 @@ file is archived.
 Readers often scan examples before prose, so critical teaching must appear in the
 source and its comments as well as in the surrounding explanation.
 
-- Make an example as short as possible, but no shorter than needed to preserve
-  the behavior being taught.
+- Keep each example focused on the behavior being taught. Include enough context
+  to make its intent, prerequisites, and consequences understandable, and remove
+  only details that distract.
 - Place an example only after its prerequisites are taught, or use pieces a
   reader can safely treat as placeholders. Do not explain an example with a
   concept introduced only later.

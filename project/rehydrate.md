@@ -32,10 +32,10 @@ been lost. Recover them before continuing.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 5 |
+| Operating guidance revision | 6 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
-| Language-document status | Legacy design input under review; not a formal specification |
+| Language-document status | Current conceptual design coexists with legacy design input; not a formal specification |
 | Implementation in this repository | None |
 
 ## Purpose and authority
@@ -131,6 +131,11 @@ coherent change set. Do not leave necessary integration to an unspecified future
 agent. Defer it explicitly only when the language design remains coherent
 without resolving it now.
 
+Design may be deferred; capture may not. Before archival, every material
+consequence needs a live owner or indexed raw destination, activation pressure,
+and any constraint it places on current work. When deferred material involves
+source syntax, preserve representative code when prose alone could be ambiguous.
+
 If recovery shows that item `n` is closing, remember that the cycle must prepare
 the aligned initiating input and reading scope for `n+1`. Creating `n+1` does not
 authorize beginning it. A new session may take over, or the language maintainer
@@ -150,12 +155,39 @@ reference details. Remove discovery chronology and rejected alternatives when
 they do not help a programmer, but do not omit behavior that future
 specification work would otherwise have to rediscover.
 
+Current programmer-facing owners do not cite numbered work or archived project
+records for provenance or meaning. Keep each example focused on the behavior
+being taught. Include enough context to make its intent, prerequisites, and
+consequences understandable, and remove only details that distract. Place it
+after its prerequisites are understandable and mark known failures inline. Do
+not introduce malformed alternatives merely to deny them.
+
 ## Default working style
 
-Use one deep-reasoning agent by default. Explain disagreements and risks plainly.
-Prefer concrete programmer use cases. Keep one active concern. Capture adjacent
-findings without silently solving them. Helpful analysis is welcome;
-unrequested commitment is not.
+Use one deep-reasoning agent by default; research, design, feasibility, and
+skeptical review do not require an orchestration pipeline. Delegate only when
+separate context materially helps. For a genuinely large delegated synthesis,
+use one general-purpose agent with the most capable task-suitable long-context
+model and high reasoning effort; if choosing a materially older or less capable
+available model, record the task-specific reason. Delegation does not transfer
+responsibility: independently review and validate the result.
+
+Treat **chat-session context**—the finite conversation and file material
+available to one agent—as a budget. Separate agents do not share chat-session
+context or its reusable token cache, so rereading the same corpus multiplies
+token cost; forcing all work into one overfull chat-session context instead risks
+compaction and lost nuance. Decide chat-session-context ownership early: use the
+current agent when it already has the relevant material, or delegate before
+duplicating that reading. Prefer one agent when the interacting scope fits;
+otherwise use the fewest agents needed, give them disjoint owner or file scopes
+and minimal reading paths, and use the active working record as shared distilled
+state. Reuse a persistent agent's chat-session context for follow-up work when
+practical, and integrate or review from summaries, diffs, and targeted high-risk
+sections rather than repeating full-corpus reads.
+
+Explain disagreements and risks plainly. Prefer concrete programmer use cases.
+Keep one active concern. Capture adjacent findings without silently solving them.
+Helpful analysis is welcome; unrequested commitment is not.
 
 For reviewability:
 
