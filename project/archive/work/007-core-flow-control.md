@@ -2,18 +2,19 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working material / non-normative / audit-only |
 | Work Item | `007` |
 | Created | 2026-08-24 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Accepted complete iteration, selection, pattern matching, error propagation, lifetime, async, formal grammar, or compiler behavior |
+| Completed | 2026-08-26 |
+| Owns | Historical record of the bounded review defined by the fixed initiating input |
+| Does Not Own | Current language design, current project guidance, or ordinary reading paths |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owner documents.
+This archived file is a historical collaborative working record. Its promoted
+findings are now owned by current language and project documents; its remaining
+discussion, candidates, and chronology are non-authoritative. Read it only for a
+targeted audit or provenance need.
 
 ## Fixed initiating input
 
@@ -67,21 +68,21 @@ flow depend on unclear scope and exit behavior.
 
 ### Known assumptions
 
-- [Zax language vision](../../language/vision.md) is accepted foundational
+- [Zax language vision](../../../language/vision.md) is accepted foundational
   direction.
-- [Zax language principles](../../language/principles.md) owns reusable
+- [Zax language principles](../../../language/principles.md) owns reusable
   cross-cutting design and use principles.
-- [Zax source structure](../../language/source-structure.md) owns effective
+- [Zax source structure](../../../language/source-structure.md) owns effective
   statements, bodies, semicolon composition, continuation, and mandatory layout.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md)
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
   owns declaration forms, visibility, shadowing, and the existing
   flow-initializer binding boundary.
-- [Zax function invocation](../../language/function-invocation.md) owns call
+- [Zax function invocation](../../../language/function-invocation.md) owns call
   evaluation, result slots, return completion, multiple-result capture, and
   synchronous call completion.
-- [Zax qualifiers](../../language/qualifiers.md) owns place, value, access,
+- [Zax qualifiers](../../../language/qualifiers.md) owns place, value, access,
   receiver, and indirection qualifications.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
   owns value/member lifetime transitions and normal completion obligations.
 - A flow-control clause consumes one effective body statement, which may be
   simple, composed, or braced.
@@ -210,62 +211,62 @@ alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) - governs ownership,
+- [Documentation architecture](../../documentation.md) - governs ownership,
   focused reading, numbered work, and promotion.
-- [Language vision](../../language/vision.md) - provides foundational direction
+- [Language vision](../../../language/vision.md) - provides foundational direction
   and accepted high-level tradeoffs.
-- [Zax language principles](../../language/principles.md) - provides the
+- [Zax language principles](../../../language/principles.md) - provides the
   cross-cutting principles against which flow behavior should be evaluated.
-- [Zax source structure](../../language/source-structure.md) - provides
+- [Zax source structure](../../../language/source-structure.md) - provides
   effective statements, bodies, composition, continuation, layout, and comments.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md) -
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md) -
   provides flow-header declarations, clause-visible scope, shadowing, and
   binding visibility.
-- [Zax function invocation](../../language/function-invocation.md) - provides
+- [Zax function invocation](../../../language/function-invocation.md) - provides
   call evaluation, result slots, return completion, result capture, and
   synchronous completion.
-- [Zax qualifiers](../../language/qualifiers.md) - provides mutation, access,
+- [Zax qualifiers](../../../language/qualifiers.md) - provides mutation, access,
   place, receiver, and indirection constraints used within flow.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md) -
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md) -
   provides lifecycle completeness, destruction, and incomplete-state pressure
   across control paths.
-- [Zax language-design terms](../../language/terms.md) - provides current
+- [Zax language-design terms](../../../language/terms.md) - provides current
   cross-cutting vocabulary.
-- [Legacy flow control](../../flow-control.md) - preserves primary evidence for
+- [Legacy flow control](../../../flow-control.md) - preserves primary evidence for
   conditions, branch and loop forms, header initialization, `;;`, ternary,
   iteration, selection, exits, `using`, and value-polymorphic proposals.
-- [Legacy scope](../../scope.md) - preserves primary evidence for named and
+- [Legacy scope](../../../scope.md) - preserves primary evidence for named and
   unnamed scopes, targeted `break`/`continue`, and scope capture proposals.
 
 ### Consequence-driven
 
-- Read focused [operator](../../operator.md) material when condition conversion,
+- Read focused [operator](../../../operator.md) material when condition conversion,
   logical short-circuiting, negation, or operator/function consistency becomes
   necessary.
-- Read focused [casting](../../casting.md) material when a non-`Boolean`
+- Read focused [casting](../../../casting.md) material when a non-`Boolean`
   condition requires an explicit conversion boundary.
-- Read focused [Nothing](../../nothing.md) or [optional](../../optional.md)
+- Read focused [Nothing](../../../nothing.md) or [optional](../../../optional.md)
   material when condition truth, absence, or optional state becomes necessary.
-- Read focused [pointer and reference](../../pointers.md) material and the
-  [raw lifetime-strategies input](../raw/lifetimes.md) when scope exit,
+- Read focused [pointer and reference](../../../pointers.md) material and the
+  [raw lifetime-strategies input](../../raw/lifetimes.md) when scope exit,
   destruction, dangling references, captures, or transfer becomes necessary.
-- Read the [raw analysis-controls input](../raw/analysis-controls.md) when flow
+- Read the [raw analysis-controls input](../../raw/analysis-controls.md) when flow
   requires proof overrides, reachability assertions, definite completion, or
   diagnostic provenance.
-- Read the [raw safety input](../raw/safety.md) when flow behavior crosses a
+- Read the [raw safety input](../../raw/safety.md) when flow behavior crosses a
   promised safe-subset boundary.
-- Read focused [except](../../except.md) material when ordinary exits cannot be
+- Read focused [except](../../../except.md) material when ordinary exits cannot be
   established without constraining error-result short-circuiting.
-- Read focused [arrays](../../arrays.md), [variadic](../../variadic.md), or
+- Read focused [arrays](../../../arrays.md), [variadic](../../../variadic.md), or
   remaining `each` material only when core loop behavior cannot be established
   without an iteration-protocol constraint.
 - Read focused `switch`, `case`, or `using` sections from
-  [legacy flow control](../../flow-control.md) only when their future design
+  [legacy flow control](../../../flow-control.md) only when their future design
   constrains the shared clause or exit model.
-- Read the [raw async input](../raw/async.md) when flow completion, suspension,
+- Read the [raw async input](../../raw/async.md) when flow completion, suspension,
   cancellation, or callback timing becomes materially async.
-- Read focused [compiler-directive](../../compiler-directives.md) or
-  [meta-function](../../meta-functions.md) material when runtime flow cannot be
+- Read focused [compiler-directive](../../../compiler-directives.md) or
+  [meta-function](../../../meta-functions.md) material when runtime flow cannot be
   separated cleanly from build-time selection or likelihood directives.
 - Expand beyond this list whenever discussion or a material finding establishes
   a concrete need. State why the additional reading is relevant and keep it
@@ -291,10 +292,10 @@ instruction or a specific audit or recovery need.
 This working record began as raw input and candidate reconstruction. It now also
 contains findings aligned in language-maintainer discussion. Consistent with the
 non-authority notice above and the maturity states in the
-[documentation architecture](../documentation.md), those aligned working
+[documentation architecture](../../documentation.md), those aligned working
 findings remain non-authoritative until separately approved and promoted.
 Current concept owners are cited as binding *constraints*. The root
-[legacy flow control](../../flow-control.md) and [legacy scope](../../scope.md)
+[legacy flow control](../../../flow-control.md) and [legacy scope](../../../scope.md)
 pages remain evidence rather than authority.
 
 The record leads with the review state and programmer model, then layers
@@ -312,15 +313,15 @@ control; legacy scope.
 
 Consequence-driven reading then expanded in bounded steps:
 
-- focused [operator](../../operator.md) and [Nothing](../../nothing.md) material
+- focused [operator](../../../operator.md) and [Nothing](../../../nothing.md) material
   tested whether `if !_` and `if !resourceError` represent explicit operator
   results or condition-level truth conversion;
-- focused [optional](../../optional.md) material exposed the legacy bare-optional
+- focused [optional](../../../optional.md) material exposed the legacy bare-optional
   condition and dereference model;
-- [raw analysis controls](../raw/analysis-controls.md) established the existing
+- [raw analysis controls](../../raw/analysis-controls.md) established the existing
   cross-cutting destination for proof overrides, lint separation, provenance,
   and smarter-compiler behavior; and
-- the [raw input index](../raw/README.md) confirmed that no dedicated selection
+- the [raw input index](../../raw/README.md) confirmed that no dedicated selection
   or cross-cutting final-audit input currently exists.
 
 No archived work or operating-prompt source was read.
@@ -1421,7 +1422,7 @@ activation pressure, and any constraint it places on current work.
 
 #### Cross-cutting analysis controls
 
-[Raw analysis controls](../raw/analysis-controls.md) already owns semantic proof
+[Raw analysis controls](../../raw/analysis-controls.md) already owns semantic proof
 overrides, lint separation, contract provenance, and smarter-compiler behavior.
 Flow-derived input still needs to be added there during a separately authorized
 change:
@@ -1434,7 +1435,7 @@ change:
 
 #### Optional behavior
 
-[Legacy optional material](../../optional.md) currently claims bare optional
+[Legacy optional material](../../../optional.md) currently claims bare optional
 conditions and unchecked dereference behavior that conflict with this model.
 Promotion must correct the condition claim and state the static proof obligation.
 Complete optional construction, reset, unwrapping, and operator design may remain
@@ -1481,7 +1482,7 @@ The reusable process finding is:
 > Record it, assign it an owner or indexed raw destination, identify what
 > reactivates it, and state any constraint it places on current work.
 
-[Documentation architecture](../documentation.md) already establishes much of
+[Documentation architecture](../../documentation.md) already establishes much of
 this rule. A future authorized project-guidance review should decide whether the
 wording needs clarification there and whether the synchronized operating prompts
 need a short teaching reminder. This item does not authorize reading or editing
@@ -1522,14 +1523,14 @@ remove that discovery history and lead with the valid programmer model.
   future closure/scope design. Core `scope` here is an explicit flow target.
 - **Lifetime strategies:** dangling references, captured results, transfers, and
   complete pointer/reference lifetime behavior remain with
-  [raw lifetimes](../raw/lifetimes.md).
+  [raw lifetimes](../../raw/lifetimes.md).
 - **Safety:** branch-local `unsafe ???`, incomplete-state escape, and proof
-  permissions remain with [raw safety](../raw/safety.md) and analysis controls.
+  permissions remain with [raw safety](../../raw/safety.md) and analysis controls.
 - **Error propagation:** `except`, `catch`, and specialized error-result
-  short-circuiting remain with [legacy except material](../../except.md). They
+  short-circuiting remain with [legacy except material](../../../except.md). They
   must preserve ordinary exit and result-completion rules.
 - **Async:** suspension, cancellation, and async conditions or post operations
-  remain with [raw async](../raw/async.md).
+  remain with [raw async](../../raw/async.md).
 - **Formal grammar and algorithms:** exact grammar productions, proof algorithms,
   diagnostic identifiers, and compiler lowering remain future specification or
   implementation work unless they change programmer-visible behavior.
@@ -3407,3 +3408,20 @@ The correction:
 The broader explanation remains with the language vision, and future
 toolchain/linkage questions remain project raw input. This is an ownership and
 teaching correction, not a new semantic finding.
+
+## Closure result
+
+| Field | Value |
+| --- | --- |
+| Status | Work item 007 closed and archived |
+| Closed | 2026-08-26 |
+| Promotion | Core flow control, bounded operator semantics, affected current owners, project guidance, raw inputs, navigation, and legacy dispositions promoted and validated |
+| Continuing evidence | Indexed raw selection, analysis, safety, build/toolchain, lifetime, and cross-cutting-audit inputs plus retained legacy remainders |
+| Successor | `project/work/008-operator-catalog-and-resolution.md` |
+
+Every material 007 finding received a current owner, live raw destination,
+explicit deferral, correction, or rejection before closure. Current documents do
+not depend on this archive for meaning.
+
+Work item 008 was created from separately aligned initiating input and reading
+scope. Its creating agent stopped before analysis, as required.
