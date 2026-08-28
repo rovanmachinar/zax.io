@@ -2,18 +2,19 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical / non-normative / audit-only |
 | Work Item | `008` |
 | Created | 2026-08-26 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Accepted complete literal, word, conversion, generic, metaprogramming, type-identity, formal grammar, or compiler behavior |
+| Completed | 2026-08-28 |
+| Owns | The historical record of the bounded review defined by the fixed initiating input |
+| Does Not Own | Current language behavior, accepted complete literal, phrase, conversion, generic, metaprogramming, type-identity, formal grammar, or compiler behavior |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owner documents.
+This archived file is historical and audit-only. Its aligned findings were
+promoted into current language owners before closure. Current documentation and
+live raw inputs, not this record, own the resulting language behavior and
+deferred future pressure.
 
 ## Fixed initiating input
 
@@ -87,27 +88,27 @@ inventing local token, precedence, or fallback rules.
 
 ### Known assumptions
 
-- [Zax language vision](../../language/vision.md) is accepted foundational
+- [Zax language vision](../../../language/vision.md) is accepted foundational
   direction.
-- [Zax language principles](../../language/principles.md) owns reusable
+- [Zax language principles](../../../language/principles.md) owns reusable
   cross-cutting design and use principles.
-- [Zax source structure](../../language/source-structure.md) owns statement
+- [Zax source structure](../../../language/source-structure.md) owns statement
   boundaries, continuation, whitespace intent, contextual keywords, and layout
   validation.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md)
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md)
   owns declaration forms, name visibility, assignment boundaries, and the
   ordinary identifier namespace.
-- [Zax qualifiers](../../language/qualifiers.md) owns place, value, access,
+- [Zax qualifiers](../../../language/qualifiers.md) owns place, value, access,
   receiver, and indirection qualifications.
-- [Zax function invocation](../../language/function-invocation.md) owns shared
+- [Zax function invocation](../../../language/function-invocation.md) owns shared
   callable viability, source-order input evaluation, expected-result limits,
   preference, ambiguity, and branch-specific callable selection.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md)
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md)
   owns assignment-versus-replacement lifetime behavior and hidden-cost
   constraints.
-- [Zax core flow control](../../language/core-flow-control.md) owns exact-Boolean
+- [Zax core flow control](../../../language/core-flow-control.md) owns exact-Boolean
   conditions, conditional-expression selected-arm order, and convergence.
-- [Zax operators](../../language/operators.md) is the bounded current operator
+- [Zax operators](../../../language/operators.md) is the bounded current operator
   owner and must grow cohesively rather than be replaced by another competing
   owner.
 - Operator result types may be arbitrary unless a specific protected operation
@@ -270,66 +271,66 @@ alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) - governs ownership,
+- [Documentation architecture](../../documentation.md) - governs ownership,
   focused reading, numbered work, promotion, and archival.
-- [Language vision](../../language/vision.md) - provides foundational direction
+- [Language vision](../../../language/vision.md) - provides foundational direction
   and the required-language-support boundary.
-- [Zax language principles](../../language/principles.md) - provides the
+- [Zax language principles](../../../language/principles.md) - provides the
   cross-cutting principles against which operator behavior should be evaluated.
-- [Zax source structure](../../language/source-structure.md) - provides token
+- [Zax source structure](../../../language/source-structure.md) - provides token
   spacing, continuation, contextual keywords, layout intent, and expression
   source boundaries.
-- [Zax declarations and bindings](../../language/declarations-and-bindings.md) -
+- [Zax declarations and bindings](../../../language/declarations-and-bindings.md) -
   provides declaration forms, name visibility, assignment boundaries, and
   operator-facing declaration constraints.
-- [Zax qualifiers](../../language/qualifiers.md) - provides place, value, access,
+- [Zax qualifiers](../../../language/qualifiers.md) - provides place, value, access,
   receiver, and indirection qualifications used by operator candidates.
-- [Zax function invocation](../../language/function-invocation.md) - provides
+- [Zax function invocation](../../../language/function-invocation.md) - provides
   shared evaluation, binding, viability, expected-result selection, preference,
   ambiguity, and branch-specific callable selection.
-- [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md) -
+- [Zax construction, replacement, and destruction](../../../language/construction-and-destruction.md) -
   provides assignment/replacement lifetime boundaries and hidden-cost pressure.
-- [Zax core flow control](../../language/core-flow-control.md) - provides
+- [Zax core flow control](../../../language/core-flow-control.md) - provides
   exact-Boolean conditions, conditional-expression selected-arm order, and
   convergence.
-- [Zax operators](../../language/operators.md) - provides the current bounded
+- [Zax operators](../../../language/operators.md) - provides the current bounded
   operator behavior that this work must extend coherently.
-- [Zax language-design terms](../../language/terms.md) - provides current
+- [Zax language-design terms](../../../language/terms.md) - provides current
   cross-cutting vocabulary.
-- Focused [legacy basics operator catalog](../../basics.md#operators) - preserves
+- Focused [legacy basics operator catalog](../../../basics.md#operators) - preserves
   the flat proposed operator list, protected forms, and word-operator boundary.
-- [Legacy operator overloading](../../operator.md) - preserves primary evidence
+- [Legacy operator overloading](../../../operator.md) - preserves primary evidence
   for declaration forms, arbitrary results, global/type-defined operators,
   receiver use, literals, and word operators.
 - Relevant entries in the
-  [cross-cutting audit](../raw/cross-cutting-audit.md) - preserve operator,
+  [cross-cutting audit](../../raw/cross-cutting-audit.md) - preserve operator,
   branch-convergence, required-support, example, and source-stability audit
   obligations that must be dispositioned.
 
 ### Consequence-driven
 
-- Read focused [casting](../../casting.md) material when conversion operators,
+- Read focused [casting](../../../casting.md) material when conversion operators,
   `as`, or result-shape adaptation becomes necessary.
-- Read focused [optional](../../optional.md), [Nothing](../../nothing.md), or
-  [except](../../except.md) material when presence, negation, checked-result, or
+- Read focused [optional](../../../optional.md), [Nothing](../../../nothing.md), or
+  [except](../../../except.md) material when presence, negation, checked-result, or
   error-flow behavior constrains an operator family.
-- Read focused [type definition](../../type-definition.md),
-  [composition](../../composition.md), [alias](../../alias.md), or
-  [raw structural typing](../raw/structural-typing.md) material when operator
+- Read focused [type definition](../../../type-definition.md),
+  [composition](../../../composition.md), [alias](../../../alias.md), or
+  [raw structural typing](../../raw/structural-typing.md) material when operator
   identity, receiver membership, structural compatibility, or result type
   relationships become necessary.
-- Read focused [arrays](../../arrays.md), [variadic](../../variadic.md), or
+- Read focused [arrays](../../../arrays.md), [variadic](../../../variadic.md), or
   remaining legacy operator sections only when indexing, invocation, literals,
   or variadic behavior constrains the ordinary catalog.
-- Read [raw analysis controls](../raw/analysis-controls.md) or
-  [raw safety boundaries](../raw/safety.md) when checked failure, proof
+- Read [raw analysis controls](../../raw/analysis-controls.md) or
+  [raw safety boundaries](../../raw/safety.md) when checked failure, proof
   assertions, lint behavior, or protected-operation diagnostics become
   necessary.
-- Read [raw build and dependency input](../raw/build-and-dependencies.md) when
+- Read [raw build and dependency input](../../raw/build-and-dependencies.md) when
   required primitive support or automatic helper/toolchain behavior becomes
   programmer-visible.
-- Read focused [compiler directives](../../compiler-directives.md),
-  [meta-functions](../../meta-functions.md), or [meta-types](../../meta-types.md)
+- Read focused [compiler directives](../../../compiler-directives.md),
+  [meta-functions](../../../meta-functions.md), or [meta-types](../../../meta-types.md)
   only when ordinary operator generation cannot be separated cleanly from
   compile-time facilities.
 - Expand beyond this list whenever discussion or a material finding establishes
@@ -720,7 +721,7 @@ circumfix is recognized.
 A global ordinary unary declaration supplies its one operand. A global ordinary
 binary declaration supplies its left and right operands.
 
-A type-defined operator has a [receiver operand](../../language/terms.md#receiver-operand):
+A type-defined operator has a [receiver operand](../../../language/terms.md#receiver-operand):
 
 | Form | Receiver operand | Explicit parameters |
 | --- | --- | --- |
@@ -2402,7 +2403,7 @@ effects, not permission to choose by source order.
 
 `bare{...}` is an aligned candidate and required initiating input for future
 operator-phrase/source work, with its complete live record preserved in
-[raw bare-source input](../raw/bare-source.md). It is **not current Zax
+[raw bare-source input](../../raw/bare-source.md). It is **not current Zax
 syntax**.
 
 The exact contiguous opener matters:
@@ -2553,7 +2554,7 @@ x ''runs fast'' y
 
 Doubled quotes make phrase extent and attachment visible but may collide with
 literal tokenization, empty literals, prefixes, and escaping. That collision is
-preserved in [raw literal input](../raw/literal-operators.md).
+preserved in [raw literal input](../../raw/literal-operators.md).
 
 The intent taxonomy supporting this work distinguishes:
 
@@ -2661,10 +2662,10 @@ representative code, activation pressure, and constraints:
    phrase fencing, intent categories, custom-extension policy, unsafe phrases,
    keyword evolution, imports, and precedence for likely work item `009`; the
    complete bare-source model is live in
-   [raw bare-source input](../raw/bare-source.md).
+   [raw bare-source input](../../raw/bare-source.md).
 6. **Anonymous structural reports.** Preserve overflow-report shapes, fields,
    status operations, conversion, layout, identity, and reflection for
-   [raw structural typing](../raw/structural-typing.md).
+   [raw structural typing](../../raw/structural-typing.md).
 7. **Partial type extensions.** Preserve the prohibition on global mixfix and the
    possible owner-authorized partial-type route, including coherence and import
    consequences, for dedicated partial-type input.
@@ -2678,9 +2679,9 @@ representative code, activation pressure, and constraints:
    tokens versus standalone contextual `#` for future discard review.
 10. **Panic recovery.** Preserve arithmetic overflow as a concrete nonfatal-use
     pressure without assuming resumable expression semantics in
-    [raw safety boundaries](../raw/safety.md).
+    [raw safety boundaries](../../raw/safety.md).
 11. **Branch-specific cost tooling.** Retain the existing
-    [cross-cutting audit](../raw/cross-cutting-audit.md) destination for per-path
+    [cross-cutting audit](../../raw/cross-cutting-audit.md) destination for per-path
     overload, mixfix, convergence, and short-circuit reporting.
 12. **Floating representation access.** Preserve the distinction among numeric
     conversion, bit-preserving reinterpretation, unsafe raw access, NaN payload,
@@ -3625,7 +3626,7 @@ boundary.
 
 ### Proposed lasting structure
 
-The current [Zax operators](../../language/operators.md) owner should remain the
+The current [Zax operators](../../../language/operators.md) owner should remain the
 primary operator concept owner rather than being replaced. Two cohesive concerns
 should split into their own human-developer-facing owners:
 
@@ -3690,12 +3691,12 @@ The promotion change set must update these existing current owners:
 | `language/core-flow-control.md` | Update truth-producing summaries for the symbolic logical core and future phrase operations, grouped conceptual `?`/`!` fallback notation, protected short-circuit barriers, and branch-specific mixfix paths |
 | `language/terms.md` | Add symbolic operator, operator phrase, operator form, circumfix operator, mixfix operator, operator component, operand hole, and receiver anchor; distinguish complete operations from hooks/components |
 
-[Zax language vision](../../language/vision.md) already owns the general
+[Zax language vision](../../../language/vision.md) already owns the general
 protected-required-support boundary and needs no semantic change. It should be
 validated against the promoted wording but does not belong in the proposed
 changed-file set unless promotion reveals a link or terminology mismatch.
 
-[Zax language principles](../../language/principles.md) already owns the
+[Zax language principles](../../../language/principles.md) already owns the
 applicable clear-intent, trustworthy-order, defensible-preference,
 context-boundary, visible-cost, and optimization-preservation principles. No
 change is required.

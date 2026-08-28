@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [008: Operator catalog, declarations, and expression resolution](work/008-operator-catalog-and-resolution.md) |
-| Next work number | `009` |
+| Active work item | [009: Operator phrases and keyword-neutral source](work/009-operator-phrases.md) |
+| Next work number | `010` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
