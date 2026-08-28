@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, and explicit `scope`; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | How expressions produce values, including `?`/`!` selection and eager or protected `&&`/`\|\|` ([operators](operators.md)); token spacing, continuation, brace layout, `else` source layout, and body boundaries ([source structure](source-structure.md)); binding visibility, the ordinary identifier namespace, and shadow permission ([declarations and bindings](declarations-and-bindings.md)); scope-exit destruction order and proof of a live value before access through conditionally live storage ([construction, replacement, and destruction](construction-and-destruction.md)); whole-function `return` result completion and branch-specific callable selection ([function invocation](function-invocation.md)); complete iteration, selection, resource management, error propagation, value polymorphism, async flow, formal grammar, or compiler behavior |
+| Does Not Own | How expressions produce values, including operator selection ([operators](operators.md)), exact logical forms ([operator catalog](operator-catalog.md)), and mixfix paths ([mixfix operators](mixfix-operators.md)); token spacing, continuation, brace layout, `else` source layout, and body boundaries ([source structure](source-structure.md)); binding visibility, the ordinary identifier namespace, and shadow permission ([declarations and bindings](declarations-and-bindings.md)); scope-exit destruction order and proof of a live value before access through conditionally live storage ([construction, replacement, and destruction](construction-and-destruction.md)); whole-function `return` result completion and branch-specific callable selection ([function invocation](function-invocation.md)); complete iteration, selection, resource management, error propagation, value polymorphism, async flow, formal grammar, or compiler behavior |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and [scope](../scope.md) evidence |
 
 ## Mental model
@@ -120,8 +120,8 @@ values are produced. The parts a condition depends on are:
   opposite-operator fallback, and the wanted `Boolean` never narrows the
   candidate set.
 - Only when no direct overload applies may the opposite operator supply a
-  fallback (`?value` via `!!value`, `!value` via `!?value`), and only when that
-  opposite selection is unambiguous and returns exactly `Boolean`.
+  fallback (`?value` via `!(!value)`, `!value` via `!(?value)`), and only when
+  that opposite selection is unambiguous and returns exactly `Boolean`.
 - An anonymous typed declaration such as `if : Boolean = ?value` supplies result
   context that an ordinary condition does not.
 - `&&` and `||` are ordinary eager overloadable operators for operand shapes
@@ -131,13 +131,19 @@ values are produced. The parts a condition depends on are:
   operations are protected, cannot be user-replaced, evaluate left to right, and
   short-circuit runtime evaluation of the right operand while still requiring
   that operand to be valid at compile time.
+- Exact `Boolean ^^ Boolean` is a protected eager logical XOR. Extended logical
+  NAND, AND-NOT, NOR, OR-NOT, and XNOR operations are accepted concepts whose
+  exact operator phrases remain future phrase work. Their exact Boolean
+  AND/OR-derived forms preserve the corresponding short-circuit decision.
 
 Short-circuiting skips runtime evaluation, not compile-time resolution. A
 condition therefore may rely on protected short-circuit order for proof, but only
 where the node really is exact `Boolean`/`Boolean`.
 
-Complete operator declaration, lookup, ranking, and precedence remain future
-operator work. See [operators](operators.md).
+Operator discovery and selection are defined by [operators](operators.md);
+exact forms and precedence by the
+[operator catalog](operator-catalog.md#boolean-operations). Phrase spelling
+remains future work.
 
 ### Optional presence and dereference in conditions
 
@@ -691,6 +697,19 @@ selection under a conditional expression is owned by
 this document owns only the shared condition, single-arm evaluation, and
 convergence requirement.
 
+A path may also select a direct mixfix while another path uses ordinary
+component operations:
+
+```zax
+result := (condition ?? a * b ;; fallback) + c
+```
+
+The true path may select a `*`, `+` mixfix and the false path ordinary `+`.
+The condition and common operands still evaluate once, only the selected arm
+runs, every path is validated, and the results must converge. Complete tree
+matching is defined by
+[mixfix operators](mixfix-operators.md#branch-specific-mixfix-selection).
+
 Every runtime path must converge to one statically usable result shape before
 the complete operation completes:
 
@@ -791,6 +810,8 @@ cancellation remain separate future design.
 - A conditional expression evaluates one arm and directly constructs its result.
 - Branch-dependent ternary resolution may select different callable bodies and
   code paths.
+- One branch may select one mixfix operation while another invokes ordinary
+  component operators.
 - A synthesized `?` or `!` Boolean fallback adds a negation that a direct
   overload may avoid.
 

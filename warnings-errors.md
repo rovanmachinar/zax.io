@@ -235,6 +235,12 @@ Upon importing a module, all warnings are pushed and all warnings are popped at 
 
 #### Warning registry and meanings
 
+This registry is legacy input. Current operator design gives oversized shift
+counts a defined result and requires an unsigned count type. A possible
+constant-oversized advisory diagnostic must not claim that an arbitrary runtime
+count is invalid, and a typed negative/signed count is a selection/type error
+rather than a suppressible warning.
+
 The following are registered warnings, default states, and their meaning:
 * `warning-directive` (always)
     * a warning directive was encountered where a specific registered warning name was not provided
@@ -250,10 +256,12 @@ The following are registered warnings, default states, and their meaning:
     * the condition passed into an `if`, `while`, `redo` `while` or other conditional statements do not resolve to a `Boolean` type
 * `switch-boolean` (always)
     * a switch should not be used to compile a `Boolean` condition
-* `shift-count-overflow` (always)
-    * a shift operation cause equal or more bits to shift than the type allows
-* `shift-negative` (always)
-    * a shift operator was given a negative value
+* `shift-count-overflow` (legacy; superseded)
+    * oversized counts have defined zero/sign-fill or rotate-modulo behavior;
+      future tooling may advise only on a statically evident suspicious constant
+* `shift-negative` (legacy; superseded)
+    * shift count requires an unsigned input; a typed signed/negative operand is
+      nonviable rather than a warning-controlled operation
 * `dangling-reference-or-pointer` (always)
     * code has been found to cause a reference or pointer to a value known to be destructed
 * `deprecate-directive` (always)

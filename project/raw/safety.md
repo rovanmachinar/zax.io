@@ -139,6 +139,24 @@ obligations still apply.
 Do not infer general exception-style rollback or recoverable partial-construction
 unwinding. Reopen that design only for a concrete nonfatal panic use case.
 
+Required-result fixed-width arithmetic supplies that concrete pressure. Bare
+overflow panics and produces no result. A future handler cannot simply resume the
+failed operator with wrapping unless a resumable-panic contract defines:
+
+- how a replacement expression result is supplied;
+- once-only operand evaluation;
+- nested call and scope transfer;
+- destruction and partially completed mutation;
+- handler failure; and
+- optimization boundaries.
+
+Until then, overflow remains fatal graceful crashing. Programs select optional,
+wrapping, saturating, or reporting operators when they need another local policy.
+
+A source-program panic during compile-time execution must become a compiler
+diagnostic with source and evaluation-path context rather than an internal
+compiler crash. This does not imply a compile-time panic handler.
+
 ## Comparative input
 
 Rust is a comparison point, not an opponent.

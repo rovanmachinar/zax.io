@@ -243,6 +243,42 @@ inference, layout, conversion eligibility, temporary lifetime, and whether a
 conversion can select a constructor. It must not reinterpret current packet
 entries as an anonymous structure merely because both forms use named content.
 
+### Anonymous arithmetic reports
+
+Current operator design uses one anonymous structural value for overflow reports:
+
+```zax
+<anonymous> :: type {
+  wrapped : Integer
+  saturated : Integer
+  overflowed : Boolean
+}
+```
+
+Specialized reports use:
+
+```zax
+<anonymous> :: type {
+  value : Integer
+  overflowed : Boolean
+}
+```
+
+Future structural work must decide:
+
+- whether member names are part of exact structural identity;
+- how the result type is inferred and reflected;
+- whether reports from different arithmetic operators are compatible;
+- whether generic code can name a structural requirement without naming the
+  concrete anonymous type;
+- layout and temporary lifetime;
+- conversion into named report types; and
+- how `?report`/`!report` status behavior is associated with the generated
+  result type.
+
+One anonymous report value remains distinct from a callable's several result
+slots.
+
 ### Promoting multiple results into one structural value
 
 [Zax function invocation](../../language/function-invocation.md) keeps an

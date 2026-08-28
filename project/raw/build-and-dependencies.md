@@ -28,12 +28,15 @@ distinction between:
 - required language support for fundamental types, protected primitive
   operations, and the runtime or lifetime behavior that source uses.
 
-The exact language-provided `Boolean && Boolean` and `Boolean || Boolean`
-operations are the current concrete example. They are protected, cannot be
-replaced by a user declaration, and are therefore required support rather than
-library content. Their programmer-visible behavior is owned by
-[Zax operators](../../language/operators.md), and the foundational promise by the
-[Zax language vision](../../language/vision.md).
+Protected intrinsic operator families are current concrete examples. Exact
+`Boolean && Boolean` and `Boolean || Boolean` are protected short-circuit
+operations; protected integer arithmetic, policy, bitwise, shift, reduction,
+count, magnitude, mutation, and swap forms likewise belong to required language
+support where the current
+[operator catalog](../../language/operator-catalog.md) makes them available.
+Their shared programmer model is owned by
+[Zax operators](../../language/operators.md), and the foundational promise by
+the [Zax language vision](../../language/vision.md).
 
 A conforming implementation may satisfy a required operation through instructions,
 constant folding, emitted target code, an intrinsic, or an automatically linked

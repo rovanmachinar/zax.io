@@ -129,6 +129,12 @@ assert(a == 5 || a == 42)
 
 ### Function input capturing and chaining
 
+The `>>` composition and capture forms and `|>` chaining material in this
+section remain legacy evidence. Current operator work fixes `>>` parsing but does
+not accept the composition signatures, generated callable types, capture
+representation, or chaining behavior shown below. Those questions are preserved
+in [raw function composition and chaining input](project/raw/function-composition-and-chaining.md).
+
 #### Functions input / output composition
 
 If a function's output arguments matches the input arguments of another function they can be bound together as a newly created function using the function composition operator (`>>`). Each of the output arguments from the first function must match the input arguments from the second function. Functions can be composed together in chains of two or more functions where each input is chained to another output.

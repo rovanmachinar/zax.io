@@ -1,0 +1,410 @@
+# Zax mixfix operators
+
+| Field | Value |
+| --- | --- |
+| Status | Current conceptual design |
+| Audience | Human developers defining, using, reviewing, or tooling multi-component Zax operations |
+| Applies To | Mixfix tree matching, declarations, selection, and evaluation; not a formal grammar or specification |
+| Implementation State | Not established by this repository |
+| Owns | Mixfix tree skeletons, components, holes, receiver anchors, declarations, call/index components, structural matching, mandatory direct selection, decomposition, ambiguity, unavailable best, protected barriers, qualification, branch-specific selection, and mixfix costs/diagnostics/source stability |
+| Does Not Own | The ordinary operator catalog and precedence ([operator catalog](operator-catalog.md)); shared callable viability and result mapping ([function invocation](function-invocation.md)); token spacing and continuation ([source structure](source-structure.md)); lifecycle semantics ([construction, replacement, and destruction](construction-and-destruction.md)); exact operator-phrase grammar, indexing/slicing, generics, reflection, or compiler implementation |
+| Source / Provenance | Operator-tree and direct indexed-operation requirements refined from legacy operator and array evidence |
+
+## Mental model
+
+A mixfix declaration selects one operation from a recognizable expression-tree
+shape containing several operator components.
+
+```zax
+a[b] = c
+a * b + c
+```
+
+When a direct mixfix matches, its component operators do not execute
+independently. The selected mixfix owns the complete operation.
+
+This allows a custom type to define direct indexed mutation, fused domain
+operations, and other multi-component behavior without a hidden proxy or an
+arbitrary new punctuation token.
+
+## Trees, components, and holes
+
+The ordinary [operator catalog](operator-catalog.md) forms the tree first.
+
+```zax
+a[b] = c + d
+```
+
+```text
+=
+|- index
+|  |- receiver: a
+|  `- index hole: b
+`- right hole: c + d
+```
+
+The mixfix skeleton fixes the index and assignment nodes. Its holes accept
+complete expression subtrees. `c + d` resolves normally inside one hole.
+
+The same skeleton matches:
+
+```zax
+a[b * scale] = produceValue()
+```
+
+because the index and RHS holes may contain different internal trees.
+
+### Receiver anchor
+
+A type-defined mixfix has one receiver anchor. Follow the receiver-bearing slot
+through each component:
+
+```text
+a -> index -> =
+```
+
+For `a[b] = c`, `a` is the receiver; `b` and `c` are explicit inputs. Right
+operand types affect viability but do not contribute type-defined discovery.
+
+Global mixfix declarations are not permitted. A future owner-authorized partial
+type mechanism may add mixfix declarations only after defining coherence,
+imports, conflicts, and source-stability behavior.
+
+## Declaration model
+
+Exact syntax remains illustrative, but the declaration categories and mapping
+are established:
+
+```zax
+MyType :: type {
+  operator mixfix
+    index 1
+    binary '='
+  final : (
+    result : MyResult
+  )(
+    indexValue : MyIndex,
+    rhs : MyValue
+  ) writable = {
+    // `_` is the receiver anchor.
+  }
+}
+```
+
+A declaration:
+
+- identifies every recognized component and its exact form;
+- relies on ordinary fixed precedence to form its skeleton;
+- omits the type-defined receiver from its explicit parameters;
+- lists the remaining holes in source-evaluation order;
+- may declare zero, one, or several result slots; and
+- receives no capability from punctuation alone.
+
+Pre-unary, post-unary, binary, circumfix, call, index, and future phrase
+components retain their own forms. A component cannot reinterpret a pre-unary
+spelling as binary or postfix.
+
+## Call and index components
+
+Direct `operator call` and `operator index` declarations derive argument count
+from their prototypes. Inside a flattened mixfix, `call N` and `index N` identify
+how many input holes belong to that component.
+
+```zax
+CustomCallable :: type {
+  operator mixfix
+    call 2
+    binary '+'
+  final : (
+    result : Result
+  )(
+    number : Integer,
+    text : String = "default",
+    adjustment : Integer
+  ) readonly = {
+  }
+}
+```
+
+This may match:
+
+```zax
+result := callable(5, "apple") + 45
+result := callable(5, :) + 45
+```
+
+The call contributes `number` and `text`; `+` contributes `adjustment`. Omitted
+`:` still occupies a call slot and requires the mixfix parameter's declared
+default.
+
+A consumed call/index component produces no intermediate result or proxy. The
+complete mixfix declares the result. Ordinary call/index results matter only
+when direct mixfix selection finds no applicable candidate and decomposition
+occurs.
+
+Named/default mapping, variadics, result forwarding, lambda-generated callable
+types, construction-like call syntax, slices, and exact default timing remain
+future invocation/indexing integration.
+
+## Matching and selection
+
+Conceptually:
+
+1. Parse the ordinary tree using fixed source rules.
+2. Find mixfix declarations whose root component matches.
+3. Match every fixed component and operand hole structurally.
+4. Discover declarations through the receiver anchor.
+5. Resolve each hole as an ordinary expression.
+6. Test receiver, inputs, qualifications, constraints, results, and availability.
+7. Compare overloads sharing one skeleton through ordinary partial-order
+   preference.
+8. Diagnose distinct viable skeletons that overlap the same tree.
+9. Select one complete mixfix or, only when none applies, consider ordinary
+   decomposition.
+
+If exactly one structure has one uniquely selected viable declaration, it must
+be used. Component operations are not competing candidates.
+
+```zax
+a * b + c
+```
+
+A declared `*`, `+` mixfix may round, overflow, allocate, mutate, or return
+differently from separate multiplication and addition. This is semantic
+selection, not an optimizer claiming equivalence.
+
+Optimization without a selected mixfix may fuse work only when every
+programmer-visible operation and consequence remains unchanged.
+
+## Nested outward resolution
+
+A disjoint mixfix may resolve inside an operand hole. Its selected result then
+supplies that hole's type, qualifications, result shape, and transfer behavior
+when testing an enclosing mixfix:
+
+```zax
+outer + (a * b + c)
+```
+
+If `a * b + c` selects one inner mixfix, that result may make an already
+structurally matching outer mixfix viable. Resolution can continue outward
+through the finite ancestor path to the complete expression root.
+
+This is not a fixed-point rewrite:
+
+- the enclosing key must already match components in the original parsed source
+  tree;
+- a selected result cannot invent new operator components;
+- the resolver does not scan the replacement result as new source syntax;
+- an outer expected input cannot recursively manufacture an otherwise ambiguous
+  inner result outside the shared narrow expected-result rules; and
+- overlapping inner/outer skeletons do not cascade in discovery order.
+
+Distinct skeletons that consume overlapping source nodes remain competing
+structural interpretations and are ambiguous when both are viable. Only
+disjoint mixfixes nested wholly inside operand holes resolve recursively.
+
+## Ambiguity and unavailable operations
+
+Declarations sharing one skeleton form an ordinary overload set. Distinct
+viable skeletons matching overlapping portions of the same expression are a
+structural ambiguity:
+
+```zax
+a[b * scale] = value
+// error if both a general indexed assignment and a distinct skeleton consuming
+// the multiplication are viable
+```
+
+A longer skeleton does not automatically win.
+
+A viable uniquely best bodyless, `forbidden`, unsupported `default`, or otherwise
+unavailable mixfix produces an unavailable-operation diagnostic and blocks
+decomposition.
+
+When no direct mixfix candidate is viable, ordinary decomposition may proceed.
+A bodyless or `forbidden` declaration may deliberately claim a shape and prevent
+that fallback.
+
+## Holes and operator fallback
+
+Fallback never rewrites the tree to create a mixfix match.
+
+```zax
+a + ?c
+```
+
+If the mixfix consumes only `+`, then `?c` lies inside a hole and resolves
+normally, including the accepted `?`/`!` fallback. If the skeleton consumes the
+written pre-unary `?`, that component does not resolve independently, and
+`a + !(!c)` is a different tree.
+
+## Protected barriers
+
+A **protected intrinsic signature** controls declaration ownership: user code
+cannot replace an exact protected built-in signature.
+
+A **mixfix-consumption barrier** controls tree matching: a user mixfix may accept
+the resolved node as a completed hole value but may not consume it as a key
+component.
+
+A custom-receiver mixfix may consume an eager protected node when doing so
+removes no required conditional evaluation boundary.
+
+The exact Boolean short-circuit operations are barriers:
+
+- symbolic `&&` and `||`;
+- future phrase NAND and AND-NOT;
+- future phrase NOR and OR-NOT.
+
+Exact Boolean XOR and XNOR are eager and may be consumed. Mixed Boolean/custom
+operand shapes are ordinary eager operations and may participate.
+
+A protected short-circuit result may fill a hole:
+
+```zax
+custom + (ready && perform())
+```
+
+The Boolean subtree then retains its protected behavior.
+
+Declaration initialization, constructors, replacement constructors,
+destructors, statement composition, and conditional/header separators are not
+ordinary overloadable components and cannot be consumed by a user mixfix.
+
+## Qualifications and lifecycle
+
+Receiver and hole qualifications participate in viability. A writable mixfix is
+nonviable through readonly access; mutation still requires mutable value state
+and writable access.
+
+Compiler-owned reconstructive replacement remains compiler-owned. Consuming a
+written `=` does not grant a user mixfix the replacement lifecycle skeleton.
+
+User mixfixes cannot be anchored on closed intrinsic receivers. A custom receiver
+may accept intrinsic values in other holes.
+
+## Indexed mutation without a proxy
+
+Indexed read and direct indexed mutation are independent:
+
+```zax
+value := container[index]
+container[index] = value
+container[index] ^= mask
+```
+
+The existence of indexed read does not block a direct indexed mixfix. No hidden
+proxy is synthesized.
+
+If no mixfix applies, decomposition is possible only when indexed read genuinely
+returns an assignable place or real proxy:
+
+```zax
+proxy := container[index]
+proxy = value
+```
+
+Whether indexing supplies such a value remains future indexing work.
+
+Splice assignment may likewise become one direct operation:
+
+```zax
+// Illustrative future syntax; range syntax is not established.
+container[low ..< high] = replacement
+```
+
+It may expose receiver, low, high, and replacement holes without a range proxy.
+
+## Branch-specific mixfix selection
+
+Conditional expressions may select different mixfix behavior on different
+paths:
+
+```zax
+result := (condition ?? a * b ;; fallback) + c
+```
+
+The true path may select a `*`, `+` mixfix while the false path selects ordinary
+`+`.
+
+Every possible path is validated statically. Runtime evaluation:
+
+- evaluates the condition once;
+- evaluates only the selected arm;
+- preserves common operands once in source order;
+- selects independently on each path; and
+- requires convergence by the complete operation boundary.
+
+An ambiguity or unavailable operation on any possible path is a compile-time
+error.
+
+## Multiword bit operations
+
+Future phrase/mixfix work must preserve separate operations for:
+
+- multiword logical left/right shift;
+- multiword arithmetic right shift;
+- multiword explicit zero-fill right shift;
+- multiword rotate left/right;
+- funnel shift left/right; and
+- writable forms affecting two component places.
+
+Illustrative phrases:
+
+```zax
+high shift left through low by count
+high rotate left through low by count
+result funnel right from high and low by count
+```
+
+These operations have receiver, chained value, and unsigned count holes. Baseline
+components have equal logical bit extents. Shifts zero/sign-fill at the outer
+boundary, rotates wrap across the combined extent, and funnel shifts return one
+fixed-width window.
+
+Exact phrase spelling, signedness constraints, mutation of one versus both
+components, result shape, and alias behavior remain future work.
+
+## Circumfix and phrase components
+
+A recognized circumfix may participate as one complete component:
+
+```zax
+|value| + adjustment
+```
+
+Its opening and closing delimiters are not independent unary operators.
+
+Operator phrases may also become components after phrase work establishes their
+exact words, fixity, and precedence. Adjacent independent phrase applications
+require grouping.
+
+## Costs and diagnostics
+
+Mixfix tooling must expose:
+
+- the matched skeleton and receiver anchor;
+- every consumed component and unresolved hole;
+- direct selection versus decomposition;
+- same-skeleton overload ambiguity versus structural overlap;
+- qualification, transfer, and constraint mismatches;
+- unavailable best candidates;
+- protected barriers;
+- branch-specific selection;
+- operand evaluation order;
+- hidden captures, copies, temporaries, allocation, and destruction; and
+- source compatibility when a new mixfix replaces prior decomposition.
+
+Adding a mixfix can change existing source from several operations to one
+operation. That is a visible API evolution, not an invisible optimization.
+
+## Boundaries and maturity
+
+This document defines current conceptual mixfix behavior, not formal grammar,
+reflection metadata, implementation matching algorithms, or a conformance
+contract.
+
+Exact declaration syntax, phrase components, generic substitution, partial-type
+extension, call/index edge cases, slicing, lambda types, multiword operations,
+and diagnostics identifiers remain focused future work.

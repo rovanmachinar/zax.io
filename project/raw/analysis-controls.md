@@ -262,6 +262,21 @@ or insignificant small-type overhead.
 Future work may give unsafe controls and lint controls related surface patterns.
 It must preserve their different authority and failure consequences.
 
+### Arithmetic-overflow analysis
+
+Bare fixed-width arithmetic has stable panic-on-unrepresentable semantics. A
+future analysis policy may:
+
+- diagnose definitely overflowing constant operations;
+- report statically evident suspicious ranges;
+- request stronger warnings when runtime safety is not proved; or
+- elevate selected warnings according to project policy.
+
+Ordinary source does not require a programmer-supplied proof for every
+calculation. A lint cannot change bare arithmetic into wrapping, saturation,
+undefined behavior, or another policy. Runtime checks may be optimized away only
+when the compiler proves the selected operation is preserved.
+
 ## What this input does not decide
 
 This file does not establish:

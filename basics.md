@@ -138,65 +138,30 @@ foobar_ : Type readonly
 
 ### Operators
 
-#### Overloadable
+> This flat list is retained only as legacy evidence. The current programmer
+> model is [Zax operators](language/operators.md), exact current forms are in the
+> [operator catalog](language/operator-catalog.md), and tree-pattern behavior is
+> in [mixfix operators](language/mixfix-operators.md). Literal, phrase,
+> allocation, pointer, and metaprogramming entries below remain future subjects;
+> the list does not make them current or available.
+
+#### Remaining literal-operator evidence
+
+The promoted symbolic, circumfix, call, index, and mixfix forms were removed from
+this legacy list. Quote-delimited literal prefixes and custom literal operations
+remain future literal work:
 
 ````
-+                  // pre-unary plus operator
--                  // pre-unary minus operator
-+                  // binary plus operator
--                  // binary minus operator
-++                 // (pre or post) unary increment operator
---                 // (pre and post) unary decrement operator
-*                  // binary multiply operator
-/                  // binary divide operator
-%                  // binary modulus divide operator
-=                  // binary assign operator
-^                  // binary bitwise xor operator
-&                  // binary bitwise and operator
-|                  // binary bitwise or operator
-<<                 // binary bitwise left shift operator
->>                 // binary bitwise right shift operator
-<<<                // binary bitwise left rotate operator
->>>                // binary bitwise right rotate operator
-~                  // pre-unary bitwise one's compliment operator
-~|                 // pre-unary bitwise parity operator
-~&                 // binary bitwise clear operator
-!                  // pre-unary logical not operator
-&&                 // binary logical and operator
-||                 // binary logical or operator
-^^                 // binary logical exclusive or operator
-+=                 // binary add and assign operator
--=                 // binary subtract and assign operator
-*=                 // binary multiply and assign operator
-/=                 // binary divide and assign operator
-%=                 // binary modulus divide and assign operator
-==                 // binary equal operator
-!=                 // binary not equal operator
-<=>                // binary three-way comparison operator
-<<>>               // binary two-way swap
-<                  // binary less than operator
->                  // binary greater than operator
-<=                 // binary less than operator
->=                 // binary greater than operator
-~=                 // binary bitwise one's compliment operator
-^=                 // binary bitwise xor and assign operator
-|=                 // binary bitwise or and assign operator
-~|=                // binary bitwise parity operator
-~&=                // binary bitwise clear and assign operator
-<<=                // binary bitwise left shift and assign operator
->>=                // binary bitwise right shift and assign operator
-<<<=               // binary bitwise left rotate and assign operator
->>>=               // binary bitwise right rotate and assign operator
-'                  // pre/post-unary literal start/end operator
-"                  // pre/post-unary literal start/end operator
-()                 // pre/post-unary function invocation operator
-[]                 // pre/post-unary array access operator
+'                  // legacy literal delimiter/operator evidence
+"                  // legacy literal delimiter/operator evidence
 ````
 
 
-#### Non overloadable operators
+#### Historical non-overloadable proposals
 
-The operators have built-in interpretations that cannot be overridden. The language reserves these operators specific for language operations and does not allow a developer to change the behaviors on these operators.
+The following unresolved forms remain evidence for pointer, allocation,
+composition, chaining, and result-shape work. Their legacy classifications are
+not current guarantees:
 
 ````
 *                   // post-unary pointer type declaration
@@ -210,15 +175,6 @@ The operators have built-in interpretations that cannot be overridden. The langu
                     // using the synchronous allocator and construct type)
 .                   // post-unary dereference operator
 .                   // binary namespace resolution operator
-,                   // post-unary argument operator
-;                   // binary statement composition operator
-;;                  // binary sub-statement separator operator
-:                   // binary variable type declaration operator
-::                  // binary data type or meta-type declaration operator
-?                   // post-unary optional type operator
-??                  // binary ternary operator (combined with sub-statement
-                    // separator operator `;;`)
-unsafe ???          // explicit unsafe uninitialized type operator
 >>                  // binary function composition
 |>                  // binary function invocation chaining
 ->                  // post-unary argument combine operator (combine remaining
@@ -226,13 +182,14 @@ unsafe ???          // explicit unsafe uninitialized type operator
                     // defined type)
 <-                  // pre-unary argument split operator (split type into
                     // multiple function arguments)
-\                   // explicit statement continuation marker
 ````
 
 
-#### (Compound) word operators
+#### Historical operator-phrase proposals
 
-The (compound) word operators have built-in meanings. These word operators are not overloadable except in contexts where these operators could not be normally used on a `type` instance. Priority is always given to the language interpretation over a overloaded operator in any scenario where ambiguity may exist.
+The legacy corpus proposed the following built-in and overloadable word
+operators. Their spellings, precedence, keyword interaction, and overload rules
+are not current design; they remain input to future operator-phrase work.
 
 ````
 as                   // binary safe type conversion operator    
@@ -326,27 +283,14 @@ is target constant
 
 #### Other expressions
 
-Below are not operators but language constructs that look like operators and they cannot be overloaded as an operator to their change behavior:
+The promoted declaration, discard, call/index, block, construction, directive,
+current-instance, and lifecycle forms were removed from this legacy list. The
+remaining generic/variadic spellings are future evidence:
 
 ````
-#               // unary discard operator
 $               // pre-unary templated argument declaration
 ...             // unary variadic values (array of optional variable arguments)
 $...            // unary variadic types (array of types of variadic values)
-()              // pre/post-unary function argument declaration operator
-[]              // pre/post-unary array subscript operator
-{               // pre-unary scope begin
-}               // post-unary scope end
-[{              // pre-unary multiple value declaration begin
-}]              // post-unary multiple value declaration end
-.               // pre-unary named variable and argument initialization
-[[              // pre-unary compiler directive or attribute declaration open
-]]              // post-unary compiler directive or attribute declaration close
-_               // unary pointer to self (a type's pointer to itself within a
-                // type's function)
-___             // unary pointer to the current context
-+++             // unary constructor
----             // unary destructor
 ````
 
 

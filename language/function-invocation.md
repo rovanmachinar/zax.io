@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; synchronous call completion; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete function declaration, capture, reassignment, or representation; complete copy, move, or `last` precedence; pointer/reference provenance; generics; variadics; hidden `mutator` access; runtime value polymorphism; arbitrary operator lookup domains; async; ABI; formal grammar; compiler implementation |
+| Owns | Ordinary call syntax; visible callable contracts; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete function declaration, capture, reassignment, or representation; complete copy, move, or `last` precedence; pointer/reference provenance; [operator discovery and selection](operators.md); exact [operator forms and precedence](operator-catalog.md); [mixfix tree matching](mixfix-operators.md); complete indexing/slicing; generics; variadics; hidden `mutator` access; runtime value polymorphism; async; ABI; formal grammar; compiler implementation |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -125,6 +125,50 @@ Document :: type {
 
 Complete receiver qualification is defined by
 [Zax qualifiers](qualifiers.md#receiver-operands).
+
+### `operator call`
+
+Call syntax is a postfix delimited form rather than an ordinary post-unary
+operator:
+
+```zax
+callable(arguments)
+```
+
+A declared function is implicitly callable. A custom callable type may define a
+complete call operation:
+
+```zax
+// Illustrative declaration syntax.
+operator call final :
+  (result : Result)(
+    number : Integer,
+    text : String = "default"
+  ) = {
+}
+```
+
+The input prototype supplies argument count, labels, defaults, qualifications,
+and transfers. Its result prototype uses ordinary result mapping.
+
+Inside a flattened mixfix declaration, `call N` or `index N` states how many
+prototype inputs belong to that component:
+
+```zax
+// Illustrative mixfix declaration fragment.
+operator mixfix
+  call 2
+  binary '+'
+```
+
+Omitted `:` still occupies one call slot and requires the mixfix parameter's
+declared default. A consumed call/index component produces no intermediate
+call result or proxy; the complete mixfix owns the final result shape.
+
+Exact default timing across a flattened mixfix, variadics, result forwarding,
+lambda/generated callable types, construction-like call syntax, and indexing
+details remain future integration. Complete tree behavior is defined by
+[mixfix operators](mixfix-operators.md#call-and-index-components).
 
 ## Positional and named inputs
 
@@ -683,6 +727,34 @@ call's original multiple-result sequence.
 Parentheses are therefore not cosmetic at a multiple-result boundary. A
 formatter must not add or remove them as stylistic cleanup.
 
+### Operator result shapes
+
+An operator is a callable operation and may declare zero, one, or several result
+slots:
+
+```zax
+sum:, carry: = customLeft + customRight
+```
+
+An operator nested as one expression input must provide exactly one usable value:
+
+```zax
+combined := customLeft + customRight
+// error if the selected + has two mandatory results
+```
+
+Several operator results do not become an implicit tuple or anonymous structure.
+Grouping does not combine them. At a mapping-capable complete producer boundary,
+operator results use the same acknowledgement, labels, cursors, construction,
+and discard behavior as another callable result shape.
+
+Zero-result operators remain valid complete operations but cannot supply a value
+to a parent expression node.
+
+Exact built-in operator result shapes are defined by the
+[operator catalog](operator-catalog.md). Operator discovery and direct selection
+are defined by [Zax operators](operators.md).
+
 ## Result-routing groups
 
 An explicit routing group ends with one producer:
@@ -979,7 +1051,7 @@ if : Boolean = ?value
 
 Which operator that selects, and when the opposite operator may supply a
 fallback, are owned by
-[operators](operators.md#direct-selection-ambiguity-and-opposite-operator-fallback).
+[operators](operators.md#boolean-operations-and-fallback).
 
 ### Same-family matching
 
@@ -1042,12 +1114,25 @@ convergence requirement are owned by
 [core flow control](core-flow-control.md#conditional-expression-and-branch-convergence);
 this document owns which callable each arm selects.
 
+A path may also select a direct mixfix while another path uses an ordinary
+operation:
+
+```zax
+result := (condition ?? a * b ;; fallback) + c
+```
+
+The true path may select a `*`, `+` mixfix; the false path may select binary `+`.
+Common operands retain once-only source evaluation, every path is validated, and
+the complete result must converge. Mixfix structural matching, ambiguity, and
+decomposition are defined by
+[mixfix operators](mixfix-operators.md#branch-specific-mixfix-selection).
+
 An operator node under a conditional expression may also be classified
 differently on different paths, so one `&&` or `||` may be a protected
 short-circuit operation on one path and an ordinary eager overload on another.
 Every path is still validated at compile time. That per-path operator-node
 behavior is owned by
-[operators](operators.md#branch-dependent-short-circuiting) and is not restated
+[operators](operators.md#branch-specific-selection) and is not restated
 here.
 
 ## Candidate selection
@@ -1067,7 +1152,8 @@ The callee form determines the initial set:
 - a resolved function value supplies one prototype;
 - an identifier may name an overload group;
 - a member call uses declarations available for its receiver operand; and
-- operators use their future operator-specific lookup domains.
+- operators use the protected, visible-global, and receiver-owned domains defined
+  by [Zax operators](operators.md#discovery).
 
 ### Viability
 
@@ -1449,7 +1535,6 @@ The following remain explicit future work:
 - complete ownership, moved-from state, returned aliases, and destruction order;
 - async, cancellation, executors, and concurrency;
 - runtime value-polymorphic predicates and hidden `mutator` access;
-- arbitrary operator lookup domains;
 - anonymous/private parameter and result labels;
 - label aliases and complete reflection metadata;
 - explicit promotion of several results into one structural value;

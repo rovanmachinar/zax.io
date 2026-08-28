@@ -40,6 +40,9 @@ EnumType :: forward enum
 // order matters as `EnumType` needs to be forwarded prior to `Value`
 EnumType.Value :: forward enum value
 
+// The following phrase and literal forms are historical evidence. Their exact
+// declarations are not current Zax syntax and await focused phrase/literal work.
+
 // forward of compound word operators
 run to a store with :: forward operator pre unary
 jump farther :: forward operator post unary

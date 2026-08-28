@@ -98,14 +98,16 @@ Each entry preserves:
   a later statement; a stored branch-dependent runtime type is deferred.
 - **Disposition.** Open.
 
-### Branch-specific overload selection and visible cost
+### Branch-specific overload and mixfix selection and visible cost
 
 - **Concern.** A conditional-expression arm may select a different overload or
   code path, and one `&&` or `||` node may be classified differently per path:
   the protected exact `Boolean`/`Boolean` short-circuit operation on one path and
-  an ordinary eager overload on another. Diagnostics and cost tooling should show
-  branch-specific selections and per-path short-circuit behavior without implying
-  duplicated evaluation of the surrounding operation.
+  an ordinary eager overload on another. One path may also select a direct
+  mixfix while another decomposes into ordinary component operations.
+  Diagnostics and cost tooling should show branch-specific selections, tree
+  boundaries, and per-path short-circuit behavior without implying duplicated
+  evaluation of the surrounding operation.
 - **Representative example.** `e := f + (condition ?? c ;; d)` evaluates `f`
   once and selects `f + c` or `f + d`. In
 
@@ -124,10 +126,12 @@ Each entry preserves:
   evaluation order.
 - **Likely owners.**
   [Function invocation](../../language/function-invocation.md),
-  [operators](../../language/operators.md), future analysis/diagnostics work.
+  [operators](../../language/operators.md),
+  [mixfix operators](../../language/mixfix-operators.md), future
+  analysis/diagnostics work.
 - **Resolution.** Branch-specific selection, per-path operator classification,
-  and cost are shown, and a possible future lint flags different overloads
-  selected before convergence.
+  mixfix/decomposition boundaries, and cost are shown, and a possible future
+  lint flags different operations selected before convergence.
 - **Activation pressure.** Diagnostics/tooling design or a reported surprise.
 - **Current constraints.** `f` is evaluated exactly once; `??` is sufficient
   source acknowledgement; compile-time resolution never implies early runtime
@@ -180,17 +184,18 @@ Each entry preserves:
   prose implying that `&&` and `||` are globally `Boolean`-only rather than
   ordinary eager overloads outside the protected exact `Boolean`/`Boolean`
   operations.
-- **Why local review misses it.** Contradictions span core flow, operators,
+- **Why local review misses it.** Remaining contradictions span core flow,
   optional, and except pages.
 - **Likely owners.** [Optional types](../../optional.md),
-  [except error handling](../../except.md), [Nothing](../../nothing.md),
-  [operator overloading](../../operator.md), and their future reviews.
+  [except error handling](../../except.md), [Nothing](../../nothing.md), and
+  their future reviews.
 - **Resolution.** Every contradicted legacy claim is corrected or routed to a
   current owner.
 - **Activation pressure.** Each affected page's focused review, or a reported
   contradiction.
-- **Current constraints.** Known contradictions touched during promotion have
-  already been corrected; remaining untouched claims are tracked here.
+- **Current constraints.** The dedicated legacy operator page has been retired
+  and current operator owners now distinguish protected exact Boolean operations
+  from eager custom shapes. Remaining optional/except claims stay tracked here.
 - **Disposition.** Open.
 
 ### Example prerequisite and placement audit
@@ -249,10 +254,10 @@ Each entry preserves:
 
 ### Protected operations, required support, and toolchain consistency
 
-- **Concern.** The protected exact `Boolean`/`Boolean` `&&` and `||` operations
-  are required language support rather than optional library content. Every
-  surface that discusses libraries, the compiler/library split, builds, or
-  linkage must agree, and none may promise a particular lowering.
+- **Concern.** Protected intrinsic operator families are required language
+  support rather than optional library content. Every surface that discusses
+  libraries, the compiler/library split, builds, or linkage must agree, and none
+  may promise a particular lowering.
 - **Representative example.** Rejecting "one mandatory system library" as a
   non-goal while source still depends on protected operations that a toolchain
   must supply:
@@ -269,6 +274,7 @@ Each entry preserves:
   owner, the vision's non-goals and build model, and future build/toolchain work,
   so any one page can look self-consistent while the set disagrees.
 - **Likely owners.** [Operators](../../language/operators.md),
+  [operator catalog](../../language/operator-catalog.md),
   [language vision](../../language/vision.md),
   [raw build and dependency input](build-and-dependencies.md), and future
   toolchain work.

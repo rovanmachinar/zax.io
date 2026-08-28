@@ -3,6 +3,13 @@
 
 ## Enums
 
+This page remains legacy enum input. Whether an enum directly inherits numeric,
+bitwise, reduction, shift, magnitude, or signedness-counterpart operations from
+its underlying representation is deferred to enum/numeric work and preserved in
+[raw numeric type families](project/raw/numeric-type-families.md). Explicit
+conversion may be required for intent; examples below do not decide that
+boundary.
+
 ### Enum definition
 
 By default, enums are defined to be Integer numbers that start at 0 and increment by one for the next value where the default value is the first entry on the list.

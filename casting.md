@@ -10,7 +10,11 @@ structural compatibility proposals on this page remain legacy input.
 
 ### Intrinsic system literal conversion
 
-Zax does not perform type conversion, promotion or demotion of intrinsic compatible types. Casting operators `as` or `unsafe as` must be used to convert from one intrinsic type to another type.
+This legacy section previously claimed that every intrinsic conversion required
+`as` or `unsafe as`. Current operator design adds the specialized equal-width
+signedness-counterpart `+` family; general width expansion, contraction, and
+unrelated conversion remain casting work. The exact `as` and `unsafe as`
+operator phrases below remain non-authoritative until phrase and casting review.
 
 An `as` operator and an `unsafe as` operator work in similar manners. Both convert an intrinsic value from one type to another. With intrinsic types, an `as` operator would cause a panic situation if data would overflow when converting from a source type to a destination type. Whereas with intrinsic types, an `unsafe as` operator will not panic even when converting from one type to another but `unsafe as` can cause either loss of information in an overflow, or data corruption / undefined behavior in another extreme with incompatible types. An `as` operator attempts to do a compatible conversion whereas a `unsafe as` will treat the types as compatible even when they are not compatible.
 
@@ -483,6 +487,11 @@ byRefValue2 := compatibleType unsafe as MyType &         // unsafe
 
 
 ### `as` operator overloading
+
+This section is legacy operator-phrase input. Exact phrase declarations,
+protected conversion domains, result selection, and generated/disabled behavior
+must be reconsidered under the current [operator model](language/operators.md)
+and future phrase work.
 
 Types can implement an `as` operator to support custom conversion from one type to another. This type of conversion can only be done by-value as by-reference would not be logical (as a new instance is needed for an unrelated destination type to exist as a reference).
 

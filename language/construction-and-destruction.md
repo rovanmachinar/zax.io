@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), [flow-transfer target selection and post-operation behavior](core-flow-control.md), [the optional presence operation and `&&` short-circuit eligibility](operators.md), complete optional representation, construction, reset, or unwrapping, arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, static-analysis contract selection, conservative proof-override and lint syntax, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), [ordinary operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix tree semantics](mixfix-operators.md), [flow-transfer target selection and post-operation behavior](core-flow-control.md), complete optional representation, construction, reset, or unwrapping, arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, static-analysis contract selection, conservative proof-override and lint syntax, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -556,8 +556,9 @@ programmer intent from a Boolean or name, so API design and documentation must
 make the distinction understandable.
 
 Result references and pointers remain subject to ordinary lifetime and alias
-rules. Expected-result context may participate in selection only as allowed by
-the eventual general callable-selection model.
+rules. Expected-result context participates only at the narrow complete
+declaration boundaries defined by
+[function invocation](function-invocation.md#narrow-expected-result-selection).
 
 ### Candidate selection
 
@@ -565,6 +566,26 @@ Being generated does not make a candidate automatically win or lose. Generated
 reconstructive `=` and declared domain-specific `=` candidates participate in
 ordinary selection according to their declarations and qualifications. An
 unresolved equal match is an error.
+
+Direct compound and mixfix operations remain separate:
+
+```zax
+destination += rhs
+destination[index] = rhs
+```
+
+The compound form invokes its own selected mutation candidate. The indexed form
+may select one direct mixfix whose receiver, index, and RHS evaluate once. Neither
+is automatically rewritten through a value operation followed by `=`.
+
+A user mixfix that consumes a written `=` component does not acquire the
+compiler-owned reconstructive lifecycle skeleton. If its body mutates a current
+value, ordinary mutable/writable authority applies. Reconstructing an immutable
+varying place remains this document's compiler-owned operation.
+
+See [Zax mixfix operators](mixfix-operators.md#qualifications-and-lifecycle) for
+tree matching and the [operator catalog](operator-catalog.md#compound-arithmetic)
+for built-in compounds.
 
 When an actual use exposes an existing-versus-generated choice, the programmer
 resolves the demanded shape with a body, `existing`, `default`, `forbidden`, or a

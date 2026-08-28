@@ -87,6 +87,13 @@ sub-path/sub-file.zax
 
 ### `panic` directive
 
+The disabling behavior below is legacy input rather than current operator
+semantics. Required-result arithmetic panics when its mathematical result is
+unrepresentable. A directive may not silently turn that operation into wrapping,
+saturation, undefined behavior, or another policy without a future reviewed
+panic/recovery contract. Programs use the explicit policy operator when they need
+another local arithmetic result.
+
 #### `panic` function
 
 When a panic occurs, the context's panic function is called (`___.panic(...)`). Normally an error message is displayed for a programmer to understand a panic and then a program terminates due to an unexpected and unhandled condition. A default `panic` function can be replaced with an alternative function.

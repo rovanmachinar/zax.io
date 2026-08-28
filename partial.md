@@ -3,6 +3,12 @@
 
 ## Partial Types
 
+This page remains legacy input. Current mixfix design prohibits global mixfix
+declarations. A future owner-authorized partial type may add a mixfix only after
+partial-type work defines coherence, imports, conflicts, layout, construction,
+and source-stability behavior. That pressure is preserved in
+[raw partial type extensions](project/raw/partial-types.md).
+
 The language has [`partial`](https://en.wikipedia.org/wiki/Class_(computer_programming)#Partial) support for types. However, `partial` types are heavily restricted and caution must be used in creating `partial` types as they can inject variables, types, and functions inside existing declared `type` where the original `type` was not expecting any additional values to exist.
 
 The primary motivation for `partial` is to support:

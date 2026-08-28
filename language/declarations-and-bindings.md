@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, operator resolution, [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, [operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix semantics](mixfix-operators.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -587,9 +587,17 @@ choices.
 
 ## Assignment and overload selection
 
-An overloadable operator is an ordinary selectable function. User-defined
-operators may have domain-specific effects and results that are unusual outside
-their domain.
+Operators occupy language-recognized operator categories rather than the
+ordinary identifier namespace. Their declarations may be global or type-defined
+as permitted by [Zax operators](operators.md), but an arbitrary identifier or
+punctuation sequence does not become an operator through ordinary name
+declaration.
+
+An overloadable operator is a callable operation. User-defined operators may have
+domain-specific effects and result shapes that are unusual outside their domain.
+Exact forms and precedence are defined by the
+[operator catalog](operator-catalog.md); multi-component tree declarations are
+defined by [mixfix operators](mixfix-operators.md).
 
 For:
 
@@ -605,6 +613,17 @@ the compiler:
 4. maps its result to `consume` if the result shape is accepted.
 
 No operator can introduce an unresolved operand as a declaration.
+
+Protected ordinary intrinsic assignment evaluates the existing destination once,
+updates its mutable value through writable access, and returns writable access to
+that destination:
+
+```zax
+updated : Integer writable & = destination = source
+```
+
+This supports right-associated assignment chains when each selected result binds
+to the next destination. Custom `=` overloads may return another result shape.
 
 Generated operators participate in ordinary candidate selection with qualifier
 requirements. The compiler-recognized reconstructive `=` scenario requires an

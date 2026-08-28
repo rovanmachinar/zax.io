@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [function invocation, result routing, and callable preference](function-invocation.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation and ranking, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [function invocation, result routing, and callable preference](function-invocation.md), [operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix tree semantics](mixfix-operators.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -388,8 +388,8 @@ This document owns why reconstructive replacement is required by the qualifier
 model and its qualification boundary. Complete fallback, member transition,
 resource retention, result, destruction, and alias behavior is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
-Complete move/copy/`last`, arbitrary operator ranking, recoverable panic,
-callbacks, reentrancy, async, and concurrency remain future focused work.
+Complete move/copy/`last` per-slot preference, recoverable panic, callbacks,
+reentrancy, async, and concurrency remain future focused work.
 
 If panic is terminal, partially transitioned storage does not return to ordinary
 execution. Any future recoverable panic model must define separate partial
@@ -593,7 +593,7 @@ MyType :: type {
   x : Integer
 
   operator binary '=' final :
-    (result : Boolean)(lhs : Integer, rhs : String) writable final = {
+    (result : Boolean)(rhs : String) writable final = {
     _.x = 42
     return true
   }
@@ -616,13 +616,42 @@ uses the dereferenced instance's qualifications, not the pointer binding's place
 qualification.
 
 Omitted receiver-operand qualifiers use the defaults applicable where the
-operation is defined. Complete operator generation, operator-specific lookup and
-priority, temporary destruction beyond synchronous call completion, and
-default-source precedence remain future work.
+operation is defined. Complete generated operator families, temporary destruction
+beyond synchronous call completion, and default-source precedence remain future
+work.
 
 Ordinary member-call evaluation, fixed-arity viability, and ambiguity are
 defined by [Zax function invocation](function-invocation.md). Operator-specific
-lookup domains remain future operator work.
+lookup and selection are defined by [Zax operators](operators.md).
+
+### Mixfix receiver anchors
+
+A type-defined mixfix belongs to one receiver anchor. That receiver and every
+operand hole carry ordinary place, value, access, and indirection
+qualifications:
+
+```zax
+// Illustrative mixfix declaration syntax.
+operator mixfix
+  index 1
+  binary '='
+final : (
+  result : MyResult
+)(
+  indexValue : MyIndex,
+  rhs : MyValue
+) writable = {
+}
+```
+
+A writable declaration is nonviable through readonly access. Mutation still
+requires mutable value state plus writable access. A final place may permit
+content mutation but not ordinary place replacement.
+
+Mixfix punctuation grants no authority. A user mixfix that consumes `=` does not
+acquire the compiler-owned reconstructive-replacement lifecycle skeleton.
+Complete tree matching and protected barriers are defined by
+[mixfix operators](mixfix-operators.md).
 
 ## Indirection
 

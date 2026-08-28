@@ -57,6 +57,19 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
+## Circumfix operator
+
+A **circumfix operator** is one complete operation with a language-recognized
+opening component, closing component, and enclosed operand:
+
+```zax
+|value|
+```
+
+The opening and closing symbols are not independent pre/post unary operations.
+Recognized forms and built-in availability are defined by the
+[operator catalog](operator-catalog.md#circumfix-operations).
+
 ## Construction packet
 
 A **construction packet** is the `[{ ... }]` construct that supplies positional
@@ -76,6 +89,16 @@ spelling is not a keyword and may name an ordinary entity.
 The term describes recognition position, not a reserved-word list. See
 [Zax source structure](source-structure.md#contextual-keyword-recognition).
 
+## Keyword-role conflict
+
+A **keyword-role conflict** occurs when a word is grammatically eligible as a
+non-operator keyword while the programmer intends it as an identifier or
+operator-phrase component.
+
+This is a lexical-role question rather than unsafe behavior or operator
+overload ambiguity. Future bare-source and phrase work must define any explicit
+keyword-neutral interpretation.
+
 ## Current instance
 
 The **current instance** is the instance whose type-defined function body is
@@ -87,13 +110,35 @@ Do not use "receiver object"; Zax is not object-oriented.
 
 ## Deliberate intent or layout error
 
-A **deliberate intent or layout error** rejects a bounded, deliberately selected
-near-miss pattern whose tokens may parse or resemble another valid form while
-presenting contradictory programmer intent.
+A **deliberate intent or layout error** is the umbrella category for a bounded,
+deliberately selected source pattern whose presentation conflicts with parsed
+structure or whose natural form is gated because it strongly resembles a likely
+mistake.
 
 It is distinct from ordinary syntax rejection and semantic error. Source-layout
 cases are owned by [Zax source structure](source-structure.md); flow-shape cases
 by [Zax core flow control](core-flow-control.md).
+
+## Confusable-form intent error
+
+A **confusable-form intent error** rejects natural source for a coherent
+recognized form because it overwhelmingly resembles a damaged neighboring form
+and cannot be clarified through ordinary whitespace or grouping.
+
+```zax
+||value| // candidate asymmetric circumfix resembles a missing final |
+```
+
+Unlike an operator-attachment error, the intended form needs an explicit future
+interpretation mechanism rather than ordinary punctuation repair.
+
+## Layout-intent error
+
+A **layout-intent error** occurs when indentation, brace placement, clause
+attachment, or physical-line position contradicts the parsed source structure.
+
+The remedy is to correct presentation or explicit structure. It does not require
+a keyword-neutral or confusable-form escape.
 
 ## Direct storage
 
@@ -102,6 +147,15 @@ it, rather than being reached through a pointer or reference.
 
 For a directly stored value, the declared binding and value share one immediate
 replacement boundary. Indirection introduces additional boundaries.
+
+## Eager operator
+
+An **eager operator** evaluates every runtime operand hole required by the
+selected operation exactly once in visible source order before entering its
+body.
+
+This does not evaluate both arms of a conditional expression. Non-Boolean
+overloads of symbolic logical operators are ordinary eager operations.
 
 ## Flow label
 
@@ -130,6 +184,30 @@ generated replacement skeleton participate in lifecycle operations. An
 arbitrary operator is not a lifecycle operation merely because it uses `=`.
 See [Zax construction, replacement, and destruction](construction-and-destruction.md).
 
+## Mixfix operator
+
+A **mixfix operator** is one complete overloadable operation selected from an
+expression-tree pattern containing several recognized operator components and
+operand holes.
+
+```zax
+a[b] = c
+```
+
+A direct mixfix may consume the index and assignment nodes as one operation.
+Complete behavior is defined by [Zax mixfix operators](mixfix-operators.md).
+
+## Mixfix-consumption barrier
+
+A **mixfix-consumption barrier** is a resolved source node that a user mixfix may
+accept as a completed operand-hole value but may not consume as one of its key
+components.
+
+Exact Boolean short-circuit operations are barriers because consumption would
+erase their conditional runtime evaluation. Compiler-owned lifecycle and flow
+boundaries may be barriers or noncomponents for their own reasons. This differs
+from signature protection.
+
 ## Normal completion
 
 **Normal completion** is relative to the construct being discussed. A body
@@ -142,6 +220,55 @@ panic or non-completion, and must satisfy the function's result obligations. See
 [Zax core flow control](core-flow-control.md),
 [Zax function invocation](function-invocation.md), and
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
+
+## Operand hole
+
+An **operand hole** is one expression position in a mixfix tree skeleton. Source
+at that position resolves as a complete ordinary expression and supplies one
+mixfix input.
+
+See [Zax mixfix operators](mixfix-operators.md#trees-components-and-holes).
+
+## Operator component
+
+An **operator component** is one recognized pre-unary, post-unary, binary,
+circumfix, call, index, or phrase form fixed inside a mixfix tree skeleton.
+
+Consumed components do not execute independently when the mixfix is selected.
+See [Zax mixfix operators](mixfix-operators.md).
+
+## Operator form
+
+An **operator form** is the general category for a language-recognized symbolic,
+phrase, circumfix, call/index, or mixfix operation when the exact source category
+does not matter.
+
+## Operator phrase
+
+An **operator phrase** is an operator written with one or more
+language-recognized contextual words rather than a punctuation-only symbol.
+
+```zax
+// Illustrative phrase syntax; exact words remain future work.
+value shift left modulo count
+```
+
+The operation concept may be accepted before phrase work establishes its final
+words, precedence, declaration, and custom-extension rules.
+
+## Operator-attachment intent error
+
+An **operator-attachment intent error** occurs when whitespace, adjacency, or
+grouping presents another fixity or number of operator applications than the
+programmer intends.
+
+```zax
+!!value   // cannot mean two independent ! applications
+!(!value) // corrected through grouping
+```
+
+It is repaired through ordinary source presentation, unlike a confusable-form
+intent error.
 
 ## Ordinary syntax rejection
 
@@ -192,6 +319,24 @@ through a container.
 A projection derives capabilities from the path used to reach the containing
 value. Complete projection behavior belongs with the relevant language concept.
 
+## Protected intrinsic signature
+
+A **protected intrinsic signature** is an exact operator signature whose every
+operand belongs to a closed intrinsic family. User declarations cannot replace
+it or claim a currently unavailable all-intrinsic combination.
+
+Protection preserves predictable primitive behavior and future language
+evolution. A mixed signature containing a custom operand remains extensible.
+See [Zax operators](operators.md#protected-intrinsic-domains).
+
+## Receiver anchor
+
+A **receiver anchor** is the operand hole whose resolved type owns and supplies
+type-defined discovery for a mixfix declaration.
+
+Other holes affect viability but do not contribute type-defined mixfix
+declarations. See [Zax mixfix operators](mixfix-operators.md#receiver-anchor).
+
 ## Receiver operand
 
 The **receiver operand** is the implicit operand representing the instance on
@@ -202,6 +347,15 @@ meanings, and "receiver object" incorrectly suggests an object-oriented model.
 
 All three qualifier axes may constrain a receiver operand. See
 [Zax qualifiers](qualifiers.md#receiver-operands).
+
+## Redundant-structure intent error
+
+A **redundant-structure intent error** occurs when source supplies two competing
+mechanisms for one structural role, such as explicit `\` where an open delimiter
+or recognized separator already continues the newline.
+
+The remedy is to remove the redundant marker. This is distinct from harmless
+explicit source that merely repeats information.
 
 ## Result-routing group
 
@@ -271,6 +425,25 @@ target, name-resolution, lifetime, or completion rule.
 It is distinct from ordinary syntax rejection and from a deliberate intent or
 layout error. The violated rule and its behavior remain with the applicable
 concept owner.
+
+## Short-circuit operator
+
+A **short-circuit operator** has language-defined evaluation in which an earlier
+operand result may determine that a later runtime operand is not evaluated.
+
+The skipped operand still resolves and validates at compile time. Short-circuit
+behavior is not general laziness: the language fixes which operand may be
+skipped, and a user overload does not receive an arbitrary unevaluated
+expression.
+
+## Symbolic operator
+
+A **symbolic operator** is an operator whose recognized source form is written
+primarily with punctuation, such as `+`, `&~`, or `<<%`.
+
+The language owns the closed symbolic catalog and precedence. Declarations may
+overload permitted forms but cannot invent arbitrary punctuation. See the
+[operator catalog](operator-catalog.md).
 
 ## Type use
 

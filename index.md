@@ -32,9 +32,15 @@ producing them.
 - Read [Zax core flow control](language/core-flow-control.md) for exact-`Boolean`
   conditions, `if`/`else`, loops, explicit `scope`, flow labels, and
   `break`/`continue`/`next`/`return`.
-- Read [Zax operators](language/operators.md) for arbitrary operator results,
-  direct `?` and `!` selection with opposite-operator fallback, ordinary eager
-  `&&` and `||` overloads, and the protected `Boolean` short-circuit operations.
+- Read [Zax operators](language/operators.md) for the shared operator mental
+  model, declarations, receiver discovery, selection, expected results,
+  evaluation, protected domains, and fallback.
+- Use the [Zax operator catalog](language/operator-catalog.md) to look up exact
+  symbolic/circumfix forms, precedence, built-in arithmetic, logical, bitwise,
+  shift, mutation, result, and availability behavior.
+- Read [Zax mixfix operators](language/mixfix-operators.md) for direct
+  multi-component tree operations, holes, receiver anchors, matching,
+  decomposition, and protected barriers.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -50,6 +56,8 @@ producing them.
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)
 - [Operators](language/operators.md)
+- [Operator catalog](language/operator-catalog.md)
+- [Mixfix operators](language/mixfix-operators.md)
 - [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes
@@ -67,7 +75,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Variadic functions](variadic.md)
 - [Flow control](flow-control.md)
 - [Scope](scope.md)
-- [Operator overloading](operator.md)
 
 ### Types and data modeling
 

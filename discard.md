@@ -9,6 +9,12 @@ default-completes a result slot are defined by
 [Zax function invocation](language/function-invocation.md#return-and-completion).
 This page remains legacy input for local, type, and memory-policy uses of `#`.
 
+The current [operator catalog](language/operator-catalog.md#counts-and-reductions)
+also recognizes attached `#`-prefixed count and reduction tokens such as
+`#bits`, `#<bits`, and `#^bits`. Future discard review must preserve the
+distinction between those expression forms and standalone contextual `#`; the
+shared character does not make count/reduction operations discard behavior.
+
 ### discard operator on previously declared variables
 
 The discard operator (`#`) can be applied to values after declaration which will force the compiler to treat the type as unimportant and not complain if the type was not referenced.

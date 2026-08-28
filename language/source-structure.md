@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, the boundary between structural operands and expression continuation, `;;` and `??` header-section separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, the source-level distinction among ordinary syntax, semantic, and deliberate intent/layout diagnostics, and comment forms and attachment |
-| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), [core flow-control semantics](core-flow-control.md) including which `else` clause runs, [operator behavior](operators.md), expression precedence, the complete keyword or delimiter catalog, compiler-directive placement or attachment, [scope-exit destruction behavior](construction-and-destruction.md), documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
+| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), [core flow-control semantics](core-flow-control.md) including which `else` clause runs, [operator selection](operators.md), the exact [operator catalog and precedence](operator-catalog.md), [mixfix semantics](mixfix-operators.md), the complete keyword or delimiter catalog, compiler-directive placement or attachment, [scope-exit destruction behavior](construction-and-destruction.md), documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -133,6 +133,76 @@ value = 1 + 2 \
     + 3
 ```
 
+## Symbolic operators, whitespace, and adjacency
+
+The [operator catalog](operator-catalog.md) fixes every recognized symbolic
+form. Whitespace presents its fixity:
+
+```zax
+!value       // pre-unary: attached to the operand on its right
+value++      // post-unary: attached to the operand on its left
+left + right // binary: whitespace on both sides
+```
+
+A newline counts as binary-operator whitespace only when another accepted rule
+already continues the expression. Missing an operand does not itself continue:
+
+```zax
+value := first +
+  second // error: `+` does not continue the statement
+```
+
+Use explicit continuation:
+
+```zax
+value := first + \
+  second
+```
+
+### Longest token and separate unary applications
+
+At an operator position, the longest recognized symbolic token wins:
+
+```zax
+a +! b // checked/reporting addition form
+a + !b // binary + whose right operand begins with pre-unary !
+```
+
+Separate adjacent unary applications require grouping:
+
+```zax
+--value    // one pre-decrement token
+-(-value)  // two pre-unary negations
+!(!value)  // two pre-unary logical negations
+```
+
+`!!value` cannot mean two independent `!` applications. This leaves that
+contiguous spelling available for future allocation without reinterpreting
+existing valid source.
+
+The rule applies to ordinary symbolic unary operations. Call, index, projection,
+and other grammar-recognized postfix forms retain their own chaining rules.
+
+### Circumfix attachment
+
+A circumfix opener attaches to the enclosed expression on its right, and its
+closer attaches on the left:
+
+```zax
+|value|
+||vector||
+```
+
+An ungrouped recognized opener/closer pair is one operation, not independent
+pre/post unary applications. Nested magnitude uses grouping:
+
+```zax
+|(|value|)|
+```
+
+Exact circumfix forms and availability are defined by the
+[operator catalog](operator-catalog.md#circumfix-operations).
+
 ## Comma-list continuation
 
 A comma already recognized as a separator in a comma-list implicitly continues
@@ -175,7 +245,9 @@ Each continued physical newline has one sufficient reason:
 
 1. an open delimiter permits the newline;
 2. a recognized comma-list separator continues it; or
-3. `\` explicitly suppresses an otherwise significant newline.
+3. a recognized construct such as a declaration colon or mixfix component list
+   opens continuation; or
+4. `\` explicitly suppresses an otherwise significant newline.
 
 An explicit `\` is an error when another rule already continues that same
 newline:
@@ -567,6 +639,81 @@ A label does not itself continue the physical line, so this explicit `\` is
 necessary and legal. By contrast, a trailing `;` or `;;` already establishes
 continuation across the following newline, so `\` after `;` or `;;` is redundant
 continuation and therefore a deliberate intent error.
+
+## Declaration-header continuation
+
+A declaration colon that requires a type or callable prototype opens a narrow
+construct-specific continuation:
+
+```zax
+value :
+  MyType = source
+
+operator pre unary '--' final :
+  ()() = {
+  }
+```
+
+This is not a general rule that incomplete syntax continues. A flow-label,
+target, result-routing, or other contextual colon does not inherit declaration
+continuation:
+
+```zax
+if retry: // error: the flow label does not continue the header
+  initialize() ;;
+  condition {
+}
+```
+
+That header requires explicit continuation:
+
+```zax
+if retry: \
+  initialize() ;;
+  condition {
+}
+```
+
+Initializer and assignment `=` do not implicitly continue:
+
+```zax
+value : MyType =
+  source // error: `=` does not continue the declaration
+```
+
+Explicit continuation may state that intent:
+
+```zax
+value : MyType = \
+  source
+```
+
+### Mixfix component-list continuation
+
+`operator mixfix` opens a grammar-delimited component list:
+
+```zax
+operator mixfix
+  index 1
+  binary '='
+final : (
+  result : MyResult
+)(
+  indexValue : MyIndex,
+  rhs : MyValue
+) writable = {
+}
+```
+
+The grammar recognizes component specifications and the declaration
+qualifier/prototype that ends the list. Indentation validates that structure but
+does not create it. Component lines use one consistent hanging indentation.
+
+An explicit `\` is redundant while the open mixfix component list or an open
+prototype delimiter already permits the newline.
+
+Exact mixfix declaration semantics are defined by
+[mixfix operators](mixfix-operators.md#declaration-model).
 
 ## Braces and body boundaries
 
@@ -1050,6 +1197,13 @@ Layout and separator diagnostics additionally distinguish:
 - physical tab characters;
 - whitespace before `;` or missing whitespace after it;
 - missing whitespace around `;;` or `??`;
+- symbolic pre/post/binary whitespace that contradicts the recognized fixity;
+- adjacent independent unary applications without grouping;
+- an unknown contiguous symbolic token where no catalog form exists;
+- an explicit `\` where a declaration colon or mixfix component list already
+  continues the newline;
+- an initializer `=` followed by an uncontinued newline;
+- mixfix component lines at conflicting continuation levels;
 - redundant `\` after `;` or `;;`;
 - composed operands at progressively deeper structural levels;
 - a body beginning more than one structural level deeper than its header;
@@ -1067,9 +1221,27 @@ Source diagnostics fall into ordinary syntax rejection (source that matches no
 legal production), semantic errors (source that parses but violates a type,
 name, or completion rule owned elsewhere), and deliberate intent or layout errors
 (a bounded set of near-miss patterns whose tokens may parse but present
-contradictory intent). Most rules in this document are the third category. The
-category is intentionally bounded and does not require recognizing every
-malformed token sequence.
+contradictory intent).
+
+Intent diagnostics distinguish:
+
+- a **layout-intent error**, where indentation, brace placement, clause
+  attachment, or physical-line position contradicts parsed structure;
+- an **operator-attachment intent error**, where whitespace, adjacency, or
+  grouping presents another fixity or number of operations;
+- a **redundant-structure intent error**, where two mechanisms claim one
+  continuation or structural role; and
+- a **confusable-form intent error**, where a coherent recognized form is gated
+  because its natural spelling strongly resembles a damaged neighboring form and
+  ordinary whitespace/grouping cannot preserve the intended source.
+
+A keyword-role conflict is a related lexical interpretation question rather than
+permission to ignore grammar. These terms are defined by
+[language-design terms](terms.md).
+
+Most rules in this document are deliberate intent or layout errors. The category
+is intentionally bounded and does not require recognizing every malformed token
+sequence.
 
 Exact diagnostic identifiers and presentation belong to later diagnostics
 design. These source-validity conditions remain mandatory errors rather than
@@ -1099,16 +1271,29 @@ construct on the next do not use `\` merely to express that relationship.
 Explicit continuation retains its single purpose of continuing one statement
 across physical lines.
 
-Comma-list continuation is the one accepted statement-level implicit
-continuation because the parsed comma already establishes a list requiring
-another element. It does not establish a general rule that incomplete
-expressions continue automatically.
+Future phrase/source work must evaluate a keyword-neutral, tree-transparent
+`bare{...}` source enclosure. It is not current Zax syntax. The candidate uses
+the contiguous opener `bare{`; bare `bare` is not a keyword, and `bare {` is not
+the same form.
+
+The candidate payload must independently form exactly one complete expression or
+effective statement and cannot obtain a missing operand or separator from
+outside. The enclosure creates no scope. After that completeness check, it is
+transparent to final precedence and mixfix matching while preserving
+keyword-neutral and confusable-form intent. Semicolon composition, continuation,
+qualification, protection, and lifetime remain unchanged.
+
+Comma-list continuation is the ordinary list-level implicit continuation because
+the parsed comma already requires another element. Declaration colon and mixfix
+component-list continuation are separate grammar-open construct rules. None
+establishes a general rule that incomplete expressions continue automatically.
 
 [Declaration and binding behavior](declarations-and-bindings.md) is defined by
-its current conceptual owner. Expression semantics, individual flow-control
-behavior, scope-exit effects, literal continuation semantics, and documentation
-payload interpretation remain later design work. Those later concepts must fit
-the source structure established here.
+its current conceptual owner. Operator semantics and precedence are defined by
+[operators](operators.md), the [operator catalog](operator-catalog.md), and
+[mixfix operators](mixfix-operators.md). Individual flow-control behavior,
+scope-exit effects, literal continuation semantics, and documentation payload
+interpretation remain with their applicable owners or future work.
 
 For Zax's accepted foundational direction, see the
 [language vision](vision.md).

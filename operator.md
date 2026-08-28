@@ -1,280 +1,31 @@
-
-# [Zax Programming Language](index.md)
-
-## Operator Overloading
-
-Accepted declaration-versus-assignment and qualified operator-candidate
-selection boundaries are defined by
-[Zax declarations and bindings](language/declarations-and-bindings.md). This
-page remains legacy input for complete operator declaration, overload resolution,
-conversion, and result behavior.
-
-The aligned bounded operator behavior accepted so far is now owned by
-[Zax operators](language/operators.md): operator results may be arbitrary types;
-`?` and `!` resolve directly, with ambiguity an error and opposite-operator
-fallback available only when no direct overload applies and the opposite
-selection is unambiguous and exactly `Boolean`; an anonymous typed declaration
-such as `: Boolean = ?value` supplies result context that a condition does not;
-`&&` and `||` are ordinary eager overloadable operators for operand shapes other
-than exact `Boolean`/`Boolean` and may return any type; and the exact
-language-provided `Boolean` `&&` and `||` operations are protected, cannot be
-replaced, and short-circuit left to right. Complete operator declaration syntax,
-lookup domains, ranking, precedence, literal operators, and word operators remain
-legacy input on this page.
-
-All three qualifier axes may constrain a type-defined operator's
-[receiver operand](language/terms.md#receiver-operand), as defined by
-[Zax qualifiers](language/qualifiers.md#receiver-operands).
-Shared fixed-arity callable viability, partial-order dominance, result-context
-limits, ambiguity, and unavailable-best behavior are defined by
-[Zax function invocation](language/function-invocation.md).
-
-### Basic overloading
-
-Overloadable operators (e.g. greater than (`>`), less than (`<`), equal to (`==`)) can be augmented with new functions. This allows types to support additional operations in symbolic form rather than requiring natural language function calls. Operators can be declared in a global scope where two arguments will be required for binary operations and one operator is required for unary operators.
-
-The resulting type for an operator is entirely arbitrary but the recommendation is to follow the normal expectations of a consumer of the programming interface. For example, comparison operators are expected to return `Boolean` values and thus returning a String from these operations would be unexpected.
-
-Adding three new operators for mixing `String` types and `Integer` types and a pre/post unary operator for `String` types:
-
-````zax
-operator binary '<' final : (result : Boolean)(lhs : Integer, rhs : String) = {
-    // ...
-}
-
-operator binary '<' final : (result : Boolean)(lhs : String, rhs : Integer) = {
-    // ...
-}
-
-operator binary '+=' final : (
-    result : String &
-)(
-    lhs : String &, rhs : Integer
-) = {
-    // ...
-    return lhs
-}
-
-operator pre unary `~` final : (result : String&)(rhs : String &) = {
-    // ...
-    return rhs
-}
-
-operator post unary `++` final : (result : String&)(lhs : String &) = {
-    // ...
-    return lhs
-}
-
-myValue1 := 5
-myValue2 := "apple"
-
-// OKAY: normally this would produce an error, but the `operator` `<` is invoked
-// and that function will implement a logical comparison of these unique types
-if myValue1 < myValue2 {
-    // ...
-}
-
-// OKAY: both orderings of operator `<` are implemented
-if myValue2 < myValue1 {
-    // ...
-}
-
-// OKAY: an operator `+=` takes a string and an integer
-myValue2 += myValue1
-
-// ERROR: the operator `+=` that takes an integer and a string is not found
-myValue1 += myValue2
-
-// OKAY: a pre-unary operator defined taking a string (and returns a string) 
-~myValue2
-
-// OKAY: a post-unary operator defined taking a string (and returns a string) 
-myValue2++
-````
-
-
-### Operator overloading from within types
-
-Rather than declaring a global-scope operator, operators can be declared within
-types. The type-defined operator has a receiver operand representing the current
-instance. Its relationship to the explicit operands depends on the operator
-form.
-
-If an operation requires only explicit operands and no receiver operand, a
-global-scope declaration supplies all operand types.
-
-Operators do not receive conventional qualifier behavior merely from traditional
-spelling. `final`/`varying`, `mutable`/`immutable`, and
-`writable`/`readonly` requirements participate in viability like the
-qualifications of other operands.
-
-The generated reconstructive `=` scenario is a narrower compiler-recognized
-lifetime case: an existing destination must be immutable and varying and the
-current path must be writable. It does not force ordinary assignment meaning on
-domain-specific `=` candidates. Replacement constructors, generated fallback,
-and replacement results are defined by
-[Zax construction, replacement, and destruction](language/construction-and-destruction.md#reconstructive-replacement).
-Complete arbitrary operator generation, priority, ambiguity, and ranking remain
-future operator work.
-
-Type, global, imported, and future operator lookup domains require focused
-operator design. Source or import order does not resolve an otherwise equal
-callable match. An unresolved undominated set is ambiguous under the shared
-callable model.
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-
-    operator binary '+=' final : (result : MyType &)(rhs : Integer) = {
-        value1 += rhs
-        return _
-    }
-
-    operator binary '+=' final : (result : MyType &)(rhs : String) = {
-        value2 += rhs
-        return _
-    }
-
-    operator pre unary '~' final : (result : MyType)() = {
-        result.value1 = ~value1
-        return result
-    }
-
-    operator binary '>' final : (result : Boolean)(rhs : Integer) readonly = {
-        return value1 > rhs
-    }
-
-    operator binary '<' final : (result : Boolean)(rhs : Integer) readonly = {
-        return value1 < rhs
-    }
-}
-
-operator binary '>' final : (result : Boolean)(lhs : Integer, rhs : MyType readonly &) = {
-    return lhs > rhs.value1
-}
-
-myType : MyType
-
-// OKAY: both are legal
-myType += 5
-myType += "hello"
-
-// OKAY: defined as part of the type
-if myType > 5 {
-    // ...
-}
-
-// OKAY: defined in the global scope
-if 5 > myType {
-    // ...
-}
-
-
-// OKAY: defined as part of the type
-if myType < 5 {
-    // ...
-}
-
-// ERROR: not defined in any scope
-if 5 < myType {
-    // ...
-}
-````
-
-
-### Literal overloading
-
-Operators overloading of string literals can be created. These kinds of operators create type instances from string literals. As an example, h'9842ABFD' can be used to create a constant integer given a hexadecimal value. As string literals are constants, they should utilize compile type string literal overloading.
-
-An `[[execute]]` directive will cause a literal operator to be run at compile-time and a constant result will be used in-place of a run time calculated value. Literals cannot be invoked with runtime arguments as the strings quoted in single (`'`) or double (`"`) quotes are always resolved at compile-time.
-
-An input to literal operators is always a `String` type.
-
-Adding a roman numeral literal operators:
-
-````zax
-operator literal 'roman' : (value : )(input : String) [[execute]] = {
-    // `value`'s type will be assumed based on the return value type
-    // (e.g. a roman number being assigned to a `UShort` rather than an integer)
-    
-    // ...
-}
-
-operator literal 'roman' : (value : Integer)(input : String) [[execute]] = {
-    // `value`'s type will return an integer type where the type is
-    // not discoverable based on the caller
-    
-    // ...
-}
-
-// `value1` will use the `Integer` version of the roman operator with a value
-// of `8`
-value1 := roman'VIII'
-
-// `value2` will use the version of the roman operator where the
-// result's type is omitted and becomes a `Byte` type with a value of 9
-value2 : Byte = roman'IX'
-
-// `value3` will use the version of the roman operator where the
-// result's type is omitted and becomes a `Byte` type with a value of 3724
-value3 : Word = roman"MMMDCCXXIV"
-````
-
-
-### Word operators and compound word operators
-
-Word operators can be used to create new operators from language words. These operators can be singular words such as `run` or compound words such as `run fast`.
-
-Word operators can overload existing operators that are not technically overloadable such as `unsafe as`. In these cases word operators are of lower priority than the built-in word operators and only apply when the default operation is not available (such as casting from a `String` to a `WideString`).
-
-Selection rules will cause the longest compound word to be matched first and lessor length compounded words to be matched later.
-
-````zax
-// forward definitions are required for named operators that are not already
-// system defined so they can be recognized by the compiler as operators in the
-// current context; however, they are only required to be forwarded if the
-// operator is not already defined in the global namespace
-
-// technically these forward declares are not required as a definition for
-// these operators are defined immediately below prior to usage
-run :: forward operator pre unary
-run fast :: forward operator pre unary
-run fast from  :: forward operator binary
-
-
-operator pre unary 'run' final : (result : String &)(rhs : String &) = {
-    // ...
-    return rhs
-}
-
-operator pre unary 'run fast' final : (result : String &)(rhs : String &) = {
-    // ...
-    return rhs
-}
-
-operator binary 'run fast from' final : (result : String &)(lhs : String &, rhs : Integer) = {
-    // ...
-    return lhs
-}
-
-value : String
-
-// OKAY: pre `run` operator is selected
-run value
-
-// OKAY: pre `run fast` operator is selected, not `run` operator because
-// `run fast` is the longer match
-run fast value
-
-// ERROR: `run` is not a post-unary operator
-value run
-
-// OKAY: the binary operator `run fast from` is selected
-value run fast from 5
-
-// ERROR: no binary or post operator `run fast` exists and thus an error is
-// issued
-value run fast 5
-````
+# Historical Zax operator-overloading notes
+
+| Field | Value |
+| --- | --- |
+| Status | Historical / non-normative / audit-only |
+| Audience | Maintainers conducting targeted provenance or legacy audits |
+| Applies To | The retired operator-overloading page formerly located at this path |
+| Implementation State | Not established by this repository |
+| Superseded By | [Zax operators](language/operators.md), the [operator catalog](language/operator-catalog.md), and [mixfix operators](language/mixfix-operators.md) |
+
+This path remains so historical project records and external references do not
+break. It is not part of the ordinary language reading path.
+
+The useful legacy material formerly owned here has been dispositioned:
+
+- ordinary declaration, receiver, selection, result, and evaluation behavior is
+  taught by [Zax operators](language/operators.md);
+- exact symbolic, circumfix, logical, arithmetic, bitwise, mutation, and
+  precedence behavior is owned by the
+  [operator catalog](language/operator-catalog.md);
+- tree-pattern operations are owned by
+  [mixfix operators](language/mixfix-operators.md);
+- literal prefix and custom-literal evidence is preserved in
+  [raw literal input](project/raw/literal-operators.md);
+- function composition and chaining evidence is preserved in
+  [raw composition input](project/raw/function-composition-and-chaining.md); and
+- operator-phrase examples remain future phrase-design input.
+
+The old page proposed arbitrary phrase declarations, literal operators, global
+and type-defined symbolic overloads, and several inconsistent punctuation
+families. Those proposals are not current merely because they appeared here.

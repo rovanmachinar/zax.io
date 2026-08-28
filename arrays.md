@@ -3,6 +3,12 @@
 
 ## Arrays
 
+This page remains legacy array input. `operator index`, direct indexed
+read/write/compound mixfix, slicing, bounds, bit places, proxy references, and
+multi-index mapping are preserved for future review in
+[raw indexing and slicing input](project/raw/indexing-and-slicing.md). Examples
+below do not establish those complete contracts.
+
 Zax arrays are multi dimensional. Arrays can be of a fixed size or they can be of a dynamic size. All array dimensions have an implicit `length` `mutator` to indicate the length of an array. Arrays are zero based indexes for their lookup. Once arrays are allocated they cannot be resized but their contents can be replaced if an array is `mutable` and `writable`.
 
 ````zax
@@ -297,6 +303,10 @@ myOtherArrayCopy : @ = myArray
 
 
 ### Slicing arrays
+
+The function-based slice forms below remain evidence. Future work must compare
+them with direct splice/index forms without assuming either source syntax is
+canonical.
 
 Arrays include a `slice` function whose binding is final and whose receiver
 operand is readonly. It extracts a subset of elements and returns a newly
