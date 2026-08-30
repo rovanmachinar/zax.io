@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, [operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix semantics](mixfix-operators.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, [operator selection and candidate-tree formation](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix semantics](mixfix-operators.md), the cohesive [operator phrase feature](operator-phrases.md), general source tokenization and layout ([source structure](source-structure.md)), [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), complete visibility and generic behavior, anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
 
@@ -443,31 +443,36 @@ immutable state or compile-time constant evaluation.
 
 ### `final` and `varying`
 
-`final` and `varying` can qualify a declared variable and a place exposed through
-a type use. They apply to the immediately qualified storage place:
+`final` and `varying` appear in two distinct positions, and they answer two
+different questions:
 
-A directly stored value and its variable occupy one replacement boundary.
-Compatible qualifiers on that boundary combine idempotently:
+| Position | Question answered |
+| --- | --- |
+| Type-use side | Whether the underlying place is actually `final` or `varying` |
+| Declaration-name side | Whether this declaration may exercise whole-value replacement authority |
+
+This parallels the distinction between a mutable value and a readonly access
+path. The complete capability-versus-permission model is owned by
+[Zax qualifiers](qualifiers.md#type-side-truth-versus-declaration-side-permission).
+
+For new direct storage, an omitted type-side stance resolves from the
+declaration-name side:
 
 ```zax
-foo final : Foo final = makeFoo()
-foo varying : Foo varying = makeFoo()
+foo final : Foo         // final storage
+foo varying : Foo       // varying storage
+foo : Foo               // varying by default
+foo : Foo final         // final
 ```
 
-Conflicting explicit qualifiers are errors:
+A declaration-side `final` may restrict replacement through a varying place, but
+a declaration cannot claim more authority than the place actually provides:
 
 ```zax
-foo final : Foo varying = makeFoo() // error
-foo varying : Foo final = makeFoo() // error
-```
-
-An omitted qualifier provides the default only when no explicit qualifier
-establishes another stance:
-
-```zax
-foo : Foo         // varying by default
-foo : Foo final   // final
-foo final : Foo   // final
+foo final : Foo varying   // legal: restrict this declaration's replacement
+foo varying : Foo varying // legal: retain replacement authority
+foo final : Foo final     // legal
+foo varying : Foo final   // error: access cannot exceed underlying capability
 ```
 
 Compatible repetition is legal. This supports aliases, generic substitution,
@@ -491,37 +496,42 @@ stableView : Foo final & = source
 ```
 
 Normal replacement through `stableView` remains unavailable because the
-referenced place is final. A qualifier on the reference variable itself cannot
-strip that referent qualification.
-
-An alias to a varying place preserves that stance:
+referenced place is final. A type-use qualifier cannot misreport a referent's
+actual stance:
 
 ```zax
 source varying : Foo = makeFoo()
 trackingView : Foo varying & = source
-```
 
-A final view of that same referent would be false:
-
-```zax
 falseView : Foo final & = source // error: source's place is varying
 ```
 
-Reference bindings and their referents have independent places:
+A same-place alias may still narrow its own replacement authority through the
+declaration-name side:
 
 ```zax
-view final : Foo varying & = source
+restricted final : Foo varying & = source
 ```
 
-The name-side `final` applies to `view`'s reference binding. The type-side
-`varying` describes the referent.
+`source` retains replacement access. `restricted` cannot initiate replacement,
+but its type use still truthfully records that another path may replace the
+referent.
+
+Declaration-side replacement permission must survive aliases, argument mapping,
+results, and captures. A declaration-final path cannot regain replacement
+authority merely by being supplied to a callable whose referent type remains
+varying.
 
 An immutable reference tracking a varying place must spell `varying`
 explicitly. Omission must not silently introduce a path that may observe
 successive immutable lifetimes.
 
-Exact reference rebinding, assignment, and qualifier syntax remain later
-reference design. An ordinary alias preserves the source place's actual stance.
+The reserved `is final` query reports the resolved type-use or referent-place
+truth, not this declaration's replacement permission.
+
+Independent replacement or rebinding of a pointer or reference *binding* itself
+is a separate concern from replacement through the declaration, and its exact
+syntax remains later pointer and reference design.
 
 Copying by value creates a new place with its own declaration stance.
 
@@ -563,9 +573,10 @@ An ordinary conversion may remove permissions or request weaker access:
 - readonly access may not become writable; and
 - mutable or readonly values do not thereby become immutable.
 
-Final/varying is preserved for an alias of the same place. A new by-value
-destination, constructed result, copy, or move destination resolves its own
-independent place stance.
+Type-side final/varying truth is preserved for an alias of the same place, while
+the declaration-name side may narrow that alias's own replacement permission. A
+new by-value destination, constructed result, copy, or move destination resolves
+its own independent place stance.
 
 The complete cast lattice, unsafe conversions, reference projection, and capture
 projection remain later design. They must preserve the constraints established
@@ -584,6 +595,148 @@ Future reviews may represent them as qualifiers, selectable operations,
 reflection, concepts, compiler-recognized guarantees, type-definition contracts,
 or combinations. The declaration model neither requires nor precludes those
 choices.
+
+## Operator phrase declarations and type parameters
+
+An [operator phrase](operator-phrases.md) is declared exactly like a symbolic
+operator, with its exact words quoted and its fixity stated:
+
+```zax
+Chicken :: type {
+  operator post unary 'cluck loudly' final : (
+    result : Chicken
+  )() readonly = {
+    // `_` is the receiver operand.
+  }
+}
+```
+
+The operator declaration is both the phrase-form declaration and its
+implementation. Zax has no separate source-level phrase-form declaration and no
+phrase `forward` form, so there is nothing to introduce ahead of the body.
+
+Custom phrase implementations are receiver-owned. There are no global custom
+phrase declarations, and a module may not add a natural phrase to a type it does
+not own. Operand holes come from fixity and the callable prototype, never from
+substitution inside the quoted words.
+
+The complete phrase feature, including exact finite word sequences, source
+interpretation, fencing, and the receiver-oriented workaround for a phrase that
+no type can own, is taught by
+[Zax operator phrases](operator-phrases.md).
+
+### Type parameter slots and type arguments
+
+A prototype may declare a **type parameter slot** completed by a concrete type
+identity:
+
+```zax
+Source :: type {
+  operator binary 'as' final : (
+    result : DestinationType
+  )(
+    DestinationType : type
+  ) readonly = {
+  }
+}
+
+converted := source as DestinationType
+```
+
+A **type argument** has no runtime storage or lifetime and is not evaluated at
+runtime. It may determine a value result type, as it does for `as`.
+
+Type category and unused intent remain independent concerns:
+
+```zax
+# : Value                 // runtime value is supplied; no body binding
+value # : Value           // binding exists; unused use is intentional
+DestinationType : type    // concrete type argument; no runtime value
+```
+
+A value receiver may accept a type argument without that argument contributing
+receiver discovery:
+
+```zax
+MyReceiverType :: type {
+  operator binary 'for' final : (
+    result : ResultType
+  )(
+    SubjectType : type
+  ) = {
+  }
+}
+
+schema : MyReceiverType
+result := schema for SomeType
+```
+
+### Type-receiver operators
+
+`operator type` declares an operation whose receiver is a concrete type identity
+rather than an instance:
+
+```zax
+MyType :: type {
+  operator type pre unary 'custom type info for' final : (
+    result : MyCustomTypeInfo
+  )() = {
+    // `_` has the Nothing state because no MyType instance exists.
+  }
+}
+
+info := custom type info for MyType
+```
+
+The concrete type identity supplies discovery and has no runtime storage or
+lifetime. `_` points to the `Nothing` instance state because there is no receiver
+instance.
+
+A type-receiver operation is not inherently compile-time. It may execute at
+runtime and return a runtime value:
+
+```zax
+instance := factory create MyType
+```
+
+Compile-time execution remains directed and inferred under the ordinary
+compile-time function model; a phrase adds no special execution rule.
+
+For a non-generic declaration, the enclosing type name identifies the receiver
+type inside its body. Generic instantiations, aliases, and type-receiver
+qualifications remain future generic and reflection work.
+
+### Bounded private eligibility
+
+A private type member is eligible only from the owning type's permitted private
+context. Outside that context it is *ineligible* rather than merely a worse
+candidate, so it is removed before callable preference and cannot defeat, tie, or
+block a public operation:
+
+```zax
+Chicken :: type {
+  weigh private final : (result : Grams)() readonly = {
+  }
+
+  weigh final : (result : Kilograms)() readonly = {
+  }
+}
+```
+
+Inside `Chicken`, both declarations are eligible and compete under ordinary
+preference: visibility is not match quality among eligible candidates. Outside
+`Chicken`, only the public declaration is eligible. Private-only declarations
+therefore never change the meaning or validity of source whose caller can see
+only public operations.
+
+The visibility modifier follows the declared form rather than preceding
+`operator`. Because word-spelled source may present several structurally complete
+readings, this rule is what lets one phrase source line be ambiguous inside a
+type and unambiguous outside it; that worked scenario is taught by
+[operator phrases](operator-phrases.md#visibility-and-private-phrase-eligibility).
+
+Complete visibility behavior, including nested types, friendship, modules, and
+reflection, remains future visibility work.
 
 ## Assignment and overload selection
 
@@ -627,8 +780,9 @@ to the next destination. Custom `=` overloads may return another result shape.
 
 Generated operators participate in ordinary candidate selection with qualifier
 requirements. The compiler-recognized reconstructive `=` scenario requires an
-immutable value in a varying destination through a writable path. It is
-unavailable for a mutable value, a final place, or through readonly access.
+immutable value in a type-side varying destination, declaration-side varying
+replacement permission, and a writable path. It is unavailable for a mutable
+value, a final place, a declaration-side final path, or readonly access.
 
 The reconstructive candidate has a compiler-owned lifetime skeleton and may
 select a contextual [`replacement +++` constructor](construction-and-destruction.md#custom-replacement).

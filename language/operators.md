@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate discovery; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; once-only evaluation; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Exact forms, precedence, built-in family behavior, and availability ([operator catalog](operator-catalog.md)); mixfix tree matching ([mixfix operators](mixfix-operators.md)); source tokenization, whitespace, and continuation ([source structure](source-structure.md)); shared result routing and callable preference ([function invocation](function-invocation.md)); exact conditions and convergence ([core flow control](core-flow-control.md)); lifecycle behavior ([construction, replacement, and destruction](construction-and-destruction.md)); complete phrase, literal, numeric, floating-point, indexing, allocation, pointer, generic, or panic design |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
+| Does Not Own | The cohesive operator phrase feature, including phrase words, declarations, interpretation, fencing, phrase-specific presentation, private phrase eligibility, and the receiver-oriented workaround ([operator phrases](operator-phrases.md)); exact forms, precedence, built-in family behavior, and availability ([operator catalog](operator-catalog.md)); mixfix tree matching and phrase components inside mixfix skeletons ([mixfix operators](mixfix-operators.md)); general source tokenization, physical lines, comments, whitespace, and continuation ([source structure](source-structure.md)); declaration ownership, type-parameter slots, and visibility rules ([declarations and bindings](declarations-and-bindings.md)); shared result routing and callable preference ([function invocation](function-invocation.md)); exact conditions and convergence ([core flow control](core-flow-control.md)); lifecycle behavior ([construction, replacement, and destruction](construction-and-destruction.md)); complete literal, numeric, floating-point, indexing, allocation, pointer, generic, reflection, or panic design |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and [optional](../optional.md) evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -19,9 +19,12 @@ form and qualified operands.
 result := left + right
 ```
 
-Source syntax first forms one fixed expression tree. Operator discovery and
-selection then choose one declaration for each ordinary node, or one direct
-[mixfix](mixfix-operators.md) declaration for a matching multi-component tree.
+Symbolic source syntax forms one fixed expression tree. Word-spelled source may
+present several structurally complete readings, so the compiler forms every
+complete candidate tree and requires exactly one to remain viable. Operator
+discovery and selection then choose one declaration for each ordinary node, or
+one direct [mixfix](mixfix-operators.md) declaration for a matching
+multi-component tree.
 
 Zax permits custom types to define domain-specific results and effects. It does
 not let a declaration invent arbitrary punctuation, change precedence, break
@@ -32,8 +35,8 @@ protected built-in behavior, or resolve ambiguity by source order.
 Zax distinguishes:
 
 - **symbolic operators**, such as `+`, `&~`, and `<<%`;
-- **operator phrases**, language-recognized contextual words whose exact catalog
-  remains future phrase work;
+- **[operator phrases](operator-phrases.md)**, operators spelled as one or more
+  exact words such as `logical nand` and `as`;
 - **circumfix operators**, such as `|value|`, with recognized opening and closing
   components;
 - **postfix delimited call and index forms**, `callable(...)` and
@@ -41,9 +44,29 @@ Zax distinguishes:
 - **mixfix operators**, one operation selected from a tree containing several
   recognized components and operand holes.
 
-The complete current symbolic/circumfix menu and precedence table are in the
-[operator catalog](operator-catalog.md). Mixfix has its own
-[programmer model](mixfix-operators.md).
+**Fixity** states where an operation's operands occur relative to its recognized
+components:
+
+| Operator form or fixity | Source shape |
+| --- | --- |
+| Pre-unary | `operator operand` |
+| Post-unary | `operand operator` |
+| Binary | `left operator right` |
+| Circumfix | `opening operand closing` |
+| Call/index | Postfix delimited inputs |
+| Mixfix | One complete operation consuming several fixed components and operand holes |
+
+Symbolic and phrase spellings share this table. A phrase component uses only
+pre-unary, post-unary, or binary fixity; circumfix, call, and index remain
+separate operator forms rather than phrase-component fixities. A word-delimited
+operation that surrounds or separates several holes is a
+[mixfix](mixfix-operators.md) built from several phrase components rather than a
+phrase circumfix.
+
+The complete current symbolic/circumfix menu, exact phrase forms, and the
+precedence table are in the [operator catalog](operator-catalog.md). Phrases have
+their own [programmer model](operator-phrases.md), and mixfix has
+[its own](mixfix-operators.md).
 
 ## Declarations and receiver operands
 
@@ -79,8 +102,8 @@ Vector :: type {
 
 | Type-defined form | Receiver | Explicit inputs |
 | --- | --- | --- |
-| Pre/post unary | Sole operand | None |
-| Binary | Left operand | Right operand only |
+| Pre/post unary, symbolic or phrase | Sole operand | None |
+| Binary, symbolic or phrase | Left operand | Right operand only |
 | Circumfix | Enclosed operand | None |
 | Call/index | Callee/base operand | Declared call/index inputs |
 | Mixfix | Declared receiver-anchor hole | Every other hole |
@@ -176,6 +199,49 @@ Mixfix declarations and uses are taught by
 The receiver's type and qualifications participate in selection. Complete
 qualification behavior is defined by [qualifiers](qualifiers.md).
 
+## Operator phrases
+
+An **operator phrase** is an operator form written as one or more exact words:
+
+```zax
+loaf := baker bakes bread dough
+converted := source as DestinationType
+ready := left logical nand right
+```
+
+A phrase is not a second dispatch mechanism. Its receiver, parameter mapping,
+viability, partial-order preference, result handling, availability, evaluation,
+protection, and mixfix participation use the shared callable and operator model
+described by the rest of this document, so a phrase adds spelling rather than
+selection machinery.
+
+The cohesive phrase feature is owned by
+[Zax operator phrases](operator-phrases.md): exact finite word sequences, phrase
+declarations, receiver ownership and the receiver-oriented workaround, phrase
+candidate teaching and ambiguity, natural/grouped/fenced source, presentation
+after selection, keyword roles, enclosure boundaries, private phrase eligibility,
+and phrase costs and diagnostics.
+
+Three consequences matter to the shared operator model and are applied
+throughout this document:
+
+- a phrase component uses only pre-unary, post-unary, or binary fixity;
+- custom phrase implementations are receiver-owned, which narrows
+  [discovery](#discovery); and
+- word-spelled source may present several structurally complete readings, which
+  is why [candidate-tree formation](#candidate-tree-formation-and-selection)
+  exists.
+
+Ordinary user-defined phrase operations are eager, and users cannot declare their
+own evaluation strategy. The language protects the exact Boolean signatures whose
+evaluation boundary must remain visible; exact Boolean `logical nand`,
+`logical and not`, `logical nor`, and `logical or not` short-circuit and form
+[mixfix-consumption barriers](mixfix-operators.md#protected-barriers), while
+exact Boolean `logical xnor` is eager and consumable. Precedence belongs to the
+form rather than the receiver. A **reserved phrase form** is an exact form user
+code cannot declare at all; exact forms, precedence levels, and the reserved set
+are in the [operator catalog](operator-catalog.md#operator-phrase-forms).
+
 ## Discovery
 
 For an ordinary symbolic use, candidates come from:
@@ -196,11 +262,62 @@ operator binary '>' final :
 ```
 
 Global mixfix declarations are not permitted. A mixfix belongs to its receiver
-type; future partial-type work must define any owner-authorized extension.
+type; future partial-type work must define any owner-authorized extension. Custom
+phrase implementations follow the same receiver-owned rule, so a phrase use
+discovers only protected or language-provided declarations for the exact form and
+type-defined declarations on its receiver operand. That narrowing, its rationale,
+and the receiver-oriented wording workaround are taught by
+[operator phrases](operator-phrases.md#receiver-ownership).
 
 Structural similarity does not widen discovery to every type with a compatible
 shape. Future structural typing may affect viability after discovery without
 turning member additions into distant lookup changes.
+
+## Candidate-tree formation and selection
+
+A symbolic source form fixes one expression tree before selection. Word-spelled
+source may present several structurally complete readings, so recognition forms
+candidate trees and rejects incomplete combinations rather than preferring the
+longest word sequence. A reading that leaves source unattached, or that places
+two adjacent expressions with no joining operation, is not one expression and is
+eliminated before parameter matching.
+
+The observable model is:
+
+1. establish the logical statement and hard source boundaries;
+2. form every structurally complete phrase/operator/mixfix candidate tree;
+3. eliminate incomplete holes, unattached source, unsupported fixities, and
+   impossible receiver forms;
+4. resolve inner operations independently;
+5. require an inner expression node to produce exactly one usable result;
+6. propagate that selected result's type, qualifications, result shape, and
+   transfer behavior outward to the next receiver position;
+7. apply ordinary parameter mapping, viability, preference, and availability
+   within each candidate tree;
+8. accept the source when exactly one complete tree remains viable;
+9. diagnose an operator-attachment ambiguity when several complete trees remain
+   viable; and
+10. validate the selected tree's physical phrase presentation only after
+    selection.
+
+This is an observable dependency model, not a required compiler-pass
+implementation. An implementation may prune inexpensive impossibilities early so
+long as it produces the same result.
+
+Resolution proceeds only through the finite candidate trees already formed from
+source. A selected result cannot invent new phrase words, cause source to be
+rescanned, or start a fixed-point rewrite.
+
+Physical presentation confirms a selected interpretation and never selects it.
+The phrase-specific presentation contract and worked examples are owned by
+[operator phrases](operator-phrases.md#presentation-confirms-a-selection-it-never-makes-one);
+general physical-line and trivia mechanics remain with
+[source structure](source-structure.md#operator-phrase-source-integration).
+
+Worked word-spelled examples, the distinction between overlapping words and real
+ambiguity, and the grouping or fencing a programmer uses to state the intended
+reading are taught by
+[operator phrases](operator-phrases.md#how-word-spelled-source-is-interpreted).
 
 ## Viability, preference, and availability
 
@@ -244,6 +361,36 @@ combined := customLeft + customRight
 
 Several results do not become an implicit tuple or structural value.
 
+### Outward result flow
+
+A uniquely selected inner result may make an enclosing operation viable. Its
+type, qualifications, result shape, and transfer behavior propagate outward to
+the next receiver position.
+
+Zero or multiple results cannot fill one expression position:
+
+```zax
+sum:, carry: = addWithCarry(a, b)
+
+combined := addWithCarry(a, b) next operation
+// error: no single intermediate receiver
+```
+
+There is no implicit "result of results" type. A future explicit combiner may
+produce one structure value, after which that structure has an ordinary
+compiler-known type and may become a receiver.
+
+An inner result-only ambiguity does not flow backward from an enclosing
+operation. The allowed direction is `selected inner result -> enclosing receiver
+selection`, never `enclosing receiver requirement -> manufacture an inner result
+choice`. The programmer states an intended narrow boundary with a complete typed
+declaration.
+
+Worked word-spelled examples of outward flow are taught by
+[operator phrases](operator-phrases.md#results-flow-outward-never-inward).
+
+### Narrow expected result
+
 A direct, complete, explicitly typed declaration may provide narrow expected
 result context:
 
@@ -255,8 +402,13 @@ An inferred declaration, outer overloaded call, later assignment, condition, or
 unresolved surrounding operator does not invent that context. Result quality can
 break a tie only after receiver and supplied-input comparisons are equal.
 
+Expected-result context may choose an implementation within one already formed
+tree. It may not choose between distinct operator extents or attachment trees.
+
 See [function invocation](function-invocation.md#narrow-expected-result-selection)
-for the shared boundary.
+for the shared boundary and
+[operator phrases](operator-phrases.md#results-flow-outward-never-inward) for the
+word-spelled example.
 
 ## Evaluation order
 
@@ -344,10 +496,10 @@ if ready && ?resource
 Other valid `&&`/`||` shapes are ordinary eager overloads and may return
 arbitrary result shapes. Exact Boolean `^^` is protected and eager.
 
-Zax also accepts logical NAND, AND-NOT, NOR, OR-NOT, and XNOR operation concepts.
-Their canonical source will be established by future operator-phrase work; the
-[catalog](operator-catalog.md#extended-logical-operations) records their current
-behavior.
+Zax also supplies exact logical NAND, AND-NOT, NOR, OR-NOT, and XNOR phrase
+operations. The
+[catalog](operator-catalog.md#exact-logical-phrase-forms) records their exact
+forms, precedence, and evaluation.
 
 ### Direct-before-fallback
 
@@ -509,6 +661,11 @@ defined by [construction, replacement, and destruction](construction-and-destruc
 
 ## Costs
 
+Candidate-tree formation costs real compile time when several structurally
+complete readings must be retained and pruned. The phrase-specific cost profile
+and the design choices that bound it are recorded by
+[operator phrases](operator-phrases.md#costs-diagnostics-formatting-and-source-stability).
+
 Programmers must be able to discover:
 
 - selected declaration and discovery domain;
@@ -530,8 +687,13 @@ The detailed per-form costs are recorded alongside their families in the
 Diagnostics should distinguish:
 
 - unrecognized or reserved form;
+- reserved-form declaration;
 - unsupported fixity or arity;
 - no discovered candidate;
+- incomplete or unattached source;
+- several viable candidate trees;
+- ambiguity among implementations of one tree;
+- an inaccessible declaration that is ineligible rather than merely worse;
 - operand, result, transfer, qualification, or constraint mismatch;
 - equal or incomparable ambiguity;
 - uniquely best unavailable operation;
@@ -545,8 +707,10 @@ Diagnostics should distinguish:
 - arithmetic policy failure;
 - invalid shift count type;
 - compile-time source panic; and
-- source spacing or continuation error.
+- source spacing, presentation, or continuation error.
 
+Phrase-specific diagnostics are listed by
+[operator phrases](operator-phrases.md#costs-diagnostics-formatting-and-source-stability).
 Exact diagnostic identifiers remain future diagnostics work.
 
 ## Source stability
@@ -556,6 +720,10 @@ Exact diagnostic identifiers remain future diagnostics work.
 - Adding a direct mixfix may replace component decomposition.
 - Changing operand type may move a logical operation between protected
   short-circuit and eager custom behavior.
+- Adding, removing, lengthening, reserving, or repricing a
+  [phrase form](operator-phrases.md#costs-diagnostics-formatting-and-source-stability)
+  is a source-compatibility event that may make existing source ambiguous or
+  invalid.
 - Adding a language-defined phrase or built-in signature may make previously
   unavailable source valid.
 - Changing precedence or tokenization would reinterpret existing source.
@@ -568,7 +736,8 @@ effects silently.
 This document is current conceptual design, not formal grammar, a compatibility
 contract, or an implementation mapping.
 
-See the [operator catalog](operator-catalog.md) for exact forms and
-[mixfix operators](mixfix-operators.md) for tree-pattern operations. Phrase
-syntax, literal operators, complete numeric families, call/index edge cases,
-allocation, pointers, generics, and panic recovery remain future focused work.
+See the [operator catalog](operator-catalog.md) for exact forms,
+[operator phrases](operator-phrases.md) for word-spelled operations, and
+[mixfix operators](mixfix-operators.md) for tree-pattern operations. Literal
+operators, complete numeric families, call/index edge cases, allocation,
+pointers, generics, reflection, and panic recovery remain future focused work.

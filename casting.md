@@ -8,13 +8,39 @@ unsafe-weakening constraints are defined by
 [Zax qualifiers](language/qualifiers.md). The complete cast catalog and the
 structural compatibility proposals on this page remain legacy input.
 
+> **Disposition.** `as` and `unsafe as` are now current open language-defined
+> [operator phrases](language/operator-phrases.md) whose exact forms are in the
+> [operator catalog](language/operator-catalog.md#as-and-unsafe-as). Their left
+> value supplies receiver discovery and their right operand is a complete
+> [type argument](language/function-invocation.md#type-parameter-slots) rather
+> than a discarded value parameter.
+>
+> Complete cast semantics — the conversion lattice, overflow and panic behavior,
+> structural compatibility, and disabling generated conversions — remain legacy
+> and future casting work. Nothing on this page is current design except where a
+> current owner is linked.
+>
+> Custom `as` declarations use a type parameter slot directly. Unprefixed
+> literals use double quotes, and every single-quoted literal payload carries its
+> own attached prefix.
+>
+> **Enum conversion evidence.** The enum side of `as` and `unsafe as` is
+> dispositioned separately. `enumValue as UnderlyingType` is a current generated
+> enum operation recorded by the
+> [operator catalog](language/operator-catalog.md#generated-enum-operations).
+> The legacy claims that `unsafe as` converts an enum to a *non-underlying*
+> intrinsic type, that direct `as` to such a type is rejected, and that a
+> two-step conversion through the underlying type is the sanctioned route remain
+> **deferred** to enum and casting work and are preserved in
+> [raw enum input](project/raw/enum-types.md). Nothing here decides their
+> narrowing, overflow, or panic behavior.
+
 ### Intrinsic system literal conversion
 
 This legacy section previously claimed that every intrinsic conversion required
 `as` or `unsafe as`. Current operator design adds the specialized equal-width
 signedness-counterpart `+` family; general width expansion, contraction, and
-unrelated conversion remain casting work. The exact `as` and `unsafe as`
-operator phrases below remain non-authoritative until phrase and casting review.
+unrelated conversion remain casting work.
 
 An `as` operator and an `unsafe as` operator work in similar manners. Both convert an intrinsic value from one type to another. With intrinsic types, an `as` operator would cause a panic situation if data would overflow when converting from a source type to a destination type. Whereas with intrinsic types, an `unsafe as` operator will not panic even when converting from one type to another but `unsafe as` can cause either loss of information in an overflow, or data corruption / undefined behavior in another extreme with incompatible types. An `as` operator attempts to do a compatible conversion whereas a `unsafe as` will treat the types as compatible even when they are not compatible.
 
@@ -45,7 +71,7 @@ stringError := w'this embedded literal "' h'16f' \
                w'" is not convertible' as WideString
 
 // converting from a `String` to a `WideString` is always safe
-string := 'always safe no matter what value'
+string := "always safe no matter what value"
 wideString := string as WideString
 
 // converting from a `Utf8String` to a `WideString` can cause runtime
@@ -72,7 +98,7 @@ wideString := utf8String unsafe as WideString
 
 
 wideString := w'Runtime value with a non-ascii value "' h'16f' w'" is not ' \
-              'legal to express in an ascii string.'
+              w'legal to express in an ascii string.'
 
 // this will cause a runtime panic since it cannot be converted to ASCII
 // (because the `as` keyword assumes all conversion is entirely legal)
@@ -488,10 +514,16 @@ byRefValue2 := compatibleType unsafe as MyType &         // unsafe
 
 ### `as` operator overloading
 
-This section is legacy operator-phrase input. Exact phrase declarations,
-protected conversion domains, result selection, and generated/disabled behavior
-must be reconsidered under the current [operator model](language/operators.md)
-and future phrase work.
+The exact phrase form `as` is current design; see the
+[operator catalog](language/operator-catalog.md#as-and-unsafe-as). Protected
+conversion domains, result selection, and generated/disabled behavior must still
+be reconsidered under the current [operator model](language/operators.md) and
+future casting work.
+
+A conversion declares a
+[type parameter slot](language/declarations-and-bindings.md#type-parameter-slots-and-type-arguments).
+A type argument has no runtime storage, lifetime, or evaluation, so no discarded
+runtime parameter is required.
 
 Types can implement an `as` operator to support custom conversion from one type to another. This type of conversion can only be done by-value as by-reference would not be logical (as a new instance is needed for an unrelated destination type to exist as a reference).
 
@@ -505,11 +537,11 @@ MyType :: type {
     name : String
     height : Float
 
-    // the input argument is discarded allowing a `type` to be specified rather
-    // than an actual value to the `as` operator; if a variable name were
-    // specified instead of a discard (`#`) then a type would not be allowed
-    // as an input argument to this operator function;
-    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) readonly = {
+    operator binary 'as' final : (
+        result : DestinationType
+    )(
+        DestinationType : type
+    ) readonly = {
         result.name = name
         return result
     }
@@ -522,8 +554,7 @@ IncompatibleType :: type {
 
 myType : MyType
 
-// creates a new instance of `IncompatibleType` from `myType`
-incompatibleType1 := myType cast IncompatibleType
+incompatibleType1 := myType as IncompatibleType
 
 // ERROR: no `as` operator that can convert to the destination type by reference
 byRefValue1 := myType as IncompatibleType &
@@ -532,69 +563,26 @@ byRefValue1 := myType as IncompatibleType &
 
 #### Disable `as` operators
 
-Disabling `as` operators is possible by declaring `as` operator overload functions as `final` with the function declared as pointing to nothing. Individual `as` operators can be enabled by creating a definition for a type, or disabled as needed. All non-specifically enabled or disabled `as` operators can be disabled by declaring a meta-function as final pointing to nothing.
+Legacy material proposes explicitly enabling generated conversions, disabling
+one conversion with a bodyless final declaration, and disabling an otherwise
+open family through a catch-all meta declaration. The exact constraint,
+generated/default, forbidden, and reference-result syntax has not been reviewed
+against the current operator and type-parameter model.
 
-The compiler generates casting a type to a compatible type by-reference using `as` operators are automatic. These `as` operators cannot be overloaded by they can be disabled (in either a catch-all meta-function or by explicit enabling using `default` or explicit disabling by declaring a function that points to nothing).
-
-````zax
-IncompatibleType :: forward type
-AnotherCompatibleType :: forward type
-
-MyType :: type {
-    category final once : String
-
-    age : Integer
-    name : String
-    height : Float
-
-    operator binary 'as' final : (result : IncompatibleType)(# : IncompatibleType) readonly = {
-        result.name = name
-        return result
-    }
-
-    // explicitly enable the reference conversion and auto-generate the function
-    operator binary 'as' final : (result : AnotherCompatibleType &)(# : AnotherCompatibleType &) readonly = default
-
-    // all `as` operators that are not explicitly defined will match this
-    // lower priority casting meta-function where the compiler will
-    // issue an error if this `as` operator is utilized (as no implementation
-    // is defined, nor possible to define later as the function is final)
-    operator binary 'as' final : (result : )(# : ) readonly
-}
-
-CompatibleType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-AnotherCompatibleType :: type {
-    value1 : Integer
-}
-
-IncompatibleType :: type {
-    name : String
-    height : Float
-}
-
-myType : MyType
-
-
-// ERROR: this `as` operator is explicitly disabled
-compatibleType := myType unsafe as CompatibleType
-
-incompatibleType := myType as IncompatibleType  // allowed
-
-// ERROR: this `as` operator is explicitly disabled
-byRefValue1 := myType as CompatibleType &
-
-// ERROR: cannot convert to the destination type by reference
-byRefValue2 := myType as IncompatibleType &
-
-byRefValue3:= myType as AnotherCompatibleType &  // allowed
-````
+Future casting work must decide which of those controls survive and then provide
+current examples. This page does not retain obsolete discarded-value parameter
+forms as candidate syntax.
 
 
 ### Casting as `default`
+
+> `as default` is now a current
+> [reserved phrase form](language/operator-catalog.md#reserved-phrase-forms) with
+> two shapes: a default-qualified concrete type identity, and a value compatible
+> with the expression's default type. Its complete qualifier-default, transfer,
+> generic, and type-result behavior remains future work. The legacy
+> `deep`/`last`/`move`/`shallow`/`lease`/`copy` qualifier set below is
+> unreviewed legacy material.
 
 The `deep`, `last`, and `move` qualifiers can be reset to their default qualification state by casting `as default` on a type. These qualifiers become converted to `shallow`, `lease`, or `copy` as appropriate. This allows for qualifications to become easily stripped from an input argument type in a generic fashion. Since `shallow`, `last`, `move`, `deep`, `lease`, and `copy` are all mutually exclusive, casting using `as default` simplifies the qualification reset process.
 

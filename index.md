@@ -35,12 +35,18 @@ producing them.
 - Read [Zax operators](language/operators.md) for the shared operator mental
   model, declarations, receiver discovery, selection, expected results,
   evaluation, protected domains, and fallback.
+- Read [Zax operator phrases](language/operator-phrases.md) for word-spelled
+  operations, receiver-owned declarations, candidate interpretations, grouping,
+  fencing, physical presentation, and phrase-specific diagnostics.
 - Use the [Zax operator catalog](language/operator-catalog.md) to look up exact
   symbolic/circumfix forms, precedence, built-in arithmetic, logical, bitwise,
   shift, mutation, result, and availability behavior.
 - Read [Zax mixfix operators](language/mixfix-operators.md) for direct
   multi-component tree operations, holes, receiver anchors, matching,
   decomposition, and protected barriers.
+- Read [Zax endianness](language/endianness.md) for endian semantic enum types,
+  receiver-correct encoding, decoding, raw adoption, the supported endian
+  operation surface, and native versus compiler-host and target byte order.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -56,8 +62,10 @@ producing them.
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)
 - [Operators](language/operators.md)
+- [Operator phrases](language/operator-phrases.md)
 - [Operator catalog](language/operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)
+- [Endianness](language/endianness.md)
 - [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes
@@ -69,7 +77,9 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 - [Basics](basics.md)
 - [Type definition](type-definition.md)
-- [Enums](enums.md)
+- [Enums](enums.md) — legacy enum input; current generated enum operations are
+  in the [operator catalog](language/operator-catalog.md#generated-enum-operations)
+  and endian behavior is owned by [Zax endianness](language/endianness.md)
 - [Arrays](arrays.md)
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)

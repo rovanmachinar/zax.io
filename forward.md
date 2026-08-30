@@ -9,6 +9,20 @@ constraints are defined by
 page remains legacy input for the complete forward-declaration catalog,
 dependency behavior, and generated forward material.
 
+> **Operator phrases.** An operator phrase is declared by its operator
+> implementation. Zax has no separate phrase-form declaration and no phrase
+> `forward` form. See
+> [Zax operator phrases](language/operator-phrases.md#declaring-a-phrase),
+> [Zax declarations and bindings](language/declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters)
+> and [Zax operators](language/operators.md#operator-phrases).
+>
+> `roman :: forward operator literal` remains unresolved literal evidence
+> preserved in
+> [raw literal input](project/raw/literal-operators.md).
+>
+> The variable, type, enum, namespace, and module forward material on this page is
+> unaffected and remains ordinary legacy input.
+
 A named type does not require `forward` merely to refer to its own incomplete
 name inside its body. `forward` remains relevant when a different name is needed
 before its declaration, for mutual or separately completed definitions, and
@@ -40,17 +54,8 @@ EnumType :: forward enum
 // order matters as `EnumType` needs to be forwarded prior to `Value`
 EnumType.Value :: forward enum value
 
-// The following phrase and literal forms are historical evidence. Their exact
-// declarations are not current Zax syntax and await focused phrase/literal work.
-
-// forward of compound word operators
-run to a store with :: forward operator pre unary
-jump farther :: forward operator post unary
-connect with :: forward operator binary
+// Literal forwarding remains raw literal evidence.
 roman :: forward operator literal
-
-// forward declare of a compound word operator within a type
-TypeName.shake up :: forward operator pre unary
 
 // forward declare a namespace
 ImportedNamespace :: forward namespace

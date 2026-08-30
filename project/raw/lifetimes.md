@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item refining pointer and lifetime concepts |
-| Applies To | Intentional lifetime-policy plurality and its costs |
-| Owns | Preservation of aligned direction and required future decisions |
-| Does Not Own | Accepted policy names, representations, or conversion rules |
-| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, construction/replacement aliasing, and invocation lifetime pressure |
+| Applies To | Intentional lifetime-policy plurality, its costs, and displaced pointer/reference binding replacement |
+| Owns | Preservation of aligned direction, displaced binding-replacement syntax, and required future decisions |
+| Does Not Own | Accepted policy names, representations, conversion rules, or qualifier meanings |
+| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, construction/replacement aliasing, invocation lifetime pressure, and the corrected declaration-side `final`/`varying` model |
 
 ## Aligned direction
 
@@ -57,6 +57,45 @@ One lifetime strategy may reject replacement while a stable reference exists.
 Another may permit the programmer to proceed through a narrow unsafe permission.
 The final policy set must make the difference and cost visible.
 
+## Displaced pointer and reference binding replacement
+
+Qualifier and declaration owners now use declaration-side `final`/`varying` to
+express whether *this* declaration may replace the whole value it reaches. See
+[Zax qualifiers](../../language/qualifiers.md#type-side-truth-versus-declaration-side-permission).
+
+```zax
+myType varying : MyType varying
+
+myAliasType final : MyType varying & = myType
+```
+
+`myAliasType` cannot initiate replacement of the referent, while its type use
+still records that `myType` may.
+
+That resolves a real conflict, but it displaces a question the previous model
+answered implicitly. Earlier owners used name-side `final` on a pointer or
+reference declaration to describe the *binding's own* replacement place, so a
+name-side-final writable reference could still reconstruct a varying referent.
+Under the current model, name-side `final` restricts replacement through the
+declaration instead, and the binding-place meaning has no spelling.
+
+Future pointer, reference, or lifetime work must recover it and decide:
+
+- how a program independently replaces or rebinds a pointer or reference binding
+  while leaving the referent untouched;
+- whether rebinding is spelled as a qualifier, an operator, or a distinct
+  operation;
+- how the binding's own place stance is expressed at each indirection level;
+- whether a reference may be rebound at all, or only a pointer;
+- how rebinding interacts with declaration-side replacement permission on the
+  same declaration; and
+- how the two concepts are diagnosed distinctly so a programmer is never told
+  "final" when the other meaning was intended.
+
+Silently retaining both meanings for one word is not acceptable. Until this is
+decided, current documentation states the declaration-side meaning and defers the
+binding-replacement syntax by subject.
+
 ## Future decisions
 
 A future owner must define:
@@ -96,5 +135,7 @@ Future lifetime and ownership work must define:
 
 ## Activation and retirement
 
-Activate this input before promoting pointer or lifetime documentation. Consume
-its findings through that work and retire or archive this placeholder afterward.
+Activate this input before promoting pointer or lifetime documentation, or when
+independent pointer/reference binding replacement or rebinding syntax is needed.
+Consume its findings through that work and retire or archive this placeholder
+afterward.

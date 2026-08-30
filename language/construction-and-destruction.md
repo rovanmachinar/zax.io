@@ -423,19 +423,46 @@ defaulted, delegated-to-existing, bodyless, and forbidden operations.
 ### Why replacement exists
 
 Generated reconstructive replacement is the whole-value transition for an
-`immutable`, `writable`, `varying` destination:
+`immutable` destination whose place is type-side `varying`, reached through a
+`writable` path whose declaration carries `varying` replacement permission:
 
 - `immutable` prevents mutation within one complete value lifetime;
-- `varying` permits the place to receive another complete value lifetime; and
-- `writable` permits the current access path to initiate the transition.
+- type-side `varying` means the place may receive another complete value
+  lifetime;
+- `writable` permits the current access path to change anything at all; and
+- declaration-side `varying` permits *this* path to initiate a whole-value
+  replacement.
 
 ```zax
-message : Message immutable writable varying = makeMessage("first")
+message varying : Message immutable writable varying = makeMessage("first")
 message = makeMessage("second")
 ```
 
 Neither immutable instance mutates. The old lifetime shuts down and a new
 immutable lifetime begins in the same outer storage.
+
+A restricted same-place path observes that transition without being able to
+initiate it:
+
+```zax
+observer final :
+  Message immutable readonly varying & = message
+
+restricted final :
+  Message immutable writable varying & = message
+
+restricted = makeMessage("third")
+// error: this declaration lacks replacement permission
+
+message = makeMessage("third") // legal through the varying declaration
+display(observer)              // "third"
+```
+
+`restricted` remains writable for operations that do not require whole-value
+replacement, and its type use still records truthfully that another path may
+replace the referent. Type-side capability versus declaration-side permission is
+owned by
+[Zax qualifiers](qualifiers.md#type-side-truth-versus-declaration-side-permission).
 
 A `mutable`, `writable`, `varying` destination uses ordinary assignment
 selection. It does not receive this generated immutable-value replacement
@@ -628,7 +655,7 @@ Document :: type {
   }
 }
 
-document : Document immutable writable varying
+document varying : Document immutable writable varying
 document = document.stringViewFrom()
 ```
 

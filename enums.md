@@ -3,12 +3,20 @@
 
 ## Enums
 
-This page remains legacy enum input. Whether an enum directly inherits numeric,
-bitwise, reduction, shift, magnitude, or signedness-counterpart operations from
-its underlying representation is deferred to enum/numeric work and preserved in
-[raw numeric type families](project/raw/numeric-type-families.md). Explicit
-conversion may be required for intent; examples below do not decide that
-boundary.
+> **Disposition.** Every enum now receives four protected generated operations —
+> `EnumType underlying type`, `enumValue underlying value`,
+> `enumValue as UnderlyingType`, and `EnumType unsafe from rawValue` — recorded
+> by the
+> [operator catalog](language/operator-catalog.md#generated-enum-operations).
+> Endian behavior is owned by [Zax endianness](language/endianness.md).
+>
+> Everything else on this page remains legacy enum input. In particular, whether
+> an enum directly inherits numeric, bitwise, reduction, shift, magnitude, or
+> signedness-counterpart operations from its underlying representation is **not**
+> decided; the examples below do not make those operations current. That
+> question, together with enum members, validity, safe creation, and generic
+> generation, is preserved in
+> [raw enum input](project/raw/enum-types.md).
 
 ### Enum definition
 
@@ -67,6 +75,12 @@ value4 := Fruit.Grapefruit  // value4 will be assigned to `4`
 
 ### Enum metadata
 
+> Enum metadata and its relationship to reflection are preserved in
+> [raw reflection input](project/raw/reflection.md) and
+> [raw enum input](project/raw/enum-types.md). The `$EnumType` spelling below is
+> legacy generic syntax preserved in
+> [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
+
 Each enum have compile-time available metadata to extract information about the enum to allow for easy associations such as to/from a `String`.
 
 convertToString final : (result : String)(enumType : $EnumType) = {
@@ -92,6 +106,21 @@ name := convertToString(value)
 
 
 ### Enum underlying type
+
+> **Disposition.** `fruitInBasket as U8` is the current generated semantic
+> conversion to the exact underlying type. The remaining claims in this section —
+> `unsafe as` to a non-underlying intrinsic type, rejection of direct `as` to
+> such a type, and the sanctioned two-step conversion — remain **deferred**
+> enum and casting evidence rather than current design. They are preserved in
+> [raw enum input](project/raw/enum-types.md).
+>
+> Two further current facts are not visible in the legacy prose below:
+> `fruitInBasket underlying value` extracts the stored backing value without any
+> semantic conversion, and `Fruit unsafe from rawValue` adopts a raw backing
+> value without membership or range validation.
+>
+> The claim that "enumerations allow math operations to be applied on them" is
+> **not** current design; operation inheritance is undecided.
 
 Enums can be based on any intrinsic numerical types. Enumerations allow math operations to be applied on them so long as all the operands are of the same enumeration type. Enumerations can be cast to the underlying type using the `as` operator from which the resulting casted value loses its enumeration type qualification. The `unsafe as` operator can be used to force an enumeration from the enumeration type into a numerical type (with any overflows being ignored). The `as` operator will cause a compiler error if the enumeration is directly converted from the enumeration type to another non-matching intrinsic numerical type. However, a two-step conversion can be performed where the enumeration is first cast to its underlying type using the `as` operator and then converted to a final numerical type using another `as` operation. The `as` operator can perform panics on numerical types in conversions should overflows occur.
 

@@ -41,7 +41,7 @@ edit.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 6 |
+| Operating guidance revision | 8 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Current conceptual design coexists with legacy design input; not a formal specification |
@@ -76,6 +76,12 @@ authority merely because they exist.
 There is no formal Zax specification. Do not describe proposed behavior as
 implemented, conforming, normative, or guaranteed unless a current owner
 explicitly establishes that status.
+
+Legacy and current conceptual syntax are not permanent compatibility anchors.
+Preserve a form when coherent, but revise it under concrete cross-feature
+pressure when doing so improves the whole language. Do not churn syntax for taste
+or preserve a poor local solution merely to avoid change; trace the material
+consequences.
 
 The Zax language maintainer is the language decision authority. An agent may
 investigate, reason, propose, disagree, identify risks, and trace consequences.
@@ -114,7 +120,8 @@ authorization.
 
 The language maintainer may stage changes to create a before/after comparison
 boundary. Staging does not imply acceptance, approval, or readiness to commit.
-Report staged and unstaged state and preserve that boundary.
+Report staged and unstaged state and preserve that boundary, including untracked
+paths when the boundary is being relied upon or reported.
 
 The agent performs all authorized repository edits unless the language
 maintainer explicitly says they edited files. The maintainer normally provides
@@ -180,6 +187,10 @@ source syntax, preserve representative code when prose alone could be ambiguous.
 Detailed numbered-work, pre-promotion, archival, and documentation rules are
 owned by `project/documentation.md`.
 
+If work reaches the pre-promotion dry run, follow `project/documentation.md`,
+record the result in the active work file, report PASS or FAIL in chat, and wait
+for separate promotion authorization.
+
 When item `n` closes, it must prepare the aligned initiating input and focused
 reading scope for `n+1`, archive `n`, create `n+1` after explicit authorization,
 and update the project current-work index. The creating agent stops before
@@ -199,6 +210,9 @@ material rules, diagnostics, costs, corner cases, advanced behavior, and
 reference details. Remove discovery chronology and rejected alternatives when
 they do not help a programmer, but do not omit behavior that future
 specification work would otherwise have to rediscover.
+
+Apply the positive-current and example-quality obligations in
+`project/documentation.md` when promoting findings.
 
 Current programmer-facing owners do not cite numbered work or archived project
 records for provenance or meaning. Keep each example focused on the behavior

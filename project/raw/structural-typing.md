@@ -5,9 +5,9 @@
 | Status | Raw candidate / non-authoritative |
 | Audience | A future numbered work item defining structural type identity and compatibility |
 | Applies To | Preserved agent-authored proposal and unresolved structural-typing questions |
-| Owns | Provenance and candidate input only |
-| Does Not Own | Accepted structural typing, syntax, layout, conversion, or reflection behavior |
-| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions |
+| Owns | Provenance, candidate input, and preserved storage/shape compatibility questions |
+| Does Not Own | Accepted structural typing, syntax, layout, compatibility, conversion, or reflection behavior |
+| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions; endian storage/shape compatibility pressure |
 
 ## Provenance and reading posture
 
@@ -204,6 +204,63 @@ reflection:
 
 This section preserves a required future question. It does not amend or accept
 the candidate proposal below.
+
+---
+
+## Storage and shape compatibility
+
+[Zax endianness](../../language/endianness.md) establishes a live consumer for
+compatibility terminology: an endian semantic enum and its backing fundamental
+type are storage- and shape-compatible while remaining independent types.
+
+This file remains non-authoritative. The terms below are candidate inputs for a
+future type-compatibility review, not accepted definitions.
+
+Candidate **exact storage compatibility** requires the complete instance storage
+to agree in:
+
+- size;
+- alignment;
+- stored-member offsets and extents;
+- required padding; and
+- representation boundaries from the base address.
+
+Candidate **shape compatibility** additionally requires corresponding
+storage-bearing members to use the same names and recursively compatible storage.
+Zero-instance-storage declarations such as `final` functions do not change
+instance shape.
+
+### Compatibility is not conversion
+
+Compatibility describes structural facts. A conversion rule grants transfer.
+Neither storage nor shape compatibility permits:
+
+```zax
+nativeValue : U32 = big
+// error: structural compatibility is not a conversion rule
+```
+
+A future review must keep the two questions separate. It must not conclude that
+because two types are layout-identical they are interchangeable, and it must not
+conclude that because a conversion exists the types are structurally compatible.
+
+### Prefix projection and truncating transfer are separate
+
+Legacy casting material assumes a source type may have more contained values than
+the destination and still match, which silently weakens exact symmetric
+compatibility into a directional relationship.
+
+A future review must distinguish at least:
+
+| Relationship | Direction | Question it answers |
+| --- | --- | --- |
+| Exact storage compatibility | Symmetric | Do both instances occupy identical storage? |
+| Storage-prefix projection | Directional | Does the destination's storage match a prefix of the source's? |
+| Truncating transfer | Directional and lossy | May a transfer deliberately discard the remaining storage? |
+
+Destination/source truncation must not silently weaken exact symmetric storage
+compatibility. Whether qualifiers participate in any of these relationships is
+one of the open questions preserved below.
 
 ---
 

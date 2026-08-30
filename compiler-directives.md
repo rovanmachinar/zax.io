@@ -3,6 +3,28 @@
 
 ## Compiler Directives
 
+> **Routing note.** This page remains legacy compiler-directive input. Two of its
+> concerns now have live destinations:
+>
+> - **Execution context.** The `execute` directive's `host`, `target`, `dual`,
+>   `generate`, and `delegate` options, the `resolve` ordering options, and the
+>   `host`/`target` prefixed sizing and constant variants are preserved as future
+>   input in
+>   [raw compile-time execution input](project/raw/compile-time-execution.md).
+>   Current documentation states only that compile-time execution is directed and
+>   inferred, that a type-receiver operation is not inherently compile-time, and
+>   that `size of`, `alignment of`, `offset of`, and `is constant` answer in the
+>   *active execution context*.
+> - **Native byte order.** **Native** endianness means the byte order of the
+>   environment whose execution semantics are currently in effect, which is
+>   distinct from compiler-host endianness and from build-target endianness. Do
+>   not read the `host`/`target` directive vocabulary below as already answering
+>   that question. Current endian behavior is owned by
+>   [Zax endianness](language/endianness.md).
+>
+> Every directive, option, sizing example, and alignment detail on this page is
+> otherwise preserved unchanged as legacy evidence.
+
 ### Official and extended directives
 
 All officially supported directives must be understood to compile and never start with an `x-` prefix. Custom compiler directives and custom directive arguments are prefixed with `x-` in the directive name. Custom directives and custom directive arguments are ignored if they are not supported.

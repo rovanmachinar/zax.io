@@ -32,7 +32,7 @@ been lost. Recover them before continuing.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 6 |
+| Operating guidance revision | 8 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Current conceptual design coexists with legacy design input; not a formal specification |
@@ -52,6 +52,12 @@ mappings do not belong in language documentation.
 Existing language pages, RFCs, examples, plans, summaries, and agent-authored
 material are evidence according to their maturity, not automatic authority.
 There is no formal Zax specification.
+
+Legacy and current conceptual syntax are not permanent compatibility anchors.
+Preserve a form when coherent, but revise it under concrete cross-feature
+pressure when doing so improves the whole language. Do not churn syntax for taste
+or preserve a poor local solution merely to avoid change; trace the material
+consequences.
 
 The Zax language maintainer is the language decision authority. An agent may
 reason, propose, disagree, identify risks, and trace consequences. It may not
@@ -85,10 +91,11 @@ boundaries, and stop when unexpected conflicting changes actually appear.
 
 ## Recovery procedure
 
-1. Inspect and report the branch and staged/unstaged working-tree state.
+1. Inspect and report the branch and staged/unstaged working-tree state,
+   including relevant untracked paths.
 2. Read `project/documentation.md`.
 3. If Mirrored current state names an active work item, read it.
-4. Inspect the current staged and unstaged changes relevant to that work.
+4. Inspect the current changes relevant to that work.
 5. Reconcile the active file, repository state, latest human instruction, and
    any recovery context supplied in chat.
 6. Determine the current phase and commitment point: starting analysis,
@@ -136,6 +143,10 @@ consequence needs a live owner or indexed raw destination, activation pressure,
 and any constraint it places on current work. When deferred material involves
 source syntax, preserve representative code when prose alone could be ambiguous.
 
+When recovering during or after a pre-promotion dry run, recover its recorded
+result, check whether later material findings revised it, report the recovered
+status and next safe action, and do not treat PASS as promotion authorization.
+
 If recovery shows that item `n` is closing, remember that the cycle must prepare
 the aligned initiating input and reading scope for `n+1`. Creating `n+1` does not
 authorize beginning it. A new session may take over, or the language maintainer
@@ -154,6 +165,9 @@ material rules, diagnostics, costs, corner cases, advanced behavior, and
 reference details. Remove discovery chronology and rejected alternatives when
 they do not help a programmer, but do not omit behavior that future
 specification work would otherwise have to rediscover.
+
+Apply the positive-current and example-quality obligations in
+`project/documentation.md` when recovering promotion work.
 
 Current programmer-facing owners do not cite numbered work or archived project
 records for provenance or meaning. Keep each example focused on the behavior

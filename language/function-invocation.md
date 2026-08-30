@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete function declaration, capture, reassignment, or representation; complete copy, move, or `last` precedence; pointer/reference provenance; [operator discovery and selection](operators.md); exact [operator forms and precedence](operator-catalog.md); [mixfix tree matching](mixfix-operators.md); complete indexing/slicing; generics; variadics; hidden `mutator` access; runtime value polymorphism; async; ABI; formal grammar; compiler implementation |
+| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete function declaration, capture, reassignment, or representation; complete copy, move, or `last` precedence; pointer/reference provenance; [operator discovery and selection](operators.md); the cohesive [operator phrase](operator-phrases.md) feature; exact [operator forms and precedence](operator-catalog.md); [mixfix tree matching](mixfix-operators.md); complete indexing/slicing; generics; variadics; hidden `mutator` access; runtime value polymorphism; async; ABI; formal grammar; compiler implementation |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -169,6 +169,69 @@ Exact default timing across a flattened mixfix, variadics, result forwarding,
 lambda/generated callable types, construction-like call syntax, and indexing
 details remain future integration. Complete tree behavior is defined by
 [mixfix operators](mixfix-operators.md#call-and-index-components).
+
+## Parameters, arguments, and type arguments
+
+Parameter and argument are distinct:
+
+- a **parameter** is a slot declared by a prototype;
+- an **argument** is caller source supplied to complete a parameter; and
+- an operator operand supplies an argument to one selected parameter, exactly as
+  a call input does.
+
+### Type parameter slots
+
+A prototype may declare a **type parameter slot**, and a caller completes it with
+a **type argument**: one concrete type identity.
+
+```zax
+Source :: type {
+  operator binary 'as' final : (
+    result : DestinationType
+  )(
+    DestinationType : type
+  ) readonly = {
+  }
+}
+
+converted := source as DestinationType
+```
+
+A type argument:
+
+- has no runtime storage or lifetime;
+- is not evaluated at runtime;
+- occupies its parameter slot for viability, preference, and diagnostics like any
+  other input; and
+- may determine a value result type, as it does for `as`.
+
+Type parameter slots therefore participate at the shared callable depth rather
+than being an operator-only concept. A concrete type argument is not a runtime
+value and does not become one merely because a value receiver supplied
+discovery.
+
+Declaration ownership, `operator type` receivers, and complete generic behavior
+are defined by
+[declarations and bindings](declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters).
+
+### Declaration-side replacement permission
+
+Qualification travels with an argument, and declaration-side replacement
+permission is part of that truth. A path that may not replace its own value
+lifetime cannot regain that authority by being mapped into a parameter,
+forwarded through a result, or captured:
+
+```zax
+replaceThrough final : ()(target varying : MyType immutable writable varying &)
+
+restricted final : MyType immutable writable varying & = value
+replaceThrough(restricted) // error: restricted may not delegate replacement authority
+```
+
+The referent type use still records that another path may replace the referent;
+only this declaration's permission is narrower. Complete capability-versus-permission
+behavior is owned by
+[qualifiers](qualifiers.md#type-side-truth-versus-declaration-side-permission).
 
 ## Positional and named inputs
 
@@ -743,6 +806,16 @@ combined := customLeft + customRight
 // error if the selected + has two mandatory results
 ```
 
+The same requirement applies to a word-spelled operand position, and it is what
+lets a selected inner result flow outward to the next receiver:
+
+```zax
+sum:, carry: = addWithCarry(a, b)
+
+combined := addWithCarry(a, b) next operation
+// error: no single intermediate receiver
+```
+
 Several operator results do not become an implicit tuple or anonymous structure.
 Grouping does not combine them. At a mapping-capable complete producer boundary,
 operator results use the same acknowledgement, labels, cursors, construction,
@@ -752,8 +825,9 @@ Zero-result operators remain valid complete operations but cannot supply a value
 to a parent expression node.
 
 Exact built-in operator result shapes are defined by the
-[operator catalog](operator-catalog.md). Operator discovery and direct selection
-are defined by [Zax operators](operators.md).
+[operator catalog](operator-catalog.md). Operator discovery, candidate-tree
+formation, and outward result flow are defined by
+[Zax operators](operators.md#outward-result-flow).
 
 ## Result-routing groups
 
@@ -1052,6 +1126,26 @@ if : Boolean = ?value
 Which operator that selects, and when the opposite operator may supply a
 fallback, are owned by
 [operators](operators.md#boolean-operations-and-fallback).
+
+### Expected results never choose a source structure
+
+Expected-result context chooses an implementation *within* one already formed
+expression tree. It never chooses between distinct operator-phrase extents or
+attachment trees:
+
+```zax
+result : Desired = source phrase middle phrase tail
+// error if two phrase trees remain viable, even when only one returns Desired
+```
+
+The allowed direction is `selected inner result -> enclosing receiver selection`,
+never `enclosing receiver requirement -> manufacture an inner result choice`. An
+inner result-only ambiguity therefore cannot be resolved by an enclosing
+operation; the programmer states the intended boundary with a complete typed
+declaration. See
+[operators](operators.md#candidate-tree-formation-and-selection) for the shared
+rule and [operator phrases](operator-phrases.md#results-flow-outward-never-inward)
+for its phrase-specific use.
 
 ### Same-family matching
 

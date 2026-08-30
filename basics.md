@@ -148,12 +148,16 @@ foobar_ : Type readonly
 #### Remaining literal-operator evidence
 
 The promoted symbolic, circumfix, call, index, and mixfix forms were removed from
-this legacy list. Quote-delimited literal prefixes and custom literal operations
-remain future literal work:
+this legacy list. The single quote is now the
+[exact phrase fence](language/operator-phrases.md#exact-phrase-fencing) when it
+stands alone and separated by whitespace; a literal single quote must be attached
+to a literal prefix. Quote-delimited literal prefixes and custom literal
+operations remain future literal work:
 
 ````
-'                  // legacy literal delimiter/operator evidence
-"                  // legacy literal delimiter/operator evidence
+"                  // ordinary unprefixed literal delimiter
+prefix'            // attached prefixed-literal delimiter evidence
+'                  // standalone single quote is a phrase fence, not a literal
 ````
 
 
@@ -185,27 +189,17 @@ not current guarantees:
 ````
 
 
-#### Historical operator-phrase proposals
+#### Remaining historical operator-phrase input
 
-The legacy corpus proposed the following built-in and overloadable word
-operators. Their spellings, precedence, keyword interaction, and overload rules
-are not current design; they remain input to future operator-phrase work.
+Operator phrases are current design and taught by
+[Zax operator phrases](language/operator-phrases.md). Exact forms and precedence
+are in the [operator catalog](language/operator-catalog.md#operator-phrase-forms).
+
+The list below retains only unresolved pointer, lifetime, allocation,
+function-representation, and variadic proposals. Their exact words are not
+reserved because those domains have not established their prototypes.
 
 ````
-as                   // binary safe type conversion operator    
-unsafe as            // binary unsafe type conversion operator
-as big endian        // post-unary converting a value into a big endian encoding
-                     // (and assumes the value was in the runtime's context
-                     // encoding)
-as little endian     // post-unary converting a value into a little endian
-                     // encoding (and assumes the value was in the runtime's
-                     // context encoding)
-from big endian      // post-unary convert a value from big endian format (and
-                     // assumes the value was in the runtime's context
-                     // encoding)
-from little endian   // post-unary convert a value from little endian format
-                     // (and assumes the value was in the runtime's context
-                     // encoding)
 outer of             // binary outer type instance of operator (convert from
                      // contained `type` pointer to container `type` pointer
                      // safely via a managed type's RTTI)
@@ -223,15 +217,6 @@ unsafe lifetime of   // binary unsafe shared lifetime casting operator (converts
                      // a raw pointer to share a lifetime with an existing
                      // `strong` or `handle` pointer)
 count of             // pre-unary count of a variadic expression
-size of              // pre-unary size of operator (returns the size of a type
-                     // in bytes)
-alignment of         // pre-unary align of operator (return the alignment of a
-                     // type in modulus bytes)
-offset of            // binary offset of operator (compute the byte offset of a
-                     // contained variable from a container type or container
-                     // variable)
-type of              // pre-unary obtain the meta-data information of a 
-                     // variable, or expression, or `type`
 count of             // pre-unary count of a type
 overhead count of    // pre-unary overhead count operator (returns the total
                      // reference count for a `handle` / `hint`, or
@@ -244,8 +229,6 @@ overhead size of     // pre-unary overhead sizing operator (return the number of
                      // the size of a control block)
 allocator of         // pre-unary allocator operator (returns the allocator
                      // instance used to allocate an instance)
-is constant          // post-unary check if a value is constant (used often in
-                     // meta-programming)
 ````
 
 A compiler has both a host and a target for compilation. Any compile-time code that evaluates on a compiler's host system may have different value sizing and alignments than that of a compiler's target system. For example, a host may operate on a 64-bit system but target may compile for a 32-bit compilation.
@@ -279,6 +262,13 @@ target offset of
 target overhead size of
 is target constant
 ````
+
+> The `host`/`target`/context distinction above is preserved future input. Current
+> documentation defines only that `size of`, `alignment of`, `offset of`, and
+> `is constant` answer in the *active execution context*, and separately defines
+> **native** as the environment whose execution semantics are currently in
+> effect. The contextual variants are routed to
+> [raw compile-time execution input](project/raw/compile-time-execution.md).
 
 
 #### Other expressions
@@ -577,13 +567,19 @@ wideString : WideString = w'hello'
 
 ### Intrinsic system literals
 
+> **Current quote boundary.** A standalone single-quoted payload is the
+> [exact phrase fence](language/operator-phrases.md#exact-phrase-fencing), not a
+> literal. An ordinary unprefixed literal uses double quotes, and every
+> single-quoted literal payload carries its own attached prefix such as `h'...'`
+> or `utf8'...'`. Complete literal realization remains future literal work.
+
 Literals are any constant literal value that requires compile-time conversion from the input value to the underlying `type`.
 
-Normal strings are enclosed with single quotes `'string'`, or double quotes `"string"`. The difference between single and double quote is merely symantec with the single quote being used as the preferred convention. Any escape sequencing interpretation performed inside any literal is entirely dependent on the type of a literal used where both single and double quotes utilize the same escaping interpretation logic for a given literal type. Literals are not required to support any escape sequences at all. The default `ascii` string type is applied to strings when a literal type is not specified, and no previous literal type declaration is being continued.
+Normal strings are enclosed with double quotes `"string"`. A single quote (`'`) closes a payload only when it is attached to a literal prefix, as in `h'ABC123'`. Any escape sequencing interpretation performed inside any literal is entirely dependent on the type of a literal used. Literals are not required to support any escape sequences at all. The default `ascii` string type is applied to strings when a literal type is not specified, and no previous literal type declaration is being continued.
 
-The type of a literal is prefixed before the value contained in single (`'`) or double (`"`) quotes. The language has support for some built-in literal types such as `a`, `ascii`, `utf8`, `c`, `w`, `unicode`, `b64`, `b`, `h` and others. The language is flexible and new compile-time literals can be added to the language. A literal type specification is done by a literal type prefix before a value (`type'value'`). A single quote (`'`) can be embedded into a literal value by utilizing double quotes (`""`) around a literal's value and double quotes can be embedded into a literal value by using single quotes, e.g. `c'"'` and `c"'"`.
+The type of a literal is prefixed before the value contained in single (`'`) or double (`"`) quotes. The language has support for some built-in literal types such as `a`, `ascii`, `utf8`, `c`, `w`, `unicode`, `b64`, `b`, `h` and others. The language is flexible and new compile-time literals can be added to the language. A literal type specification is done by a literal type prefix before a value (`type'value'`). A single quote (`'`) can be embedded into a literal value by utilizing double quotes (`""`) around a literal's value and double quotes can be embedded into a literal value by using a prefixed single-quoted payload, e.g. `c'"'` and `c"'"`.
 
-Literals can be extended across multiple lines using the continuation operator `\` and can interchange between using the single quote (`'`) and the double quote (`"`) as needed. The declaration of a prefixed literal type is only required initially when specifying a non-default literal type, or when the literal type's encoding changes, or when a new separate literal value is being declared. For example, embedding a specific wide character by specifying its hex value inside a wide character string would require a `w` literal prefix to be re-declared after using a `h` literal prefix when part of the same string literal sequence.
+Literals can be extended across multiple lines using the continuation operator `\` and can interchange between using an attached single quote (`'`) and the double quote (`"`) as needed. Every single-quoted payload states its own prefix; no payload inherits a prefix from an earlier literal. Complete continuation and merged-literal behavior remains future literal work.
 
 String literals have additional logic once a literal is resolved. If a string literal resolves followed by any other literal value that resolves to a number or another string then a compiler will merge the result into into a single string sequence. A number after a string literal will cause the number to be converted to a character code within the string's supported character value range.
 
@@ -600,29 +596,29 @@ charDoubleQuote := c'"'             // becomes a double quote
 charSingleQuote := c"'"             // becomes a single quote
 charNulValue := c'\0'               // becomes an ASCII NUL character
 binary := b'1011101'                // becomes a base-2 number
-binarySequence := 'm' b'1011101'    // becomes a string sequence with an
+binarySequence := "m" b'1011101'    // becomes a string sequence with an
                                     // embedded character expressed in base-2
 octal := o'12345670'                // becomes a base-8 number
-octalSequence := 'n' o'76'          // becomes a string sequence with an
+octalSequence := "n" o'76'          // becomes a string sequence with an
                                     // embedded character expressed in base-8
 duodecimal := d'1234567890AB'       // becomes a base-12 number
-duodecimalSequence := 'y' d'AB'     // becomes a string sequence with an
+duodecimalSequence := "y" d'AB'     // becomes a string sequence with an
                                     // embedded character expressed in base-12
 hexadecimal := h'ABC123'            // becomes a base-16 number
-hexadecimalSequence := 'z' h'EF'    // becomes a string sequence with an
+hexadecimalSequence := "z" h'EF'    // becomes a string sequence with an
                                     // embedded character expressed in base-16
-mixedSequence := c'h' 'e' \         // becomes a string sequence containing the
+mixedSequence := c'h' c'e' \        // becomes a string sequence containing the
                  b'01101100' \      // ASCII characters "hello"
                  b'01101100' \
                  o'157'
 
-runeString : Rune = h'0398' '03A4'  // wide character string consisting of
+runeString : Rune = h'0398' h'03A4' // wide character string consisting of
                                     // the unicode characters Theta and Tau.
 
 namespacedType := Module.System.Literals.ascii"hello there!"
 
-string := 'Default is an ASCII string type where c-style escapes are ' \
-          'not supported.'
+string := "Default is an ASCII string type where c-style escapes are " \
+          "not supported."
 
 asciiString1 := a'an ASCII string with c-style escapes\n'
 asciiString2 := ascii'an ASCII string without c-style escapes'
@@ -631,7 +627,7 @@ wideString1 := w'a wide string with escapes with c-style escapes\n'
 wideString2 := unicode'a wide string without c-style escapes'
 
 utf8String := utf8'utf8 string does not have escape sequences ' \
-              'as remains "as is".'
+              utf8'as remains "as is".'
 
 // convert from base-64 directly to a string character sequence (embedded NUL
 // characters can exist within strings)
@@ -642,23 +638,22 @@ xmlEntity := xml'John&#39;s Fish &amp; Chip Caf&#233;.'
 
 // string literals merging with other literals
 mergedLiterals := "This string has no escape sequences thus C:\file\paths is " \
-                  "preserved as well as 'single quotes' as ASCII.'\n'
+                  "preserved as well as 'single quotes' as ASCII."
 
 anotherWayToEscape := a'This string has escape sequences where backslashes' \
-                      'need escaping for paths like C:\\file but "double' \
-                      'quotes" are left "as is"\n'
+                      a'need escaping for paths like C:\\file but "double' \
+                      a'quotes" are left "as is"\n'
 
 beCarefulSingleQuotes := ascii'single quotes cannot exist inside single quotes'\
-                         ' thus use "double quotes"' "around 'single quotes'\n"
+                         ascii' thus use "double quotes"' "around 'single quotes'\n"
 
 wideStringLiterals := unicode'Wide string has no escapes but can embed wide ' \
-                      'values such as "' h'16F' w'" fairly easily.\n'
+                      unicode'values such as "' h'16F' w'" fairly easily.\n'
 
 continueExisting := w'encoding inside single quotes is continued ' \
-                    'without needing to redeclare the encoding so long ' \
-                    'as no change in encoding has occurred since the last ' \
-                    'open and close single quote sequence but need ' \
-                    'declaring again when changed, e.g. "' \
+                    w'with an explicit prefix on every payload, even when ' \
+                    w'the encoding remains unchanged. A changed encoding also ' \
+                    w'uses its own prefix, as in "' \
                     h'16F' w'" needed the "w" declared once again'
 ````
 

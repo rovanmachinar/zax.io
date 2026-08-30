@@ -2,6 +2,29 @@
 
 ## Meta-Types
 
+> **Routing note.** This page remains legacy input. Current design accepts only a
+> narrow type-input model: a prototype may declare a `ParameterType : type`
+> [type parameter slot](language/declarations-and-bindings.md#type-parameter-slots-and-type-arguments)
+> completed by one concrete
+> [type argument](language/function-invocation.md#type-parameter-slots) that has
+> no runtime storage, lifetime, or evaluation. A
+> [type-receiver operation](language/declarations-and-bindings.md#type-receiver-operators)
+> is discovered through a concrete type identity and is not inherently
+> compile-time.
+>
+> The `MyType$(Type)` parameterized-type spelling, the `$Type` sigil, generic
+> instantiation identity, generic and alias type receivers, and generated type
+> families below are **not** current design. They are preserved as future input in
+> [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
+>
+> Compile-time type behavior is preserved in
+> [raw compile-time execution input](project/raw/compile-time-execution.md), and
+> type metadata and identity questions in
+> [raw reflection input](project/raw/reflection.md).
+>
+> This note routes those concerns without rewriting the complete legacy syntax
+> below.
+
 ### Meta-types with omitted meta argument types
 
 Meta-types are normal types except one or more types used within the meta-type is selected at compile-time. This allows a type to be variable.

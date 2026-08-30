@@ -246,6 +246,15 @@ source and its comments as well as in the surrounding explanation.
   in prose.
 - Repeat a complex example in the section that owns it rather than opening a
   document with it.
+- Consolidation may remove repeated explanation but must preserve examples,
+  tables, and checklists that make a deciding boundary understandable. Verify
+  that unmarked source uses current forms and label illustrative future syntax
+  inline. When consecutive examples change declarations, candidate sets,
+  visibility, types, or other material assumptions, state that change before
+  contrasting their outcomes.
+- Establish shared behavior before explaining variations. Organize differences by
+  the property that actually varies so document structure does not make an
+  ordinary family member appear categorically special.
 
 ### Raw material carries the same obligation
 
@@ -268,11 +277,26 @@ preserve rejected hypotheses and diagnostic classification so that promotion
 avoids inventing an obligation; the promoted owner removes that discovery history
 and teaches the valid model.
 
+Repair settled wording and examples directly. Remove a legacy or superseded
+alternative when its only remaining purpose is to say that it is obsolete;
+retain historical material only when it still preserves useful evidence,
+compatibility context, or a current teaching boundary. This does not prohibit
+counterexamples that teach a valid distinction or intentional diagnostic.
+
 ## Authority and maturity
 
 Document location does not create authority. Checked-in prose, polished
 examples, generated output, plans, and agent-authored proposals remain evidence
 until promoted deliberately.
+
+Legacy and current conceptual syntax are evidence at their stated maturity, not
+permanent compatibility anchors. Preserve a form when it remains coherent, but
+revise it when concrete cross-feature pressure exposes ambiguity, inconsistency,
+hidden cost or authority, or a locally convenient choice that harms the wider
+language. Do not churn syntax for taste or preserve a poor solution merely to
+avoid change. Trace every material consequence, and raise the threshold for
+revision as implementation, users, formal contracts, and compatibility
+commitments accumulate.
 
 Use these decision-maturity states:
 
@@ -535,6 +559,19 @@ The dry run:
    material.
 9. Produces the exact proposed promotion change set.
 
+Record the result in the active work file and report **PASS** or **FAIL** in
+chat. FAIL means the dry run found material design, ownership, or integration
+questions that require new alignment before promotion can begin. PASS means the
+aligned findings have a coherent owner structure, human reading path, deferred
+destinations, and exact promotion set; it does not authorize promotion.
+
+A dry run tests cohesive teaching as well as unique authority. A concern may
+have one owner per rule yet still require a dedicated concept owner when readers
+would otherwise reconstruct one feature across several local documents. A
+material issue discovered during promotion review revises the recorded dry-run
+result and change set before closure rather than being ignored because an
+earlier result passed.
+
 A disposition ledger or ownership map supports this work but does not replace
 understandable findings. Preserve each material finding in plain language with
 enough examples and reasoning for the maintainer to recognize what the later
@@ -666,5 +703,6 @@ For an authorized documentation change, check the applicable items:
 - Lower-case naming is followed except for `README.md`.
 - Local links and heading anchors resolve.
 - Markdown renders coherently.
-- Staged and unstaged review boundaries are preserved.
+- Staged and unstaged review boundaries are preserved, including untracked paths
+  when that boundary is being relied upon or reported.
 - The final changed-file set matches the explicitly authorized scope.

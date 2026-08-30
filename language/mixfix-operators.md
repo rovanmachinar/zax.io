@@ -6,8 +6,8 @@
 | Audience | Human developers defining, using, reviewing, or tooling multi-component Zax operations |
 | Applies To | Mixfix tree matching, declarations, selection, and evaluation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Mixfix tree skeletons, components, holes, receiver anchors, declarations, call/index components, structural matching, mandatory direct selection, decomposition, ambiguity, unavailable best, protected barriers, qualification, branch-specific selection, and mixfix costs/diagnostics/source stability |
-| Does Not Own | The ordinary operator catalog and precedence ([operator catalog](operator-catalog.md)); shared callable viability and result mapping ([function invocation](function-invocation.md)); token spacing and continuation ([source structure](source-structure.md)); lifecycle semantics ([construction, replacement, and destruction](construction-and-destruction.md)); exact operator-phrase grammar, indexing/slicing, generics, reflection, or compiler implementation |
+| Owns | Mixfix tree skeletons, components, holes, receiver anchors, declarations, phrase and call/index components, structural matching, mandatory direct selection, decomposition, ambiguity, unavailable best, protected barriers, qualification, branch-specific selection, and mixfix costs/diagnostics/source stability |
+| Does Not Own | The ordinary operator catalog, exact phrase forms, and precedence ([operator catalog](operator-catalog.md)); the cohesive [operator phrase](operator-phrases.md) feature outside its use as mixfix components; the shared candidate-tree, outward-result, and selection model ([operators](operators.md)); shared callable viability and result mapping ([function invocation](function-invocation.md)); general token spacing, comments, continuation, and layout ([source structure](source-structure.md)); lifecycle semantics ([construction, replacement, and destruction](construction-and-destruction.md)); indexing/slicing, generics, reflection, or compiler implementation |
 | Source / Provenance | Operator-tree and direct indexed-operation requirements refined from legacy operator and array evidence |
 
 ## Mental model
@@ -29,7 +29,9 @@ arbitrary new punctuation token.
 
 ## Trees, components, and holes
 
-The ordinary [operator catalog](operator-catalog.md) forms the tree first.
+The ordinary [operator catalog](operator-catalog.md) forms the tree first for
+symbolic source. Word-spelled source forms candidate trees under the shared
+[operator model](operators.md#candidate-tree-formation-and-selection).
 
 ```zax
 a[b] = c + d
@@ -100,9 +102,72 @@ A declaration:
 - may declare zero, one, or several result slots; and
 - receives no capability from punctuation alone.
 
-Pre-unary, post-unary, binary, circumfix, call, index, and future phrase
-components retain their own forms. A component cannot reinterpret a pre-unary
-spelling as binary or postfix.
+Pre-unary, post-unary, binary, circumfix, call, index, and phrase components
+retain their own forms. A component cannot reinterpret a pre-unary spelling as
+binary or postfix.
+
+## Phrase components
+
+A phrase component is one exact contiguous word sequence declared with its own
+fixity. For:
+
+```zax
+high shift left through low by count
+```
+
+an illustrative declaration is:
+
+```zax
+Multiword :: type {
+  operator mixfix
+    binary 'shift left through'
+    binary 'by'
+  final : (
+    result : Multiword
+  )(
+    low : Multiword,
+    count : BitCount
+  ) = {
+    // `_` is `high`, the receiver anchor.
+  }
+}
+```
+
+`operator mixfix` identifies the complete consumed skeleton. Each component line
+identifies one exact component and its fixity. The prototype lists non-receiver
+holes in source order; type-use holes, when present, are likewise declared by
+parameters rather than interpolated into phrase text.
+
+A phrase component uses only pre-unary, post-unary, or binary fixity. A
+word-delimited operation that surrounds or separates several holes is therefore
+built from several mixfix phrase components rather than from a phrase circumfix.
+
+Word-spelled source may present several structurally complete readings. Candidate
+trees are formed and pruned by the shared model in
+[operators](operators.md#candidate-tree-formation-and-selection); this document
+applies that model rather than redefining it. A uniquely selected inner result may
+make a structurally matching outer mixfix viable, as
+[nested outward resolution](#nested-outward-resolution) describes below.
+
+An explicit
+[phrase fence](operator-phrases.md#exact-phrase-fencing) marks one exact
+component. It does not group, add a precedence boundary, choose between ordinary
+operator and mixfix readings, or select an implementation:
+
+```zax
+high 'shift left through' low 'by' count
+```
+
+The fences establish exact components. Complete-tree pruning still determines
+whether they form one mixfix or several operations.
+
+A complete mixfix may span physical lines when its surrounding construct has a
+valid continuation reason, but each individual phrase component remains on one
+physical line with exactly one ASCII space between its words. Those presentation
+rules are owned by
+[operator phrases](operator-phrases.md#presentation-confirms-a-selection-it-never-makes-one);
+general continuation and physical-line mechanics remain with
+[source structure](source-structure.md#operator-phrase-source-integration).
 
 ## Call and index components
 
@@ -254,11 +319,12 @@ removes no required conditional evaluation boundary.
 The exact Boolean short-circuit operations are barriers:
 
 - symbolic `&&` and `||`;
-- future phrase NAND and AND-NOT;
-- future phrase NOR and OR-NOT.
+- phrase `logical nand` and `logical and not`; and
+- phrase `logical nor` and `logical or not`.
 
-Exact Boolean XOR and XNOR are eager and may be consumed. Mixed Boolean/custom
-operand shapes are ordinary eager operations and may participate.
+Exact Boolean `^^` and `logical xnor` are eager and may be consumed. Mixed
+Boolean/custom operand shapes are ordinary eager operations and may participate,
+including custom implementations of the language-defined logical phrase forms.
 
 A protected short-circuit result may fill a hole:
 
@@ -341,7 +407,7 @@ error.
 
 ## Multiword bit operations
 
-Future phrase/mixfix work must preserve separate operations for:
+Zax preserves separate operations for:
 
 - multiword logical left/right shift;
 - multiword arithmetic right shift;
@@ -350,9 +416,11 @@ Future phrase/mixfix work must preserve separate operations for:
 - funnel shift left/right; and
 - writable forms affecting two component places.
 
-Illustrative phrases:
+Their exact words remain deferred, so the following source is illustrative
+wording rather than current spelling:
 
 ```zax
+// Illustrative wording; exact multiword phrases are not established.
 high shift left through low by count
 high rotate left through low by count
 result funnel right from high and low by count
@@ -361,12 +429,13 @@ result funnel right from high and low by count
 These operations have receiver, chained value, and unsigned count holes. Baseline
 components have equal logical bit extents. Shifts zero/sign-fill at the outer
 boundary, rotates wrap across the combined extent, and funnel shifts return one
-fixed-width window.
+fixed-width window. They use shift/rotate/composition precedence and have
+language-provided basic-integer forms.
 
 Exact phrase spelling, signedness constraints, mutation of one versus both
-components, result shape, and alias behavior remain future work.
+components, result shape, and alias behavior remain future numeric work.
 
-## Circumfix and phrase components
+## Circumfix and phrase components in ordinary trees
 
 A recognized circumfix may participate as one complete component:
 
@@ -376,9 +445,10 @@ A recognized circumfix may participate as one complete component:
 
 Its opening and closing delimiters are not independent unary operators.
 
-Operator phrases may also become components after phrase work establishes their
-exact words, fixity, and precedence. Adjacent independent phrase applications
-require grouping.
+Operator phrases participate as ordinary components with their exact words,
+fixity, and precedence from the
+[operator catalog](operator-catalog.md#operator-phrase-forms). Adjacent
+independent phrase applications require grouping.
 
 ## Costs and diagnostics
 
@@ -405,6 +475,6 @@ This document defines current conceptual mixfix behavior, not formal grammar,
 reflection metadata, implementation matching algorithms, or a conformance
 contract.
 
-Exact declaration syntax, phrase components, generic substitution, partial-type
-extension, call/index edge cases, slicing, lambda types, multiword operations,
-and diagnostics identifiers remain focused future work.
+Exact declaration syntax, generic substitution, partial-type extension, call/index
+edge cases, slicing, lambda types, exact multiword words, and diagnostics
+identifiers remain focused future work.

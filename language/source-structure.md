@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
-| Does Not Own | [Declaration and binding behavior](declarations-and-bindings.md), [function invocation and result routing](function-invocation.md), [core flow-control semantics](core-flow-control.md) including which `else` clause runs, [operator selection](operators.md), the exact [operator catalog and precedence](operator-catalog.md), [mixfix semantics](mixfix-operators.md), the complete keyword or delimiter catalog, compiler-directive placement or attachment, [scope-exit destruction behavior](construction-and-destruction.md), documentation payload languages, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
+| Does Not Own | The cohesive [operator phrase](operator-phrases.md) feature, including phrase words, fencing, interpretation, and phrase-specific presentation; [declaration and binding behavior](declarations-and-bindings.md); [function invocation and result routing](function-invocation.md); [core flow-control semantics](core-flow-control.md) including which `else` clause runs; [operator selection and candidate-tree formation](operators.md); the exact [operator catalog and precedence](operator-catalog.md); [mixfix semantics](mixfix-operators.md); the complete keyword or delimiter catalog; compiler-directive placement or attachment; [scope-exit destruction behavior](construction-and-destruction.md); literal realization; documentation payload languages; diagnostic identifiers; or compiler and tooling implementation |
 
 ## Mental model
 
@@ -202,6 +202,80 @@ pre/post unary applications. Nested magnitude uses grouping:
 
 Exact circumfix forms and availability are defined by the
 [operator catalog](operator-catalog.md#circumfix-operations).
+
+## Operator phrase source integration
+
+The complete programmer model for phrase words, interpretation, grouping,
+fencing, and phrase-specific presentation is owned by
+[Zax operator phrases](operator-phrases.md). This section records how the general
+source machinery owned here applies to that feature.
+
+### Phrase words and selected presentation
+
+A phrase word is an ASCII `[a-z][a-z0-9]*` token. After phrase selection, each
+multiword component must contain exactly one ASCII space between words and remain
+on one physical line:
+
+```zax
+chickens cluck loudly    // valid when this phrase is uniquely selected
+chickens cluck  loudly   // error: phrase-whitespace intent
+chickens cluck \
+    loudly               // error: selected phrase spans physical lines
+```
+
+Comments, doubled spaces, and explicit continuation remain source trivia while
+candidate trees are formed. They do not remove a competing phrase reading.
+Only after one interpretation survives does this document's physical-line and
+trivia validation report a phrase-presentation error. An uncontinued newline is
+different because it already ends the logical statement.
+
+The complete ambiguity and presentation examples are in
+[operator phrases](operator-phrases.md#presentation-confirms-a-selection-it-never-makes-one).
+
+### Phrase fences and literal coordination
+
+An attached single quote starts a literal payload; a whitespace-separated single
+quote starts an exact phrase fence:
+
+```zax
+"ordinary text" // ordinary unprefixed literal
+h'DEADBEEF'     // attached prefixed literal
+foo 'bar'       // whitespace-separated phrase fence
+```
+
+Every fenced word follows the phrase-word token rule. The fence permits no
+escapes or leading/trailing spaces. A whitespace-separated single-quoted payload
+is a phrase fence rather than an unprefixed literal, and `''` is an invalid empty
+fence.
+
+The phrase feature owns what fencing does to candidate interpretations; see
+[exact phrase fencing](operator-phrases.md#exact-phrase-fencing). Complete
+literal realization remains future literal work and may not reinterpret this
+attachment boundary.
+
+### Contextual keywords and enclosure boundaries
+
+The contextual-keyword machinery owned here considers keyword roles only where
+their constructs are grammatically permitted. Phrase words may use the same
+spellings; complete phrase interpretation and ambiguity behavior are defined by
+[operator phrases](operator-phrases.md#keyword-words-in-phrase-roles).
+
+A phrase component cannot cross a hard statement boundary. It also cannot span a
+source enclosure whose payload must independently form a complete expression or
+effective statement. General statement, continuation, delimiter, and enclosure
+recognition happen before the phrase owner applies candidate pruning.
+
+### Formatter and source-reflection impact
+
+A formatter must retain comments, spaces, physical lines, and fences until phrase
+selection completes. It may then normalize one selected phrase to its exact
+single-space presentation, but it may not add or remove a fence or turn ambiguity
+into another meaning.
+
+Source reflection and documentation must retain enough physical trivia to
+reproduce an explicit phrase fence even though the fence creates no final
+expression-tree node. Complete source-reflection representation remains future
+work.
 
 ## Comma-list continuation
 
@@ -1200,6 +1274,10 @@ Layout and separator diagnostics additionally distinguish:
 - symbolic pre/post/binary whitespace that contradicts the recognized fixity;
 - adjacent independent unary applications without grouping;
 - an unknown contiguous symbolic token where no catalog form exists;
+- a phrase-whitespace presentation error in a selected component;
+- a selected phrase component spanning a physical line;
+- an empty phrase fence, or a fence with an escape, leading space, or trailing
+  space;
 - an explicit `\` where a declaration colon or mixfix component list already
   continues the newline;
 - an initializer `=` followed by an uncontinued newline;
@@ -1216,6 +1294,10 @@ Layout and separator diagnostics additionally distinguish:
 - exact `{ }` used as an initializer or post header; and
 - the parseable multiline initializer-block composition whose layout places its
   operands at conflicting levels.
+
+Phrase-word, recognition, fencing, attachment, and other phrase-specific
+diagnostics are listed by
+[Zax operator phrases](operator-phrases.md#costs-diagnostics-formatting-and-source-stability).
 
 Source diagnostics fall into ordinary syntax rejection (source that matches no
 legal production), semantic errors (source that parses but violates a type,
@@ -1260,7 +1342,8 @@ conditional-expression meaning is owned by
 [core flow control](core-flow-control.md).
 
 Contextual keyword recognition is accepted as a positional rule: a spelling is a
-keyword only where its keyword construct is grammatically permitted. The complete
+keyword only where its keyword construct is grammatically permitted. Words inside
+a declared or fenced operator phrase carry phrase roles instead. The complete
 keyword catalog and each construct's grammar remain with their own owners and
 future work.
 
@@ -1281,7 +1364,10 @@ effective statement and cannot obtain a missing operand or separator from
 outside. The enclosure creates no scope. After that completeness check, it is
 transparent to final precedence and mixfix matching while preserving
 keyword-neutral and confusable-form intent. Semicolon composition, continuation,
-qualification, protection, and lifetime remain unchanged.
+qualification, protection, and lifetime remain unchanged. Strict neutralization,
+unavailable nesting, and the enclosure's interaction with reflection and
+formatting remain with that future work; the phrase no-spanning rule above is
+already stable regardless of the enclosure's final spelling.
 
 Comma-list continuation is the ordinary list-level implicit continuation because
 the parsed comma already requires another element. Declaration colon and mixfix
@@ -1289,10 +1375,11 @@ component-list continuation are separate grammar-open construct rules. None
 establishes a general rule that incomplete expressions continue automatically.
 
 [Declaration and binding behavior](declarations-and-bindings.md) is defined by
-its current conceptual owner. Operator semantics and precedence are defined by
-[operators](operators.md), the [operator catalog](operator-catalog.md), and
+its current conceptual owner. Operator semantics, candidate-tree formation, and
+precedence are defined by [operators](operators.md), the
+[operator catalog](operator-catalog.md), and
 [mixfix operators](mixfix-operators.md). Individual flow-control behavior,
-scope-exit effects, literal continuation semantics, and documentation payload
+scope-exit effects, literal realization, and documentation payload
 interpretation remain with their applicable owners or future work.
 
 For Zax's accepted foundational direction, see the

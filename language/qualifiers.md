@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Place-replacement, value-mutability, and access qualifiers; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
+| Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
 | Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [function invocation, result routing, and callable preference](function-invocation.md), [operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix tree semantics](mixfix-operators.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
 
 ## Mental model
@@ -21,7 +21,7 @@ Each question has its own qualifier axis:
 
 | Axis | Stances | Governs |
 | --- | --- | --- |
-| Place replacement | `final` / `varying` | Whether the immediately qualified storage place may ordinarily receive another value lifetime |
+| Place replacement | `final` / `varying` | Whether the qualified storage place may ordinarily receive another value lifetime, and whether a particular declaration may exercise that authority |
 | Value mutability | `mutable` / `immutable` | Whether the current value lifetime's contained state may change through ordinary behavior |
 | Access capability | `writable` / `readonly` | Whether the current path may perform an otherwise permitted content mutation or place replacement |
 
@@ -45,17 +45,168 @@ the defaulted mutable value through the defaulted writable source path.
 `readonly` removes change authority from `reader` without changing the value's
 mutability or the place's final stance.
 
+## Type-side truth versus declaration-side permission
+
+`final` and `varying` occupy two positions that answer two different questions:
+
+| Position | Meaning |
+| --- | --- |
+| Type-use side | Whether the underlying place is actually `final` or `varying` |
+| Declaration-name side | Whether this declaration or access path may exercise replacement authority |
+
+This is the same shape as the distinction between a mutable value and a readonly
+access path. Teach it as **capability versus permission**:
+
+| Kind of change | Underlying capability | Permission through this path |
+| --- | --- | --- |
+| Mutate the current value lifetime's contents | `mutable` | `writable` |
+| Replace the entire value lifetime in place | type-side `varying` | `writable` plus declaration-side `varying` |
+
+The restrictive counterparts are:
+
+| Concern | Underlying restriction | Path restriction |
+| --- | --- | --- |
+| Content mutation | `immutable` | `readonly` |
+| Whole-value replacement | type-side `final` | declaration-side `final` |
+
+`readonly` and `writable` appear in the qualified type use but semantically
+describe the current access path rather than the nominal base type. `readonly` is
+broad: it removes both content-mutation and whole-value-replacement authority
+through that path, so a second declaration-name `readonly` would only repeat the
+same fact.
+
+Declaration-side `final` is narrower. It removes only whole-value replacement
+authority while preserving writable content mutation when the value is mutable:
+
+```zax
+source varying : MyType mutable varying
+
+reader : MyType mutable readonly varying & = source
+restricted final : MyType mutable writable varying & = source
+
+reader.member = replacement     // error: readonly path
+restricted.member = replacement // legal: mutable value and writable path
+restricted = makeMyType()       // error: declaration-side final
+```
+
+That is why `final`/`varying` needs both positions while `readonly`/`writable`
+does not.
+
+So:
+
+```zax
+myType final : MyType varying
+```
+
+means:
+
+- the underlying type/place is varying;
+- an authorized path may replace its value lifetime in place;
+- this declaration promises not to exercise that replacement authority; and
+- the declaration may still mutate contents when the value is mutable and the
+  path is writable.
+
+### Same-place aliases
+
+A restricted same-place view preserves the underlying truth while narrowing
+replacement authority through that declaration:
+
+```zax
+myType varying : MyType varying
+
+myAliasType final : MyType varying & = myType
+```
+
+`myType` retains replacement access. `myAliasType` cannot initiate replacement,
+but its type use still records truthfully that another path may replace the
+referent. A same-place alias never misreports the referent's actual stance, and an
+omitted type-side stance inherits that actual stance rather than changing it.
+
+### Permitted and rejected combinations
+
+```zax
+name final : Type             // type-side omission resolves final for new storage
+name final : Type varying     // legal: restrict replacement through this path
+name varying : Type varying   // legal: retain replacement access
+name final : Type final       // legal
+name varying : Type final     // error: access cannot exceed underlying capability
+```
+
+Declaration-side `final` may narrow replacement access from varying to final. It
+may never widen final storage to varying.
+
+Declaration-side replacement permission must survive aliases, argument mapping,
+results, and captures. A declaration-final path cannot regain replacement
+authority merely by being supplied to a callable whose referent type remains
+varying. See
+[Zax function invocation](function-invocation.md#declaration-side-replacement-permission).
+
+### Immutable varying places seen through several paths
+
+```zax
+value varying : MyType immutable varying
+
+observer final :
+  MyType immutable readonly varying & = value
+
+replacer varying :
+  MyType immutable writable varying & = value
+
+restricted final :
+  MyType immutable writable varying & = value
+
+replacer = makeMyType()   // reconstructive replacement
+restricted = makeMyType() // error: this declaration lacks replacement authority
+```
+
+The underlying place can undergo compiler-recognized reconstructive replacement,
+ending one immutable lifetime and beginning another. `observer` and `restricted`
+must understand that `replacer` may do so. `restricted` remains writable for
+operations that do not require whole-value replacement, but its declaration-side
+`final` prevents it from initiating reconstructive replacement.
+
+Effective whole-value replacement through one path therefore requires:
+
+- underlying type/place stance `varying`;
+- declaration/access replacement permission `varying`;
+- writable access;
+- a viable replacement operation; and
+- for reconstructive replacement, the applicable immutable-lifetime conditions.
+
+### Inspecting the stance
+
+The reserved `is final` query inspects the resolved type-use or referent-place
+truth, not this declaration's replacement permission:
+
+```zax
+restricted final : MyType varying
+
+restricted is final // false
+```
+
+Whether a particular declaration may exercise replacement belongs to future
+access or declaration reflection.
+
+### Pointer and reference bindings
+
+Declaration-side `final` restricts whole-value replacement *through that
+declaration*. It is not a statement about independently replacing or rebinding
+the pointer or reference binding itself. Exact syntax for that separate operation
+must be established by focused pointer, reference, and lifetime work rather than
+by overloading the same word with two meanings.
+
 ## What each axis promises
 
 ### `final` and `varying`
 
-`final` says the immediately qualified place is not ordinarily replaceable.
-`varying` says it may receive another value lifetime when a writable path and a
-viable replacement operation are available.
+Type-side `final` says the qualified place is not ordinarily replaceable.
+Type-side `varying` says it may receive another value lifetime when a writable
+path with declaration-side replacement permission and a viable replacement
+operation are available.
 
-An ordinary alias to the same place preserves that actual stance. A varying
-referent may not be presented as final merely to restrict one access path;
-readonly supplies that access restriction.
+An ordinary alias to the same place preserves that actual type-side stance. A
+varying referent may not be presented as final; declaration-side `final` or
+`readonly` supplies the access restriction instead.
 
 ```zax
 config final : Config mutable = makeConfig()
@@ -107,9 +258,9 @@ The axes combine when deciding whether a change is available:
 | Operation | Required qualifications |
 | --- | --- |
 | Mutate the current value lifetime's contents | `mutable` + `writable` |
-| Use generated reconstructive replacement for an immutable value | `immutable` + `varying` + `writable` |
+| Use generated reconstructive replacement for an immutable value | `immutable` + type-side `varying` + declaration-side `varying` + `writable` |
 | Observe a stable immutable place | `immutable` + `readonly` + `final` |
-| Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + explicit `varying` |
+| Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + explicit type-side `varying` |
 
 ## Varying places with immutable lifetimes
 
@@ -121,7 +272,7 @@ message varying : Message immutable = makeMessage("first")
 observer final :
   Message immutable readonly varying & = message
 
-replacer final :
+replacer varying :
   Message immutable writable varying & = message
 
 display(observer)                 // "first"
@@ -130,7 +281,10 @@ display(observer)                 // "second"
 ```
 
 Neither immutable instance mutates. The first lifetime ends and another
-immutable lifetime begins in the same storage.
+immutable lifetime begins in the same storage. `replacer` needs
+declaration-side `varying` in addition to writable access; a declaration-side
+`final` alias of the same place could observe the transition but never initiate
+it.
 
 The referent's `varying` stance must be explicit when creating an immutable
 place-tracking reference. Omission must not silently introduce this unusual
@@ -269,19 +423,22 @@ Ordinary views may narrow authority and strengthen the promise made by the new
 path:
 
 - `writable` to `readonly`;
+- declaration-side `varying` to declaration-side `final`;
 - a mutable value to a readonly path; and
 - an immutable value to a readonly path.
 
 The reverse directions weaken promises and are not ordinary conversions:
 
 - `readonly` to `writable`;
+- declaration-side `final` to declaration-side `varying`; and
 - `immutable` to `mutable`.
 
 Mutable or readonly state does not thereby become immutable. Readonly constrains
 one path; immutable makes a guarantee about one value lifetime.
 
-Final/varying is not an ordinary same-place authority conversion. An alias
-preserves the actual referent-place stance. A new independent destination place
+Type-side final/varying is not an ordinary same-place authority conversion. An
+alias preserves the actual referent-place stance, even when its own
+declaration-side permission is narrower. A new independent destination place
 resolves its own stance:
 
 ```zax
@@ -334,8 +491,9 @@ escaped construction-time aliases are defined or bounded by
 
 `=` has one compiler-recognized lifetime scenario in addition to arbitrary
 domain-specific operator candidates. When an existing destination is immutable
-and varying and the current path is writable, the compiler may select a
-generated **reconstructive replacement** candidate.
+and type-side varying, the current declaration has declaration-side varying
+replacement permission, and the current path is writable, the compiler may select
+a generated **reconstructive replacement** candidate.
 
 A mutable, varying destination uses ordinary operator selection. It does not
 receive this generated immutable-value lifecycle transition merely because its
@@ -565,10 +723,21 @@ generic result resolution remains later function design.
 Captures preserve or strengthen the captured source qualifications and never
 inherit pliability implicitly.
 
+Declaration-side replacement permission survives parameter binding, result
+routing, and capture. A declaration-final argument cannot regain replacement
+authority merely because the parameter's referent type use remains varying:
+
+```zax
+replaceThrough final : ()(target varying : MyType immutable writable varying &)
+
+restricted final : MyType immutable writable varying & = value
+replaceThrough(restricted) // error: restricted may not delegate replacement authority
+```
+
 The invocation owner applies these qualification truths to parameter binding,
 result routing, expected-result matching, compatible prototype adaptation, and
 partial-order candidate preference. See
-[Zax function invocation](function-invocation.md).
+[Zax function invocation](function-invocation.md#declaration-side-replacement-permission).
 
 Changing the labels, defaults, or result-acknowledgement policy of a compatible
 visible prototype does not permit its ordered implementation slots to gain
@@ -606,9 +775,10 @@ place. `final` does not prohibit an operator named `=`. An operation involving
 readonly prevents selection only of a candidate requiring writable access
 through that operand; it does not prohibit arbitrary effects elsewhere.
 
-The generated reconstructive candidate requires immutable, varying, and
-writable. It is unavailable for a mutable value or through a readonly receiver
-operand even when the underlying place is varying.
+The generated reconstructive candidate requires immutable, type-side varying,
+declaration-side varying, and writable. It is unavailable for a mutable value,
+through a readonly receiver operand, or through a declaration-side final path
+even when the underlying place is varying.
 
 A temporary supplies the qualifications of its resolved result and
 compiler-managed temporary place. An operation through a pointer or reference
@@ -659,15 +829,15 @@ Dereferencing does not change the qualifications of the dereferenced instance.
 Converting between pointer and reference forms preserves pointee-level
 qualifications.
 
-An ordinary alias to the same referent preserves that place's final/varying
-stance. Changing indirection form cannot present a varying referent as final or
-a final referent as varying.
+An ordinary alias to the same referent preserves that place's type-side
+final/varying stance, though it may narrow its own declaration-side replacement
+permission. Changing indirection form cannot present a varying referent as final
+or a final referent as varying.
 
-The place qualification of the pointer or reference binding itself does not
-transfer to a newly declared binding. A final pointer may produce a separately
-varying reference binding, and a final reference binding may produce a
-separately varying pointer binding, while the referent's final stance remains
-intact.
+The declaration-side permission of the pointer or reference binding constrains
+replacement through that declaration. Independently replacing or rebinding the
+pointer or reference binding itself is a separate operation whose exact syntax
+remains later indirection design.
 
 Changing indirection form may not silently strip referent qualifications or
 increase ordinary access authority. Complete pointer/reference grammar,
@@ -744,8 +914,11 @@ remain deferred.
 Diagnostics should:
 
 - identify the entity and indirection level carrying each qualification;
+- distinguish underlying capability from permission through the current
+  declaration or path;
 - distinguish unavailable authority from a conflicting qualification;
 - reject duplicate qualifier tokens at one syntactic point;
+- reject a declaration-side stance that would exceed the underlying capability;
 - report contradictions where contextual defaults become concrete;
 - explain required and available receiver-operand qualifications when no
   candidate is viable; and
@@ -787,15 +960,21 @@ implementation mapping, compatibility contract, or conformance specification.
 Later work may refine syntax and adjacent mechanisms while preserving:
 
 - the independence of place, value, and access qualification;
+- the separation of type-side capability from declaration-side permission;
 - per-layer attachment through indirection;
 - defaults filling only unresolved axes;
 - ordinary conversions never increasing authority;
-- same-place aliases preserving the referent's actual final/varying stance;
+- same-place aliases preserving the referent's actual type-side final/varying
+  stance while being free to narrow their own replacement permission;
 - mutation requiring mutable + writable;
-- generated reconstructive replacement requiring immutable + varying + writable;
+- generated reconstructive replacement requiring immutable + type-side varying +
+  declaration-side varying + writable;
 - deep immutability under ordinary safe behavior;
 - explicit, non-propagating unsafe pliability;
 - qualifier-aware receiver-operand selection;
 - function invocation applying qualification truth without silently increasing
   authority; and
 - the separation of mutability from lifetime and thread safety.
+
+Independent replacement or rebinding of a pointer or reference binding itself
+remains future pointer, reference, and lifetime work.

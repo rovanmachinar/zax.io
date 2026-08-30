@@ -9,6 +9,28 @@ legacy input for omitted meta types, compile-time specialization, and other
 meta-function behavior; those mechanisms may not silently broaden ordinary
 runtime result inference.
 
+> **Routing note.** Current design accepts only a narrow type-input model: a
+> prototype may declare a `ParameterType : type`
+> [type parameter slot](language/declarations-and-bindings.md#type-parameter-slots-and-type-arguments)
+> completed by one concrete type identity with no runtime storage, lifetime, or
+> evaluation, and `operator type` declares a
+> [type-receiver operation](language/declarations-and-bindings.md#type-receiver-operators)
+> that is *not* inherently compile-time.
+>
+> The `$Type` sigil, omitted-type inference, generic constraints, and computed
+> type results shown below are **not** current design. They are preserved as
+> future input in
+> [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
+>
+> Compile-time specialization, directed and inferred execution, and compile-time
+> failure are preserved in
+> [raw compile-time execution input](project/raw/compile-time-execution.md).
+> Reflection-dependent behavior is preserved in
+> [raw reflection input](project/raw/reflection.md).
+>
+> This note routes those concerns without rewriting the complete legacy syntax
+> below.
+
 ### Meta-functions with omitted meta argument types
 
 The compile-time language requires that types are known as the compiler doesn't not support runtime variable typed parameters. However, function types can be omitted and caller usage can be determined. Functions will only be considered as valid callee choice if their function signature is compatible with the caller's signature. If the signature of the function is compatible with the caller then the function is considered a candidate so long as a better candidate was not found. Better is subjective, but in Zax it means the function with the best exact match to the input and return types expected.

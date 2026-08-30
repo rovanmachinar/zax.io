@@ -124,17 +124,26 @@ values are produced. The parts a condition depends on are:
   that opposite selection is unambiguous and returns exactly `Boolean`.
 - An anonymous typed declaration such as `if : Boolean = ?value` supplies result
   context that an ordinary condition does not.
-- `&&` and `||` are ordinary eager overloadable operators for operand shapes
-  other than exact `Boolean`/`Boolean`, and may return any type. Those nodes
-  evaluate both operands left to right.
-- The exact language-provided `Boolean && Boolean` and `Boolean || Boolean`
-  operations are protected, cannot be user-replaced, evaluate left to right, and
-  short-circuit runtime evaluation of the right operand while still requiring
-  that operand to be valid at compile time.
-- Exact `Boolean ^^ Boolean` is a protected eager logical XOR. Extended logical
-  NAND, AND-NOT, NOR, OR-NOT, and XNOR operations are accepted concepts whose
-  exact operator phrases remain future phrase work. Their exact Boolean
-  AND/OR-derived forms preserve the corresponding short-circuit decision.
+- The exact language-provided Boolean logical family is protected and cannot be
+  user-replaced. Its members differ only in the logical operation and whether
+  that operation can decide its result before evaluating the right operand:
+
+  | Exact Boolean form | Evaluation |
+  | --- | --- |
+  | `&&` | Short-circuit when the left operand is false |
+  | `\|\|` | Short-circuit when the left operand is true |
+  | `^^` | Eager |
+  | `logical nand`, `logical and not` | Preserve the corresponding AND short-circuit decision |
+  | `logical nor`, `logical or not` | Preserve the corresponding OR short-circuit decision |
+  | `logical xnor` | Eager |
+
+  Every exact form evaluates required operands from left to right and still
+  requires every possible operand path to be valid at compile time. Their exact
+  forms and precedence are listed in the
+  [operator catalog](operator-catalog.md#boolean-operations).
+- For operand shapes other than an exact protected Boolean signature, the
+  symbolic and phrase forms are ordinary eager overloadable operations, may
+  return any type, and evaluate both operands left to right.
 
 Short-circuiting skips runtime evaluation, not compile-time resolution. A
 condition therefore may rely on protected short-circuit order for proof, but only
@@ -142,8 +151,7 @@ where the node really is exact `Boolean`/`Boolean`.
 
 Operator discovery and selection are defined by [operators](operators.md);
 exact forms and precedence by the
-[operator catalog](operator-catalog.md#boolean-operations). Phrase spelling
-remains future work.
+[operator catalog](operator-catalog.md#boolean-operations).
 
 ### Optional presence and dereference in conditions
 

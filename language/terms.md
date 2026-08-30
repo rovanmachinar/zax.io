@@ -96,8 +96,9 @@ non-operator keyword while the programmer intends it as an identifier or
 operator-phrase component.
 
 This is a lexical-role question rather than unsafe behavior or operator
-overload ambiguity. Future bare-source and phrase work must define any explicit
-keyword-neutral interpretation.
+overload ambiguity. Words inside a declared or fenced operator phrase carry
+phrase roles instead of keyword roles; see
+[Zax operator phrases](operator-phrases.md#keyword-words-in-phrase-roles).
 
 ## Current instance
 
@@ -208,6 +209,16 @@ erase their conditional runtime evaluation. Compiler-owned lifecycle and flow
 boundaries may be barriers or noncomponents for their own reasons. This differs
 from signature protection.
 
+## Native endianness
+
+**Native endianness** is the active byte order of the environment whose execution
+semantics are currently in effect.
+
+It is distinct from **compiler-host endianness**, the byte order of the
+environment running the compiler, from **target endianness**, the byte order
+selected for generated target behavior, and from the absolute orders **big
+endian** and **little endian**. See [Zax endianness](endianness.md).
+
 ## Normal completion
 
 **Normal completion** is relative to the construct being discussed. A body
@@ -245,16 +256,57 @@ does not matter.
 
 ## Operator phrase
 
-An **operator phrase** is an operator written with one or more
-language-recognized contextual words rather than a punctuation-only symbol.
+An **operator phrase** is an operator form written as one or more exact words
+rather than a punctuation-only symbol:
 
 ```zax
-// Illustrative phrase syntax; exact words remain future work.
-value shift left modulo count
+ready := left logical nand right
+converted := source as DestinationType
 ```
 
-The operation concept may be accepted before phrase work establishes its final
-words, precedence, declaration, and custom-extension rules.
+A phrase is not a second dispatch mechanism; it uses the shared callable and
+operator model. See [Zax operator phrases](operator-phrases.md),
+[Zax operators](operators.md#operator-phrases), and the
+[operator catalog](operator-catalog.md#operator-phrase-forms).
+
+## Phrase word
+
+A **phrase word** is one canonical word in an operator phrase. It matches
+`[a-z][a-z0-9]*`: an ASCII lower-case letter followed by ASCII lower-case letters
+or digits.
+
+The complete word and presentation rules are owned by
+[Zax operator phrases](operator-phrases.md#exact-finite-forms).
+
+## Phrase component
+
+A **phrase component** is one contiguous exact word sequence participating as an
+operator or as one component of a
+[mixfix](mixfix-operators.md#phrase-components) skeleton.
+
+A component carries exactly one fixity: pre-unary, post-unary, or binary.
+
+## Phrase fence
+
+A **phrase fence** is explicit local source requiring one exact phrase component:
+
+```zax
+foo 'bar'
+```
+
+It eliminates identifier, keyword, literal, and differently worded phrase
+interpretations for the fenced words. It does not group, add a precedence
+boundary, or select an implementation. See
+[Zax operator phrases](operator-phrases.md#exact-phrase-fencing).
+
+## Reserved phrase form
+
+A **reserved phrase form** is an exact operator phrase that user code cannot
+declare. Reserving a form holds it for the language even when some of its domain
+behavior remains future work.
+
+The current reserved set is listed by the
+[operator catalog](operator-catalog.md#reserved-phrase-forms).
 
 ## Operator-attachment intent error
 
@@ -444,6 +496,44 @@ primarily with punctuation, such as `+`, `&~`, or `<<%`.
 The language owns the closed symbolic catalog and precedence. Declarations may
 overload permitted forms but cannot invent arbitrary punctuation. See the
 [operator catalog](operator-catalog.md).
+
+## Type argument
+
+A **type argument** is the concrete type identity supplied to a
+[type parameter slot](#type-parameter-slot):
+
+```zax
+converted := source as DestinationType
+```
+
+A type argument has no runtime storage, lifetime, or evaluation. See
+[Zax function invocation](function-invocation.md#type-parameter-slots).
+
+## Type parameter slot
+
+A **type parameter slot** is a prototype input completed by one concrete type
+identity rather than a runtime value:
+
+```zax
+DestinationType : type
+```
+
+It occupies its ordered slot for viability, preference, and diagnostics like any
+other parameter. See
+[Zax declarations and bindings](declarations-and-bindings.md#type-parameter-slots-and-type-arguments).
+
+## Type-receiver operator
+
+A **type-receiver operator** is an operation discovered through a concrete type
+identity rather than through an instance:
+
+```zax
+BackingType := EnumType underlying type
+```
+
+It is declared with `operator type`, has no receiver instance, and is not
+inherently compile-time. See
+[Zax declarations and bindings](declarations-and-bindings.md#type-receiver-operators).
 
 ## Type use
 
