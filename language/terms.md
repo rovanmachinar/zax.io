@@ -7,7 +7,7 @@
 | Applies To | Cross-cutting human-language terms used by current conceptual design |
 | Implementation State | Not applicable |
 | Owns | Concise meanings and usage boundaries for cross-cutting descriptive terms |
-| Does Not Own | Keyword catalogs, complete behavior of the concepts named here, formal grammar, compiler terminology, implementation data structures, or definitions already owned by a language concept document |
+| Does Not Own | Keyword catalogs or the complete behavior owned by the concept documents linked here |
 
 ## Purpose
 
@@ -18,6 +18,14 @@ without being available as source syntax.
 Behavior remains with its concept owner. This page gives readers enough meaning
 to follow documentation and links to the relevant owner when the distinction
 affects programming behavior.
+
+## Active execution environment
+
+The **active execution environment** is the environment whose execution
+semantics currently govern an operation. It may be the generated target or the
+compiler host during applicable build-time execution. An unqualified
+environment-relative scalar name selects against this environment. See
+[Zax integers](integers.md#native-representation-and-software-emulation).
 
 ## Access path
 
@@ -57,6 +65,13 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
+## Compiler host
+
+The **compiler host** is the environment running the compiler and applicable
+build-time code. It is distinct from the generated target even when both happen
+to use the same CPU model or representation. See
+[Zax integers](integers.md#native-representation-and-software-emulation).
+
 ## Circumfix operator
 
 A **circumfix operator** is one complete operation with a language-recognized
@@ -68,7 +83,7 @@ opening component, closing component, and enclosed operand:
 
 The opening and closing symbols are not independent pre/post unary operations.
 Recognized forms and built-in availability are defined by the
-[operator catalog](operator-catalog.md#circumfix-operations).
+[operator catalog](operator-catalog.md#circumfix-forms).
 
 ## Construction packet
 
@@ -158,6 +173,16 @@ body.
 This does not evaluate both arms of a conditional expression. Non-Boolean
 overloads of symbolic logical operators are ordinary eager operations.
 
+## Exact value
+
+An **exact value** is the same mathematical or semantic value requested by an
+operation, without rounding, truncation, wrapping, saturation, substitution, or
+discarded information.
+
+An exact-width integer instead describes a type whose logical width is fixed.
+An exact conversion preserves the source value. An exact arithmetic result is
+the mathematical result without another policy transformation.
+
 ## Flow label
 
 A **flow label** is a separately shaped name category that names a complete flow
@@ -174,6 +199,20 @@ and a value or another pointer/reference value.
 
 Each level may have its own place and access qualifications. See
 [Zax qualifiers](qualifiers.md).
+
+## Identity boundary
+
+An **identity boundary** separates types that are not interchangeable even when
+their representation is the same. Assignment, argument passing, return, and
+operator matching cross it only through declared projection, admission, or a
+direct bridge. See
+[Zax identity types](identity-types.md#identity-boundary-and-underlying-type).
+
+## Identity type
+
+An **identity type** is a distinct outer type based on an existing underlying
+type. Its declaration explicitly chooses admission and an exposed or opaque
+underlying surface. See [Zax identity types](identity-types.md).
 
 ## Lifecycle operation
 
@@ -218,6 +257,13 @@ It is distinct from **compiler-host endianness**, the byte order of the
 environment running the compiler, from **target endianness**, the byte order
 selected for generated target behavior, and from the absolute orders **big
 endian** and **little endian**. See [Zax endianness](endianness.md).
+
+## Native representation
+
+A scalar type has a **native representation** when the applicable CPU provider
+classifies that width as a native scalar representation. This does not promise
+that every operation has a direct instruction or one uniform cost. See
+[Zax integers](integers.md#native-representation-and-software-emulation).
 
 ## Normal completion
 
@@ -267,7 +313,7 @@ converted := source as DestinationType
 A phrase is not a second dispatch mechanism; it uses the shared callable and
 operator model. See [Zax operator phrases](operator-phrases.md),
 [Zax operators](operators.md#operator-phrases), and the
-[operator catalog](operator-catalog.md#operator-phrase-forms).
+[operator catalog](operator-catalog.md#operator-forms).
 
 ## Phrase word
 
@@ -370,6 +416,12 @@ through a container.
 
 A projection derives capabilities from the path used to reach the containing
 value. Complete projection behavior belongs with the relevant language concept.
+
+An **identity projection** is a separate qualified use: an explicit conversion
+from an identity value to its immediate underlying type. It does not mean member
+access and need not create an access path. Documentation uses the qualified term
+when that distinction matters; see
+[Zax identity types](identity-types.md#identity-projection).
 
 ## Protected intrinsic signature
 
@@ -478,6 +530,13 @@ It is distinct from ordinary syntax rejection and from a deliberate intent or
 layout error. The violated rule and its behavior remain with the applicable
 concept owner.
 
+## Sealed type
+
+A **sealed type** cannot receive ordinary externally added members or
+operations. A separately authorized partial mechanism may still permit narrowly
+classified additions without changing stored shape. See
+[Zax integers](integers.md#exact-intrinsic-family).
+
 ## Short-circuit operator
 
 A **short-circuit operator** has language-defined evaluation in which an earlier
@@ -487,6 +546,16 @@ The skipped operand still resolves and validates at compile time. Short-circuit
 behavior is not general laziness: the language fixes which operand may be
 skipped, and a user overload does not receive an arbitrary unevaluated
 expression.
+
+## Software emulation
+
+**Software emulation** implements a scalar operation through several native
+operations or automatically supplied helper behavior when the CPU does not
+natively represent or directly operate on the requested width.
+
+A **software fallback** is a type-selection result that uses software emulation
+because no native candidate satisfies the request. See
+[Zax integers](integers.md#native-representation-and-software-emulation).
 
 ## Symbolic operator
 
@@ -508,6 +577,19 @@ converted := source as DestinationType
 
 A type argument has no runtime storage, lifetime, or evaluation. See
 [Zax function invocation](function-invocation.md#type-parameter-slots).
+
+## Target environment
+
+The **target environment** is the environment selected for generated program
+behavior. It is distinct from the compiler host and may be named explicitly by
+environment-relative type paths. See
+[Zax integers](integers.md#native-representation-and-software-emulation).
+
+## Transparent alias
+
+A **transparent alias** is another source name for the same canonical type
+identity. It creates no conversion or overload domain. See
+[Zax identity types](identity-types.md#transparent-aliases).
 
 ## Type parameter slot
 
@@ -542,6 +624,13 @@ context, as distinct from the type's definition.
 
 A type use may carry contextual qualification without changing the underlying
 type definition.
+
+## Underlying type and value
+
+An identity type's **underlying type** is the existing type on which its
+representation begins. The **underlying value** is the value used to create the
+identity or returned by identity projection. See
+[Zax identity types](identity-types.md#identity-boundary-and-underlying-type).
 
 ## Value
 

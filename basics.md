@@ -193,7 +193,7 @@ not current guarantees:
 
 Operator phrases are current design and taught by
 [Zax operator phrases](language/operator-phrases.md). Exact forms and precedence
-are in the [operator catalog](language/operator-catalog.md#operator-phrase-forms).
+are in the [operator catalog](language/operator-catalog.md#operator-forms).
 
 The list below retains only unresolved pointer, lifetime, allocation,
 function-representation, and variadic proposals. Their exact words are not
@@ -430,6 +430,18 @@ MyType :: type {
 
 ### Intrinsic types
 
+> **Current integer disposition.** Fundamental finite integer types, canonical
+> names and namespaces, role identities, exact/optional/narrowing conversion,
+> representation, counts, sizes, and portability are now owned by
+> [Zax integers](language/integers.md). Transparent aliases and explicit
+> identity declarations using `admit`/`restricted` and `expose`/`opaque` are
+> owned by
+> [Zax identity types](language/identity-types.md).
+>
+> The promoted integer catalog has been removed from this legacy page rather
+> than retained as duplicate teaching. The remaining block preserves unresolved
+> non-integer intrinsic input.
+
 ````zax
 // import the module system types into the global `Module` namespace
 :: import Module.System.Types
@@ -438,101 +450,6 @@ unknown : Unknown   // used as a generic pointer type to an `Unknown` type
 nothing : Nothing   // used as a generic type of `Nothing`
 void : Void         // an alias of the `Unknown` type
 boolean : Boolean   // A value representing `true` or `false` literals
-
-// aliased or templated signed integers to the appropriate fixed size equivalent
-char : Char         // Signed value representing the size of a single string
-                    // character (minimum 8 bits)
-wchar : WChar       // Signed value representing the size of a wide string
-                    // character (minimum 32 bits)
-small : Small       // Small is a signed value of the smallest cpu type
-                    // (minimum 8 bits)
-short : Short       // Short is a signed value of a smaller cpu type
-                    // (minimum 16 bits)
-integer : Integer   // Integer is a signed value of the fastest cpu type
-                    // (minimum 16 bits, 32/64 is typical)
-long : Long         // Long is a signed value of the natural longest cpu type
-                    // (minimum 32 bits)
-longest : Longest   // Longest is a signed value of the largest cpu type
-                    // (minimum 64 bits)
-
-// unsigned versions of the signed integers
-uchar : UChar
-uwchar : UWChar
-usmall : USmall
-ushort : UShort
-uinteger : UInteger
-ulong : ULong
-ulongest : ULongest
-
-// aliased fastest signed integer type with at least the specified bit size 
-fastI8 : FastI8
-fastI16 : FastI16
-fastI32 : FastI32
-fastI64 : FastI64
-fastI128 : FastI128
-
-// aliased fastest unsigned integer type with at least the specified bit size 
-fastU8 : FastU8
-fastU16 : FastU16
-fastU32 : FastU32
-fastU64 : FastU64
-fastU128 : FastU128
-
-// fixed size signed integers
-i8 : I8
-i16 : I16
-i32 : I32
-i64 : I64
-i128 : I128
-
-// fixed size unsigned integers
-u8 : U8
-u16 : U16
-u32 : U32
-u64 : U64
-u128 : U128
-
-// familiar named types
-byte : Byte             // alias of U8
-dbyte : DByte           // alias of U16
-qbyte : QByte           // alias of U32
-obyte : OByte           // alias of U64
-
-word : Word             // alias of the unsigned CPU's natural unit of data
-                        // mapped to the U8 through U128 types (or the next
-                        // largest size up if the natural word size is not
-                        // on a power of 2 byte boundary)
-                        // (undefined if greater than 128 bits)
-dword : DWord           // alias of double the byte capacity of the Word type
-                        // (undefined if greater than 128 bits)
-qword : QWord           // alias of double the byte capacity of the DWord type
-                        // (undefined if greater than 128 bits)
-
-uuid : UUID             // alias of U128
-
-rune : Rune             // alias of UWChar
-
-// aliased fixed size sizing types
-uptr : UPointer         // unsigned integer large enough to hold the
-                        // value of pointer
-
-sptr : SPointer         // signed integer large enough to hold the pointer
-                        // difference between two pointer values using
-                        // the same memory arena and must be the same bit size
-                        // as a UPointer (although this type can overflow if
-                        // the distances between the smallest pointer and the
-                        // largest pointer exceed the capacity of the type)
-
-slongPtr : SLongPointer // signed integer large enough to hold the pointer
-                        // difference between two pointer positions even if the
-                        // largest casted UPointer and smallest casted
-                        // UPointer are used (this type must not cause a panic
-                        // if the `as` operator is used to cast from a
-                        // `UPointer` to a `SLongPointer`)
-
-typeSize : TypeSize     // unsigned integer large enough to hold the size of
-                        // the largest possible type or standard requested
-                        // byte allocation
 
 // aliased or meta-types floats mapping to fixed size type equivalents
 float : Float           // fastest precision float
@@ -548,11 +465,7 @@ f32 : F32
 f64 : F64
 f128 : F128
 
-// advanced note: Integer/Float types are actually a templated type which
-// contains a bit size and/or a sign, e.g.
-Integer $(BitCount = Cpu.Integer.Optimal, UseSign = Sign.Signed) :: type {
-    // ...
-}
+// advanced legacy float-family input
 Float $(BitCount = Cpu.Integer.Optimal) :: type { /*... */ }
 
 // strings have a built-in `length` `mutator` and are extended ASCII by default

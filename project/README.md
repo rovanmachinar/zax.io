@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [010: Fundamental integer types and finite bit domains](work/010-integer-types.md) |
-| Next work number | `011` |
+| Active work item | [011: Integer literals and compile-time realization](work/011-integer-literals.md) |
+| Next work number | `012` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

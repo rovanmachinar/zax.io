@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | The cohesive operator phrase feature, including phrase words, declarations, interpretation, fencing, phrase-specific presentation, private phrase eligibility, and the receiver-oriented workaround ([operator phrases](operator-phrases.md)); exact forms, precedence, built-in family behavior, and availability ([operator catalog](operator-catalog.md)); mixfix tree matching and phrase components inside mixfix skeletons ([mixfix operators](mixfix-operators.md)); general source tokenization, physical lines, comments, whitespace, and continuation ([source structure](source-structure.md)); declaration ownership, type-parameter slots, and visibility rules ([declarations and bindings](declarations-and-bindings.md)); shared result routing and callable preference ([function invocation](function-invocation.md)); exact conditions and convergence ([core flow control](core-flow-control.md)); lifecycle behavior ([construction, replacement, and destruction](construction-and-destruction.md)); complete literal, numeric, floating-point, indexing, allocation, pointer, generic, reflection, or panic design |
+| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and [optional](../optional.md) evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -155,7 +155,7 @@ length := |vector|
 ```
 
 The enclosed `vector` is the receiver operand. Exact recognized circumfix forms
-are in the [operator catalog](operator-catalog.md#circumfix-operations).
+are in the [operator catalog](operator-catalog.md#circumfix-forms).
 
 ### Call
 
@@ -240,7 +240,7 @@ evaluation boundary must remain visible; exact Boolean `logical nand`,
 exact Boolean `logical xnor` is eager and consumable. Precedence belongs to the
 form rather than the receiver. A **reserved phrase form** is an exact form user
 code cannot declare at all; exact forms, precedence levels, and the reserved set
-are in the [operator catalog](operator-catalog.md#operator-phrase-forms).
+are in the [operator catalog](operator-catalog.md#operator-forms).
 
 ## Discovery
 
@@ -457,8 +457,11 @@ operator binary '+' final :
 ```
 
 This reserves fundamental Boolean, integer, pointer-sized numeric, floating, and
-other closed domains for coherent language evolution. Extensible library types
-such as `String` may expose ordinary library-owned overloads.
+other closed domains for coherent language evolution. Exposed integer identities
+receive the identity-adjusted protected surface defined by
+[Zax integers](integers.md) and [Zax identity types](identity-types.md).
+Extensible library types such as `String` may expose ordinary library-owned
+overloads.
 
 Signature protection differs from a
 [mixfix-consumption barrier](terms.md#mixfix-consumption-barrier). A barrier is a
@@ -481,7 +484,9 @@ instructions, constant folding, emitted code, intrinsics, or automatically linke
 helpers; operator semantics promise no lowering.
 
 Exact family availability is listed in the
-[operator catalog](operator-catalog.md#protected-intrinsic-domains).
+[operator catalog](operator-catalog.md#protected-domains). Complete protected
+integer behavior is in the
+[integer operator catalog](integer-operator-catalog.md).
 
 ## Boolean operations and fallback
 
@@ -498,7 +503,7 @@ arbitrary result shapes. Exact Boolean `^^` is protected and eager.
 
 Zax also supplies exact logical NAND, AND-NOT, NOR, OR-NOT, and XNOR phrase
 operations. The
-[catalog](operator-catalog.md#exact-logical-phrase-forms) records their exact
+[catalog](operator-catalog.md#exact-logical-phrases) records their exact
 forms, precedence, and evaluation.
 
 ### Direct-before-fallback
@@ -676,11 +681,15 @@ Programmers must be able to discover:
 - allocation and destruction;
 - mutation versus replacement;
 - arithmetic checks and policy results;
+- exact, optional, narrowing, unchecked, and unsafe conversion/admission;
+- associated count, delta, and distance result identities;
+- unchecked arithmetic and divisor contracts;
 - branch-specific selection; and
 - zero/multiple result handling.
 
 The detailed per-form costs are recorded alongside their families in the
-[operator catalog](operator-catalog.md).
+[operator catalog](operator-catalog.md) and applicable type-specific references
+such as the [integer operator catalog](integer-operator-catalog.md).
 
 ## Diagnostics
 
@@ -706,6 +715,10 @@ Diagnostics should distinguish:
 - grouping-required comparison;
 - arithmetic policy failure;
 - invalid shift count type;
+- unproved exact integer conversion;
+- failed or unavailable identity admission;
+- unavailable maximum-width delta;
+- unchecked-contract dependence;
 - compile-time source panic; and
 - source spacing, presentation, or continuation error.
 
@@ -726,6 +739,8 @@ Exact diagnostic identifiers remain future diagnostics work.
   invalid.
 - Adding a language-defined phrase or built-in signature may make previously
   unavailable source valid.
+- Adding a range fact or declared identity bridge may enable a conversion.
+- Changing an integer role's associated type may change an operator result.
 - Changing precedence or tokenization would reinterpret existing source.
 
 Source order, import order, and implementation convenience never resolve these
@@ -739,5 +754,6 @@ contract, or an implementation mapping.
 See the [operator catalog](operator-catalog.md) for exact forms,
 [operator phrases](operator-phrases.md) for word-spelled operations, and
 [mixfix operators](mixfix-operators.md) for tree-pattern operations. Literal
-operators, complete numeric families, call/index edge cases, allocation,
-pointers, generics, reflection, and panic recovery remain future focused work.
+operators, floating/fixed-point/unbounded numeric families, call/index edge
+cases, allocation, pointers, generics, reflection, build-contract syntax, and
+panic recovery remain future focused work.

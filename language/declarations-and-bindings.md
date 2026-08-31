@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete inference, [function invocation, parameter defaults, result routing, and callable selection](function-invocation.md), complete function capture and representation, [operator selection and candidate-tree formation](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix semantics](mixfix-operators.md), the cohesive [operator phrase feature](operator-phrases.md), general source tokenization and layout ([source structure](source-structure.md)), [construction, replacement, and destruction behavior](construction-and-destruction.md), move/copy and ownership, complete [qualifier behavior](qualifiers.md), complete visibility and generic behavior, anonymous recursive type syntax, flow-control grammar, import/module behavior, type identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
 
 ## Mental model
 
@@ -825,6 +825,8 @@ operator sets remain later operator design.
 Point :: type { }
 Fruit :: enum { }
 FriendlyName :: alias type ExistingType
+MyCount :: identity admit expose type U32
+MyHandle :: identity restricted opaque type Integer
 ModuleName :: import Module.Definition
 TypeName :: forward type
 ```
@@ -854,6 +856,15 @@ value final : :: type {
   member : Integer
 }
 ```
+
+`alias type` introduces another name for one identity. `identity ... type`
+introduces a new identity represented by an existing type. Identity declarations
+write one admission keyword (`admit` or `restricted`) and one surface keyword
+(`expose` or `opaque`) before `type`; neither axis has an omission default.
+
+Complete projection, admission, identity bridges, representation relationships,
+and exposed/opaque behavior are defined by
+[Zax identity types](identity-types.md).
 
 ### `forward`
 
@@ -1101,7 +1112,9 @@ Diagnostics should distinguish:
 - a declaration form used in a source position that does not accept it;
 - declaration-like spacing that conflicts with label intent;
 - duplicate bindings introduced by a result-routing construct; and
-- use of an unconstructed result slot as a live value.
+- use of an unconstructed result slot as a live value;
+- an identity declaration missing either its admission or surface keyword; and
+- conflicting `admit`/`restricted` or `expose`/`opaque` intent.
 
 Exact identifiers, wording, and presentation remain later diagnostics design.
 
@@ -1114,6 +1127,7 @@ inferred := value
 explicit : Type = value
 stableValue final : Type = value
 anonymous final : :: type { }
+MyCount :: identity admit expose type U32
 ```
 
 A formatter may canonicalize `: =` to `:=`. It must preserve the separation
@@ -1150,4 +1164,7 @@ It establishes constraints that later work must preserve:
   namespace, fixed path roots, and pending suffix resolution; and
 - structural typing must decide explicitly whether member names, qualifiers,
   defaults, inferred types, and recursive forms participate in identity,
-  equivalence, layout, conversion, and reflection.
+  equivalence, layout, conversion, and reflection; and
+- future generic, composition, and partial work must preserve the explicit
+  identity-declaration integration owned here and the behavior owned by
+  [Zax identity types](identity-types.md).

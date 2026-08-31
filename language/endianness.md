@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax code that stores, transmits, or interprets byte-ordered integers |
 | Applies To | Programmer-facing endian semantic enum behavior; not a formal grammar, layout contract, or specification |
 | Implementation State | Not established by this repository |
-| Owns | The endian mental model; absolute, native, compiler-host, and target endianness; how the four generated enum operations behave for endian values; receiver-correct encode, transcode, decode, adoption, and raw extraction; full-domain endian enum behavior; the focused endian operation surface; native right-operand as-if semantics; unavailable and deferred endian operations; storage/shape compatibility without implicit transfer; endian costs, diagnostics, and examples |
-| Does Not Own | Complete enum design, members, validity, inheritance, or generic generation; complete numeric type families; exact operator forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); complete type compatibility, ABI, layout, or serialization frameworks; compile-time execution behavior; any compiler mapping or lowering |
+| Owns | The endian mental model; absolute, native, compiler-host, and target endianness; how the four generated enum operations behave for endian values; receiver-correct encode, transcode, decode, adoption, and raw extraction; backing-value validity for endian enums; the focused endian operation surface; native right-operand as-if semantics; unavailable and deferred endian operations; storage/shape compatibility without implicit transfer; endian costs, diagnostics, and examples |
+| Does Not Own | Complete enum validity/generation; integer families and backing eligibility ([integers](integers.md)); exact forms and shared selection ([operator catalog](operator-catalog.md), [operators](operators.md)); or general type compatibility/layout rules |
 | Source / Provenance | Legacy [enums](../enums.md) and [basics](../basics.md) endian conversion evidence, refined against current operator and enum behavior |
 
 ## Mental model
@@ -31,8 +31,11 @@ sentence. Everything else is unavailable rather than approximate.
 
 ## Endian semantic enum families
 
-For every applicable fundamental basic integer type, Zax conceptually supplies a
+For every applicable exact fundamental integer type, Zax conceptually supplies a
 big-endian and a little-endian enum version backed by that same fundamental type.
+An applicable backing type has a whole-byte logical width, no non-value storage
+bits, and the representation guarantees defined by
+[Zax integers](integers.md#enum-and-endian-boundaries).
 
 ```zax
 big : BigEndianU32
@@ -44,9 +47,9 @@ are written here as though ordinary named enum types exist so that examples stay
 readable; exact generated names and the generic mechanism producing the family
 remain future enum and numeric work.
 
-These are **full-domain semantic enums**: every backing bit pattern represents
-some endian value. That is why the language-provided closed bitwise operations
-below cannot create an invalid enum representation.
+Every value of the backing integer type represents an endian value. That is why
+the language-provided closed bitwise operations below cannot create an invalid
+enum representation.
 
 Endian enums:
 
@@ -256,7 +259,8 @@ is unambiguous under the mental model:
 - the language-defined `bitwise nand`, `bitwise nor`, `bitwise xnor`, and
   `bitwise or not` phrase forms;
 - the corresponding direct mutation forms;
-- population count; and
+- population count, returning the backing integer's associated bit-count type;
+  and
 - reduction AND, OR, XOR/parity, NAND, NOR, and XNOR.
 
 ```zax
@@ -415,10 +419,9 @@ This document is current conceptual design, not a formal specification, layout o
 ABI contract, serialization framework, or implementation mapping.
 
 Exact generated endian type names, the generic mechanism producing the family,
-non-byte-multiple representations, padding, ABI, complete enum validity and
-operation inheritance, safe restricted-enum creation, complete arithmetic and
-ordering behavior, and complete compile-time-context naming remain focused future
-work.
+identity-family integration, ABI, complete enum validity and operation
+inheritance, safe restricted-enum creation, complete arithmetic and ordering
+behavior, and complete compile-time-context naming remain focused future work.
 
 Exact operator forms, fixity, and precedence are in the
 [operator catalog](operator-catalog.md#endianness-reference). The shared operator

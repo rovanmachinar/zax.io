@@ -7,7 +7,7 @@
 | Applies To | Cross-cutting principles that guide Zax source, APIs, and future language decisions |
 | Implementation State | Not applicable |
 | Owns | The human-facing catalog and full definitions of accepted reusable Zax design and use principles |
-| Does Not Own | Exact feature semantics, project cooperation rules, documentation process, formal conformance, compiler implementation, or unreviewed aphorisms |
+| Does Not Own | Exact feature semantics or project cooperation/documentation rules |
 | Source / Provenance | Foundational direction from the language vision and reusable principles recovered from legacy design material |
 
 ## Purpose

@@ -6,7 +6,7 @@
 | Audience | Future work defining literal realization, prefixes, payloads, or literal operators |
 | Applies To | Preserved literal syntax and operator pressure from operator review |
 | Owns | Literal realization questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted literal grammar, types, parsing, compile-time execution, or operator behavior |
+| Does Not Own | Accepted literal semantics or current source/integer behavior |
 | Source / Provenance | Legacy `basics.md` and `operator.md` literal evidence |
 
 ## Preserved requirements
@@ -27,6 +27,24 @@ literal work must decide:
 - explicit base, width, and encoding prefixes;
 - when realization fails at compile time; and
 - how expected type context participates.
+
+A typed slot may directly realize a compiler-known integer result when that
+result has not already committed to a concrete integer type:
+
+```zax
+myByte : Byte = compileTimeResult()
+```
+
+Out-of-range realization is a compile-time error. An ordinary result already
+typed as `Integer` does not become directly realizable as `Byte` merely because
+its value is constant. Literal and compile-time work must preserve that boundary
+and make the minimum signed value expressible without first realizing an
+unrepresentable positive value in the same type.
+
+The current integer-side boundary is owned by
+[Zax integers](../../language/integers.md#initialization-and-compile-time-realization).
+This input retains literal grammar, prefixes, payload, and unrealized-result
+mechanics.
 
 Legacy literal-operator evidence includes:
 

@@ -6,7 +6,7 @@
 | Audience | Future work defining compile-time execution, execution context, or constant availability |
 | Applies To | Directed and inferred compile-time execution and the host/target context questions it raises |
 | Owns | Preserved compile-time execution questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted compile-time semantics, directive syntax, diagnostics, constant rules, or reflection behavior |
+| Does Not Own | Accepted compile-time semantics or current integer/literal/reflection behavior |
 | Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type receivers, `is constant`, and native execution context |
 
 ## Why this input exists
@@ -122,6 +122,30 @@ Future work must decide:
 - whether the answer differs for language-provided versus user-declared
   type-receiver operations.
 
+## Deferred integer realization
+
+Current programmer-visible integer realization boundaries are owned by
+[Zax integers](../../language/integers.md#initialization-and-compile-time-realization).
+This section retains the future compile-time result mechanism.
+
+A compile-time operation may produce an integer whose concrete realization
+remains open until a typed slot requests a width and signedness:
+
+```zax
+myValue := compileTimeResult()
+myByte : Byte = compileTimeResult()
+```
+
+The typed declaration directly realizes `myByte` when the value fits and reports
+a compile-time error otherwise. This is not implicit conversion from a hidden
+preselected `Integer`.
+
+An ordinary expression already typed as `Integer` remains `Integer` even when
+the compiler proves it constant. Constancy alone does not grant another
+conversion surface. Future work must define the compiler-known unrealized
+integer category, result-polymorphic alternative, or other mechanism preserving
+that distinction.
+
 ## Compile-time availability and failure
 
 Accepted today: a language-level panic during compile-time execution becomes a
@@ -143,7 +167,9 @@ Future work must decide:
   compile-time by default;
 - `native` must not be used interchangeably with `host` or `target`; and
 - contextual layout and constant queries must be preserved as context-dependent
-  rather than completed here.
+  rather than completed here; and
+- compile-time evaluation of an already concrete integer must not silently
+  change its type-conversion rules.
 
 ## Activation and retirement
 

@@ -7,7 +7,7 @@
 | Applies To | Mixfix tree matching, declarations, selection, and evaluation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Mixfix tree skeletons, components, holes, receiver anchors, declarations, phrase and call/index components, structural matching, mandatory direct selection, decomposition, ambiguity, unavailable best, protected barriers, qualification, branch-specific selection, and mixfix costs/diagnostics/source stability |
-| Does Not Own | The ordinary operator catalog, exact phrase forms, and precedence ([operator catalog](operator-catalog.md)); the cohesive [operator phrase](operator-phrases.md) feature outside its use as mixfix components; the shared candidate-tree, outward-result, and selection model ([operators](operators.md)); shared callable viability and result mapping ([function invocation](function-invocation.md)); general token spacing, comments, continuation, and layout ([source structure](source-structure.md)); lifecycle semantics ([construction, replacement, and destruction](construction-and-destruction.md)); indexing/slicing, generics, reflection, or compiler implementation |
+| Does Not Own | Exact forms and precedence ([operator catalog](operator-catalog.md)); operator phrases outside mixfix participation ([operator phrases](operator-phrases.md)); shared selection ([operators](operators.md), [function invocation](function-invocation.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Operator-tree and direct indexed-operation requirements refined from legacy operator and array evidence |
 
 ## Mental model
@@ -447,7 +447,7 @@ Its opening and closing delimiters are not independent unary operators.
 
 Operator phrases participate as ordinary components with their exact words,
 fixity, and precedence from the
-[operator catalog](operator-catalog.md#operator-phrase-forms). Adjacent
+[operator catalog](operator-catalog.md#operator-forms). Adjacent
 independent phrase applications require grouping.
 
 ## Costs and diagnostics

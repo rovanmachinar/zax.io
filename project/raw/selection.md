@@ -6,7 +6,7 @@
 | Audience | Future work reviewing `switch`, `case`, and pattern-like selection |
 | Applies To | Selection constructs whose complete design was deferred by core flow control |
 | Owns | Preservation of the selection concern, its legacy provenance, the aligned `case next` consequence, current-flow constraints, activation pressure, and retirement criteria |
-| Does Not Own | Accepted selection syntax or behavior, exhaustiveness rules, pattern grammar, or diagnostic identifiers |
+| Does Not Own | Accepted selection semantics or current flow/operator ownership |
 | Source / Provenance | Work item `007`; legacy [flow control](../../flow-control.md) `switch`, `case`, and value-polymorphism sections |
 
 ## Reading posture

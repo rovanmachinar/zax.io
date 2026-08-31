@@ -7,7 +7,7 @@
 | Applies To | Intended language direction; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Zax's purpose, audience, foundational language direction, goals, intended advantages, non-goals, accepted high-level tradeoffs, and summary route to reusable language principles |
-| Does Not Own | Full reusable [language-principle definitions](principles.md), exact syntax, feature semantics, safety guarantees, ABI rules, runtime design, or compiler implementation |
+| Does Not Own | Full reusable [language-principle definitions](principles.md) or exact feature semantics |
 
 ## What Zax is
 
@@ -356,6 +356,12 @@ owned by [Zax source structure](source-structure.md). Accepted declaration,
 initialization, binding visibility, qualifier, name-resolution, and assignment
 boundaries are owned by
 [Zax declarations and bindings](declarations-and-bindings.md).
+Accepted transparent aliases, explicit identity types, admission, projection,
+and exposure boundaries are owned by
+[Zax identity types](identity-types.md). Accepted finite integer families,
+representations, conversions, and arithmetic contracts are owned by
+[Zax integers](integers.md), with complete protected operation behavior in the
+[integer operator catalog](integer-operator-catalog.md).
 
 Exact behavior outside the accepted concept owners, along with formal
 guarantees, diagnostic contracts, and implementation contracts, remains later

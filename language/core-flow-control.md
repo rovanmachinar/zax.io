@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, and explicit `scope`; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | How expressions produce values, including operator selection ([operators](operators.md)), exact logical forms ([operator catalog](operator-catalog.md)), and mixfix paths ([mixfix operators](mixfix-operators.md)); token spacing, continuation, brace layout, `else` source layout, and body boundaries ([source structure](source-structure.md)); binding visibility, the ordinary identifier namespace, and shadow permission ([declarations and bindings](declarations-and-bindings.md)); scope-exit destruction order and proof of a live value before access through conditionally live storage ([construction, replacement, and destruction](construction-and-destruction.md)); whole-function `return` result completion and branch-specific callable selection ([function invocation](function-invocation.md)); complete iteration, selection, resource management, error propagation, value polymorphism, async flow, formal grammar, or compiler behavior |
+| Does Not Own | Expression/operator selection ([operators](operators.md)); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and [scope](../scope.md) evidence |
 
 ## Mental model
@@ -140,7 +140,7 @@ values are produced. The parts a condition depends on are:
   Every exact form evaluates required operands from left to right and still
   requires every possible operand path to be valid at compile time. Their exact
   forms and precedence are listed in the
-  [operator catalog](operator-catalog.md#boolean-operations).
+  [operator catalog](operator-catalog.md#boolean-forms).
 - For operand shapes other than an exact protected Boolean signature, the
   symbolic and phrase forms are ordinary eager overloadable operations, may
   return any type, and evaluate both operands left to right.
@@ -151,7 +151,7 @@ where the node really is exact `Boolean`/`Boolean`.
 
 Operator discovery and selection are defined by [operators](operators.md);
 exact forms and precedence by the
-[operator catalog](operator-catalog.md#boolean-operations).
+[operator catalog](operator-catalog.md#boolean-forms).
 
 ### Optional presence and dereference in conditions
 

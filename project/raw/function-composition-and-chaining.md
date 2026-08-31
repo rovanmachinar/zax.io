@@ -6,7 +6,7 @@
 | Audience | Future work defining function composition, capture, chaining, generated callable types, or generic callable reflection |
 | Applies To | Preserved `>>`, `|>`, call-component, capture, and reflection pressure |
 | Owns | Representative source, generated-signature concepts, costs, boundaries, activation pressure, and retirement criteria |
-| Does Not Own | Accepted composition/chaining syntax, callable representation, capture, generics, reflection, or lowering |
+| Does Not Own | Accepted composition semantics or current invocation/operator ownership |
 | Source / Provenance | Legacy `functions.md` and operator review |
 
 ## Composition and capture pressure

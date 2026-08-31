@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining reflection, type metadata, declaration metadata, or source reflection |
-| Applies To | Reflection pressure exposed by operator-phrase, type-identity, and source-presentation review |
-| Owns | Preserved reflection questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted reflection syntax, metadata shape, identity rules, or tooling contracts |
+| Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, and source-presentation review |
+| Owns | Preserved reflection, integer metadata, representative-source, activation-pressure, and retirement questions |
+| Does Not Own | Accepted reflection semantics or the current domain facts reflected |
 | Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, and phrase fences |
 
 ## Why this input exists
@@ -143,16 +143,58 @@ Legacy enum material assumes compile-time metadata sufficient to convert between
 enum values and strings. Preserve that requirement here and route the enum-side
 questions to [enum types](enum-types.md).
 
+## Integer-specific metadata
+
+The integer facts themselves are current in
+[Zax integers](../../language/integers.md). This section retains the future
+reflection shape and tooling exposure required to report them.
+
+Future reflection must let integer tooling and generic code discover:
+
+- logical bit width and signedness;
+- minimum and maximum values;
+- exact intrinsic specialization;
+- transparent alias and public intent-identity relationships;
+- admission and exposure choices;
+- immediate projection type;
+- signedness counterpart and whether it is a named pair or unnamed exact type;
+- bit-count, byte-count, delta, distance, and storage associated types;
+- storage-envelope byte count, non-value padding extent, and alignment;
+- exact, native, or software representation classification;
+- requested native-selection constraints;
+- selected width, active/target/compiler-host environment, and fallback;
+- optimized-maximum selection and software-emulation classification;
+- applicable protected operation and conversion families;
+- declared range-containment and identity-bridge relationships;
+- endian eligibility; and
+- normalization requirements for representation-dependent exchange.
+
+Native representation says only that the CPU provider classifies the width as a
+native scalar representation. Per-operation instruction availability and cost
+remain separate metadata.
+
+Diagnostics should lead with the programmer's source alias or the most useful
+public catalog name. Expanded output may show the canonical
+`Scalars.Integers...` path and the underlying `Integer$(...)` specialization
+without making the generic expansion the ordinary error vocabulary.
+
+Future work must decide whether these facts form an integer-specific metadata
+section, general associated-type relationships, convenient phrase operations,
+or several layers. This input does not reserve exact reflection phrases.
+
 ## Constraints this input places on current work
 
 - current documentation must not present illustrative reflection wording as an
   exact source reservation;
 - canonical type identity must not absorb expression-specific facts; and
-- the direct predicate family must not expand to cover declaration properties.
+- the direct predicate family must not expand to cover declaration properties;
+- public aliases remain useful diagnostic vocabulary even when reflection exposes
+  canonical identity; and
+- integer-specific facts need not become universal fields on every type.
 
 ## Activation and retirement
 
-Activate this input when reflection, type or declaration metadata, source
-reflection, or reflection-dependent tooling is reviewed. Move accepted behavior
-into a reflection owner and the domain owners whose facts it exposes, then retire
-this file after every preserved question is dispositioned.
+Activate this input when reflection, type or declaration metadata, integer-family
+metadata, source reflection, or reflection-dependent tooling is reviewed. Move
+accepted behavior into a reflection owner and the domain owners whose facts it
+exposes, then retire this file after every preserved question is dispositioned.

@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), [function invocation, result routing, and callable preference](function-invocation.md), [operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix tree semantics](mixfix-operators.md), [construction, replacement, and destruction behavior](construction-and-destruction.md), pointer and reference grammar, ownership and lifetime strategies, complete move/copy selection, complete function and capture syntax, operator generation, recoverable panic, concurrency transfer, structural identity and equivalence, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); or complete pointer/lifetime rules |
 
 ## Mental model
 

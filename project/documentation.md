@@ -246,6 +246,21 @@ source and its comments as well as in the surrounding explanation.
   in prose.
 - Repeat a complex example in the section that owns it rather than opening a
   document with it.
+- Prefer `My...` and `my...` names when they help distinguish
+  programmer-defined declarations from language-provided ones. Use alphabetic or
+  numbered placeholder names only in a compact comparison whose relationships
+  explain those names; standalone or reusable examples use meaningful role
+  names.
+- Preserve established Zax grammatical categories and ordering. Declaration
+  keywords remain declaration keywords, operator phrases remain operator
+  phrases, and qualifiers appear in the established position for the construct
+  they qualify. Do not invent punctuation or compound pseudo-keywords that
+  conflict with Zax source conventions.
+- Do not omit a source choice merely to shorten an example when omission would
+  obscure the intent or boundary being taught.
+- When required syntax remains unsettled, preserve accepted surrounding grammar,
+  invent only the unresolved portion, mark it illustrative, and keep related
+  examples internally consistent.
 - Consolidation may remove repeated explanation but must preserve examples,
   tables, and checklists that make a deciding boundary understandable. Verify
   that unmarked source uses current forms and label illustrative future syntax
@@ -263,6 +278,34 @@ behavior, preserve representative valid examples, invalid counterexamples, and
 comments explaining the deciding distinction. Prose alone is insufficient when
 code can disambiguate the intended meaning. A raw input may omit examples only
 when no useful source form exists yet, and it should say so explicitly.
+
+### Teachability controls presentation order
+
+Completeness and teachability are both required:
+
+- teachability controls presentation order;
+- completeness controls coverage.
+
+Promotion does not present findings in discovery, audit, or contract order.
+Begin with ordinary use, concrete examples, and plain language. Define each
+specialized term before later rules rely on it. Layer exact rules, failures,
+costs, corner cases, and reference details only after readers have the
+prerequisite model.
+
+Apply these checks:
+
+1. **Cold-reader test:** a competent programmer who has not read the working
+   record can understand common use from the opening sections.
+2. **Vocabulary-before-use test:** every Zax-specific or overloaded term is
+   defined in plain language before carrying technical weight.
+3. **Concrete-paraphrase test:** an abstract rule is followed by what it changes
+   in source, values, operations, failures, or costs.
+4. **Teaching-versus-reference test:** exhaustive matrices and per-form behavior
+   follow the conceptual model or move into an independently useful catalog.
+5. **No working-record transcription:** promotion reconstructs human-facing
+   teaching rather than polishing analytical discussion.
+6. **Two-pass promotion:** first build the reader's model, then trace every
+   aligned finding into the appropriate later layer.
 
 ### Positive-first promoted teaching
 
@@ -282,6 +325,20 @@ alternative when its only remaining purpose is to say that it is obsolete;
 retain historical material only when it still preserves useful evidence,
 compatibility context, or a current teaching boundary. This does not prohibit
 counterexamples that teach a valid distinction or intentional diagnostic.
+
+Consume legacy material during promotion. Remove a legacy passage when all of
+its useful meaning has been promoted, moved to a live deferred owner, rejected,
+or superseded. Do not retain duplicate teaching merely for provenance. When a
+passage still contains unique unresolved input, extract the smallest useful
+concern and representative examples into its indexed future owner, then remove
+the superseded teaching from the public legacy page.
+
+Preservation does not imply in-place retention. Preserve each finding in the
+owner appropriate to its maturity: current behavior in current owners,
+unresolved input in indexed raw material, and historical provenance in project
+records or archives. Retain legacy text in an ordinary public reading path only
+while it remains unique useful input for an unresolved concern or teaches a
+concrete current compatibility boundary.
 
 ## Authority and maturity
 
@@ -347,6 +404,12 @@ of:
 | Does Not Own | Adjacent concerns owned elsewhere |
 | Source / Provenance | Evidence or predecessor when useful |
 | Supersedes / Superseded By | Ownership transitions when applicable |
+
+`Does Not Own` identifies only plausible competing ownership or a direct
+handoff. It is not an exhaustive exclusion list. Put detailed interactions,
+future boundaries, and deferred mechanics in the relevant body or maturity
+section instead of expanding metadata with everything the document does not
+cover.
 
 Do not retrofit untouched legacy pages merely for cosmetic consistency.
 
@@ -531,6 +594,11 @@ and state any constraint it places on current work. A deferred consequence must
 not lose its home when numbered work is archived, and archived work must not
 become a current owner's source of meaning.
 
+Discussion that exposes concrete future design pressure creates this capture
+obligation even when the maintainer does not separately repeat “capture this.”
+The obligation does not itself authorize an edit; normal discussion, alignment,
+and explicit edit authorization still apply.
+
 The active work file evolves only through discussed, aligned, and explicitly
 authorized edits.
 
@@ -571,6 +639,11 @@ would otherwise reconstruct one feature across several local documents. A
 material issue discovered during promotion review revises the recorded dry-run
 result and change set before closure rather than being ignored because an
 earlier result passed.
+
+The dry run applies the cold-reader, vocabulary-before-use,
+concrete-paraphrase, teaching-versus-reference, and two-pass promotion checks. It
+fails when ownership is unique but readers must still reconstruct the concept
+from abstract or poorly ordered material.
 
 A disposition ledger or ownership map supports this work but does not replace
 understandable findings. Preserve each material finding in plain language with

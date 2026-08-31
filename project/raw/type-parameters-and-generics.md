@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining generics, type parameters, constraints, or computed type results |
-| Applies To | Type-input pressure exposed by operator-phrase, declaration, and invocation review |
-| Owns | Preserved type-parameter and generic questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted generic syntax, constraints, instantiation, identity, reflection, or compile-time behavior |
+| Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, and integer-family review |
+| Owns | Preserved type-parameter, generic, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
+| Does Not Own | Accepted generic semantics or current declaration/type behavior |
 | Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type receivers |
 
 ## Why this input exists
@@ -139,6 +139,30 @@ Undecided:
 - how qualified type identities behave as receivers; and
 - whether a generic instantiation may add or remove type-receiver operations.
 
+### Qualified type receivers and `once`
+
+Reference admission creates pressure for a qualified type identity to supply
+receiver discovery:
+
+```zax
+// Illustrative; qualified type-receiver syntax is not established.
+myView := MyIdentity & from myUnderlying
+```
+
+Future work must decide:
+
+- whether `MyIdentity &` is one qualified type receiver;
+- whether expected-result context instead selects a reference-returning
+  `MyIdentity from ...` operation;
+- how alias and generic identities participate;
+- whether an explicit type parameter slot would duplicate the implicit
+  `operator type` receiver;
+- how `operator type` relates to legacy/static `once final`; and
+- whether `once varying` has a corresponding type-receiver role.
+
+The result must never silently change between by-value identity construction and
+same-storage reference view.
+
 ## Generated type families
 
 Endian enums are described as conceptually generated families with explicitly
@@ -153,17 +177,122 @@ Future generic work must decide:
 - how a family member's identity, reflection, and documentation appear; and
 - whether a family may be parameterized over more than the backing type.
 
+## Integer specializations and factory selection
+
+The concrete programmer-visible integer families and relationships are current
+in [Zax integers](../../language/integers.md). This section retains only the
+future generic/factory mechanism needed to produce them.
+
+Future integer work assumes a built-in generic family conceptually like:
+
+```zax
+// Illustrative only.
+MyI57 :: alias type Integer$(57, Sign.Signed)
+```
+
+Each realized combination is a concrete, closed intrinsic type. It is not still
+generic after realization.
+
+A separate integer factory returns one concrete specialization from dimensions
+such as:
+
+- minimum and maximum logical width;
+- signedness;
+- fastest or smallest preference;
+- active, target, or compiler-host environment;
+- native-representation requirement; and
+- software fallback.
+
+Illustrative use:
+
+```zax
+// Exact factory and type-result syntax remain unsettled.
+MySelectedInteger :: alias type IntegerFactory.select(
+  minimumBitCount: 13,
+  maximumBitCount: 24,
+  signedness: Sign.Signed,
+  environment: Target
+)
+```
+
+Future work must define a type-returning factory function rather than treating
+selection as an array or receiverless phrase. A selected public role identity
+retains its role when two profiles happen to choose the same exact
+specialization.
+
+## Relational signedness pairs
+
+The exact intrinsic family derives its counterpart by changing only signedness:
+
+```text
+Integer$(W, Signed) <-> Integer$(W, Unsigned)
+```
+
+Named role identities require an explicit relational pair:
+
+```text
+Small <-> USmall
+FastI16 <-> FastU16
+IPointer <-> UPointer
+```
+
+The integer factory or another validated generic mechanism should define both
+identities together:
+
+1. apply one shared selector except for signedness;
+2. realize equal-width intrinsic counterparts;
+3. establish both public identity branches;
+4. bind them as unique mutual counterparts; and
+5. generate their protected counterpart operations.
+
+The compiler must not infer relationships from spelling. Future programmer code
+should be able to define owner-authorized pairs through the same mechanism. The
+compiler validates equal logical width, opposite signedness, mutual and unique
+pairing, and ownership; no declaration may replace the intrinsic pairing or pair
+a type owned elsewhere.
+
+One-sided roles have no paired public identity. Their counterpart relation may
+return the unnamed exact intrinsic counterpart. Restricted or opaque semantic
+identities gain no counterpart merely from integer storage.
+
+## Integer associated types
+
+Generic numeric code needs statically known type relationships:
+
+```zax
+MyBitCount :: alias type MyNumericType bit count type
+MyByteCount :: alias type MyNumericType byte count type
+MyDelta :: alias type MyNumericType delta type
+MyDistance :: alias type MyNumericType distance type
+MyStorage :: alias type MyNumericType storage type
+MyCounterpart :: alias type MyNumericType signedness counterpart type
+```
+
+These are type-receiver operations returning concrete type identities with no
+runtime construction. Future work must determine whether they are specialized
+operator phrases, one general associated-type facility, type metadata queries,
+or a combination.
+
+The relationships must remain usable in result declarations and constraints
+without forcing generic code to branch manually between ordinary and large
+count tiers.
+
 ## Constraints this input places on current work
 
 - a concrete type argument is never a runtime value;
 - a type-receiver operation is not inherently compile-time;
 - non-generic enclosing type identity is sufficient for current behavior; and
 - current documentation must not imply that a general computed type result
-  exists.
+  exists;
+- integer-factory and associated-type examples remain illustrative until
+  computed type results are designed; and
+- public signedness pairs are declared relationally rather than inferred from
+  names.
 
 ## Activation and retirement
 
 Activate this input when generics, type parameters, constraints, computed type
-results, type-receiver identity, or generated type families are reviewed. Move
-accepted behavior into generic, declaration, invocation, type, and reflection
+results, type-receiver identity, integer factories, relational type pairs,
+associated types, or generated type families are reviewed. Move accepted
+behavior into generic, declaration, invocation, type, numeric, and reflection
 owners, then retire this file after every preserved question is dispositioned.

@@ -6,7 +6,7 @@
 | Audience | A future numbered work item defining build-time execution or dependency behavior |
 | Applies To | Trust, sandboxing, source resolution, immutable identity, provenance, durable builds, and required language support supplied by the toolchain |
 | Owns | Preservation of aligned pressures, threats, required-support and linkage questions, and unresolved mechanisms |
-| Does Not Own | Accepted dependency schemas, security policy, compiler or runtime architecture, or implementation contracts |
+| Does Not Own | Accepted build/dependency semantics or implementation contracts |
 | Source / Provenance | Work item `001`, Zax purpose and design principles; operator and foundational-support pressure |
 
 ## Aligned pressure

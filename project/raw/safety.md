@@ -157,6 +157,46 @@ A source-program panic during compile-time execution must become a compiler
 diagnostic with source and evaluation-path context rather than an internal
 compiler crash. This does not imply a compile-time panic handler.
 
+## Unchecked versus unsafe admission
+
+Current identity admission behavior is owned by
+[Zax identity types](../../language/identity-types.md#admission). This section
+retains the future safe-subset classification.
+
+Identity work exposes a safety distinction future work must preserve:
+
+- `optional from` validates and returns absent on rejection;
+- `unchecked from` skips semantic validation but has defined mechanical behavior;
+- `unsafe from` bypasses an invariant on which memory, lifetime, representation,
+  concurrency, or optimizer guarantees may rely.
+
+An unchecked document handle may be meaningless without making construction
+itself undefined. A forged capability or invalid representation may require the
+stronger unsafe boundary. `restricted` identity means only that automatic
+ordinary admission is absent; the identity owner decides which validated,
+unchecked, unsafe, or unavailable paths exist.
+
+Future safety work must define when an invalid semantic value remains a logic
+error and when it can violate the safe subset. Existing enum and endian
+`unsafe from` operations need reconsideration under that distinction rather than
+automatic renaming.
+
+## Unchecked required arithmetic contract
+
+Current programmer-visible integer contract behavior is owned by
+[the integer operator catalog](../../language/integer-operator-catalog.md#unchecked-build-contracts).
+This section retains its future safe-subset and auditing classification.
+
+An explicit build policy may replace required overflow checks with the contract
+that every required arithmetic result is representable. Contract-respecting code
+retains the exact result. A violation has no promised behavior and may be
+optimized under the assumption that it never occurs.
+
+Future safety work must decide whether code relying on that build contract is
+inside a contract-qualified safe subset, how the assumption is audited, and
+which non-representability panic conditions the policy covers. Defined modular
+arithmetic remains the separate wrapping operator family.
+
 ## Comparative input
 
 Rust is a comparison point, not an opponent.

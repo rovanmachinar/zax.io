@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
-| Does Not Own | The cohesive [operator phrase](operator-phrases.md) feature, including phrase words, fencing, interpretation, and phrase-specific presentation; [declaration and binding behavior](declarations-and-bindings.md); [function invocation and result routing](function-invocation.md); [core flow-control semantics](core-flow-control.md) including which `else` clause runs; [operator selection and candidate-tree formation](operators.md); the exact [operator catalog and precedence](operator-catalog.md); [mixfix semantics](mixfix-operators.md); the complete keyword or delimiter catalog; compiler-directive placement or attachment; [scope-exit destruction behavior](construction-and-destruction.md); literal realization; documentation payload languages; diagnostic identifiers; or compiler and tooling implementation |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -201,7 +201,7 @@ pre/post unary applications. Nested magnitude uses grouping:
 ```
 
 Exact circumfix forms and availability are defined by the
-[operator catalog](operator-catalog.md#circumfix-operations).
+[operator catalog](operator-catalog.md#circumfix-forms).
 
 ## Operator phrase source integration
 

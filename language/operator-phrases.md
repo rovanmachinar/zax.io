@@ -7,7 +7,7 @@
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments and type receivers are used by phrases; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
-| Does Not Own | Shared callable discovery, viability, preference, availability, and result routing ([function invocation](function-invocation.md)); the general operator model, the complete fixity table, and the shared candidate-tree and outward-result algorithm ([operators](operators.md)); exact phrase forms, precedence levels, reserved sets, and protected availability ([operator catalog](operator-catalog.md)); general declaration forms, type-parameter mechanics, and complete visibility behavior ([declarations and bindings](declarations-and-bindings.md)); general whitespace, comment, continuation, contextual-keyword, and layout mechanics ([source structure](source-structure.md)); complete mixfix skeletons, holes, and matching ([mixfix operators](mixfix-operators.md)); exact endian operations ([endianness](endianness.md)); generics, reflection, compile-time execution, literals, partial types, or any compiler mapping |
+| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
 ## Mental model
@@ -646,7 +646,7 @@ barrier behavior differ from the protected exact Boolean signature.
 A **reserved phrase form** is an exact form that user code cannot declare at all.
 Exact forms, their precedence levels, the reserved set, and protected
 availability are owned by the
-[operator catalog](operator-catalog.md#operator-phrase-forms).
+[operator catalog](operator-catalog.md#operator-forms).
 
 ## Costs, diagnostics, formatting, and source stability
 

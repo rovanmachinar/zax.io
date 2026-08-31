@@ -3,6 +3,15 @@
 
 ## Aliasing
 
+> **Current type disposition.** Transparent type aliases and explicit identity
+> declarations are now owned by
+> [Zax identity types](language/identity-types.md). Declaration integration is
+> owned by
+> [Zax declarations and bindings](language/declarations-and-bindings.md#non-value-definitions).
+> The keyword, operator, qualification-changing, meta-type, function, and
+> anonymous-type alias proposals below remain legacy input unless a current owner
+> says otherwise.
+
 ### Keyword aliasing
 
 Zax supports keyword aliasing using an `alias keyword` declaration. The verbose nature of the default keywords are made to ensure the language is natural rather than using shortened keywords abbreviations that are inconsistently applied to within the language. However, a keyword can be aliased to friendlier names. As with reserved keywords, aliased keywords become newly reserved keywords only within a context where the original non-aliased keywords would apply. Creating an alias of a keyword does not remove the original reserved keyword.
@@ -98,31 +107,7 @@ MyType :: type {
 ````
 
 
-### Type aliasing
-
-Types can be aliased from their original name to declare a new name within a new context. An `alias` of an original `type` is equivalent to the original `type` and can be used anywhere the original `type` would have been legal, except it is declared within the current context.
-
-````zax
-MyType :: type {
-    a : Integer
-    b : String
-}
-
-type1 : MyType
-type1.a = 42
-type2.b = "hello"
-
-
-CoolType :: alias type MyType
-
-type2 : CoolType
-
-// the assignment works as `MyType` and `CoolType` are the same underlying type
-type2 = type1
-````
-
-
-### Type aliasing adding or changing qualifications
+### Legacy qualification-changing type alias input
 
 When a `type` is aliased, the alias can add or change qualifiers for the original `type`. This includes specifying if a `type` is a reference, a pointer, an array, a pointer qualifier, changes to mutability, as well as other options. The underlying aliased `type` remains the same but qualifiers become part of the qualifiers around an aliased `type` whenever the alias is used.
 

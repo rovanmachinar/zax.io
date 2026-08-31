@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining partial, open, or externally extended types |
-| Applies To | Ownership, coherence, import, layout, phrase-extension, and mixfix-extension pressure |
-| Owns | Preserved partial-type risks and the possible owner-authorized phrase/mixfix route |
-| Does Not Own | Accepted partial syntax, extension authority, layout, imports, phrase behavior, or mixfix behavior |
+| Applies To | Ownership, coherence, import, layout, intrinsic, identity, phrase-extension, and mixfix-extension pressure |
+| Owns | Preserved partial-type risks and possible owner-authorized intrinsic, identity, phrase, and mixfix routes |
+| Does Not Own | Accepted partial semantics or current type/operator ownership |
 | Source / Provenance | Legacy `partial.md` evidence and operator/operator-phrase review |
 
 ## Mixfix ownership pressure
@@ -91,6 +91,65 @@ Adding, removing, lengthening, reserving, or repricing a phrase form is already 
 source-compatibility event. Allowing external declarations multiplies the surface
 on which that event can occur.
 
+## Intrinsic and identity-type pressure
+
+Current identity behavior is owned by
+[Zax identity types](../../language/identity-types.md). This section retains the
+future authority and coherence mechanism for adding partial definitions.
+
+Integer work establishes the current illustrative partial shape:
+
+```zax
+MyIntegerExtension :: partial MyInteger {
+  // Additional MyInteger behavior.
+}
+```
+
+A partial declaration adds another authorized piece of the same type definition.
+It may add declarations. It cannot suppress, hide, restrict, remove, or replace
+behavior exposed by an identity's original definition.
+
+Programmer-owned integer identities need a way to add a small surface without
+modifying their closed intrinsic representation. Separately, language-owned or
+compiler-generated partial declarations may be a useful way to provide protected
+conversion families among exact intrinsic integer specializations.
+
+Future work must distinguish:
+
+- compiler-generated partials;
+- language-owned partials;
+- CPU-provider partials;
+- module/type-owner partials; and
+- arbitrary programmer partials.
+
+Allowing arbitrary programmer partials on intrinsic types risks changing
+fundamental overload selection through imports, claiming protected signatures,
+and making programs disagree about the surface of `U16`. Completely sealing
+intrinsics may instead make language-owned family conversions and target
+specialization unnecessarily ad hoc.
+
+The future owner must decide whether intrinsic types remain sealed from every
+partial or only from partials outside authorized ownership domains. Import,
+declaration, and source order must not determine which intrinsic surface exists.
+
+Integer review adds these pressures:
+
+- whether a sealed intrinsic permits language/compiler-generated conversion or
+  representation-cast functions;
+- whether CPU providers may add optimized `final` functions;
+- whether the defining owner or arbitrary programmers may add `final` functions
+  that contribute no instance storage;
+- whether a partial may ever add stored members;
+- how a stored-member addition changes identity/`own` shape compatibility; and
+- whether a previously valid same-storage identity view becomes invalid when a
+  partial changes shape.
+
+`partial` remains add-only. If stored members are ever permitted, all pieces
+must be known before layout and representation-compatible casts are validated.
+
+Identity-aware `own` exposure and suppression belong to
+[owned-composition input](owned-composition.md), not to `partial`.
+
 ## Future work must decide
 
 - who may extend a type;
@@ -98,6 +157,13 @@ on which that event can occur.
 - whether partial pieces may add ordinary, phrase, circumfix, call/index, or
   mixfix operations;
 - whether intrinsic types may be extended at all;
+- which provenance classes may partially define an intrinsic or identity type;
+- whether language-generated conversion partials use the same coherence rules as
+  source partials;
+- whether an identity owner may add behavior after its initial declaration;
+- whether `once final`, `once varying`, and `operator type` functions participate
+  in one partial authority model;
+- how diagnostics identify the original owner and every contributing partial;
 - import and visibility behavior, including whether an extension's private
   members participate in the owning type's private context;
 - conflicts among partial pieces;
@@ -112,6 +178,6 @@ Import or declaration order must not resolve conflicts.
 ## Activation and retirement
 
 Activate this input for partial types, extension methods, open types, mixins,
-external phrase or mixfix extensions, or external type completion. Move accepted
-behavior into type, module/import, layout, and operator owners, then retire this
-file.
+intrinsic or identity extensions, external phrase or mixfix extensions, or
+external type completion. Move accepted behavior into type, module/import,
+layout, identity, and operator owners, then retire this file.

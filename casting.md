@@ -10,7 +10,7 @@ structural compatibility proposals on this page remain legacy input.
 
 > **Disposition.** `as` and `unsafe as` are now current open language-defined
 > [operator phrases](language/operator-phrases.md) whose exact forms are in the
-> [operator catalog](language/operator-catalog.md#as-and-unsafe-as). Their left
+> [operator catalog](language/operator-catalog.md#conversion-and-admission-forms). Their left
 > value supplies receiver discovery and their right operand is a complete
 > [type argument](language/function-invocation.md#type-parameter-slots) rather
 > than a discarded value parameter.
@@ -20,6 +20,14 @@ structural compatibility proposals on this page remain legacy input.
 > and future casting work. Nothing on this page is current design except where a
 > current owner is linked.
 >
+> **Integer conversion disposition.** Fundamental integer conversion is now
+> current conceptual design in
+> [Zax integers](language/integers.md#integer-identity-types).
+> Guaranteed `as`, optional `as Destination?`, `narrowing as`, identity
+> admission, and projection replace the legacy claim that ordinary `as` performs
+> every potentially panicking intrinsic conversion and `unsafe as` performs
+> ordinary truncation. General non-integer casting remains future work.
+>
 > Custom `as` declarations use a type parameter slot directly. Unprefixed
 > literals use double quotes, and every single-quoted literal payload carries its
 > own attached prefix.
@@ -27,7 +35,7 @@ structural compatibility proposals on this page remain legacy input.
 > **Enum conversion evidence.** The enum side of `as` and `unsafe as` is
 > dispositioned separately. `enumValue as UnderlyingType` is a current generated
 > enum operation recorded by the
-> [operator catalog](language/operator-catalog.md#generated-enum-operations).
+> [operator catalog](language/operator-catalog.md#generated-enum-forms).
 > The legacy claims that `unsafe as` converts an enum to a *non-underlying*
 > intrinsic type, that direct `as` to such a type is rejected, and that a
 > two-step conversion through the underlying type is the sanctioned route remain
@@ -35,32 +43,17 @@ structural compatibility proposals on this page remain legacy input.
 > [raw enum input](project/raw/enum-types.md). Nothing here decides their
 > narrowing, overflow, or panic behavior.
 
-### Intrinsic system literal conversion
+### Remaining intrinsic string-conversion input
 
-This legacy section previously claimed that every intrinsic conversion required
-`as` or `unsafe as`. Current operator design adds the specialized equal-width
-signedness-counterpart `+` family; general width expansion, contraction, and
-unrelated conversion remain casting work.
+The former integer conversion material has been consumed by
+[Zax integers](language/integers.md#conversion-to-exact-intrinsic-integers). The remaining
+non-integer conversion evidence below stays legacy casting input.
 
-An `as` operator and an `unsafe as` operator work in similar manners. Both convert an intrinsic value from one type to another. With intrinsic types, an `as` operator would cause a panic situation if data would overflow when converting from a source type to a destination type. Whereas with intrinsic types, an `unsafe as` operator will not panic even when converting from one type to another but `unsafe as` can cause either loss of information in an overflow, or data corruption / undefined behavior in another extreme with incompatible types. An `as` operator attempts to do a compatible conversion whereas a `unsafe as` will treat the types as compatible even when they are not compatible.
+The superseded integer conversion prose and examples have been removed. The
+remaining examples preserve unresolved string encoding, validation, lossy
+conversion, and failure input.
 
 ````zax
-i8 := -127 as I8                    // `as` can convert the value into an
-                                    // I8 type without overflow
-u8 := 255 as U8                     // `as` can convert the value into a
-                                    // U8 type without overflow
-
-u8Error := 256 as U8                // `as` will cause compile-time error
-                                    // as value is overflow
-u8CastError := 256 unsafe as U8     // `unsafe as` will succeed despite any
-                                    // value overflow is truncated
-
-value : Integer = 256
-u8Panic := value as U8                  // `as` will cause runtime panic as
-                                        // value is overflow
-u8CastIgnorePanic := value unsafe as U8 // `unsafe as` will ignore overflow and
-                                        // any value overflow is truncated
-
 // converting from a `WideString`to a `String` is not always safe (but this case
 // is safe)
 string := w'hello' as String
@@ -515,7 +508,7 @@ byRefValue2 := compatibleType unsafe as MyType &         // unsafe
 ### `as` operator overloading
 
 The exact phrase form `as` is current design; see the
-[operator catalog](language/operator-catalog.md#as-and-unsafe-as). Protected
+[operator catalog](language/operator-catalog.md#conversion-and-admission-forms). Protected
 conversion domains, result selection, and generated/disabled behavior must still
 be reconsidered under the current [operator model](language/operators.md) and
 future casting work.

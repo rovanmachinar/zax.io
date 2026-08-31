@@ -6,7 +6,7 @@
 | Audience | A future numbered work item refining pointer and lifetime concepts |
 | Applies To | Intentional lifetime-policy plurality, its costs, and displaced pointer/reference binding replacement |
 | Owns | Preservation of aligned direction, displaced binding-replacement syntax, and required future decisions |
-| Does Not Own | Accepted policy names, representations, conversion rules, or qualifier meanings |
+| Does Not Own | Accepted lifetime semantics or current qualifier/construction behavior |
 | Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, construction/replacement aliasing, invocation lifetime pressure, and the corrected declaration-side `final`/`varying` model |
 
 ## Aligned direction
@@ -111,6 +111,52 @@ A future owner must define:
 - replacement while place-tracking or stable references exist; and
 - pointer behavior when an address remains but the intended pointee lifetime
   changes.
+
+## Pointer-representation and memory-domain pressure
+
+Current pointer-representation integer capacities are owned by
+[Zax integers](../../language/integers.md#pointer-representation-integer-roles). This
+section retains actual pointer validity, transfer, provenance, and lifetime
+behavior.
+
+CPU profiles provide ordinary, near, and far pointer-capacity domains satisfying:
+
+```text
+Near pointer capacity <= ordinary pointer capacity <= Far pointer capacity
+Near.TypeSize.maximum <= TypeSize.maximum <= Far.TypeSize.maximum
+Near.IndexSize.maximum <= IndexSize.maximum <= Far.IndexSize.maximum
+```
+
+When near or far representations mirror ordinary pointers, their public intent
+identities remain distinct rather than becoming transparent aliases on only some
+targets.
+
+Pointer-representation integers are freely admitting numeric capacity types.
+Numeric transfer uses exact, optional, or narrowing admission according to the
+range relationship. Actual pointer-object transfer remains separate because
+numeric fit does not establish segment, tag, provenance, permission, arena, or
+lifetime validity.
+
+`pointerA delta pointerB` must not overflow for a semantically valid difference,
+but does not make arbitrary pointers comparable. Future pointer work must decide
+comparability, failure, and the associated `PointerDelta` result identity.
+Unsigned pointer distance remains related pressure with the same validity
+boundary.
+
+## Same-storage identity-reference pressure
+
+A future identity admission may return `MyIdentity &` viewing existing
+underlying storage rather than constructing another value. Lifetime work must
+decide:
+
+- whether the source reference outlives every identity view;
+- whether a temporary source may be viewed;
+- whether underlying and identity references may coexist;
+- how moves, replacement, and destruction invalidate either view;
+- whether a returned view preserves its exact origin; and
+- how readonly/writable and final/varying permissions project.
+
+No independent identity lifetime or destructor is created for a reference view.
 
 ## Invocation-derived lifetime pressure
 

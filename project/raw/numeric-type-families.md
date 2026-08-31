@@ -5,9 +5,23 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining intrinsic, custom, generic, fixed-point, arbitrary-width, or floating numeric families |
 | Applies To | Numeric type relationships and operator availability deferred by operator review |
-| Owns | Signedness-counterpart, finite-bit-extent, canonical bit-count type, multiword, reversal, extraction/deposit, type-family, alias, float-representation, and policy applicability questions |
-| Does Not Own | Accepted numeric types, layouts, conversions, operators, generic contracts, or [enum behavior](enum-types.md) |
+| Owns | Signedness-counterpart, finite-bit-extent, count-tier, conversion, delta/distance, storage, type-family, alias, float-representation, and policy applicability questions |
+| Does Not Own | Current finite-integer behavior or [enum behavior](enum-types.md) |
 | Source / Provenance | Legacy intrinsic-type, casting, and operator evidence |
+
+## Current finite-integer disposition
+
+Current exact and role-selected finite integers, ranges, storage, conversion,
+count tiers, signedness pairs, `delta`, `distance`, and endian eligibility are
+owned by [Zax integers](../../language/integers.md). Complete protected integer
+operation behavior is owned by the
+[integer operator catalog](../../language/integer-operator-catalog.md); exact
+forms and precedence remain in the
+[general operator catalog](../../language/operator-catalog.md).
+
+This raw input retains the generic mechanism, associated-type implementation,
+custom/extreme numeric families, multiword arrangement, fixed-point, unbounded,
+and floating questions. It is not a competing definition of current integers.
 
 ## Signedness counterparts
 
@@ -42,10 +56,10 @@ multiword, and masked extraction/deposit operations all require a finite defined
 logical bit extent. A runtime-sized bit vector may provide one. Hidden allocation
 capacity and padding must not change results.
 
-## Canonical unsigned bit-count type
+## Associated bit- and byte-count types
 
-The zero-count forms and the optional set-bit-position phrases share one
-canonical unsigned bit-count type:
+The zero-count forms and optional set-bit-position phrases share the associated
+unsigned bit-count type of their operand:
 
 ```zax
 leadingZeros := #<bits
@@ -55,14 +69,126 @@ if ?position
   shifted := x << position.
 ```
 
-That type must be directly viable as the count operand of every applicable
-built-in shift without an explicit conversion. Future numeric work must establish:
+`T bit count type` must represent zero through `T`'s logical width and be directly
+viable as a protected shift count for `T`. Ordinary widths select `BitCount`;
+extreme widths select `LargeBitCount`. Generic code asks for the associated type
+instead of branching between tiers.
 
-- its exact name;
-- its representation and width;
-- whether it varies with the operand's logical extent or is uniform;
-- how an optional payload of that type participates in shift counts; and
-- how generic numeric code names it.
+`T byte count type` similarly selects `ByteCount` or `LargeByteCount` according
+to the complete storage-envelope byte count.
+
+The CPU profile chooses ordinary representations subject to language capacity
+rules. Large tiers cover the language maximum:
+
+```text
+LargeBitCount: 0 through LanguageMaximumIntegerWidth
+LargeByteCount: 0 through ceil(LanguageMaximumIntegerWidth / 8)
+```
+
+The initial language maximum is `2^23` logical bits, requiring at least 24
+unsigned logical bits for `LargeBitCount` and at least 21 for `LargeByteCount`.
+Exact tier syntax, reflection, and future larger language versions remain
+numeric/generic work.
+
+An ordinary `BitCount` has at least eight logical bits and therefore represents
+at least zero through 255.
+
+Associated-type teaching must lead with its purpose: ordinary widths use compact
+counts, extreme widths use larger counts, and generic code asks `T bit count
+type` rather than branching on width.
+
+Bit-count tier selection uses logical width. Byte-count tier selection uses the
+storage-envelope byte size.
+
+## Exact, optional, and narrowing conversion
+
+Integer conversions use declared range facts:
+
+```zax
+myWide := myU16 as U32
+myOptional := myU16 as U8?
+myNarrow := myU16 narrowing as U8
+```
+
+- `as Destination` is available when the type contract or a compile-time-known
+  value proves exact representability;
+- `as Destination?` returns absent instead of losing information;
+- `narrowing as Destination` performs defined modular conversion;
+- `unsafe as` is reserved for actual guarantee weakening rather than ordinary
+  integer truncation.
+
+Admission into an exposed numeric identity uses `from`, `optional from`, or
+`narrowing from`. A restricted identity may instead declare validating
+`optional from`, defined-but-unvalidated `unchecked from`, truly unsafe
+`unsafe from`, or no representation admission.
+
+Equal representation never creates an identity conversion. A direct bridge
+requires a declared semantic relationship and a proof that every source value
+fits.
+
+Future work must provide enough range and relationship metadata for programmers
+and tooling to derive the applicable surface without listing every named pair.
+
+## Delta and distance
+
+The aligned operation concepts are:
+
+```zax
+myDelta := myLeft delta myRight
+myDistance := myLeft distance myRight
+```
+
+Both are eager, left-associative language-defined binary phrases at additive
+precedence and require the same integer identity on both sides.
+
+`delta` returns `T delta type` and represents exact `left - right`. Its selected
+signed result covers `-(2^W - 1)..+(2^W - 1)`. A CPU profile may select the next
+appropriate native or byte-oriented width rather than exact `W + 1`. The
+operation is unavailable when no language-supported result type covers the
+range, including at the maximum integer width.
+
+`distance` returns `T distance type` and represents exact `abs(left - right)`.
+Its unsigned result covers `0..2^W - 1`, so it remains available at the language
+maximum.
+
+Neither operation has wrapping, saturating, optional, reporting, compound, or
+mutation forms. Pointer comparability remains pointer/lifetime work.
+
+## Storage carrier and unusual widths
+
+`T storage type` is the smallest byte-sized unsigned integer carrier large enough
+for `T`'s complete storage envelope:
+
+```text
+I32 storage type -> U32
+I57 storage type -> U64
+```
+
+It names capacity, not a safe raw conversion. A non-byte-multiple integer has
+unspecified non-value storage bits that cannot affect defined numeric behavior.
+Widening uses the logical sign or zero extension; narrowing uses logical bits.
+
+An arbitrary exact width may back an ordinary enum. Endian families are limited
+to whole-byte exact widths with no non-value storage bits. No language-provided
+raw storage extraction exists for an unusual padded width such as `I57`.
+
+## Identity and counterpart relationships
+
+Exact intrinsic counterparts are derived by changing signedness at equal logical
+width. Named role identities are paired relationally by the integer factory or
+another validated generic mechanism; the compiler never infers a counterpart
+from spelling.
+
+One-sided roles return an unnamed exact intrinsic counterpart and intentionally
+leave role identity. Restricted or opaque semantic identities receive no
+counterpart merely because they use integer storage.
+
+## Optimized maximum family
+
+`OptimizedMaxI`/`OptimizedMaxU` preserve the widest provider-recommended
+general-purpose implementation, including deliberately optimized software
+emulation beyond native width. Exact profile selection, cost metadata, and
+relational pair generation remain CPU-provider/generic work.
 
 ## Multiword operations
 
@@ -100,15 +226,24 @@ signedness interaction, and unsupported-target costs.
 
 ## Aliases
 
-Alias work must distinguish aliases retaining intrinsic identity from new wrapper
-types with independent operator domains.
+Transparent aliases and explicit identity types are now distinguished by
+[Zax identity types](../../language/identity-types.md). Future numeric work
+retains only generic alias generation and identity-aware associated-type
+questions.
+
+Legacy intrinsic input also proposed `UUID` as an alias of `U128` and `Rune` as
+an alias of a wide character integer. Current design does not retain those
+transparent integer aliases. Future UUID and Unicode-scalar work must decide
+their independent identity, validity, formatting, conversion, and operation
+surfaces without inheriting arithmetic merely from storage.
 
 ## Numeric interaction with enums
 
 An enum is backed by one fundamental intrinsic type but is an independent type.
-Whether an enum inherits numeric, bitwise, reduction, shift, magnitude, or
-signedness-counterpart operations from its backing representation is an *enum*
-question and is preserved in [raw enum input](enum-types.md).
+It receives no automatic integer arithmetic merely from that backing. Whether a
+future flag or another enum kind explicitly requests selected bitwise, reduction,
+shift, magnitude, or signedness behavior remains an *enum* question preserved in
+[raw enum input](enum-types.md).
 
 Numeric work should consult that file when a numeric decision would constrain
 enum behavior, and vice versa. This file no longer holds enum-specific questions.
@@ -130,8 +265,9 @@ until that review.
 ## Activation and retirement
 
 Activate this input for numeric types, generic numeric contracts, signedness,
-fixed-point, arbitrary-width, canonical bit-count type, multiword operations,
-reversal, masked extraction/deposit, alias, float, or representation work. Move
-accepted behavior into numeric, type, cast, or operator owners and retire this
-file after every item is dispositioned. Enum-specific questions are dispositioned
-through [raw enum input](enum-types.md) instead.
+fixed-point, arbitrary-width, count and associated types, conversion,
+delta/distance, multiword operations, reversal, masked extraction/deposit,
+alias, float, or representation work. Move accepted behavior into numeric,
+type, cast, generic, or operator owners and retire this file after every item is
+dispositioned. Enum-specific questions are dispositioned through
+[raw enum input](enum-types.md) instead.

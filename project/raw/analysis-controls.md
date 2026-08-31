@@ -6,7 +6,7 @@
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
 | Applies To | Source-local semantic permissions and assertions, analysis provenance, contract-version evolution, and the boundary between unsafe controls and lint suppression |
 | Owns | Preservation of construction-derived requirements, concrete examples, the contract-dependent severity of redundant controls, unresolved syntax, activation pressure, and retirement criteria |
-| Does Not Own | Accepted unsafe syntax, safety guarantees, diagnostic identifiers, lint syntax, language contracts, compiler extensions, or implementation |
+| Does Not Own | Accepted analysis-control semantics or current safety/diagnostic ownership |
 | Source / Provenance | Work items `005`, `006`, and `007`; construction/lifecycle, invocation/result, and core-flow analysis pressure |
 
 ## Reading posture
@@ -264,18 +264,77 @@ It must preserve their different authority and failure consequences.
 
 ### Arithmetic-overflow analysis
 
-Bare fixed-width arithmetic has stable panic-on-unrepresentable semantics. A
-future analysis policy may:
+Current integer arithmetic and the two unchecked build contracts are owned by
+[the integer operator catalog](../../language/integer-operator-catalog.md#unchecked-build-contracts).
+This section retains their future option syntax, placement, source-local
+controls, and analysis-contract integration.
+
+Bare fixed-width arithmetic has stable exact-result-or-panic semantics,
+independent from debug or release optimization mode. A future analysis policy
+may:
 
 - diagnose definitely overflowing constant operations;
 - report statically evident suspicious ranges;
 - request stronger warnings when runtime safety is not proved; or
 - elevate selected warnings according to project policy.
 
+An explicit compiler/build policy may instead remove required runtime
+representability checks by changing the selected contract:
+
+> Every required arithmetic result is representable by its result type.
+
+When the contract holds, the result is the exact mathematical value. When it is
+violated, Zax makes no behavioral promise; the operation does not become
+implicitly wrapping.
+
+Future teaching must explain the practical choice before the contract details:
+
+- keeping checks catches range failures through panic;
+- disabling checks removes those panic branches and permits stronger loop,
+  vectorization, and no-overflow optimization;
+- the unchecked contract is useful when trusted validation or domain invariants
+  already prove representability; and
+- violating it has undefined consequences that tests may not expose.
+
+The option is never defined by debug versus release mode. Project/build metadata
+must make the chosen contract reproducible and auditable.
+
+The policy is independent from optimization level, shifts proof responsibility
+to the programmer, is recorded in build metadata, and does not affect optional,
+wrapping, saturating, reporting, or narrowing forms. Compile-time-proven
+violation remains a diagnostic.
+
+Required representability and nonzero-divisor contracts are independent. Future
+compiler-directive work must decide whether each may be selected at:
+
+- project/build level;
+- module or namespace level;
+- source-file level;
+- lexical region;
+- declaration;
+- expression/operation; or
+- a deliberately smaller set.
+
+It must also decide inheritance, narrower overrides, project-level minimum
+safety that forbids weakening, forced checks, whether a build may force
+unchecked behavior over explicit source checks, imported/generated source,
+conflict diagnostics, language-contract versions, and reproducible metadata.
+
+The current recommendation is a project/build default with narrower explicit
+source choices and an optional minimum-safety policy. A project may force checks
+without changing contract-respecting results; it should not silently force
+unchecked behavior over source that explicitly requests checks.
+
+Future work must decide:
+
+- the policy's exact name;
+- exact supported selection levels and source syntax;
+- how tooling reports code relying on the contract;
+- how contract versions preserve source and build reproducibility.
+
 Ordinary source does not require a programmer-supplied proof for every
-calculation. A lint cannot change bare arithmetic into wrapping, saturation,
-undefined behavior, or another policy. Runtime checks may be optimized away only
-when the compiler proves the selected operation is preserved.
+calculation. A lint cannot change arithmetic semantics. Checks may always be
+optimized away when the compiler proves the selected operation is preserved.
 
 ## What this input does not decide
 

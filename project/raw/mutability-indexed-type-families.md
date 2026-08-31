@@ -6,7 +6,7 @@
 | Audience | A future numbered work item reviewing type definitions, type families, structural compatibility, representation specialization, or qualifier-indexed APIs |
 | Applies To | Preserved legacy motivation and a candidate framing for distinct mutable and immutable implementations under one named family |
 | Owns | Provenance, use cases, current constraints, unresolved questions, activation pressure, and retirement criteria |
-| Does Not Own | Accepted type-family behavior, syntax, identity, layout, conversion, defaults, reflection, structural compatibility, or implementation |
+| Does Not Own | Accepted indexed-family behavior or current qualifier/structural semantics |
 | Source / Provenance | Distinct mutable/immutable implementation proposals formerly in `mutable.md`, recovered during work item `004` promotion review and reframed through language-maintainer discussion |
 
 ## Reading posture

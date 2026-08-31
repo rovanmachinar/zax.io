@@ -6,7 +6,7 @@
 | Audience | A future numbered work item defining structural type identity and compatibility |
 | Applies To | Preserved agent-authored proposal and unresolved structural-typing questions |
 | Owns | Provenance, candidate input, and preserved storage/shape compatibility questions |
-| Does Not Own | Accepted structural typing, syntax, layout, compatibility, conversion, or reflection behavior |
+| Does Not Own | Accepted structural semantics or current identity/layout owners |
 | Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions; endian storage/shape compatibility pressure |
 
 ## Provenance and reading posture
@@ -243,6 +243,26 @@ nativeValue : U32 = big
 A future review must keep the two questions separate. It must not conclude that
 because two types are layout-identical they are interchangeable, and it must not
 conclude that because a conversion exists the types are structurally compatible.
+
+### Same-storage identity cast pressure
+
+Owned identity composition may establish an exact same-shape relationship
+between an identity type and its underlying type. A reference view then motivates
+a representation operation conceptually like:
+
+```zax
+// Illustrative; `cast as` is not accepted syntax.
+myUnderlying cast as MyIdentity &
+```
+
+Structural compatibility alone does not authorize this conversion. Future work
+must also account for declared identity relationship, admission policy,
+qualifications, aliasing, lifetime, lifecycle functions, and optimizer type
+assumptions.
+
+The primary operation pressure remains in
+[owned-composition input](owned-composition.md). This section owns only the
+structural compatibility constraint.
 
 ### Prefix projection and truncating transfer are separate
 

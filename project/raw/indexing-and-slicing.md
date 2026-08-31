@@ -6,7 +6,7 @@
 | Audience | Future work defining indexing, slicing, ranges, bit places, proxies, or multi-index operations |
 | Applies To | `operator index`, direct indexed mixfix, slicing, bounds, and projection pressure |
 | Owns | Representative source, direct-operation requirements, unsettled syntax, activation pressure, and retirement criteria |
-| Does Not Own | Accepted array/index/range syntax, bounds policy, references, proxy types, or implementation |
+| Does Not Own | Accepted indexing semantics or current integer/lifetime behavior |
 | Source / Provenance | Legacy `arrays.md` evidence and operator review |
 
 ## Direct indexed operations
@@ -59,6 +59,67 @@ container[low ..< high] = replacement
 The operation may expose receiver, low, high, and replacement holes without a
 range value or proxy. Future work must decide range syntax, inclusive/exclusive
 bounds, omission, evaluation, overlap, aliases, result, and failure.
+
+### Range punctuation candidates
+
+Preserve:
+
+```zax
+1..=5
+0..<myCount
+```
+
+as candidate closed and half-open range forms. `..=` is visually inspired by an
+English en dash; `..<` states that the upper endpoint is excluded. Exact syntax
+is not accepted.
+
+Bare `..` receives no two-ended range meaning here. Leaving it unassigned avoids
+conflict with the strong Rust expectation that `..` is half-open and preserves
+it for future open-ended/rest investigation.
+
+Future work must decide:
+
+- whether `..=` includes both endpoints and `..<` excludes the upper endpoint;
+- longest-token recognition;
+- tokenization beside postfix `.` dereference;
+- required grouping around adjacent dereference/range punctuation;
+- empty and reversed ranges; and
+- whether a range is a value, syntax consumed directly by indexing, or both.
+
+Optional-pointer/dereference adjacency is parser pressure, but this input does
+not establish its final grouped spelling.
+
+## Index-size and endpoint pressure
+
+Current `IndexSize`/`TypeSize` capacity and identity relationships are owned by
+[Zax integers](../../language/integers.md#counts-sizes-and-indexes). This section
+retains container-specific indexing, endpoint, and bounds behavior.
+
+For each ordinary, near, or far memory domain, `IndexSize` and `TypeSize` are
+different intent identities with equal numeric capacity and representation:
+
+```text
+IndexSize.maximum = TypeSize.maximum
+IndexSize representation = TypeSize representation
+```
+
+Their declared equal-range relationship permits protected exact `as` bridges in
+both directions without making the identities interchangeable.
+
+For a collection of length `L`, valid element positions are `0..L-1` and valid
+slice/splice endpoints are `0..L`. Since `IndexSize` already represents `L`, no
+separate splice-index type or extra one-past capacity is required.
+
+Future indexing work must decide:
+
+- whether every indexable container uses the profile `IndexSize` or exposes an
+  associated narrower index type;
+- how element counts, positions, and endpoints are distinguished by consuming
+  operations rather than by representation;
+- how bounds failure reports;
+- how checked multiplication converts element count and element size into
+  `TypeSize`; and
+- how ordinary, near, and far domains constrain container availability.
 
 ## Bit places
 

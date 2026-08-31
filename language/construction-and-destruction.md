@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete [declaration and binding behavior](declarations-and-bindings.md), complete [qualifier behavior](qualifiers.md), general [function invocation, parameter defaults, result routing, and callable preference](function-invocation.md), [ordinary operator selection](operators.md), the exact [operator catalog](operator-catalog.md), [mixfix tree semantics](mixfix-operators.md), [flow-transfer target selection and post-operation behavior](core-flow-control.md), complete optional representation, construction, reset, or unwrapping, arbitrary operator semantics, complete move/copy and ownership, pointer/reference grammar and provenance, allocator APIs, static-analysis contract selection, conservative proof-override and lint syntax, formal unsafe-control syntax, panic recovery, async or concurrency behavior, structural identity and layout, formal grammar, diagnostic identifiers, or compiler and tooling implementation |
+| Does Not Own | Declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
 
 ## Mental model
 
@@ -611,8 +611,9 @@ value, ordinary mutable/writable authority applies. Reconstructing an immutable
 varying place remains this document's compiler-owned operation.
 
 See [Zax mixfix operators](mixfix-operators.md#qualifications-and-lifecycle) for
-tree matching and the [operator catalog](operator-catalog.md#compound-arithmetic)
-for built-in compounds.
+tree matching and the
+[integer operator catalog](integer-operator-catalog.md#compound-arithmetic) for
+protected integer compounds.
 
 When an actual use exposes an existing-versus-generated choice, the programmer
 resolves the demanded shape with a body, `existing`, `default`, `forbidden`, or a
@@ -986,6 +987,24 @@ recovery strategy.
 Constructors, replacement constructors, and destructors are synchronous.
 Suspending lifecycle operations, cancellation, and concurrent replacement remain
 future async, lifetime, and concurrency work.
+
+## Identity admission boundary
+
+By-value identity admission requests a new value. It requires an applicable
+copy, move, consuming/`last` transfer, direct construction, or another declared
+way to establish the identity's underlying stored value.
+
+Identity syntax does not manufacture copyability. When no applicable
+construction or transfer exists, by-value admission is unavailable.
+
+A same-storage identity reference would instead view existing storage and create
+no independent value lifetime. Its representation-cast, qualification, alias,
+lifetime, and destruction rules remain future identity/owned-composition work.
+The compiler does not silently substitute such a view for a requested by-value
+result.
+
+General identity behavior is defined by
+[Zax identity types](identity-types.md#construction-and-transfer).
 
 ## Costs
 

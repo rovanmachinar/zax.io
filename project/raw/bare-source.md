@@ -6,7 +6,7 @@
 | Audience | Future work defining keyword-neutral source, confusable-form intent, or transparent source enclosures |
 | Applies To | The complete candidate `bare{...}` model and its source, scope, continuation, operator, and mixfix consequences |
 | Owns | Preservation of the candidate mental model, representative valid/invalid source, constraints, alternatives, activation pressure, and retirement criteria |
-| Does Not Own | Accepted `bare` syntax, keyword behavior, accepted phrase fencing and phrase presentation, operator grammar, source layout, scope, or implementation |
+| Does Not Own | Accepted bare-source semantics or current source/phrase ownership |
 | Source / Provenance | Operator-catalog promotion review, follow-up source-intent analysis, and operator-phrase review |
 
 ## Why this input exists
@@ -303,17 +303,20 @@ The operator catalog preserves asymmetric `||...|` as an intent-gated
 saturating-magnitude form:
 
 ```zax
-// Illustrative future syntax.
 saturated := bare{ ||value| }
 ```
 
-Natural source remains a confusable-form intent error:
+This specific acknowledgement is provisionally accepted for using the
+saturating-magnitude operation. This raw input retains the general enclosure
+mechanics.
+
+Natural unacknowledged source remains a confusable-form intent error:
 
 ```zax
-saturated := ||value|
+saturated := ||value| // error: explicit intent acknowledgement is required
 ```
 
-The likely alternatives are:
+A programmer can state either intended operation:
 
 ```zax
 norm := ||value||

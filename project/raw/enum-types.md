@@ -6,14 +6,14 @@
 | Audience | Future work defining complete enum behavior, validity, inheritance, or generation |
 | Applies To | Fundamental-backed enum identity and the enum questions deferred by operator-phrase review |
 | Owns | Preserved enum questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted enum grammar, members, conversions, operator availability, or generic behavior |
+| Does Not Own | Accepted enum semantics or current identity/integer behavior |
 | Source / Provenance | Legacy `enums.md` and `casting.md` evidence, the enum portion formerly held in [numeric type families](numeric-type-families.md), and operator-phrase review of the generated enum baseline |
 
 ## Why this input exists
 
 Current documentation accepts a narrow enum baseline: four generated operations,
 recorded by the
-[operator catalog](../../language/operator-catalog.md#generated-enum-operations),
+[operator catalog](../../language/operator-catalog.md#generated-enum-forms),
 plus the endian semantic families taught by
 [Zax endianness](../../language/endianness.md).
 
@@ -50,8 +50,7 @@ named domain.
 ## Safe creation pressure
 
 There is no baseline safe `EnumType from value` for a restricted enum. Endian
-enums have a safe `from` because they are full-domain, so every bit pattern is a
-valid value.
+enums have a safe `from` because every backing integer value is valid.
 
 Future enum work must decide whether a restricted enum receives a safe creation
 facility and, if so, whether it:
@@ -66,16 +65,19 @@ facility and, if so, whether it:
 maybeFruit := Fruit from rawValue
 ```
 
-## Restricted versus full-domain validity
+## Backing-value validity
 
-| Kind | Every backing bit pattern is valid? | Consequence |
+| Kind | Every backing integer value is valid? | Consequence |
 | --- | --- | --- |
-| Restricted enum | No | `unsafe from` can create an out-of-domain value; closed operations could too |
-| Full-domain semantic enum | Yes | Language-provided closed operations cannot create an invalid representation |
+| Restricted enum | No | Unvalidated adoption can create an invalid value; closed operations could too |
+| Every backing value is valid | Yes | Language-provided closed operations cannot create an invalid value |
 
 Future work must decide what "valid" means for a restricted enum, whether flag
 combinations are valid, and what an operation is permitted to do when a value is
 outside the named domain.
+
+Do not introduce a category label merely for the second row. State plainly
+whether every backing value is valid.
 
 ## Operation independence or inheritance
 
@@ -129,6 +131,40 @@ Only the first is part of the accepted baseline. Overflow, narrowing, panic, and
 safety behavior for the rest remains deferred to enum and casting work. Preserve
 the evidence rather than silently accepting or discarding it.
 
+## `unchecked from` versus `unsafe from`
+
+Current general identity admission is owned by
+[Zax identity types](../../language/identity-types.md). This section retains the
+enum-specific classification question.
+
+Identity review distinguishes:
+
+- `optional from`, which validates and returns absent;
+- `unchecked from`, which skips semantic validation but has defined mechanical
+  behavior; and
+- `unsafe from`, which bypasses an invariant on which memory, lifetime,
+  representation, or optimizer guarantees may rely.
+
+Future enum work must decide whether adopting an unnamed or otherwise invalid
+backing value is merely unchecked or truly unsafe. That review may revise the
+current baseline phrase, but integer work does not silently rename it.
+
+An enum may offer validated optional creation, unchecked raw-value adoption,
+unsafe adoption, or no arbitrary admission according to its invariants.
+
+## Unusual-width integer backing
+
+Current integer backing and endian eligibility are owned by
+[Zax integers](../../language/integers.md#enum-and-endian-boundaries).
+
+An arbitrary exact integer such as `I57` may back an ordinary enum. Generated
+`underlying value` returns the logical `I57`, not the byte-rounded `U64` storage
+carrier. Non-value storage bits do not participate in enum validity.
+
+Endian semantic families are limited to exact whole-byte integer widths with no
+non-value storage bits. A no-padding `I24` may be eligible; `I57` is not. Zax
+provides no language-level raw storage extraction for `I57`.
+
 ## Endian enum motivation
 
 Endian families motivated much of the baseline: they needed independent nominal
@@ -141,14 +177,14 @@ The questions that remain *enum* questions are:
 - exact generated enum names and the generic mechanism producing a family;
 - whether generated families are ordinary enums or a distinct declaration kind;
 - non-byte-multiple widths, padding, and representation extent; and
-- how a full-domain semantic enum declares that every bit pattern is valid.
+- how an enum declares that every backing value is valid.
 
 ## Numeric interactions retained here
 
 The enum-specific portion formerly held in
 [numeric type families](numeric-type-families.md) now lives in this file.
 Numeric questions that merely *touch* enums — signedness counterparts, finite bit
-extent, and the canonical bit-count type — stay with that input.
+extent, and associated bit-count types — stay with that input.
 
 ## Other undecided enum concerns
 

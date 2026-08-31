@@ -21,6 +21,9 @@ producing them.
 - Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
   declaration, initialization, binding visibility, qualifiers, and assignment
   boundaries.
+- Read [Zax identity types](language/identity-types.md) for transparent aliases,
+  distinct identities, admission, projection, exposed and opaque surfaces, and
+  declared identity bridges.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
@@ -41,6 +44,12 @@ producing them.
 - Use the [Zax operator catalog](language/operator-catalog.md) to look up exact
   symbolic/circumfix forms, precedence, built-in arithmetic, logical, bitwise,
   shift, mutation, result, and availability behavior.
+- Read [Zax integers](language/integers.md) for exact and target-selected integer
+  types, representation, conversion, arithmetic policy, counts, sizes, and
+  portability.
+- Use the [Zax integer operator catalog](language/integer-operator-catalog.md)
+  to look up complete protected integer availability, results, policies,
+  failures, counts, shifts, conversion, `delta`, and `distance`.
 - Read [Zax mixfix operators](language/mixfix-operators.md) for direct
   multi-component tree operations, holes, receiver anchors, matching,
   decomposition, and protected barriers.
@@ -57,6 +66,7 @@ producing them.
 - [Language principles](language/principles.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
+- [Identity types](language/identity-types.md)
 - [Qualifiers](language/qualifiers.md)
 - [Function invocation](language/function-invocation.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
@@ -64,6 +74,8 @@ producing them.
 - [Operators](language/operators.md)
 - [Operator phrases](language/operator-phrases.md)
 - [Operator catalog](language/operator-catalog.md)
+- [Integers](language/integers.md)
+- [Integer operator catalog](language/integer-operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)
 - [Endianness](language/endianness.md)
 - [Language-design terms](language/terms.md)
@@ -75,10 +87,11 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Foundations and flow
 
-- [Basics](basics.md)
+- [Basics](basics.md) — legacy foundations; current finite integer design is
+  owned by [Zax integers](language/integers.md)
 - [Type definition](type-definition.md)
 - [Enums](enums.md) — legacy enum input; current generated enum operations are
-  in the [operator catalog](language/operator-catalog.md#generated-enum-operations)
+  in the [operator catalog](language/operator-catalog.md#generated-enum-forms)
   and endian behavior is owned by [Zax endianness](language/endianness.md)
 - [Arrays](arrays.md)
 - [Functions](functions.md)
@@ -88,12 +101,15 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Types and data modeling
 
-- [Alias](alias.md)
+- [Alias](alias.md) — legacy alias input; current transparent aliases and
+  explicit identities are owned by
+  [Zax identity types](language/identity-types.md)
 - [Composition](composition.md)
 - [Optional types](optional.md)
 - [Nothing type instances](nothing.md)
 - [Partial types](partial.md)
-- [Casting](casting.md)
+- [Casting](casting.md) — legacy general casting input; current integer
+  conversion is owned by [Zax integers](language/integers.md)
 
 ### Memory and lifetime
 
