@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -532,6 +532,19 @@ make final : (
 
 `return source` directly constructs the slot. It does not default-construct an
 `Item` and then assign over it.
+
+A function always returns the types written in its selected prototype, even
+when the compiler evaluates the call early. A number literal in `return` can
+take that declared result type directly:
+
+```zax
+makeByte final : (result : Byte)() = {
+  return 55
+}
+```
+
+Here `55` is checked against `Byte`, and the caller receives a `Byte`. See
+[Zax integer literals and realization](integer-literals.md#concrete-results-and-compile-time-execution).
 
 ### Opt-in result initialization
 
@@ -1101,6 +1114,21 @@ An inferred declaration supplies no expected result:
 inferred := parseValue(source)
 ```
 
+A typed declaration can choose the final type of arithmetic performed only on
+number literals:
+
+```zax
+myByte : U8 = 200 + 55
+myBits : U8 = ~1 // error: complement has no width-invariant result
+```
+
+The first declaration checks the final mathematical result against `U8`. The
+second still fails because unknown positive complement has different signed and
+unsigned results; the surrounding declaration cannot reach inside and choose
+one interpretation.
+
+See [Zax integer literals and realization](integer-literals.md).
+
 Later use, ordinary assignment, unresolved operators, and outer overloaded calls
 do not invent one:
 
@@ -1208,6 +1236,11 @@ convergence requirement are owned by
 [core flow control](core-flow-control.md#conditional-expression-and-branch-convergence);
 this document owns which callable each arm selects.
 
+Final uncommitted integer arm results may realize through the conditional's one
+concrete convergence hole. That exception does not propagate through an arm to
+discover an inner receiver; see
+[integer conditional convergence](integer-literals.md#conditional-convergence).
+
 A path may also select a direct mixfix while another path uses an ordinary
 operation:
 
@@ -1262,6 +1295,18 @@ A candidate is viable only when:
 - every required result receives a valid disposition; and
 - the declaration is available for invocation.
 
+A number literal can directly supply a parameter declared with an integer type:
+
+```zax
+consumeByte final : ()(value : U8) = {
+}
+
+consumeByte(55)
+```
+
+The compiler checks `55` against `U8`. It does not try conversions or invent
+nested temporary values merely to make another overload viable.
+
 ### Partial-order preference
 
 Preference is a partial order, not a mismatch score.
@@ -1291,6 +1336,13 @@ not declare every pair comparable. Copy versus readonly reference, move versus
 The detailed type, qualification, reference, pointer, copy, move, and `last`
 precedence table remains future work. Its eventual rules must fit this
 partial-order structure.
+
+If a number literal fits several overloads, ordinary source prefers an
+`Integer` parameter; source with unsigned intent prefers a `UInteger`
+parameter. The compiler chooses that overload before checking the value's
+range, and a range failure does not retry another overload. Complete examples
+and failures are defined by
+[Zax integer literals and realization](integer-literals.md#selection-and-range-order).
 
 ### Fewer defaults
 

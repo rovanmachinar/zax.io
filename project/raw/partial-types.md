@@ -150,6 +150,41 @@ must be known before layout and representation-compatible casts are validated.
 Identity-aware `own` exposure and suppression belong to
 [owned-composition input](owned-composition.md), not to `partial`.
 
+## Candidate relatching is a compatibility effect
+
+An authorized partial is conceptually another piece of the type definition.
+Once its declarations are visible, candidate selection must not rank them
+differently merely because they came from a partial.
+
+For example:
+
+```zax
+Foo :: type {
+  +++ final : ()(rhs : U8) = {
+  }
+}
+
+myFoo : Foo = 100 // selects U8
+
+// Illustrative future partial syntax.
+FooExtension :: partial Foo {
+  +++ final : ()(rhs : Integer) = {
+  }
+}
+
+myOtherFoo : Foo = 100 // selects Integer when the partial is present
+```
+
+The `Integer` preference applies across the complete admitted constructor set.
+Moving the same signature between the original body and an authorized partial
+must not change its ranking.
+
+Relatching is an intentional source-compatibility consequence of changing the
+type's surface. This applies to constructors, functions, symbolic operators,
+and phrases. Future partial work must decide which authorities may create that
+effect and how builds make the complete surface reproducible; it may not solve
+the problem by ignoring partial provenance during selection.
+
 ## Future work must decide
 
 - who may extend a type;

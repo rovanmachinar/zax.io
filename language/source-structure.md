@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -250,8 +250,10 @@ fence.
 
 The phrase feature owns what fencing does to candidate interpretations; see
 [exact phrase fencing](operator-phrases.md#exact-phrase-fencing). Complete
-literal realization remains future literal work and may not reinterpret this
-attachment boundary.
+unprefixed integer realization is defined by
+[Zax integer literals and realization](integer-literals.md). Prefixed/custom
+literal catalogs and payload behavior remain future literal work. Neither may
+reinterpret this attachment boundary.
 
 ### Contextual keywords and enclosure boundaries
 

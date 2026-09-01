@@ -35,7 +35,7 @@ structural compatibility proposals on this page remain legacy input.
 > **Enum conversion evidence.** The enum side of `as` and `unsafe as` is
 > dispositioned separately. `enumValue as UnderlyingType` is a current generated
 > enum operation recorded by the
-> [operator catalog](language/operator-catalog.md#generated-enum-forms).
+> [operator catalog](language/operator-catalog.md#generated-underlying-and-enum-forms).
 > The legacy claims that `unsafe as` converts an enum to a *non-underlying*
 > intrinsic type, that direct `as` to such a type is rejected, and that a
 > two-step conversion through the underlying type is the sanctioned route remain
@@ -60,8 +60,8 @@ string := w'hello' as String
 
 // An unsafe conversion will cause a compilation error due to a string character
 // overflow
-stringError := w'this embedded literal "' h'16f' \
-               w'" is not convertible' as WideString
+stringError := w'this embedded non-ascii value "ů" is not convertible' \
+               as WideString
 
 // converting from a `String` to a `WideString` is always safe
 string := "always safe no matter what value"
@@ -90,8 +90,8 @@ asciiString := utf8String unsafe as String
 wideString := utf8String unsafe as WideString
 
 
-wideString := w'Runtime value with a non-ascii value "' h'16f' w'" is not ' \
-              w'legal to express in an ascii string.'
+wideString := w'Runtime value with a non-ascii value "ů" is not legal to ' \
+              w'express in an ascii string.'
 
 // this will cause a runtime panic since it cannot be converted to ASCII
 // (because the `as` keyword assumes all conversion is entirely legal)

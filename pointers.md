@@ -283,7 +283,7 @@ func : ()(pointer : U32 *) = {
     // modern systems)
 }
 
-value : U32 = h'ABCDEF12'
+value : U32 = 2882400018 // hexadecimal ABCDEF12
 
 func(value)
 ````

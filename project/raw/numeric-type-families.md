@@ -23,6 +23,41 @@ This raw input retains the generic mechanism, associated-type implementation,
 custom/extreme numeric families, multiword arrangement, fixed-point, unbounded,
 and floating questions. It is not a competing definition of current integers.
 
+## Custom integer-family participation
+
+Compare a Zax integer with a separate identity that uses an integer underneath:
+
+```zax
+myRaw : U32 = 5
+
+MyInteger :: identity admit expose type Integer
+myUnderlying : Integer = 5
+myIdentity := MyInteger from myUnderlying
+myValue := 0 + myIdentity
+// error: MyInteger is not an integer-family type
+```
+
+`U32` and `Integer` belong to the language's integer family. `MyInteger` is a
+different type whose construction, admission, and exposed operations preserve
+that identity boundary. Numeric source therefore applies directly to
+integer-family types, not to every type with integer storage.
+
+Future numeric/generic work may define a mechanism for declaring a genuine
+custom integer family or direct-realization contract. That work must decide:
+
+- which mathematical values and sign intents the type accepts;
+- which operations are width-invariant for its mathematical model;
+- whether it participates in contextual peer construction or protected
+  same-identity operand anchoring;
+- which contextual/explicit construction and operator modes it exposes;
+- how range, width, storage, and associated types are exposed;
+- what authority may declare the relationship; and
+- how tooling distinguishes genuine numeric participation from an identity
+  using integer representation.
+
+Such a mechanism must not authorize speculative temporary construction, global
+operator discovery, or implicit admission across an ordinary identity boundary.
+
 ## Signedness counterparts
 
 A concretely typed integer may request its equal-width opposite-signedness

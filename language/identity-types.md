@@ -6,8 +6,8 @@
 | Audience | Human developers defining, reading, or converting aliases and representation-related types |
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Transparent aliases; identity boundaries; underlying types and values; identity declarations; admission; identity projection; exposed and opaque surfaces; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
-| Does Not Own | Type-specific integer behavior ([integers](integers.md)); qualifier semantics ([qualifiers](qualifiers.md)); complete owned-composition transformation; partial-extension authority; or structural type equivalence |
+| Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
+| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); qualifier semantics ([qualifiers](qualifiers.md)); complete owned-composition transformation; partial-extension authority; or structural type equivalence |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
 ## Two ways to build on an existing type
@@ -129,6 +129,75 @@ MyDocumentHandle :: identity restricted opaque type Integer
 
 There is no omission default for either choice. Admission and exposure state
 consequential intent.
+
+### Original definition body and sealing
+
+An identity without a body completes and seals as soon as its declaration
+finishes:
+
+```zax
+MyInteger :: identity admit expose type Integer
+```
+
+An original definition body may keep the identity open while its owner adds
+constructors, functions, and operators:
+
+```zax
+// Illustrative future identity-body/completion syntax.
+MyContextualInteger :: identity admit expose type Integer {
+  +++ contextual final : ()(rhs : Integer) = {
+  }
+
+  operator binary '+' contextual existing
+
+  double final : ()() = {
+    _ *= 2
+  }
+}
+```
+
+This is a compile-time definition phase, not a runtime state. No code observes a
+partially defined identity. The closing brace completes and seals the type;
+later additions require whatever authority the future partial mechanism
+provides.
+
+The body belongs to the original identity owner. It does not introduce class
+inheritance: the identity remains a distinct representation/composition-based
+type with the admission and exposure choices stated by its header.
+
+A new identity resets inherited completion posture to `explicit`. The owner
+must opt its construction and exposed operator into `contextual` completion
+separately:
+
+```zax
+myValue := 0 + (: MyContextualInteger = 5)
+```
+
+Exact identity-body and `contextual existing` grammar remains future source
+integration. Completion behavior is defined by
+[Zax operators](operators.md#contextual-completion).
+
+### Integer underlying types do not grant integer membership
+
+An identity does not become an intrinsic integer merely because its underlying
+type is an integer:
+
+```zax
+MyInteger :: identity admit expose type Integer
+myValue := 0 + (: MyInteger = 5)
+// error by default: identity construction and exposed + are explicit
+```
+
+`admit` supplies declared admission and `expose` adapts eligible operations to
+the new identity. Neither grants fundamental integer realization or general
+implicit admission from numeric source. Contextual completion is an independent
+opt-in owned by the identity declaration.
+
+A transparent alias remains the underlying integer type and retains its
+behavior. A future custom numeric-family mechanism may define genuine
+programmer-supplied integer participation; ordinary identity declarations do
+not. See
+[Zax integer literals and realization](integer-literals.md#identities-do-not-become-integers-through-storage).
 
 ## Admission
 
@@ -276,6 +345,66 @@ owned-composition work.
 
 `opaque` performs none of this automatic exposure. The identity may still
 declare its own functions and operators.
+
+### Immediate underlying operations do not forward
+
+The original definition body normally uses the adapted identity surface:
+
+```zax
+double final : ()() = {
+  _ *= 2
+}
+```
+
+When owner code needs the underlying relationship directly, each identity
+boundary provides operations for exactly its immediate layer:
+
+```zax
+UnderlyingType := MyIdentity underlying type
+myUnderlying := myIdentity underlying value
+```
+
+`underlying type` returns the immediate underlying type. `underlying value`
+returns one copied/projected value of that type. Existing
+`as UnderlyingType` projection remains the explicit conversion-shaped route to
+the same immediate underlying value.
+
+`underlying place` is generated as a private final post-unary operation. It is
+eligible only inside the private context implementing this immediate identity
+boundary and grants no stronger place, value, access, or lifetime permission
+than the receiver path already carries:
+
+```zax
+doubleUnderlying final : ()() = {
+  (_ underlying place) *= 2
+}
+```
+
+The operation produces a place, not a first-class reference with independent
+alias or escape guarantees. A function may bind a reference from that place
+when ordinary permissions allow it.
+
+`underlying type`, `underlying value`, and `underlying place` describe the
+current boundary and are not mechanically forwarded by `expose`. An outer
+identity regenerates them for its own immediate layer. It may obtain a copied
+deeper value without gaining the inner identity's private place access:
+
+```zax
+myDeeperValue := (_ underlying place) underlying value
+myDeeperValue.doSomething()
+```
+
+The first operation reaches the outer identity's immediate underlying place.
+The second invokes the inner value's public copied/projected operation. Changes
+to `myDeeperValue` do not mutate the nested stored value.
+
+A second `underlying place` is unavailable unless the current code is also
+private-eligible for that inner identity or the inner owner deliberately
+publishes another access operation. Wrapping a private identity does not grant
+permission to tunnel through it.
+
+Optional naming of the underlying place and complete owned-component
+qualification/lifetime behavior remain future owned-composition work.
 
 ## Construction and transfer
 

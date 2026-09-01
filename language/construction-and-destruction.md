@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional present-construction failure boundary; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
 
 ## Mental model
 
@@ -212,6 +212,87 @@ Closely overlapping overload contracts can still create logic mistakes when a
 later declaration change makes another candidate a better match. Zax diagnoses
 ambiguity but does not prohibit advanced overload sets whose distinctions
 require care.
+
+### Number literals in constructor selection
+
+Number literals participate in the same constructor selection after arguments
+are mapped. Suppose `MyValue` has constructors accepting `U32` and `I8`:
+
+```zax
+myValue : MyValue = 55 // error: both constructors accept 55
+myU32Value : MyValue = (: U32 = 55) // selects the U32 constructor
+```
+
+The compiler tests only the declared parameter types. Suppose `MyContainer`
+accepts `MyInteger`, and `MyInteger` can itself be constructed from an integer.
+The compiler does not invent that nested construction:
+
+```zax
+myContainer : MyContainer = 55
+// error: MyContainer requires MyInteger, not an integer parameter
+
+myContainer : MyContainer = (: MyInteger = 55)
+```
+
+The second form explicitly creates the `MyInteger` value. Integer argument
+selection and the no-invented-temporary rule are explained by
+[Zax integer literals and realization](integer-literals.md#when-a-visible-type-may-complete-an-operand).
+
+### Contextual and explicit constructors
+
+An operator with a visible typed peer may sometimes request the same
+construction without the programmer writing the nested declaration:
+
+```zax
+myValue := 0 + (: MyInteger = 5)
+```
+
+That construction may run user code and has real effects and costs. It is
+available only when the constructor and operator both opt in with the
+`contextual` completion mode.
+
+Illustrative constructor syntax:
+
+```zax
++++ contextual final : ()(rhs : Integer) = {
+}
+```
+
+Assume `MyContextualInteger` also provides a contextual `+`. Its constructor
+allows the missing left value to be built:
+
+```zax
+myValue := 0 + (: MyContextualInteger = 5)
+```
+
+For construction, this is equivalent to:
+
+```zax
+myValue :=
+  (: MyContextualInteger = 0) +
+  (: MyContextualInteger = 5)
+```
+
+An explicit constructor refuses that inserted construction even when `+`
+permits contextual completion:
+
+```zax
+myValue := 0 + (: MyExplicitInteger = 5)
+// error: MyExplicitInteger requires explicit construction
+
+myValue :=
+  (: MyExplicitInteger = 0) +
+  (: MyExplicitInteger = 5)
+```
+
+The second form supplies both values explicitly and may use the ordinary
+operator.
+
+`explicit` requires source to provide the constructed value before the compiler
+may select a candidate that needs it, and omission defaults to `explicit`. The
+exact final keyword position remains future declaration/source integration.
+Operator participation and bounded fallback are defined by
+[Zax operators](operators.md#contextual-completion).
 
 Constructors and replacement constructors use the ordinary parameter-default
 and omission model. A packet may omit an input only when the tested candidate
@@ -814,6 +895,35 @@ branch, loop, or transfer produces.
 
 ## Conditionally live storage and access proof
 
+### Optional construction must establish the contained value
+
+Constructing a present `T?` succeeds only when its selected construction can
+establish a valid `T`:
+
+```zax
+myValue : MyType
+myOptional := (: MyType? = myValue)
+```
+
+An optional may forward an initializer into a contextual contained constructor,
+but failure remains an error:
+
+```zax
+myOptional := (: U8? = 355) // error: 355 does not fit U8
+```
+
+It does not become absent, narrow the value, or select default optional
+construction after present construction fails. Absence occurs only when the
+selected operation explicitly requests or produces it.
+
+Complete optional constructor generation, copy/move/`last`, reset, unwrapping,
+contained lifetime, and failure cleanup remain
+[legacy optional](../optional.md) input. The number-literal application is
+explained by
+[Zax integer literals and realization](integer-literals.md#optional-construction-still-has-to-build-a-value).
+
+### Access proof
+
 Some storage may or may not hold a live value on a given path. Access through
 such storage requires proof that a live value exists on that path:
 
@@ -852,8 +962,6 @@ document owns only the programmer-visible lifetime obligation: access proves a
 live value. Detailed proof algorithms, assertion syntax, contract provenance, and
 lint separation remain future analysis work, and validity follows the selected
 static-analysis contract rather than one compiler's current cleverness.
-Complete optional construction, reset, and unwrapping remain
-[legacy optional](../optional.md) input.
 
 ## Manual and delayed construction
 

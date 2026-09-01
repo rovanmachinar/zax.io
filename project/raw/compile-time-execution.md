@@ -122,29 +122,45 @@ Future work must decide:
 - whether the answer differs for language-provided versus user-declared
   type-receiver operations.
 
-## Deferred integer realization
+## Concrete results and constant inputs
 
-Current programmer-visible integer realization boundaries are owned by
-[Zax integers](../../language/integers.md#initialization-and-compile-time-realization).
-This section retains the future compile-time result mechanism.
-
-A compile-time operation may produce an integer whose concrete realization
-remains open until a typed slot requests a width and signedness:
+Even when the compiler evaluates a function early, the call keeps the result
+type written in its prototype:
 
 ```zax
-myValue := compileTimeResult()
-myByte : Byte = compileTimeResult()
+compileTimeResult final : (result : Integer)() = {
+  return 42
+}
+
+myValue := compileTimeResult() // concrete Integer
+myByte : Byte = compileTimeResult() // error: result remains Integer
 ```
 
-The typed declaration directly realizes `myByte` when the value fits and reports
-a compile-time error otherwise. This is not implicit conversion from a hidden
-preselected `Integer`.
+Current number-literal type selection is owned by
+[Zax integer literals and realization](../../language/integer-literals.md).
 
-An ordinary expression already typed as `Integer` remains `Integer` even when
-the compiler proves it constant. Constancy alone does not grant another
-conversion surface. Future work must define the compiler-known unrealized
-integer category, result-polymorphic alternative, or other mechanism preserving
-that distinction.
+A number literal can take its type from a selected function parameter or result:
+
+```zax
+makeByte final : (result : Byte)() = {
+  return 42
+}
+```
+
+Here `42` becomes a `Byte` while filling the declared result. The caller still
+receives a concrete `Byte`; compile-time execution does not return a hidden
+typeless number.
+
+Constant-only inputs may make a selected operation eligible or attractive for
+compile-time execution:
+
+```zax
+myValue := calculate(42)
+```
+
+They do not by themselves mandate it. Future work must distinguish required,
+permitted, inferred, preferred, and optimization-only execution without
+changing candidate selection or reopening concrete results.
 
 ## Compile-time availability and failure
 
@@ -168,8 +184,10 @@ Future work must decide:
 - `native` must not be used interchangeably with `host` or `target`; and
 - contextual layout and constant queries must be preserved as context-dependent
   rather than completed here; and
-- compile-time evaluation of an already concrete integer must not silently
-  change its type-conversion rules.
+- compile-time evaluation of an already concrete value must not silently change
+  its type, conversion, identity, or operator-selection rules; and
+- uncommitted integer realization must complete before an integer value crosses
+  into runtime execution.
 
 ## Activation and retirement
 

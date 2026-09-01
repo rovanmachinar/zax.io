@@ -281,31 +281,97 @@ when no useful source form exists yet, and it should say so explicitly.
 
 ### Teachability controls presentation order
 
-Completeness and teachability are both required:
+Completeness, accuracy, and teachability are simultaneous goals:
 
-- teachability controls presentation order;
-- completeness controls coverage.
+- teachability controls how a reader encounters the material;
+- completeness controls what behavior must remain discoverable; and
+- accuracy prevents a simpler explanation from changing the design.
 
-Promotion does not present findings in discovery, audit, or contract order.
-Begin with ordinary use, concrete examples, and plain language. Define each
-specialized term before later rules rely on it. Layer exact rules, failures,
-costs, corner cases, and reference details only after readers have the
-prerequisite model.
+Promotion reconstructs human-facing teaching rather than polishing or
+redistributing a working record. Discovery order, audit categories, and
+contract-shaped ledgers are evidence for the author, not a presentation plan.
 
-Apply these checks:
+Documentation guidance has three different strengths:
 
-1. **Cold-reader test:** a competent programmer who has not read the working
-   record can understand common use from the opening sections.
-2. **Vocabulary-before-use test:** every Zax-specific or overloaded term is
-   defined in plain language before carrying technical weight.
-3. **Concrete-paraphrase test:** an abstract rule is followed by what it changes
-   in source, values, operations, failures, or costs.
-4. **Teaching-versus-reference test:** exhaustive matrices and per-form behavior
-   follow the conceptual model or move into an independently useful catalog.
-5. **No working-record transcription:** promotion reconstructs human-facing
-   teaching rather than polishing analytical discussion.
-6. **Two-pass promotion:** first build the reader's model, then trace every
-   aligned finding into the appropriate later layer.
+1. **Hard invariants** protect authority, correctness, and process. Examples
+   include one current owner, explicit maturity, complete disposition, required
+   dry-run output, authorization boundaries, and preservation of staged review
+   state.
+2. **Reader outcomes** describe what successful teaching achieves. A competent
+   programmer should understand ordinary use, predict behavior and cost, and
+   know where deeper rules belong without reconstructing project history.
+3. **Suggested techniques** are accumulated ways to reach those outcomes.
+   Examples include leading with source, explaining in everyday language before
+   introducing a term, and moving exhaustive tables after the mental model.
+
+Suggested techniques are diagnostic aids, not a required content template. Do
+not add an example, definition, rule, table, or link merely to satisfy a
+sequence. When techniques compete, preserve hard invariants and choose the
+presentation that best achieves the reader outcomes without losing technical
+content.
+
+Use these outcome checks:
+
+- **Cold-reader:** a competent programmer who has not read the working record
+  can understand common use from the opening.
+- **Vocabulary earns precision:** a Zax-specific or overloaded term gains
+  technical weight only after the reader has enough meaning to use it.
+- **Concrete consequence:** the reader can tell what an abstract rule changes
+  in source, values, operations, failures, or costs.
+- **Teaching before reference:** exhaustive matrices and per-form behavior
+  follow the conceptual model or live in an independently useful catalog.
+- **No working-record transcription:** the owner teaches the accepted model
+  rather than preserving analytical chronology.
+
+One reliable promotion technique is to work in two passes: first build the
+reader's model, then trace every aligned finding into the appropriate later
+layer. Another structure may work when it achieves the same outcomes and makes
+the completeness trace equally reliable.
+
+### Direct-entry and cross-owner teaching
+
+A reader may enter any linked document or section directly. Success means that
+the reader can quickly understand why the section matters, what representative
+source does, and where the complete rule belongs without being assumed to have
+followed a preferred reading order.
+
+An often-effective progression for a cross-cutting concern is:
+
+```text
+representative source
+-> plain-language outcome
+-> precise Zax term
+-> local boundary
+-> complete owner
+```
+
+Use only the pieces the section needs. A concise reference entry, familiar
+operation, or already established local term may need a different order or no
+example at all.
+
+A link does not replace local teaching. The current document must explain why
+the linked rule matters to the reader's immediate task, while avoiding a
+duplicate definition of the complete foreign mechanism.
+
+Usually place an advanced interaction after the local prerequisites needed to
+understand it rather than at the first technically related heading. If the
+interaction is not needed for the local reading task, omit it or use a concise
+later handoff.
+
+Everyday language and established terminology are complementary. Everyday
+language establishes meaning; terminology preserves precision after that
+meaning is understood. Do not remove a useful term merely to sound informal,
+and do not open with a dense cluster of terms that forces the reader to decode
+the project model before seeing its effect. For example, prefer:
+
+> A number such as `55` takes the parameter's `U8` type.
+
+before:
+
+> An uncommitted integer realizes into a concrete parameter hole.
+
+when that wording better prepares the local reader. In a later reference section
+where the term is already established, the precise shorter form may be better.
 
 ### Positive-first promoted teaching
 
@@ -762,6 +828,9 @@ For an authorized documentation change, check the applicable items:
 - The changed concern has one owner.
 - Authority and implementation state are not overstated.
 - Human-developer-facing detail supports a programmer's mental model.
+- A reader entering an edited owner or linked section can understand its
+  immediate purpose, representative behavior, and route to deeper rules without
+  reconstructing project history.
 - Mirrored stable operating-prompt guidance agrees.
 - Both operating-prompt sources retain the generic active-work placeholder.
 - The `project/README.md` active-work pointer and next number agree with actual

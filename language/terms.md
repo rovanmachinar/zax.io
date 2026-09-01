@@ -65,6 +65,33 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
+## Commitment boundary
+
+A **commitment boundary** selects one concrete integer type for an uncommitted
+integer. Integer realization then checks sign intent and range and creates that
+concrete value.
+
+Commitment may come from an inferred default, an explicitly typed declaration,
+a selected callable/operator input, a protected integer operand anchor, or a
+conditional convergence result. See
+[Zax integer literals and realization](integer-literals.md).
+
+## Completion mode and contextual completion
+
+A declaration's **completion mode** says whether a supported source context may
+provide one missing typed value.
+
+- `contextual` permits one bounded construction in a context defined to support
+  it.
+- `explicit` requires source to provide the concrete receiver or input before
+  the compiler may select a constructor or operator candidate that needs it; it
+  is the omission default.
+
+**Contextual completion** is the act of applying that permission. It does not
+authorize general implicit conversion, construction chains, or fallback after
+an ordinary ambiguity or selected failure. See
+[Zax operators](operators.md#contextual-completion).
+
 ## Compiler host
 
 The **compiler host** is the environment running the compiler and applicable
@@ -213,6 +240,15 @@ direct bridge. See
 An **identity type** is a distinct outer type based on an existing underlying
 type. Its declaration explicitly chooses admission and an exposed or opaque
 underlying surface. See [Zax identity types](identity-types.md).
+
+## Integer realization
+
+**Integer realization** checks an uncommitted integer's mathematical value and
+sign intent against one selected concrete integer type, then creates that value
+directly in the selected type.
+
+It is not conversion from a hidden `Integer` and introduces no runtime range
+check. See [Zax integer literals and realization](integer-literals.md).
 
 ## Lifecycle operation
 
@@ -578,6 +614,22 @@ converted := source as DestinationType
 A type argument has no runtime storage, lifetime, or evaluation. See
 [Zax function invocation](function-invocation.md#type-parameter-slots).
 
+## Type anchor
+
+A **type anchor** is a parsed operand or type argument that supplies the one
+concrete type a contextual operation may use to complete a missing numeric
+receiver or peer.
+
+```zax
+myValue := 0 + (: MyInteger = 5)
+myByte := 55 as U8
+```
+
+The first source uses the concrete peer's type; the second uses the written type
+argument. An anchor does not authorize type search or construction by itself.
+See
+[Zax integer literals and realization](integer-literals.md#when-a-visible-type-may-complete-an-operand).
+
 ## Target environment
 
 The **target environment** is the environment selected for generated program
@@ -625,12 +677,51 @@ context, as distinct from the type's definition.
 A type use may carry contextual qualification without changing the underlying
 type definition.
 
-## Underlying type and value
+## Underlying type, value, and place
 
 An identity type's **underlying type** is the existing type on which its
 representation begins. The **underlying value** is the value used to create the
 identity or returned by identity projection. See
 [Zax identity types](identity-types.md#identity-boundary-and-underlying-type).
+
+The **underlying place** is the immediate storage place beneath an identity or
+owned-composition boundary. Access to it is authority- and qualification-bound
+and does not by itself promise a first-class reference or escaping alias. See
+[Zax identity types](identity-types.md#immediate-underlying-operations-do-not-forward).
+
+## Uncommitted integer
+
+An **uncommitted integer** is a compiler-known mathematical integer value with
+unknown, signed, or unsigned intent but no concrete type, logical width,
+storage, identity, or runtime representation.
+
+It must reach a commitment boundary before it can become a runtime value. See
+[Zax integer literals and realization](integer-literals.md).
+
+## Uncommitted integer evaluation
+
+**Uncommitted integer evaluation** applies the closed language-defined family
+of width-independent mathematical operations before a concrete integer type is
+selected.
+
+It ends for an expression node when that node receives a concrete type. General
+typed expression resolution and constant evaluation may continue afterward.
+See [Zax integer literals and realization](integer-literals.md).
+
+## Width invariance
+
+An integer operation is **width-invariant** for given uncommitted operands when
+every sufficiently wide concrete interpretation that can contain the operands
+and mathematical result produces the same decoded number.
+
+```zax
+myBits := 55 ^ 77 // width-invariant mathematical 122
+myComplement := ~1 // error: signed and unsigned results differ
+```
+
+This test decides whether the operation may run before a concrete integer width
+is selected. See
+[Zax integer literals and realization](integer-literals.md#which-calculations-need-an-integer-width).
 
 ## Value
 

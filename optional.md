@@ -18,6 +18,22 @@ this page is not authoritative for conditional expressions.
 Complete optional construction, reset, and unwrapping behavior remains legacy
 input on this page.
 
+Current construction establishes one boundary that future optional work must
+preserve: constructing a present `T?` succeeds only when the selected operation
+can establish a valid `T`.
+
+```zax
+myOptional := (: U8? = 355) // error: 355 does not fit U8
+```
+
+Failure does not silently produce absence, apply narrowing, try another integer
+width, or fall back to default optional construction. Absence occurs only when
+the selected operation explicitly requests or produces it. The current
+programmer-facing boundary is owned by
+[Zax construction, replacement, and destruction](language/construction-and-destruction.md#optional-construction-must-establish-the-contained-value);
+this page retains future copy/move/`last`, constructor generation, reset,
+unwrapping, contained lifetime, and failure-cleanup input.
+
 
 ### Declaring an optional type
 

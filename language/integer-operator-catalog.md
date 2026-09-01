@@ -7,7 +7,7 @@
 | Applies To | Built-in finite integer operations; not custom overload behavior, formal grammar, or a specification |
 | Implementation State | Not established by this repository |
 | Owns | Protected integer operand domains, availability, result identities, policy behavior, failure, mutation, conversion/admission, count/mask/shift behavior, `delta`, `distance`, and unchecked arithmetic contracts |
-| Does Not Own | Integer type choice and representation ([integers](integers.md)); exact forms/fixity/precedence ([operator catalog](operator-catalog.md)); shared discovery/selection ([operators](operators.md)); or general identity behavior ([identity types](identity-types.md)) |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); integer type choice and representation ([integers](integers.md)); exact forms/fixity/precedence ([operator catalog](operator-catalog.md)); shared discovery/selection ([operators](operators.md)); or general identity behavior ([identity types](identity-types.md)) |
 | Source / Provenance | Integer behavior formerly embedded in the general operator catalog, reorganized after fundamental-integer review |
 
 ## How to use this catalog
@@ -28,6 +28,43 @@ The [general operator catalog](operator-catalog.md) remains authoritative for:
 
 Custom overloads may assign domain-specific behavior and result shapes where the
 form is open. The rules below apply only to protected integer signatures.
+
+### Number literals before a concrete type
+
+Compare:
+
+```zax
+myMathematicalResult : U8 = 200 + 55
+myTypedResult := (: U8 = 200) + 55
+```
+
+In the first declaration, `200 + 55` is calculated mathematically before the
+final `255` is checked against `U8`. In the second, the left operand is already
+`U8`, so the addition uses the concrete `U8` overflow rules in this catalog.
+
+Plain negation, magnitude, arithmetic, division, remainder, mathematical
+shifts, width-invariant binary bitwise operations, and comparison can operate
+on not-yet-typed number literals as described by
+[Zax integer literals and realization](integer-literals.md). Complement is
+available there only when value and sign intent produce one result at every
+fitting width.
+
+This catalog describes operations after an exact or role-selected integer type
+is known, including finite overflow, policy suffixes, optional/reporting
+results, mutation, finite-width bitwise behavior, shifts, and associated result
+types.
+
+A typed operand can also determine the integer type for a number literal on its
+other side:
+
+```zax
+myValue := 0 + (: U8 = 5)
+```
+
+The right operand is `U8`, so `0` is checked as though the programmer wrote
+`(: U8 = 0)`. Ordinary concrete `U8 + U8` behavior then applies. This special
+relationship belongs to the built-in integer operation; the right operand still
+does not contribute custom declarations.
 
 ## Shared integer-operation rules
 
@@ -99,7 +136,7 @@ Pre-unary `+` requests the equal-width opposite-signedness counterpart:
 
 ```zax
 myUnsigned : U8 = 100
-mySigned := +myUnsigned // I8(100)
+mySigned := +myUnsigned // I8 value 100
 ```
 
 | Policy | Behavior |
@@ -119,8 +156,11 @@ declared paired identity.
 One-sided roles such as `Word` return the unnamed exact intrinsic counterpart
 and leave their role identity.
 
-Integer literal `+55` requests unsigned realization. Complete literal behavior
-remains future literal work.
+For an uncommitted integer, pre-unary `+` toggles sign intent: unknown becomes
+unsigned, unsigned becomes signed, and signed becomes unsigned. That
+pre-commitment behavior is defined by
+[Zax integer literals and realization](integer-literals.md).
+For a concrete integer, the counterpart behavior in this section applies.
 
 ## Negation and magnitude
 
@@ -396,6 +436,24 @@ extraction/deposit remain future numeric work.
 ## Integer conversion and admission
 
 ### Exact intrinsic conversion
+
+Plain `as` may contextually give a number literal its written destination type:
+
+```zax
+myByte := 55 as U8
+myError := 355 as U8 // error: 355 does not fit U8
+```
+
+Sign intent must permit construction of that destination. The optional and
+narrowing forms require an already concrete receiver because otherwise their
+apparent policy could not handle contextual construction failure:
+
+```zax
+myOptional := 55 as U8? // error: optional `as` requires a concrete receiver
+myNarrow := 355 narrowing as U8 // error: narrowing requires a concrete receiver
+```
+
+Once the receiver is concrete, the ordinary policies apply:
 
 ```zax
 myWide := myU16 as U32

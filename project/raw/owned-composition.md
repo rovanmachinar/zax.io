@@ -96,6 +96,66 @@ exposed declaration.
 Partial ownership and extension authority are preserved separately in
 [partial-type input](partial-types.md).
 
+## Identity declaration bodies and underlying access
+
+An original identity declaration body may provide owner authority to add
+constructors and operations before the identity is sealed:
+
+```zax
+// Illustrative future identity-body/completion syntax.
+MyInteger :: identity admit expose type Integer {
+  +++ contextual final : ()(rhs : Integer) = {
+  }
+
+  operator binary '+' contextual existing
+}
+```
+
+The identity is open only for this original compile-time definition. The closing
+brace completes and seals it; no runtime value observes a partially defined
+type, and the body does not introduce inheritance.
+
+This is conceptually related to private owned composition, but it does not imply
+that the identity exposes a synthetic source member such as `boxed` or `value`.
+Owner-defined functions can usually act through the identity surface and `_`.
+
+When direct contained access is required, the aligned immediate-boundary family
+is:
+
+```zax
+MyIdentity underlying type
+myIdentity underlying value
+myIdentity underlying place
+```
+
+`underlying place` is a private final post-unary operation for the defining
+authority. It grants access to the immediate storage place under ordinary
+qualification and lifetime restrictions and does not by itself promise a
+first-class reference or escaping alias.
+
+These operations are regenerated for each outer identity boundary and must not
+be forwarded mechanically. An outer owner may use the public copied value
+operation on its immediate inner value without gaining the inner identity's
+private place access:
+
+```zax
+myDeeperValue := (_ underlying place) underlying value
+myDeeperValue.doSomething()
+```
+
+Changes to `myDeeperValue` do not mutate the nested stored value. A deeper
+`underlying place` requires independent private eligibility or an access
+operation deliberately published by the inner owner.
+
+Future work must decide:
+
+- exact identity-body and owner-authority syntax;
+- whether an identity header may name the underlying place;
+- reference binding, alias escape, and lifetime behavior;
+- interaction with existing identity `as UnderlyingType` projection; and
+- how general `own` sugar generates, names, filters, or omits an equivalent
+  private immediate-place capability.
+
 ## Representation and reflection pressure
 
 Future work must decide:

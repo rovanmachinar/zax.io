@@ -6,8 +6,8 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms; precedence and association; form reservation; compact protected-domain availability; generated enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); or cohesive type-specific behavior such as [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Does Not Own | Shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -225,6 +225,27 @@ This section records exact integer-related forms and their levels. Complete
 protected behavior is in the
 [integer operator catalog](integer-operator-catalog.md).
 
+Plain arithmetic, mathematical shifts, and width-invariant binary bitwise forms
+can be used before number literals have selected a width:
+
+```zax
+myByte : U8 = 200 + 55
+myShifted := 1 << 3
+myBits := 55 ^ 77
+```
+
+Complement is available before commitment only when value and sign intent leave
+one result at every fitting width. Zero-fill shift, rotation, counts, mutation,
+and policy/reporting forms need a concrete integer type:
+
+```zax
+myComplement := ~1 // error: signed and unsigned results differ
+myRotated := 1 <<% 2 // error: no concrete width
+```
+
+[Zax integer literals and realization](integer-literals.md) defines that
+boundary. This catalog continues to own the exact forms and precedence.
+
 ### Arithmetic and mutation forms
 
 ```text
@@ -248,7 +269,9 @@ Decrement: --  --?  --%  --|  --!  --!%  --!|
 
 ### Signedness, exact difference, and distance
 
-Pre-unary `+` and its policy variants request the signedness counterpart.
+For a concrete integer, pre-unary `+` and its policy variants request the
+signedness counterpart. For an uncommitted integer, plain pre-unary `+` toggles
+sign intent before realization; policy variants require commitment.
 
 `delta` and `distance` are exact language-defined binary phrases at additive
 precedence.
@@ -341,6 +364,17 @@ myUnsafe := MyIdentity unsafe from mySource
 `as`, `narrowing as`, and `unsafe as` use the left value for receiver discovery.
 The right operand is a complete type argument.
 
+Plain `as` may declare that type argument as a contextual anchor when the left
+side is an uncommitted integer:
+
+```zax
+myByte := 55 as U8
+```
+
+This follows the shared contextual-completion mechanism rather than a
+literal-specific rewrite. Protected optional and narrowing integer forms require
+an already concrete left receiver.
+
 `from`, `optional from`, `narrowing from`, `unchecked from`, and `unsafe from`
 use the destination type identity as receiver.
 
@@ -369,14 +403,31 @@ A reserved phrase form cannot be declared by user code.
 A type-information operation is reserved in concept but has no exact words yet.
 It returns immutable, readonly, final metadata about a concrete type identity.
 
-## Generated enum forms
+## Generated underlying and enum forms
 
-Every enum receives four protected language-provided forms:
+Enums and identities receive immediate-boundary type/value forms:
 
 | Operation | Exact form | Behavior owner |
 | --- | --- | --- |
-| Backing type | `MyEnum underlying type` | Enum type model |
-| Raw extraction | `myEnum underlying value` | Enum type model |
+| Immediate underlying type | `MyType underlying type` | Enum or identity type model |
+| Immediate underlying value | `myValue underlying value` | Enum or identity type model |
+
+An identity original-definition body additionally receives a private final
+post-unary place form:
+
+| Operation | Exact form | Behavior owner |
+| --- | --- | --- |
+| Private immediate underlying place | `myIdentity underlying place` | Identity type model |
+
+These forms are regenerated for each outer boundary and are not mechanically
+forwarded by identity exposure. `underlying place` is not part of the current
+generated enum surface; a future enum definition body may motivate an
+equivalent private capability after enum validity and mutation are reviewed.
+
+Every enum additionally receives:
+
+| Operation | Exact form | Behavior owner |
+| --- | --- | --- |
 | Semantic decode | `myEnum as UnderlyingType` | Enum and applicable semantic owner |
 | Raw adoption | `MyEnum unsafe from myRaw` | Enum and safety model |
 

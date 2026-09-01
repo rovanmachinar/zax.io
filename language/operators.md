@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
+| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and [optional](../optional.md) evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -272,6 +272,74 @@ and the receiver-oriented wording workaround are taught by
 Structural similarity does not widen discovery to every type with a compatible
 shape. Future structural typing may affect viability after discovery without
 turning member additions into distant lookup changes.
+
+### Contextual completion
+
+A visible typed peer can sometimes supply the missing type for a number literal:
+
+```zax
+myValue := 0 + (: MyInteger = 5)
+```
+
+This is allowed only when `MyInteger` permits contextual construction from the
+number and its `+` operator also permits contextual completion. The source then
+behaves as though the programmer had written:
+
+```zax
+myValue := (: MyInteger = 0) + (: MyInteger = 5)
+```
+
+The construction is real and retains its source-order effects and costs.
+
+Constructors and operators share one completion mode:
+
+- `contextual` permits one bounded completion in a source context defined to
+  support it;
+- `explicit` requires the concrete value to be present before selection; and
+- omission means `explicit`.
+
+Exact final keyword placement remains future source integration. Conceptually,
+both declarations must opt in:
+
+```zax
+// Illustrative completion-mode syntax.
++++ contextual final : ()(rhs : Integer) = {
+}
+
+operator binary '+' contextual final : (
+  result : MyInteger
+)(
+  rhs : MyInteger
+) = {
+}
+```
+
+### Direct operations win before contextual fallback
+
+Contextual completion is attempted only when ordinary selection has no viable
+direct candidate. It never repairs:
+
+- ambiguity among direct candidates;
+- a range failure after a direct candidate is selected;
+- a uniquely best but unavailable operation; or
+- a source tree that remains structurally ambiguous.
+
+The fallback obtains one type from one visible peer or declared type anchor,
+tries one contextual construction, and then tests only the already identified
+operator form on that type. It never chains constructors or conversions and
+never searches unrelated types.
+
+The right operand still contributes no declarations during ordinary discovery.
+The contextual fallback is a later, explicitly permitted completion path, not a
+general reversal of receiver ownership.
+
+Only operator contexts currently opt in. A contextual constructor does not by
+itself authorize implicit construction in ordinary calls, returns, or
+conditional convergence.
+
+The complete number-literal examples, sign/range checks, `as` behavior, and
+stopping rules are in
+[Zax integer literals and realization](integer-literals.md#when-a-visible-type-may-complete-an-operand).
 
 ## Candidate-tree formation and selection
 

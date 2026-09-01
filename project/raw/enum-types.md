@@ -13,7 +13,7 @@
 
 Current documentation accepts a narrow enum baseline: four generated operations,
 recorded by the
-[operator catalog](../../language/operator-catalog.md#generated-enum-forms),
+[operator catalog](../../language/operator-catalog.md#generated-underlying-and-enum-forms),
 plus the endian semantic families taught by
 [Zax endianness](../../language/endianness.md).
 
@@ -46,6 +46,48 @@ enumValue := EnumType unsafe from rawValue
 `unsafe from` preserves the backing value without membership, range, or semantic
 validation, so it may produce a value outside a restricted enum's ordinarily
 named domain.
+
+## Original enum definition-body pressure
+
+Enums need more than a list of named values. An original definition body could
+remain open while the enum owner declares values, generated-behavior choices,
+and owner-supplied functions, then seal when the body closes.
+
+```zax
+// Illustrative future syntax; member/function grammar is not established.
+Fruit :: enum U8 {
+  Apple = 1
+  Banana = 2
+
+  format final : (result : String)() = {
+    // Owner-supplied enum-to-string behavior.
+  }
+
+  parse final : (result : Fruit?)(source : String) = {
+    // Owner-supplied string-to-enum behavior.
+  }
+}
+```
+
+This would follow the identity original-definition model:
+
+- the body is open only to the enum's original defining authority;
+- no runtime code observes a partially defined enum;
+- the closing brace completes and seals the enum;
+- the body adds no per-instance storage;
+- composition remains composition rather than inheritance; and
+- later partial extension remains a separate authority question.
+
+String formatting/parsing, validation, flag helpers, and domain utilities are
+concrete uses. Future work must decide which functions are generated, whether
+the owner can retain, replace, or forbid generated versions, and how conflicting
+member/function syntax is disambiguated.
+
+Current enums do not receive `underlying place`. If an original enum body is
+accepted, its defining authority may need an equivalent private final
+immediate-backing-place operation to implement low-level behavior. That
+capability must never become public automatically and must preserve enum
+validity, qualification, and lifetime rules.
 
 ## Safe creation pressure
 

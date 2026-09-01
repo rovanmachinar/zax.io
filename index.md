@@ -47,6 +47,9 @@ producing them.
 - Read [Zax integers](language/integers.md) for exact and target-selected integer
   types, representation, conversion, arithmetic policy, counts, sizes, and
   portability.
+- Read [Zax integer literals and realization](language/integer-literals.md) for
+  how number literals get a type, how pre-unary `+` states signedness intent,
+  how typed operands affect them, and when a value does not fit.
 - Use the [Zax integer operator catalog](language/integer-operator-catalog.md)
   to look up complete protected integer availability, results, policies,
   failures, counts, shifts, conversion, `delta`, and `distance`.
@@ -75,6 +78,7 @@ producing them.
 - [Operator phrases](language/operator-phrases.md)
 - [Operator catalog](language/operator-catalog.md)
 - [Integers](language/integers.md)
+- [Integer literals and realization](language/integer-literals.md)
 - [Integer operator catalog](language/integer-operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)
 - [Endianness](language/endianness.md)
@@ -91,7 +95,7 @@ semantics remain non-authoritative until individually reviewed and promoted.
   owned by [Zax integers](language/integers.md)
 - [Type definition](type-definition.md)
 - [Enums](enums.md) — legacy enum input; current generated enum operations are
-  in the [operator catalog](language/operator-catalog.md#generated-enum-forms)
+  in the [operator catalog](language/operator-catalog.md#generated-underlying-and-enum-forms)
   and endian behavior is owned by [Zax endianness](language/endianness.md)
 - [Arrays](arrays.md)
 - [Functions](functions.md)

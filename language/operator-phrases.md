@@ -455,6 +455,32 @@ whether they form one mixfix or several operations. An unknown fenced form
 produces a phrase-not-found diagnostic, which is a different error from an
 unrecognized natural phrase.
 
+### Contextual completion never searches word combinations
+
+A number literal may use a visible peer type only after source has established
+one operator tree and one exact phrase component:
+
+```zax
+0 'foobar things make nice decorations' (: MyInteger = 5)
+```
+
+The fence fixes the words in one component. Grouping may still be required to
+fix the complete tree, and the `MyInteger` declaration must actually provide a
+matching contextual phrase and construction.
+
+Unfenced source is ineligible when applying a guessed receiver type would
+require trying several word partitions:
+
+```zax
+0 foobar things make nice decorations (: MyInteger = 5)
+// error: contextual completion cannot search phrase combinations
+```
+
+Fencing is one way to provide the needed certainty, not a privileged completion
+mechanism. Any future source form that establishes the same single component
+and tree may qualify. General contextual operator fallback is defined by
+[Zax operators](operators.md#contextual-completion).
+
 The fence's phrase role is owned here. Its interaction with general tokenization
 and attached literal prefixes is summarized by
 [source structure](source-structure.md#phrase-fences-and-literal-coordination).

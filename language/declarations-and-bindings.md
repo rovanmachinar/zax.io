@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
+| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
 
 ## Mental model
 
@@ -54,6 +54,12 @@ y : = 0
 Both forms declare an inferred `Integer` and initialize it from `0`. A formatter
 uses the compact `:=` spelling consistently.
 
+A number such as `0` does not choose an integer width by itself. Because these
+declarations provide no explicit type, Zax uses the ordinary default
+`Integer`. Writing `x := +0` instead selects the unsigned default `UInteger`.
+The complete rules are in
+[Zax integer literals and realization](integer-literals.md).
+
 The compiler may optimize storage reservation and initialization when doing so
 preserves behavior. That does not collapse the programmer-visible distinction
 between introducing a name and initializing its value.
@@ -98,6 +104,18 @@ Initializer and constructor selection are defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
 The declaration guarantees only that `item` is introduced and initialized
 directly from the supplied source.
+
+A number literal can take its type directly from an explicitly typed
+declaration:
+
+```zax
+myByte : U8 = 255
+myTooLarge : U8 = 256 // error: 256 is outside U8
+```
+
+The compiler checks the value against `U8`; it does not first create an
+`Integer` and convert it. See
+[Zax integer literals and realization](integer-literals.md#direct-typed-realization).
 
 ## Default initialization
 
@@ -811,6 +829,13 @@ foo : Bar = source
 The `:` introduces `foo`; user code cannot overload that act. The initializer
 selects construction or initialization behavior for the new `Bar`. Later
 `foo = source` performs operator selection against an existing destination.
+
+An uncommitted integer on the right of assignment may fill a concrete integer
+input declared by an already discovered `=` candidate. The assignment receiver
+bounds discovery; later use does not propagate an expected type backward into
+the source expression. Candidate preference, post-selection range checking, and
+failure are defined by
+[Zax integer literals and realization](integer-literals.md#number-literals-filling-typed-inputs).
 
 Replacement-constructor result forwarding is defined by the construction owner.
 Exact results for other built-in operators, expression value categories,

@@ -258,7 +258,7 @@ myOtherType : MyOtherType
 // declare three different data types
 value1 : U8 = 12
 value2 : Short = -1000
-value3 : U64 = h'ABCDEF'
+value3 : U64 = 11259375 // hexadecimal ABCDEF
 
 // invoke `add` with three different data types
 myType.add(value1)

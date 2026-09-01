@@ -725,6 +725,56 @@ the complete operation completes:
 whatAmI : KnownType = (a < b ?? c ;; d) // each path constructs KnownType
 ```
 
+Number literals at the ends of conditional arms can use the type that the
+conditional must produce:
+
+```zax
+myByte : U8 = condition ?? 1 ;; 2
+```
+
+Both `1` and `2` are checked and used as `U8` before their runtime paths leave
+the conditional. If one arm already has an integer type, a number literal in the
+other arm takes that same type:
+
+```zax
+myByte := condition ?? (: U8 = 1) ;; 2
+```
+
+Two concrete arms use ordinary convergence and do not reopen:
+
+```zax
+myValue := condition ?? (: U8 = 1) ;; (: Byte = 2) // error: distinct identities
+```
+
+The convergence type reaches only each arm's final result. It cannot choose a
+width or signedness interpretation needed by an invalid inner operation:
+
+```zax
+myValue : U8 = condition ?? ~1 ;; 1 // error: complement has no invariant result
+```
+
+The first arm cannot resolve independently:
+
+```zax
+signed := ~(: I8 = 1)       // -2
+unsigned8 := ~(: U8 = 1)    // 254
+unsigned16 := ~(: U16 = 1)  // 65534
+```
+
+Bare `1` has not chosen signed or unsigned intent, and those valid concrete
+interpretations produce different numbers. The outer `U8` convergence type can
+receive a completed arm result; it cannot reach inside the arm and choose which
+complement operation the programmer meant.
+
+Commit the operand when `U8` complement is intended:
+
+```zax
+myValue : U8 = condition ?? ~(: U8 = 1) ;; 1
+```
+
+No uncommitted value reaches runtime. The complete integer-specific rules are in
+[Zax integer literals and realization](integer-literals.md#conditional-convergence).
+
 An inferred binding may not retain several possible types:
 
 ```zax

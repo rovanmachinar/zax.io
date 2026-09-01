@@ -480,95 +480,15 @@ wideString : WideString = w'hello'
 
 ### Intrinsic system literals
 
-> **Current quote boundary.** A standalone single-quoted payload is the
-> [exact phrase fence](language/operator-phrases.md#exact-phrase-fencing), not a
-> literal. An ordinary unprefixed literal uses double quotes, and every
-> single-quoted literal payload carries its own attached prefix such as `h'...'`
-> or `utf8'...'`. Complete literal realization remains future literal work.
+Current unprefixed integer behavior is owned by
+[Zax integer literals and realization](language/integer-literals.md). Attached
+single-quote versus separated phrase-fence tokenization is owned by
+[Zax source structure](language/source-structure.md#phrase-fences-and-literal-coordination).
 
-Literals are any constant literal value that requires compile-time conversion from the input value to the underlying `type`.
-
-Normal strings are enclosed with double quotes `"string"`. A single quote (`'`) closes a payload only when it is attached to a literal prefix, as in `h'ABC123'`. Any escape sequencing interpretation performed inside any literal is entirely dependent on the type of a literal used. Literals are not required to support any escape sequences at all. The default `ascii` string type is applied to strings when a literal type is not specified, and no previous literal type declaration is being continued.
-
-The type of a literal is prefixed before the value contained in single (`'`) or double (`"`) quotes. The language has support for some built-in literal types such as `a`, `ascii`, `utf8`, `c`, `w`, `unicode`, `b64`, `b`, `h` and others. The language is flexible and new compile-time literals can be added to the language. A literal type specification is done by a literal type prefix before a value (`type'value'`). A single quote (`'`) can be embedded into a literal value by utilizing double quotes (`""`) around a literal's value and double quotes can be embedded into a literal value by using a prefixed single-quoted payload, e.g. `c'"'` and `c"'"`.
-
-Literals can be extended across multiple lines using the continuation operator `\` and can interchange between using an attached single quote (`'`) and the double quote (`"`) as needed. Every single-quoted payload states its own prefix; no payload inherits a prefix from an earlier literal. Complete continuation and merged-literal behavior remains future literal work.
-
-String literals have additional logic once a literal is resolved. If a string literal resolves followed by any other literal value that resolves to a number or another string then a compiler will merge the result into into a single string sequence. A number after a string literal will cause the number to be converted to a character code within the string's supported character value range.
-
-````zax
-// import the module system literals into the global namespace
-:: import Module.System.Literals
-
-char1 := c'A'                       // becomes the ASCII letter `A`
-char2 := c'\n'                      // C-style escapes supported thus becomes
-                                    // an ASCII new line character
-wideChar := r'😀'                    // becomes a rune character/wide character
-charBackslash := c'\\'              // becomes a single backslash
-charDoubleQuote := c'"'             // becomes a double quote
-charSingleQuote := c"'"             // becomes a single quote
-charNulValue := c'\0'               // becomes an ASCII NUL character
-binary := b'1011101'                // becomes a base-2 number
-binarySequence := "m" b'1011101'    // becomes a string sequence with an
-                                    // embedded character expressed in base-2
-octal := o'12345670'                // becomes a base-8 number
-octalSequence := "n" o'76'          // becomes a string sequence with an
-                                    // embedded character expressed in base-8
-duodecimal := d'1234567890AB'       // becomes a base-12 number
-duodecimalSequence := "y" d'AB'     // becomes a string sequence with an
-                                    // embedded character expressed in base-12
-hexadecimal := h'ABC123'            // becomes a base-16 number
-hexadecimalSequence := "z" h'EF'    // becomes a string sequence with an
-                                    // embedded character expressed in base-16
-mixedSequence := c'h' c'e' \        // becomes a string sequence containing the
-                 b'01101100' \      // ASCII characters "hello"
-                 b'01101100' \
-                 o'157'
-
-runeString : Rune = h'0398' h'03A4' // wide character string consisting of
-                                    // the unicode characters Theta and Tau.
-
-namespacedType := Module.System.Literals.ascii"hello there!"
-
-string := "Default is an ASCII string type where c-style escapes are " \
-          "not supported."
-
-asciiString1 := a'an ASCII string with c-style escapes\n'
-asciiString2 := ascii'an ASCII string without c-style escapes'
-
-wideString1 := w'a wide string with escapes with c-style escapes\n'
-wideString2 := unicode'a wide string without c-style escapes'
-
-utf8String := utf8'utf8 string does not have escape sequences ' \
-              utf8'as remains "as is".'
-
-// convert from base-64 directly to a string character sequence (embedded NUL
-// characters can exist within strings)
-base64 := b64'VGhlIHF1aWNrIGJyb3duIGZveC4='
-
-// convert from xml entity text directly to a wide-character string
-xmlEntity := xml'John&#39;s Fish &amp; Chip Caf&#233;.'
-
-// string literals merging with other literals
-mergedLiterals := "This string has no escape sequences thus C:\file\paths is " \
-                  "preserved as well as 'single quotes' as ASCII."
-
-anotherWayToEscape := a'This string has escape sequences where backslashes' \
-                      a'need escaping for paths like C:\\file but "double' \
-                      a'quotes" are left "as is"\n'
-
-beCarefulSingleQuotes := ascii'single quotes cannot exist inside single quotes'\
-                         ascii' thus use "double quotes"' "around 'single quotes'\n"
-
-wideStringLiterals := unicode'Wide string has no escapes but can embed wide ' \
-                      unicode'values such as "' h'16F' w'" fairly easily.\n'
-
-continueExisting := w'encoding inside single quotes is continued ' \
-                    w'with an explicit prefix on every payload, even when ' \
-                    w'the encoding remains unchanged. A changed encoding also ' \
-                    w'uses its own prefix, as in "' \
-                    h'16F' w'" needed the "w" declared once again'
-````
+The former prefix catalog, encoding/escape candidates, numeric-base payloads,
+custom literal operators, compile-time transformations, and merged literal
+examples remain unresolved future input. They are no longer presented here as
+current language behavior.
 
 ### Intrinsic Namespaces
 

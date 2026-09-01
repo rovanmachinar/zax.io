@@ -7,7 +7,7 @@
 | Applies To | Fundamental finite integer types and their programmer-visible behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Integer choice and mental model; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; endian eligibility; costs, diagnostics, portability, and source stability |
-| Does Not Own | General identity declarations ([identity types](identity-types.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
 | Source / Provenance | Legacy [basics](../basics.md) and [casting](../casting.md) integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
 
 ## Choosing an integer says what the value is for
@@ -399,27 +399,46 @@ Near.IndexSize.maximum <= IndexSize.maximum <= Far.IndexSize.maximum
 Default initialization of a fundamental integer produces numeric zero with an
 all-zero logical representation.
 
-A typed slot directly realizes an uncommitted literal or compile-time integer
-result:
+A number written directly in source, such as `42`, has a mathematical value but
+has not yet chosen an integer width. A typed declaration supplies that type:
 
 ```zax
 myByte : Byte = 42
-myOtherByte : Byte = compileTimeResult()
 ```
 
-If the compile-time value does not fit, compilation fails. The value is not
-first created as `Integer` and then implicitly converted.
+In this example, the source `42` is the uncommitted integer. It stops being
+uncommitted when the declaration gives it type `Byte`.
 
-An expression already typed as `Integer` remains `Integer` merely because it is
-constant:
+The compiler checks whether `42` fits `Byte` and creates the `Byte` value
+directly. It does not first create an `Integer` and implicitly convert it. An
+out-of-range value is a compile error.
+
+Function and operator results are concrete. An expression already typed as
+`Integer` remains `Integer` merely because it is constant or was evaluated
+during compilation:
 
 ```zax
+compileTimeInteger final : (result : Integer)() = {
+  return 42
+}
+
 myInteger : Integer = compileTimeInteger()
 myByte : Byte = myInteger // error: distinct integer identities
 ```
 
-Complete literal grammar and the compiler-known uncommitted integer result or
-equivalent mechanism remain future literal/compile-time work.
+`compileTimeInteger()` and `myInteger` are already concrete `Integer` values;
+neither is an uncommitted integer merely because the value is known during
+compilation.
+
+Zax calls a not-yet-typed mathematical source value such as the earlier `42` an
+**uncommitted integer**.
+[Zax integer literals and realization](integer-literals.md) explains its sign
+intent, width-invariant operations, type selection, conditional behavior, and
+failures.
+
+Prefixed/custom literal catalogs and payload behavior remain future literal
+work. A resolved prefixed literal has one concrete result type rather than an
+uncommitted function-like result.
 
 ## Integer identity types
 

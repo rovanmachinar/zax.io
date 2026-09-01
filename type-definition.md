@@ -158,7 +158,7 @@ func final : ()() = {
     myType.value2 = 3.14159
 
     myType.value3.a = "banana"
-    myType.value3.b = h'ABCDEF01'
+    myType.value3.b = 2882400001 // hexadecimal ABCDEF01
 }
 ````
 

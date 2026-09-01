@@ -20,8 +20,11 @@ gadget bolted onto an integer; it is a distinct type whose supported operations
 mean what they would mean inside a machine that natively uses its byte order.
 
 ```zax
-header := BigEndianU32 from h'00001234'
-flagged := header | h'80000000'
+headerBits : U32 = 4660       // hexadecimal 00001234
+flagMask : U32 = 2147483648   // hexadecimal 80000000
+
+header := BigEndianU32 from headerBits
+flagged := header | flagMask
 // `flagged` means "the big-endian value 0x80001234",
 // not "the native value whose bytes happen to look shuffled".
 ```
@@ -139,6 +142,19 @@ little := LittleEndianU32 from nativeValue
 little := LittleEndianU32 from big
 big := BigEndianU32 from little
 ```
+
+The destination-owned operation also gives a number literal the exact backing
+integer type it needs:
+
+```zax
+smallBigEndian := BigEndianU32 from 5
+```
+
+Here the selected `from` input is `U32`, so argument binding has the same typed
+value as `(: U32 = 5)` before the endian value is created. This direct source
+capability must survive future refinement of generated endian names and family
+syntax. Number-literal input selection is defined by
+[Zax integer literals and realization](integer-literals.md#number-literals-filling-typed-inputs).
 
 The additional safe type-receiver `from` operation:
 
@@ -264,8 +280,11 @@ is unambiguous under the mental model:
 - reduction AND, OR, XOR/parity, NAND, NOR, and XNOR.
 
 ```zax
-a := BigEndianU32 from h'12345678'
-b := BigEndianU32 from h'0F0F0F0F'
+aBits : U32 = 305419896 // hexadecimal 12345678
+bBits : U32 = 252645135 // hexadecimal 0F0F0F0F
+
+a := BigEndianU32 from aBits
+b := BigEndianU32 from bBits
 
 same := a == b
 inverted := ~a
@@ -367,7 +386,8 @@ length := BigEndianU32 unsafe from rawStorage
 count := length as U32
 
 // Mask a flag while staying in the endian domain.
-withoutFlag := length &~ h'80000000'
+flagMask : U32 = 2147483648 // hexadecimal 80000000
+withoutFlag := length &~ flagMask
 
 // Write it back out as raw storage.
 writeU32(buffer, offset, withoutFlag underlying value)
