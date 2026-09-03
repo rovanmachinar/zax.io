@@ -7,7 +7,7 @@
 | Applies To | Async I/O, coroutines, concurrency, scheduling, and optional runtime support |
 | Owns | Preservation of aligned pressures and unresolved boundaries |
 | Does Not Own | Accepted async semantics or runtime contracts |
-| Source / Provenance | Work items `001`, `005`, and `006`; foundational async, lifecycle, and invocation completion pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, and `012`; foundational async, lifecycle, invocation completion, and optional construction/transfer pressure |
 
 ## Aligned pressure
 
@@ -78,6 +78,27 @@ completion only for synchronous calls. Future async work must decide:
 - which executor or thread performs result mapping; and
 - how coroutine, allocation, scheduling, and synchronization costs remain
   visible.
+
+## Optional construction and transfer pressure
+
+[Zax optional values](../../language/optional-values.md) marks a wrapper present
+only after its boxed construction completes. Async work must not publish or
+observe presence while a suspending operation has established only part of the
+boxed value.
+
+Cancellation during optional construction or transfer must define:
+
+- cleanup of partially established boxed members;
+- whether a source under `move` still contains one valid moved-from value;
+- whether a terminally transferred source has become absent;
+- who owns resources between source release and destination adoption;
+- when payload aliases and presence proofs become invalid;
+- whether result mapping completed before another task can observe either
+  wrapper.
+
+These questions do not authorize suspending optional lifecycle operations.
+Synchronous optional construction and transfer remain the current conceptual
+boundary.
 
 ## Activation and retirement
 

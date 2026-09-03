@@ -6,9 +6,9 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional-presence behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
-| Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and [optional](../optional.md) evidence together with dispositioned operator-overloading material |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
+| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
+| Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
 ## Mental model
 
@@ -680,6 +680,44 @@ An arbitrary user-defined Boolean-returning `?` does not prove storage live. The
 optional-presence contract must be recognized by the analyzer. The lifetime
 obligation is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#conditionally-live-storage-and-access-proof).
+
+### Optional reset and transfer-source operations
+
+`reset value` is a protected pre-unary optional phrase. It destroys a present
+boxed value, leaves the same wrapper absent, and returns a reference to that
+wrapper:
+
+```zax
+reset optionalValue
+(reset optionalValue) = [{}]
+```
+
+`last value` and `move value` are protected pre-unary optional source forms.
+They preserve the optional type and attach distinct transfer stances. Producing
+the stance has no effect until a constructor, assignment, parameter binding, or
+another consumer accepts it:
+
+```zax
+source : MyType?
+
+terminallyTransferred : MyType? = last source
+```
+
+The accepted consumer owns the source-state effect. A terminal payload transfer
+leaves the source wrapper absent; a nonterminal move preserves source presence
+and leaves a present boxed value live in its defined moved-from state.
+
+Postfix optional access yields a reference under the boxed qualifications after
+proof. It is not a runtime-checking `unwrap` operation. Safe source that lacks
+proof is rejected rather than receiving an implicit runtime fallback.
+
+A future narrow unsafe presence/lifetime assertion may permit access the compiler
+cannot prove. It adds no required runtime check; if the asserted lifetime or
+presence is false, the language provides no defined behavior. Debug
+instrumentation may detect a violation and panic without making that check a
+language guarantee. Complete optional state, construction, qualification,
+nesting, and transfer behavior is defined by
+[Zax optional values](optional-values.md).
 
 ## Branch-specific selection
 

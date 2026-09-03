@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -387,6 +387,13 @@ binds before the mutation but may observe `2` when the body later reads the
 referent. A move or `last` transfer likewise occurs before
 `changeSourceToTwo(source)` starts.
 
+For an optional source, a selected `last` consumer leaves the source wrapper
+absent after terminal payload transfer, while a selected `move` consumer
+preserves source presence and a live moved-from payload. Merely producing
+`last optional` or `move optional` has no effect until the mapped parameter or
+another consumer accepts that stance. Complete optional state behavior is
+defined by [Zax optional values](optional-values.md#the-three-ordinary-state-and-transfer-operations).
+
 This order is programmer-visible. An optimization may elide storage or operations
 only when it preserves:
 
@@ -532,6 +539,26 @@ make final : (
 
 `return source` directly constructs the slot. It does not default-construct an
 `Item` and then assign over it.
+
+An optional result therefore establishes absence or presence directly:
+
+```zax
+find final : (
+  result : Item?
+)(
+  shouldReturn : Boolean,
+  input : Item
+) = {
+  if shouldReturn
+    return input
+
+  return (: Item?)
+}
+```
+
+Neither path first constructs an absent result and assigns over it. Complete
+optional construction and transfer is defined by
+[Zax optional values](optional-values.md#parameters-and-results).
 
 A function always returns the types written in its selected prototype, even
 when the compiler evaluates the call early. A number literal in `return` can
@@ -948,6 +975,33 @@ anotherFunction(# : Integer = produce())
 These forms differ in how grouping, positional intent, or an anonymous binding
 name resolves the surrounding syntax. Canonical formatting may prefer one form
 later; their current parsing roles remain distinct.
+
+Anonymous typed construction is required when an expression hole adds an
+optional layer around an already-optional source:
+
+Assume `consumeOptional` accepts `Item?` and `consumeNested` accepts `Item? ?`:
+
+```zax
+inner : Item?
+
+consumeOptional(inner) // ordinary same-type Item? argument
+consumeNested((: Item? ? = [{ inner }]))
+```
+
+A bare packet cannot fill the argument:
+
+```zax
+consumeNested([{ inner }]) // error: the packet has no destination
+```
+
+The extra declaration is required only because the second call adds optional
+depth. "Anonymous" describes the declaration's missing binding name before
+`: Item? ?`; it does not mean that `Item? ?` is an anonymous structural type or
+that the named source `inner` lacks a name.
+
+The packet supplies constructor inputs rather than producing an anonymous
+value. Optional depth intent is defined by
+[Zax optional values](optional-values.md#adding-optional-depth-requires-a-packet).
 
 ### Source and destination discard
 

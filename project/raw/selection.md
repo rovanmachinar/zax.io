@@ -7,7 +7,7 @@
 | Applies To | Selection constructs whose complete design was deferred by core flow control |
 | Owns | Preservation of the selection concern, its legacy provenance, the aligned `case next` consequence, current-flow constraints, activation pressure, and retirement criteria |
 | Does Not Own | Accepted selection semantics or current flow/operator ownership |
-| Source / Provenance | Work item `007`; legacy [flow control](../../flow-control.md) `switch`, `case`, and value-polymorphism sections |
+| Source / Provenance | Work items `007` and `012`; legacy [flow control](../../flow-control.md) `switch`, `case`, and value-polymorphism sections; optional per-layer matching pressure |
 
 ## Reading posture
 
@@ -59,6 +59,39 @@ Selection design must preserve the already-accepted
 
 Selection may add its own matching and dispatch behavior but may not contradict
 these constraints.
+
+## Optional matching pressure
+
+[Zax optional values](../../language/optional-values.md) gives every optional
+layer independent absence/presence and boxed lifetime:
+
+```zax
+nested : MyType? ?
+```
+
+Future selection work must decide how source matches:
+
+- outer absence;
+- outer presence with inner absence;
+- both layers present;
+- a boxed binding under its declared qualifications.
+
+Matching must preserve per-layer proof. A boxed binding is valid only while the
+exact matched lifetime remains active; reset, packet construction, complete
+wrapper replacement, or terminal transfer invalidates it. Selection syntax must
+not flatten nested optionals or make a bare construction packet into an
+anonymous value.
+
+Exhaustiveness should count semantically distinct optional states rather than
+representation niches. Exact binding syntax and interaction with guards remain
+unaccepted.
+
+Present/absent combinators such as illustrative
+`fold(optionalValue, onPresent, onAbsent)` create the same selected-branch
+pressure in expression form. Future selection work must coordinate with
+function-composition input so only one callback executes, both possible result
+paths converge, and a present callback receives a valid boxed lifetime without
+turning wrapper method syntax into implicit postfix access.
 
 ## Activation and retirement
 

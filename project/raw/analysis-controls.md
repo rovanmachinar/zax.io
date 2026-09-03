@@ -5,9 +5,9 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
 | Applies To | Source-local semantic permissions and assertions, analysis provenance, contract-version evolution, and the boundary between unsafe controls and lint suppression |
-| Owns | Preservation of construction-derived requirements, concrete examples, the contract-dependent severity of redundant controls, unresolved syntax, activation pressure, and retirement criteria |
+| Owns | Preservation of construction-derived requirements, concrete examples, the aligned contiguous non-scoping unsafe-enclosure constraint, multiple exact categories, the contract-dependent severity of redundant controls, remaining syntax, activation pressure, and retirement criteria |
 | Does Not Own | Accepted analysis-control semantics or current safety/diagnostic ownership |
-| Source / Provenance | Work items `005`, `006`, and `007`; construction/lifecycle, invocation/result, and core-flow analysis pressure |
+| Source / Provenance | Work items `005`, `006`, `007`, and `012`; construction/lifecycle, invocation/result, core-flow, and optional proof/alias pressure |
 
 ## Reading posture
 
@@ -42,24 +42,37 @@ Illustrative syntax:
 
 ```zax
 /// The callback consumes the view synchronously and stores nothing.
-unsafe <lifetime-escape> {
+unsafe<lifetime-escape>{
   myCaptureBeyondLifetime(myType.view())
 }
 ```
 
 The angle-bracketed category is placeholder notation, not accepted syntax.
 
-An unsafe grouping block should not silently create a lexical scope. Either the
-future construct is non-scoping or it uses the established descope mechanism:
+The aligned source shape is a contiguous, non-scoping unsafe enclosure, not a
+keyword followed by a scope. Declarations retain their surrounding scope:
 
 ```zax
-unsafe <lifetime-escape> [[descope]] {
+unsafe<lifetime-escape>{
   x : Integer
   myCaptureBeyondLifetime(myType.view())
 }
 
 x = 5
 ```
+
+One enclosure may acknowledge several exact categories without becoming broad
+unsafe mode:
+
+```zax
+unsafe<optional-presence, lifetime-escape, replacement-alias>{
+  reset optionalValue
+}
+```
+
+Every category applies only its named permission. Future grammar must validate
+the contiguous opener, required whitespace after each comma separator,
+documentation attachment, nesting, and source reflection.
 
 ## Lifecycle-state assertions
 
@@ -147,6 +160,34 @@ override syntax:
 These are future analysis concerns. A semantic assertion may override incomplete
 proof, while lint suppression may not change semantics; the two mechanisms remain
 distinct as described below.
+
+### Optional proof and invalidation pressure
+
+[Zax optional values](../../language/optional-values.md) requires static proof of
+the exact live boxed lifetime before postfix access. Proof may come from a
+presence test, construction, earlier flow, or another recognized contract.
+
+Reset, packet construction, complete-wrapper replacement, terminal transfer, or
+another lifetime-ending operation invalidates earlier payload proof and aliases.
+An assertion may accept responsibility when the compiler cannot prove valid
+source. The assertion adds no required runtime handle or check. If its presence,
+alias, or lifetime claim is false, behavior is undefined; debug instrumentation
+may detect the violation and panic without making that check a language
+guarantee. It cannot legalize unconditional known absence, a known-ended
+lifetime, direct boxed destruction, readonly mutation, immutable mutation, or
+replacement of a final place.
+
+Exact same-object source is not a universal error:
+
+```zax
+value = value
+value foos value
+```
+
+A protected lifecycle operation may define alias-safe behavior, while an
+arbitrary user phrase may intentionally accept the same object twice. Future
+analysis should use operation contracts or lint policy rather than a blanket
+semantic rejection.
 
 ## Partial access and publication are distinct
 
@@ -298,6 +339,31 @@ Future teaching must explain the practical choice before the contract details:
 
 The option is never defined by debug versus release mode. Project/build metadata
 must make the chosen contract reproducible and auditable.
+
+### General runtime-check contract pressure
+
+Arithmetic overflow is one instance of a broader possible mechanism. Future
+work should evaluate whether other cheaply checkable runtime failures use the
+same contract shape:
+
+```text
+default contract -> perform the required check and panic on violation
+unchecked contract -> omit the check; violation has undefined consequences
+```
+
+Candidate domains include bounds, nonzero divisors, explicit panic-on-absence
+operations, and other checks whose runtime condition is well-defined. Each
+domain still owns its safe default and exact failure.
+
+Static proof obligations remain distinct. Optional presence, reference lifetime,
+and alias validity may be impossible or prohibitively expensive to track at
+runtime without changing representation. A narrow unsafe assertion may accept
+responsibility without requiring a check; debug tooling may add best-effort
+instrumentation.
+
+Future contract work must decide which domains share syntax, how several
+contracts compose, whether source/build configuration may strengthen or weaken
+them, and how tooling exposes the accepted cost and undefined-behavior boundary.
 
 The policy is independent from optimization level, shifts proof responsibility
 to the programmer, is recorded in build metadata, and does not affect optional,

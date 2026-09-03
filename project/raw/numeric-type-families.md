@@ -7,7 +7,7 @@
 | Applies To | Numeric type relationships and operator availability deferred by operator review |
 | Owns | Signedness-counterpart, finite-bit-extent, count-tier, conversion, delta/distance, storage, type-family, alias, float-representation, and policy applicability questions |
 | Does Not Own | Current finite-integer behavior or [enum behavior](enum-types.md) |
-| Source / Provenance | Legacy intrinsic-type, casting, and operator evidence |
+| Source / Provenance | Legacy intrinsic-type, casting, and operator evidence; work item `012` nested optional conversion pressure |
 
 ## Current finite-integer disposition
 
@@ -160,6 +160,23 @@ Admission into an exposed numeric identity uses `from`, `optional from`, or
 Equal representation never creates an identity conversion. A direct bridge
 requires a declared semantic relationship and a proof that every source value
 fits.
+
+Nested optional type formation does not generate a corresponding numeric
+conversion:
+
+```zax
+single := myWide as U8?
+nested := myWide as U8? ?
+```
+
+The second form is available only if the source numeric family explicitly
+declares that exact `U8? ?` result. Its contract must distinguish outer absence
+from outer-present/inner-absent and both-present states. Type inference merely
+receives the declared result; it does not select the state policy.
+
+Future numeric review must decide whether any nested optional conversion is
+useful. Optional existence alone supplies neither availability nor recursive
+conversion.
 
 Future work must provide enough range and relationship metadata for programmers
 and tooling to derive the applicable surface without listing every named pair.

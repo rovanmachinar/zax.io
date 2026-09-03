@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining function composition, capture, chaining, generated callable types, or generic callable reflection |
-| Applies To | Preserved `>>`, `|>`, call-component, capture, and reflection pressure |
-| Owns | Representative source, generated-signature concepts, costs, boundaries, activation pressure, and retirement criteria |
+| Applies To | Preserved `>>`, `|>`, call-component, capture, optional callable construction/combinators, and reflection pressure |
+| Owns | Representative source, generated-signature concepts, optional callable/combinator pressure, costs, boundaries, activation pressure, and retirement criteria |
 | Does Not Own | Accepted composition semantics or current invocation/operator ownership |
-| Source / Provenance | Legacy `functions.md` and operator review |
+| Source / Provenance | Legacy `functions.md`, operator review, and work item `012` optional callable/combinator pressure |
 
 ## Composition and capture pressure
 
@@ -71,9 +71,58 @@ myReflectionAnalyzer << myFunc
 At least one custom operand keeps this outside an all-intrinsic signature, but
 complete generic and reflection behavior remains unsettled.
 
+## Optional callable construction pressure
+
+[Zax optional values](../../language/optional-values.md) requires a construction
+packet to establish a boxed function value in an existing optional:
+
+```zax
+callback : MyCallback?
+callback = [{ doSomethingFunc }]
+```
+
+A future inline callable value may contain a braced body:
+
+```zax
+callback = [{ { doSomething() } }]
+```
+
+That source is illustrative, not accepted. Function-value work must decide
+whether the inner braces construct a callable, create a scope, or require a
+prior named value. It must preserve `[{}]` as the explicit zero-entry packet and
+`[{ expression }]` as one packet input rather than confusing callable-body and
+packet boundaries.
+
+## Optional combinator pressure
+
+Optional values may benefit from present/absent callable composition:
+
+```zax
+fold(optionalValue, onPresent, onAbsent)
+```
+
+Possible `on some`, `on none`, mapping, and folding operations must decide:
+
+- only the selected callback executes;
+- how a present callback receives boxed qualifications and lifetime proof;
+- how outermost `copy`/`deep`/`move`/`last` stance reaches the callback;
+- result convergence between present and absent callbacks;
+- capture, temporary, allocation, and indirect-call costs;
+- async callback behavior;
+- protected language operation versus library API ownership.
+
+`optionalValue.onSome(...)` is not neutral candidate syntax because postfix `.`
+already crosses into the boxed value. Exact source must respect current optional
+access and operator-phrase rules.
+
+This concrete pressure does not establish a general monad abstraction. If later
+work finds a reusable model spanning optionals, results, collections, async
+values, and composition laws, it may justify a separately indexed owner.
+
 ## Activation and retirement
 
 Activate this input for composition, chaining, captures, lambdas, partial
-application, callable generics, or callable reflection. Move accepted behavior
-into function, invocation, operator, generic, or reflection owners and retire
-this file when fully dispositioned.
+application, callable generics, callable reflection, optional callable
+construction, or optional combinators. Move accepted behavior into function,
+invocation, operator, optional, generic, selection, or reflection owners and
+retire this file when fully dispositioned.

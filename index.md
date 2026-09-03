@@ -72,6 +72,7 @@ producing them.
 - [Identity types](language/identity-types.md)
 - [Qualifiers](language/qualifiers.md)
 - [Function invocation](language/function-invocation.md)
+- [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)
 - [Operators](language/operators.md)
@@ -109,7 +110,8 @@ semantics remain non-authoritative until individually reviewed and promoted.
   explicit identities are owned by
   [Zax identity types](language/identity-types.md)
 - [Composition](composition.md)
-- [Optional types](optional.md)
+- [Optional values](language/optional-values.md) — current optional wrapper,
+  construction, transfer, qualification, and proven-access design
 - [Nothing type instances](nothing.md)
 - [Partial types](partial.md)
 - [Casting](casting.md) — legacy general casting input; current integer

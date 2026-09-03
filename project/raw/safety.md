@@ -7,7 +7,7 @@
 | Applies To | Safe-subset guarantees, unsafe mechanisms, and comparative safety input |
 | Owns | Preservation of aligned pressures, the contract-qualified prove-or-narrowly-assert philosophy, and unresolved comparison material |
 | Does Not Own | Accepted safety guarantees or unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, lifecycle, and invocation safety pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, and `012`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, and general panic-contract pressure |
 
 ## Aligned direction
 
@@ -152,6 +152,16 @@ failed operator with wrapping unless a resumable-panic contract defines:
 
 Until then, overflow remains fatal graceful crashing. Programs select optional,
 wrapping, saturating, or reporting operators when they need another local policy.
+
+Future safety work should test a general default-check contract across other
+runtime failure domains. Where a check is required by default, violation panics.
+An explicit unchecked contract may permit omitting the check and make violation
+undefined, provided the cost and responsibility remain visible and reproducible.
+
+This does not require runtime handles for static lifetime proof. A false unsafe
+optional-presence, reference-lifetime, or alias assertion may have undefined
+consequences with no required check. Debug modes may add detection and panic, but
+that instrumentation is not a language guarantee.
 
 A source-program panic during compile-time execution must become a compiler
 diagnostic with source and evaluation-path context rather than an internal

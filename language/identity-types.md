@@ -253,6 +253,9 @@ myUnsafe :=
 `restricted` does not decide which of these exists. The identity's invariants
 decide whether admission is validated, unchecked, unsafe, or unavailable.
 
+The resulting wrapper's construction, qualification, and lifetime behavior is
+defined by [Zax optional values](optional-values.md).
+
 Complete safe-subset classification remains future safety work.
 
 ## Identity projection

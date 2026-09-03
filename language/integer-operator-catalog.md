@@ -473,7 +473,9 @@ The narrowing rule is:
 > Preserve the source integer modulo `2^W`, where `W` is the destination logical
 > width, then interpret those bits under destination signedness.
 
-Signed widening sign-extends. Unsigned widening zero-extends.
+Signed widening sign-extends. Unsigned widening zero-extends. Complete optional
+result behavior is defined by
+[Zax optional values](optional-values.md#construction-and-optional-conversion-are-different).
 
 ### Integer identity admission
 

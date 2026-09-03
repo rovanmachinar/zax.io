@@ -7,7 +7,7 @@
 | Applies To | Direct assembly and selected C/C++ interoperability |
 | Owns | Preservation of aligned requirements and boundaries |
 | Does Not Own | Accepted foreign layouts, calling conventions, or binding contracts |
-| Source / Provenance | Work item `001`, Zax purpose and design principles |
+| Source / Provenance | Work items `001` and `012`, Zax purpose/design principles, and optional layout/ABI pressure |
 
 ## Aligned requirements
 
@@ -35,6 +35,24 @@ The general pressure is:
 
 > Zax supports selected foreign representations and calling conventions without
 > importing the foreign language's complete semantic model.
+
+## Optional representation and ABI pressure
+
+[Zax optional values](../../language/optional-values.md) defines semantic states
+without fixing a tag, niche, layout, or calling convention. Future interop work
+must decide explicitly:
+
+- whether a selected foreign boundary uses a separate discriminant or a valid
+  niche;
+- how nested optional states remain distinguishable;
+- whether optional pointers/functions preserve their inner null/`Nothing` state;
+- size, alignment, padding, parameter passing, and result return;
+- stability across modules, toolchains, targets, and language versions;
+- adapter behavior when a foreign optional/nullability model has fewer states.
+
+Representation coincidence on one target does not make two semantic states or
+type layers equivalent. Manual ABI use remains an explicit low-level boundary
+until a named contract accepts an exact optional representation.
 
 ## Activation and retirement
 

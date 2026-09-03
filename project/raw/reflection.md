@@ -7,7 +7,7 @@
 | Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, and source-presentation review |
 | Owns | Preserved reflection, integer metadata, representative-source, activation-pressure, and retirement questions |
 | Does Not Own | Accepted reflection semantics or the current domain facts reflected |
-| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, and phrase fences |
+| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, and work item `012` optional-layer metadata pressure |
 
 ## Why this input exists
 
@@ -103,6 +103,29 @@ Future work must decide:
 That last question is a live consequence: `is final` deliberately reports the
 resolved type-use or referent-place truth, so a program currently has no way to
 ask whether *this* declaration may exercise replacement.
+
+## Optional layer and source metadata pressure
+
+[Zax optional values](../../language/optional-values.md) permits independently
+qualified repeated wrapper layers:
+
+```zax
+MyType readonly ? writable ? immutable
+```
+
+Reflection must preserve:
+
+- the number and order of optional, pointer, and reference layers;
+- qualifications attached to each layer;
+- wrapper `final`/`varying` truth separately from declaration-side replacement
+  permission;
+- compact `??` as a different source token from spaced `? ?`;
+- aliases that hide optional depth without changing canonical resolved
+  structure.
+
+Runtime presence is an expression/value fact, not part of canonical `T?` type
+identity. Future reflection must distinguish static wrapper metadata from the
+current absent/present state of one value.
 
 ## Expression facts versus type identity
 

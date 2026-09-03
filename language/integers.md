@@ -470,7 +470,8 @@ myNarrow := myU16 narrowing as U8
 
 Conversion availability follows type/family contracts, not accidental equality
 in one CPU profile. A profile may eliminate a check without making a portable
-source form appear or disappear.
+source form appear or disappear. Complete optional result behavior is defined
+by [Zax optional values](optional-values.md#construction-and-optional-conversion-are-different).
 
 ### Admission into an integer role
 
@@ -487,7 +488,8 @@ myNarrowSmall := Small narrowing from myU16
   admitting identity.
 
 An identity's immediate underlying value always qualifies for ordinary
-admission when the identity uses `admit`.
+admission when the identity uses `admit`. Complete optional wrapper behavior is
+defined by [Zax optional values](optional-values.md).
 
 ### Projection and direct bridges
 

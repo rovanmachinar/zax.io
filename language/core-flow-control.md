@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, and explicit `scope`; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | Expression/operator selection ([operators](operators.md)); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
+| Does Not Own | Expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and [scope](../scope.md) evidence |
 
 ## Mental model
@@ -185,7 +185,9 @@ The proof need not be immediately adjacent. Construction, earlier control flow,
 and other recognized presence contracts may also establish it. The
 programmer-visible proof obligation is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#conditionally-live-storage-and-access-proof);
-the presence operation itself is owned by [operators](operators.md).
+the presence operation itself is owned by [operators](operators.md). Complete
+optional proof invalidation and wrapper/boxed behavior is taught by
+[Zax optional values](optional-values.md#presence-proof-and-postfix-access).
 
 ## Effective bodies and header boundaries
 
@@ -792,20 +794,37 @@ if ?(a < b ?? c ;; d)
 A typed optional destination is another convergence form:
 
 ```zax
-myType : MyType? = (a < b ?? : MyType = a ;; : MyType?)
+myType : MyType? =
+  a < b ?? (: MyType = a) ;; (: MyType?)
 
 if ?myType
   use(myType.)
 ```
 
 On the true path the anonymous `MyType` is constructed from `a` and then
-constructs the destination optional. On the false path the anonymous type-default
-`MyType?` supplies an empty optional. Both paths converge to the single
-destination type `MyType?`. The spelling uses the current anonymous typed
-declaration form owned by
+constructs the destination optional. On the false path the anonymous
+type-default `MyType?` supplies absence. Both paths converge to the single
+destination type `MyType?`.
+
+Adding a layer around an already-optional arm requires explicit typed packet
+construction:
+
+```zax
+inner : MyType?
+
+nested : MyType? ? =
+  condition ??
+    (: MyType? ? = [{ inner }]) ;;
+    (: MyType? ?)
+```
+
+`condition ?? [{ inner }] ;; (: MyType? ?)` is an error because a construction
+packet is not independently an expression and has no destination in that arm.
+The anonymous typed declaration supplies the construction boundary. Anonymous
+declaration syntax is owned by
 [function invocation](function-invocation.md#anonymous-typed-declarations);
-complete optional construction and reset design remains
-[legacy optional](../optional.md) input and future optional work.
+complete optional convergence and depth intent is taught by
+[Zax optional values](optional-values.md#conditional-convergence).
 
 Statement composition does not extend convergence into a later statement:
 

@@ -7,7 +7,7 @@
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
 | Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
+| Does Not Own | Shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -43,6 +43,7 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
+| Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -384,6 +385,28 @@ admission/projection belongs to [Zax identity types](identity-types.md).
 
 User-defined words do not independently grant unsafe authority.
 
+## Optional forms
+
+These exact forms are protected for optional operands:
+
+| Form | Fixity/level | Result role |
+| --- | --- | --- |
+| `?value` | Symbolic prefix | Return exactly `Boolean` presence |
+| `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
+| `reset value` | Pre-unary phrase at ordinary phrase level | Leave the same wrapper absent and return its reference |
+| `last value` | Pre-unary phrase at ordinary phrase level | Preserve the optional type under `last` transfer stance |
+| `move value` | Pre-unary phrase at ordinary phrase level | Preserve the optional type under `move` transfer stance |
+
+Producing `last value` or `move value` does not itself transfer or change state.
+A selected consumer creates any effect. Complete optional behavior and source
+consequences are defined by [Zax optional values](optional-values.md).
+
+`T? ?` is two optional type layers and requires the separating space. Compact
+`T??` contains the conditional-expression token. `[{}]` is the canonical
+zero-entry construction packet; neither form is an independently overloadable
+operator. Their source boundaries are owned by
+[Zax source structure](source-structure.md#optional-layers-and-empty-construction-packets).
+
 ## Reserved phrase forms
 
 A reserved phrase form cannot be declared by user code.
@@ -508,7 +531,10 @@ It is left-associative.
 
 Protected integer behavior belongs to the
 [integer operator catalog](integer-operator-catalog.md). Lifecycle-specific
-assignment/replacement remains with its lifecycle owner.
+assignment/replacement remains with its lifecycle owner. Optional `T? = T?`
+replaces the complete wrapper lifetime, while `T? = [{...}]` is a distinct
+packet-construction boundary; see
+[Zax optional values](optional-values.md#construction-wrapper-replacement-and-boxed-assignment).
 
 ## Call, index, and mixfix
 

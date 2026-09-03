@@ -846,8 +846,9 @@ myOptional := (: U8? = 355) // error: 355 does not fit U8
 ```
 
 Default absence, optional conversion, and optional construction are separate.
-Complete optional copy, move, `last`, reset, unwrapping, and contained-lifetime
-behavior remains future optional work.
+Complete optional wrapper construction, packets, `copy`/`move`/`last` source
+effects, reset, proven access, and boxed lifetime behavior is defined by
+[Zax optional values](optional-values.md).
 
 ## Environment-selected destinations
 
@@ -966,7 +967,6 @@ Still future:
 - custom integer-family declarations;
 - exact final declaration grammar for `contextual`/`explicit` completion modes;
 - future callable categories that may opt into contextual completion;
-- complete optional copy/move/`last`, reset, and contained-lifetime behavior;
 - generic and computed destination-type syntax;
 - reflection of literal spelling or realization provenance; and
 - floating-point and other numeric intent.

@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional present-construction failure boundary; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Does Not Own | Complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
 
 ## Mental model
 
@@ -159,6 +159,25 @@ member, and a stored-member entry never falls back to a parameter.
 The packet syntax is current conceptual design and should be used in
 construction examples. Its formal grammar may be refined if later concrete
 pressure requires a change.
+
+`[{}]` is the canonical zero-entry packet:
+
+```zax
+explicit : MyType = [{}]
+```
+
+For an ordinary type it selects the same zero-input construction as an
+initializer-free declaration when available. For `MyType?`, it explicitly
+constructs a present wrapper containing a zero-input-constructed `MyType`;
+initializer-free optional construction is absent.
+
+`[{ }]` is a confusable-form intent error because its blank body looks like the
+programmer opened a nonempty packet but forgot its arguments. Contiguous `[{}]`
+acknowledges intentionally zero inputs. A packet is also not independently an
+expression value; anonymous typed construction supplies a destination where an
+expression hole needs one. Complete optional and source-structure consequences
+are defined by [Zax optional values](optional-values.md#empty-construction-packets)
+and [Zax source structure](source-structure.md#optional-layers-and-empty-construction-packets).
 
 ### Declaration expressions as inputs
 
@@ -795,6 +814,45 @@ transformation.
 Unions and overlapping storage likewise need future active-member transition
 rules before generated replacement can operate on them safely.
 
+### Optional complete-wrapper replacement
+
+Same-type optional `=` replaces the complete wrapper lifetime rather than
+assigning or conditionally constructing only its boxed value:
+
+```zax
+destinationOptional : MyType?
+sourceOptional : MyType?
+
+// ...
+
+destinationOptional = sourceOptional
+```
+
+It requires a type-side varying wrapper place, declaration-side replacement
+permission, writable access, and a compatible optional source transfer. The old
+wrapper and any present payload end; a new absent or present wrapper is directly
+constructed from the source state.
+
+This is distinct from packet construction, which retains one mutable wrapper
+lifetime while ending and constructing boxed lifetimes:
+
+```zax
+destination = [{ sourceValue }]
+```
+
+It is also distinct from an operation selected after proven boxed access:
+
+```zax
+if ?destination
+  destination. = sourceValue
+```
+
+The optional family therefore exposes a protected whole-wrapper lifecycle
+operation even when the wrapper is mutable; it does not turn ordinary
+value-shaped `T? = T` source into construction. Complete state, qualification,
+intent, and transfer behavior is owned by
+[Zax optional values](optional-values.md#construction-wrapper-replacement-and-boxed-assignment).
+
 ## Destruction
 
 ### Destructor declarations and sequence
@@ -916,11 +974,22 @@ It does not become absent, narrow the value, or select default optional
 construction after present construction fails. Absence occurs only when the
 selected operation explicitly requests or produces it.
 
-Complete optional constructor generation, copy/move/`last`, reset, unwrapping,
-contained lifetime, and failure cleanup remain
-[legacy optional](../optional.md) input. The number-literal application is
-explained by
-[Zax integer literals and realization](integer-literals.md#optional-construction-still-has-to-build-a-value).
+Type-default optional construction is absent, while `[{}]` explicitly requests
+present zero-input boxed construction. A packet on an existing mutable/writable
+wrapper evaluates and binds its inputs, ends any old boxed lifetime, constructs
+the fresh value, and marks presence only after completion.
+
+Reset ends the boxed lifetime and leaves the same wrapper absent. Direct
+destruction through boxed access is rejected because it could not update wrapper
+presence:
+
+```zax
+optional.---() // error
+```
+
+Complete optional operations, nesting, qualification, and transfer are defined
+by [Zax optional values](optional-values.md). The number-literal application is
+explained by [Zax integer literals and realization](integer-literals.md#optional-construction-still-has-to-build-a-value).
 
 ### Access proof
 
@@ -955,6 +1024,12 @@ The proof need not be immediately adjacent. Construction, earlier control flow, 
 preceding presence test, or another recognized presence contract may establish
 it. An arbitrary user-defined Boolean-returning `?` does not by itself prove
 initialization; the analyzer needs a recognized presence contract.
+
+Wrapper qualifications do not replace the boxed qualifications after access.
+Once proof permits `optional.`, the resulting path carries the boxed
+qualifications. Any operation ending that exact boxed lifetime invalidates the
+proof and every reference tied to it; see
+[Zax optional values](optional-values.md#presence-proof-and-postfix-access).
 
 The presence operation `?value` itself is owned by [operators](operators.md), and
 condition placement is owned by [core flow control](core-flow-control.md). This

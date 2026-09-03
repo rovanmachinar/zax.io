@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit and construct-open continuation, effective statements and bodies, semicolon composition, comment and physical-line trivia retained through composition and layout validation, exact two-space structural indentation and physical-tab rejection, symbolic-operator whitespace and adjacency, longest recognized symbolic tokens, grouped separate unary applications, application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary, declaration-colon and mixfix-component-list continuation, the boundary between structural operands and expression continuation, `;;` and `??` separator whitespace, flow-header continuation and the explicit `\` alignment escape hatch, brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error, contextual keyword recognition, mandatory layout validation, diagnostic categories, and comment forms and attachment |
+| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -40,16 +40,16 @@ body owns a statement.
 `\` suppresses an otherwise significant physical newline:
 
 ```zax
-value = calculate() + \
-    more()
+value = calculate() \
+    + more()
 ```
 
 The continuation marker must be the last non-comment code token on its line. An
 ordinary `//` comment may follow it:
 
 ```zax
-value = calculate() + \ // Explain the continued expression.
-    more()
+value = calculate() \ // Explain the continued expression.
+    + more()
 ```
 
 A `///` documentation comment may not follow `\` because the continued
@@ -61,23 +61,23 @@ Every continued physical line must be indented beyond the structural
 indentation of the statement being continued:
 
 ```zax
-value = calculate() + \
-    more()
+value = calculate() \
+    + more()
 ```
 
 The exact expression alignment may vary:
 
 ```zax
-value = calculate() + \
-                   more()
+value = calculate() \
+                   + more()
 ```
 
 This is an error because the line visually presents itself as a new statement
 at the surrounding level:
 
 ```zax
-value = calculate() + \
-more() // error: continuation is not hanging-indented
+value = calculate() \
++ more() // error: continuation is not hanging-indented
 ```
 
 At a nested level, the continuation must be deeper than the continued statement,
@@ -85,8 +85,8 @@ not merely deeper than the enclosing control header:
 
 ```zax
 if condition
-  value = calculate() + \
-    more()
+  value = calculate() \
+    + more()
 ```
 
 ### Continued and continuation-only lines
@@ -95,17 +95,17 @@ A continued line may contribute source tokens and continue again:
 
 ```zax
 value = 1 + 2 \
-    + 3 + \
-    4
+    + 3 \
+    + 4
 ```
 
 It may also consist only of an appropriately indented `\`. Such a line visibly
 carries the continuation across another physical newline:
 
 ```zax
-value = 1 + 2 + \
+value = 1 + 2 \
     \
-    3
+    + 3
 ```
 
 A continuation-only line may have an ordinary `//` comment after `\`.
@@ -113,15 +113,15 @@ A continuation-only line may have an ordinary `//` comment after `\`.
 A blank or comment-only line does not carry continuation:
 
 ```zax
-value = 1 + 2 + \
+value = 1 + 2 \
 
-    3 // error: blank line broke the continuation
+    + 3 // error: blank line broke the continuation
 ```
 
 ```zax
-value = 1 + 2 + \
+value = 1 + 2 \
     // error: comment-only line does not carry continuation
-    3
+    + 3
 ```
 
 The joined physical lines must eventually form one valid statement. A
@@ -144,18 +144,45 @@ value++      // post-unary: attached to the operand on its left
 left + right // binary: whitespace on both sides
 ```
 
-A newline counts as binary-operator whitespace only when another accepted rule
-already continues the expression. Missing an operand does not itself continue:
+A recognized symbolic infix operator or multi-part component that is the last
+non-comment code token on a physical line establishes continuation when
+whitespace before it presents infix use and the form requires a following
+operand or section. The newline supplies the right-side whitespace:
 
 ```zax
 value := first +
-  second // error: `+` does not continue the statement
+  second
 ```
 
-Use explicit continuation:
+This applies to assignment/initializer `=`, inferred declaration `:=`, ordinary
+symbolic binary operators, and symbolic components such as `??` and `;;`:
 
 ```zax
-value := first + \
+result : MyType? =
+  condition ??
+    presentValue ;;
+    (: MyType?)
+```
+
+An attached symbol does not present binary continuation, and phrase spacing does
+not prove that a phrase expects another physical-line operand:
+
+```zax
+value := first+
+  second // error: attached `+` did not establish continuation
+
+value := left runs with
+  right // error: phrase source did not establish continuation
+```
+
+The diagnostic may identify the unexpectedly indented next line rather than
+claim that a particular `\` is missing. The error is that no accepted rule
+connected the physical lines; explicit continuation is only one possible repair.
+
+Explicit `\` is redundant when the trailing symbolic form already continues:
+
+```zax
+value := first + \ // error: `+` already establishes continuation
   second
 ```
 
@@ -182,6 +209,50 @@ existing valid source.
 
 The rule applies to ordinary symbolic unary operations. Call, index, projection,
 and other grammar-recognized postfix forms retain their own chaining rules.
+
+### Optional layers and empty construction packets
+
+`??` is the conditional-expression token. Two optional type layers therefore
+require visible separation:
+
+```zax
+single : MyType?
+nested : MyType? ?
+compact : MyType?? // error: `??` is not two optional markers
+```
+
+The space acknowledges two independently qualified wrapper layers and must not
+be removed by formatting.
+
+`[{}]` is the one contiguous zero-entry
+[construction packet](terms.md#construction-packet):
+
+```zax
+explicit : MyType = [{}]
+```
+
+The spaced form is a confusable-form intent error:
+
+```zax
+explicit : MyType = [{ }] // error: blank packet looks like omitted arguments
+```
+
+A packet supplies constructor inputs only where a declaration or another
+construction boundary establishes its destination. It is not independently an
+expression value:
+
+```zax
+inner : MyType?
+
+result : MyType? ? =
+  condition ?? [{ inner }] ;; (: MyType? ?) // error: packet has no destination
+
+result : MyType? ? =
+  condition ?? (: MyType? ? = [{ inner }]) ;; (: MyType? ?)
+```
+
+Complete optional depth and construction behavior is defined by
+[Zax optional values](optional-values.md#nested-optionals).
 
 ### Circumfix attachment
 
@@ -281,6 +352,26 @@ work.
 
 ## Comma-list continuation
 
+A recognized comma separator has no whitespace before it and requires whitespace
+after it. A newline satisfies the following-whitespace requirement:
+
+```zax
+consume(first, second)
+consume(first,
+  second)
+
+// consume(first,second) // error: no whitespace after comma
+// consume(first , second) // error: whitespace before comma
+```
+
+This is a mandatory separator-intent rule rather than a formatting lint. The
+comma visibly completes the previous entry and separates the next. It does not
+conflict with a completed post-unary operand:
+
+```zax
+consume(value--, nextValue)
+```
+
 A comma already recognized as a separator in a comma-list implicitly continues
 that list across the following physical newline:
 
@@ -322,8 +413,10 @@ Each continued physical newline has one sufficient reason:
 1. an open delimiter permits the newline;
 2. a recognized comma-list separator continues it; or
 3. a recognized construct such as a declaration colon or mixfix component list
-   opens continuation; or
-4. `\` explicitly suppresses an otherwise significant newline.
+   opens continuation;
+4. a trailing recognized symbolic infix form requires a right operand or
+   section; or
+5. `\` explicitly suppresses an otherwise significant newline.
 
 An explicit `\` is an error when another rule already continues that same
 newline:
@@ -339,6 +432,11 @@ consume(
   first, \ // error: the open `(` already permits the newline
   second
 )
+```
+
+```zax
+value = first + \ // error: `+` already continues the expression
+  second
 ```
 
 The explicit marker is not harmless defensive punctuation. Redundancy makes
@@ -545,7 +643,7 @@ continuation is established, even when those expressions are then composed:
 if true
   a := 1 + 2 + 3 + 4 \
     + 5 + 6;
-  b := 1 + 2 + \
+  b := 1 + 2 +
        3 + 4;
   calc(a, b)
 ```
@@ -750,17 +848,18 @@ if retry: \
 }
 ```
 
-Initializer and assignment `=` do not implicitly continue:
+Initializer and assignment `=` use the trailing symbolic-infix rule:
 
 ```zax
 value : MyType =
-  source // error: `=` does not continue the declaration
+  source
 ```
 
-Explicit continuation may state that intent:
+An explicit marker is redundant because `=` already proves the initializer
+continues:
 
 ```zax
-value : MyType = \
+value : MyType = \ // error: `=` already continues the declaration
   source
 ```
 
@@ -1221,7 +1320,7 @@ doB()
 Documentation may appear where a multiline construct finishes:
 
 ```zax
-value = 1 + 2 + \ // Ordinary commentary is legal here.
+value = 1 + 2 + // Ordinary commentary is legal here.
     3 /// Documentation for the complete assignment.
 ```
 
@@ -1255,8 +1354,8 @@ applicable:
 
 - a missing `\`;
 - a broken or unterminated continuation;
-- redundant explicit continuation where an open delimiter or comma already
-  continues the newline;
+- redundant explicit continuation where an open delimiter, comma, or trailing
+  symbolic infix form already continues the newline;
 - a broken comma-list continuation;
 - a missing semicolon operand;
 - redundant vertical composition;
@@ -1271,6 +1370,7 @@ Layout and separator diagnostics additionally distinguish:
 - statement-start indentation that does not use the exact two-space structural
   level;
 - physical tab characters;
+- whitespace before a comma separator or missing whitespace after it;
 - whitespace before `;` or missing whitespace after it;
 - missing whitespace around `;;` or `??`;
 - symbolic pre/post/binary whitespace that contradicts the recognized fixity;
@@ -1290,6 +1390,9 @@ Layout and separator diagnostics additionally distinguish:
 - sibling header operands or sections at conflicting continuation levels;
 - a body-opening `{` separated onto the next physical line;
 - a scope-opening `{` without whitespace on both sides;
+- compact `T??` where two optional type layers require `T? ?`;
+- spaced `[{ }]` where a zero-entry construction packet requires `[{}]`;
+- a bare construction packet in an expression position without a destination;
 - a multiline closing `}` at the wrong structural level;
 - an `else` separated from a preceding `}` by a newline, preceded by a blank
   line, or placed at a level other than its owning `if`;
@@ -1373,8 +1476,9 @@ already stable regardless of the enclosure's final spelling.
 
 Comma-list continuation is the ordinary list-level implicit continuation because
 the parsed comma already requires another element. Declaration colon and mixfix
-component-list continuation are separate grammar-open construct rules. None
-establishes a general rule that incomplete expressions continue automatically.
+component-list continuation are separate grammar-open construct rules. A
+trailing recognized symbolic infix form is the only incomplete-expression shape
+that continues by its own presentation; arbitrary missing syntax does not.
 
 [Declaration and binding behavior](declarations-and-bindings.md) is defined by
 its current conceptual owner. Operator semantics, candidate-tree formation, and

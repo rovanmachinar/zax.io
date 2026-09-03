@@ -122,6 +122,10 @@ Packet order controls input evaluation and binding. It does not reorder member
 construction. See
 [Zax construction, replacement, and destruction](construction-and-destruction.md#construction-packets).
 
+`[{}]` is the canonical zero-entry construction packet. A packet supplies
+construction inputs at a destination; it is not independently a value or an
+anonymous structure.
+
 ## Contextual keyword
 
 A **contextual keyword** is a spelling that has keyword status only where that
@@ -350,6 +354,17 @@ A phrase is not a second dispatch mechanism; it uses the shared callable and
 operator model. See [Zax operator phrases](operator-phrases.md),
 [Zax operators](operators.md#operator-phrases), and the
 [operator catalog](operator-catalog.md#operator-forms).
+
+## Optional wrapper and boxed value
+
+An **optional wrapper** is one live `T?` value whose state is absent or present.
+When absent, it contains no live boxed value. When present, it owns exactly one
+live **boxed value** of type `T`.
+
+The wrapper and boxed value have separate lifetimes and qualifications. Postfix
+optional access crosses the wrapper boundary and produces access under the boxed
+qualifications after presence proof. See
+[Zax optional values](optional-values.md).
 
 ## Phrase word
 
@@ -636,6 +651,18 @@ The **target environment** is the environment selected for generated program
 behavior. It is distinct from the compiler host and may be named explicitly by
 environment-relative type paths. See
 [Zax integers](integers.md#native-representation-and-software-emulation).
+
+## Transfer stance
+
+A **transfer stance** qualifies how a source may satisfy a selected consumer.
+`copy`, `deep`, `move`, and `last` identify distinct candidate stances whose
+complete preference, propagation, and source syntax remain future transfer
+design.
+
+A stance expression does not itself perform a transfer. Construction,
+assignment, parameter binding, or another consumer produces any source-state
+effect after accepting it. Optional-specific consequences are taught by
+[Zax optional values](optional-values.md#the-three-ordinary-state-and-transfer-operations).
 
 ## Transparent alias
 

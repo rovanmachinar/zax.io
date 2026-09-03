@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); or complete pointer/lifetime rules |
+| Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
+| Does Not Own | Declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); or complete pointer/lifetime rules |
 
 ## Mental model
 
@@ -405,7 +405,8 @@ On the type-use side, read outward from the base type:
 2. value mutability;
 3. access capability;
 4. referent-place replacement; and
-5. pointer or reference marker.
+5. optional, pointer, or reference marker;
+6. then the independently qualified outer layer, when another layer follows.
 
 ```zax
 source final : Payload immutable = makePayload()
@@ -474,9 +475,25 @@ visibility, and syntax remain future work.
 
 ## Construction and deep immutability
 
-Immutability is recursively deep over contained values. Pointer and reference
-levels retain their own qualifications; deep immutability does not silently
-rewrite every externally referenced pointee.
+Immutability is recursively deep over direct structural containment. Semantic
+indirection boundaries retain independently stated qualifications. Pointer,
+reference, and optional layers therefore do not silently rewrite the
+qualifications of their pointee, referent, or boxed value:
+
+```zax
+stablePresence :
+  Payload mutable writable? immutable readonly
+```
+
+The optional wrapper's presence is immutable and readonly through this path.
+After proven access, the boxed `Payload` has its separately written
+mutable/writable qualifications. The compiler may rely on stable wrapper state
+but not stable payload bytes.
+
+This independence does not remove lifetime ownership. An optional wrapper owns
+its boxed lifetime and may end it through an otherwise authorized wrapper
+operation. Complete behavior is defined by
+[Zax optional values](optional-values.md#wrapper-and-boxed-qualifications).
 
 Construction has authority to establish final and immutable state without an
 unsafe bypass. The guarantees activate when the full instance, including all
@@ -823,6 +840,90 @@ acquire the compiler-owned reconstructive-replacement lifecycle skeleton.
 Complete tree matching and protected barriers are defined by
 [mixfix operators](mixfix-operators.md).
 
+## Optional qualification layers
+
+`?` forms an outward qualification layer:
+
+```zax
+T q0 ? q1 * q2
+```
+
+This reads as a `q2` pointer to a `q1` optional wrapper containing a `q0` boxed
+`T`. Qualifiers before `?` describe the boxed layer; qualifiers after `?`
+describe the wrapper layer:
+
+```zax
+innerReadonly : Payload readonly?
+wrapperReadonly : Payload? readonly
+```
+
+`innerReadonly` may change wrapper state through otherwise mutable/writable
+wrapper defaults, but postfix access produces readonly `Payload` access.
+`wrapperReadonly` cannot change state through this wrapper path, but the outer
+readonly qualifier does not rewrite the boxed qualifications.
+
+Postfix optional access crosses the wrapper boundary. Once presence is proven,
+the result carries the boxed qualifications rather than the wrapper
+qualifications:
+
+```zax
+if ?innerReadonly
+  inspect(innerReadonly.) // readonly Payload access
+```
+
+### Wrapper axes
+
+The three qualifier axes remain independent:
+
+| Axis | Optional-wrapper consequence |
+| --- | --- |
+| `mutable` / `immutable` | Whether presence may change during this wrapper lifetime |
+| `writable` / `readonly` | Whether this path may perform an otherwise available wrapper change |
+| Type-side `varying` / `final` | Whether the place may receive another complete optional-wrapper lifetime |
+
+Declaration-side `varying`/`final` separately says whether this declaration may
+exercise complete-wrapper replacement.
+
+A final mutable wrapper may reset and construct successive boxed lifetimes while
+retaining one wrapper lifetime:
+
+```zax
+optional final : Payload? mutable final = value
+
+reset optional
+reset optional
+optional = [{}]
+optional = anotherOptional // error: complete wrapper place is final
+```
+
+An immutable varying wrapper cannot change presence within its current lifetime,
+but an authorized writable varying path may replace that complete wrapper:
+
+```zax
+optional varying :
+  Payload? immutable writable varying = first
+
+reset optional    // error: current wrapper is immutable
+optional = [{}]   // error: current wrapper is immutable
+optional = second // replace the complete wrapper lifetime
+```
+
+Boxed `readonly`, `immutable`, or `final` does not prevent the mutable/writable
+wrapper owner from ending that conditional lifetime:
+
+```zax
+optional : Payload immutable readonly final? mutable writable
+
+reset optional
+optional = [{}]
+```
+
+Those operations remove and create boxed places. They do not mutate or
+independently replace the old payload through postfix access.
+
+Complete optional operations, nested optional layers, and transfer effects are
+defined by [Zax optional values](optional-values.md).
+
 ## Indirection
 
 Dereferencing does not change the qualifications of the dereferenced instance.
@@ -858,6 +959,10 @@ source.member = 5 // legal through the original writable path
 
 A member requiring mutation through readonly or immutable access must introduce
 explicit `unsafe pliable`.
+
+Postfix optional access is not ordinary member projection. It crosses the
+semantic `?` indirection boundary and therefore exposes the independently
+qualified boxed layer as described above.
 
 ## Move-out and destruction
 
@@ -969,7 +1074,11 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - mutation requiring mutable + writable;
 - generated reconstructive replacement requiring immutable + type-side varying +
   declaration-side varying + writable;
-- deep immutability under ordinary safe behavior;
+- deep immutability across direct structural containment while optional,
+  pointer, and reference indirection layers retain independently written
+  qualifications;
+- optional wrapper mutability governing presence, independently from boxed
+  qualification and complete-wrapper place replacement;
 - explicit, non-propagating unsafe pliability;
 - qualifier-aware receiver-operand selection;
 - function invocation applying qualification truth without silently increasing

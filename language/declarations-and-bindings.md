@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
+| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
 
 ## Mental model
 
@@ -105,6 +105,37 @@ Initializer and constructor selection are defined by
 The declaration guarantees only that `item` is introduced and initialized
 directly from the supplied source.
 
+Optional declarations preserve the same distinction among same-type
+construction, first-layer construction, and acknowledged additional depth:
+
+```zax
+sourceFooOptional : FooType?
+fooOptional : FooType? = sourceFooOptional
+// same resolved type: direct optional construction
+
+bar : BarType
+barOptional : BarType? = bar
+barOptionalFromPacket : BarType? = [{ bar }]
+// both construct the first optional layer
+
+someOptional : SomeType?
+someOptionalOptional : SomeType? ? = someOptional // error: packet required
+
+someOptionalOptionalFromPacket : SomeType? ? = [{ someOptional }]
+
+anotherOptionalOptional : SomeType? ?
+someOtherOptionalOptional : SomeType? ? =
+  anotherOptionalOptional
+// same resolved type: direct nested-optional construction
+```
+
+Direct construction does not first create absence and assign over it. The packet
+in the depth-changing case distinguishes deliberate outer wrapping from
+same-type construction.
+
+Complete optional construction and depth behavior is defined by
+[Zax optional values](optional-values.md#adding-optional-depth-requires-a-packet).
+
 A number literal can take its type directly from an explicitly typed
 declaration:
 
@@ -125,6 +156,20 @@ Every ordinary value declaration initializes its value:
 count : Integer
 item : Item
 ```
+
+For an optional type, default initialization constructs an absent wrapper and
+does not run the boxed type's zero-input constructor:
+
+```zax
+empty : Item?
+present : Item? = [{}]
+```
+
+The second declaration explicitly uses the canonical zero-entry construction
+packet and therefore constructs a present optional containing one
+zero-input-constructed `Item`. For a non-optional `Item`, `item : Item` and
+`item : Item = [{}]` select the same zero-input construction when available.
+See [Zax optional values](optional-values.md#empty-construction-packets).
 
 Default initialization may initialize contained values, execute constructors,
 allocate storage, or perform other visible work. Ordinary constructors and
@@ -1169,6 +1214,10 @@ It establishes constraints that later work must preserve:
 
 - complete inference may add rules without making later uses determine an
   earlier inferred declaration;
+- complete inference must decide whether `:=` introduces a value or preserves a
+  reference/pointer layer; current optional transfer examples do not establish
+  that general rule, and `: & =` remains the explicit way to request a reference
+  shape at the current conceptual depth;
 - functions and captures may refine recursive bindings without allowing
   executable ordinary self-initialization;
 - function invocation may use declarations as inputs and result destinations

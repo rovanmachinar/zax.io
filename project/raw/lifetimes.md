@@ -7,7 +7,7 @@
 | Applies To | Intentional lifetime-policy plurality, its costs, and displaced pointer/reference binding replacement |
 | Owns | Preservation of aligned direction, displaced binding-replacement syntax, and required future decisions |
 | Does Not Own | Accepted lifetime semantics or current qualifier/construction behavior |
-| Source / Provenance | Work items `001`, `005`, and `006`; Zax purpose, construction/replacement aliasing, invocation lifetime pressure, and the corrected declaration-side `final`/`varying` model |
+| Source / Provenance | Work items `001`, `005`, `006`, and `012`; Zax purpose, construction/replacement aliasing, invocation lifetime pressure, optional layer/transfer pressure, and the corrected declaration-side `final`/`varying` model |
 
 ## Aligned direction
 
@@ -178,6 +178,71 @@ Future lifetime and ownership work must define:
 - source-shell destruction and resource disposition;
 - when a lifetime strategy may extend, reject, or unsafely permit an escape; and
 - how an async call broadens the synchronous completion boundary.
+
+## Optional- and layer-derived transfer pressure
+
+[Zax optional values](../../language/optional-values.md) establishes the
+optional-specific source effects that future transfer work must preserve:
+
+| Accepted source stance | Optional source after a consumer |
+| --- | --- |
+| `copy` | Wrapper and boxed value remain unchanged |
+| `deep` | Wrapper remains unchanged; a present payload supplies recursively independent transfer under the selected deep contract |
+| `move` | Absence remains absent; presence remains with one live moved-from boxed value |
+| `last` | A terminally transferred present payload ends and the wrapper becomes absent |
+
+A transfer-qualified source expression has no effect until a constructor,
+assignment, parameter binding, or another consumer accepts it. Future work must
+decide:
+
+- exact `copy`/`deep`/`move`/`last` candidate preference;
+- whether a stance permits or requires its specialized transfer;
+- pre-unary versus post-unary source forms;
+- whether a by-value parameter consumes during immediate binding or a terminal
+  reference/capability permits later body consumption;
+- result qualifications and the valid moved-from contract;
+- source-shell destruction and exactly-once resource disposition;
+- later-use analysis after terminal qualification.
+
+Transfer stance is expected to attach to the outermost completed composite type
+and carry inward through generated operations:
+
+```zax
+MyType readonly ? writable * immutable * varying deep
+```
+
+A present optional forwards the stance to its boxed transfer; an absent optional
+performs no boxed transfer. Nested wrappers forward through each present layer.
+Future work must define custom interception, pointer ownership, reference
+authority, and whether a weaker operation such as copy remains viable.
+
+References have a hidden handle location, cannot be rebound, and accept no
+reference-layer qualifiers. Optional references, pointers to references, and
+arbitrary eligible layer compositions create addressability and origin pressure:
+
+```zax
+MyType readonly & ?
+MyType readonly & * writable
+MyType & ? * & ?
+```
+
+A direct reference-to-reference layer remains unavailable. Future reference work
+must define addressable handle representation without collapsing distinct
+pointer, optional, or referent lifetimes.
+
+Inferred declaration source also remains unresolved:
+
+```zax
+source : Integer
+
+copied := source
+reference : & = source
+moved := move source
+```
+
+Declarations and bindings owns whether `:=` defaults to value construction and
+how reference/pointer shapes are inferred. Lifetime work must preserve the
+resulting copy, alias, move, and terminal source effects.
 
 ## Activation and retirement
 

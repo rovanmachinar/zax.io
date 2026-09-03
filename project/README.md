@@ -18,8 +18,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [012: Optional values, construction, absence, and transfer](work/012-optional-values.md) |
-| Next work number | `013` |
+| Active work item | [013: Transfer stances, source state, and lifetime completion](work/013-transfer-stances-and-source-state.md) |
+| Next work number | `014` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

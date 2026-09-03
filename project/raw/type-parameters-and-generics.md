@@ -7,7 +7,7 @@
 | Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, and integer-family review |
 | Owns | Preserved type-parameter, generic, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
 | Does Not Own | Accepted generic semantics or current declaration/type behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type receivers |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers and work item `012` optional-depth substitution pressure |
 
 ## Why this input exists
 
@@ -278,6 +278,31 @@ without forcing generic code to branch manually between ordinary and large
 count tiers.
 
 ## Constraints this input places on current work
+
+Optional wrapper composition adds a resolved-type intent requirement:
+
+```zax
+MyInner :: alias type MyValue?
+MyOuter :: alias type MyInner?
+
+inner : MyInner
+outer : MyOuter = inner             // error: hidden optional depth is added
+outerExplicit : MyOuter = [{ inner }]
+```
+
+A type parameter substitution may create the same relationship even when the
+generic source does not spell both `?` layers. Future generic work must preserve:
+
+- no automatic flattening of optional layers;
+- one independent qualification and presence state per layer;
+- construction-packet acknowledgement when a construction adds a layer around
+  an already-optional source;
+- same-type optional construction remaining ordinary;
+- declared operations returning nested optionals retaining their exact result
+  type and state contract.
+
+Generic diagnostics must show enough resolved structure to explain why an
+apparently simple initialization needs an explicit packet.
 
 - a concrete type argument is never a runtime value;
 - a type-receiver operation is not inherently compile-time;

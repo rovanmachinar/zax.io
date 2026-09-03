@@ -7,7 +7,7 @@
 | Applies To | Concerns that cross several owners and must survive numbered-work archival |
 | Owns | An indexed, live list of cross-cutting audit entries, each with a concern, why local review misses it, likely owners, resolution criteria, activation pressure, current constraints, and eventual disposition; the durable-queue purpose, future-agent workflow, add/do-not-add criteria, and retirement model |
 | Does Not Own | Accepted language design, a miscellaneous design dump, ordinary local TODOs, or competing authority over any concept owner |
-| Source / Provenance | Work item `007` promotion and its corrective promotion |
+| Source / Provenance | Work item `007` promotion and its corrective promotion; work item `012` optional legacy disposition |
 
 ## Purpose
 
@@ -81,15 +81,16 @@ Each entry preserves:
 - **Representative example.** `whatAmI := (a < b ?? c ;; d)` must error when `c`
   and `d` remain different types, while `whatAmI : KnownType = (a < b ?? c ;; d)`
   converges through construction and
-  `myType : MyType? = (a < b ?? : MyType = a ;; : MyType?)` converges through a
-  typed optional destination.
+  `myType : MyType? = (a < b ?? (: MyType = a) ;; (: MyType?))` converges through
+  a typed optional destination.
 - **Why local review misses it.** Convergence spans core flow, function
   invocation (selection), operators (node classification), and construction
   (destination lifetime); no single owner sees every form.
 - **Likely owners.** [Core flow control](../../language/core-flow-control.md),
   [function invocation](../../language/function-invocation.md),
   [operators](../../language/operators.md),
-  [construction, replacement, and destruction](../../language/construction-and-destruction.md).
+  [construction, replacement, and destruction](../../language/construction-and-destruction.md),
+  and [optional values](../../language/optional-values.md).
 - **Resolution.** A reviewed catalog of valid convergence forms and their errors,
   cross-checked across those owners.
 - **Activation pressure.** Value-polymorphism, generics, or richer inference
@@ -176,26 +177,24 @@ Each entry preserves:
 
 ### Legacy claims contradicted by promoted behavior
 
-- **Concern.** Legacy pages contain condition, optional, error-exit, and
-  operator claims contradicted by the promoted exact-`Boolean`, presence-proof,
-  and exit model.
-- **Representative example.** Bare optional or captured-error conditions,
-  unchecked-dereference prose that conflicts with mandatory static proof, and
-  prose implying that `&&` and `||` are globally `Boolean`-only rather than
-  ordinary eager overloads outside the protected exact `Boolean`/`Boolean`
-  operations.
+- **Concern.** Legacy pages contain condition, error-exit, and operator claims
+  contradicted by the promoted exact-`Boolean`, presence-proof, and exit model.
+- **Representative example.** Captured-error conditions and prose implying that
+  `&&` and `||` are globally `Boolean`-only rather than ordinary eager overloads
+  outside the protected exact `Boolean`/`Boolean` operations.
 - **Why local review misses it.** Remaining contradictions span core flow,
   optional, and except pages.
-- **Likely owners.** [Optional types](../../optional.md),
-  [except error handling](../../except.md), [Nothing](../../nothing.md), and
-  their future reviews.
+- **Likely owners.** [Except error handling](../../except.md),
+  [Nothing](../../nothing.md), and their future reviews.
 - **Resolution.** Every contradicted legacy claim is corrected or routed to a
   current owner.
 - **Activation pressure.** Each affected page's focused review, or a reported
   contradiction.
-- **Current constraints.** The dedicated legacy operator page has been retired
-  and current operator owners now distinguish protected exact Boolean operations
-  from eager custom shapes. Remaining optional/except claims stay tracked here.
+- **Current constraints.** The dedicated legacy operator and optional pages have
+  been retired to historical disposition paths. Current operator and
+  [optional](../../language/optional-values.md) owners distinguish protected
+  exact Boolean/presence behavior from eager custom shapes. Remaining
+  error-handling claims stay tracked here.
 - **Disposition.** Open.
 
 ### Example prerequisite and placement audit
@@ -287,6 +286,30 @@ Each entry preserves:
 - **Current constraints.** The implementation may choose instructions, constant
   folding, emitted code, an intrinsic, or an automatically linked helper; the
   programmer-visible guarantee is only availability and semantics.
+- **Disposition.** Open.
+
+### Legacy continuation examples after symbolic-infix refinement
+
+- **Concern.** Current source structure now treats a recognized spaced symbolic
+  infix form at physical line end as sufficient continuation intent and rejects
+  redundant `\`. Explicitly legacy pages still preserve older examples using
+  `&& \` or `= \`.
+- **Representative example.** `meta-functions.md` line 112 and `except.md` lines
+  373, 379, and 384 retain the old form.
+- **Why local review misses it.** Those pages are outside ordinary current
+  language reading and contain broader unreviewed legacy syntax. Mechanically
+  rewriting one continuation token could make the remaining example appear
+  current.
+- **Likely owners.** Future meta-function and error-handling reviews, with
+  [source structure](../../language/source-structure.md) retaining the current
+  continuation rule.
+- **Resolution.** Each focused legacy review either updates the complete example
+  to current source or preserves it as explicitly marked historical evidence.
+- **Activation pressure.** Focused review or promotion of `meta-functions.md` or
+  `except.md`, or a repository-wide retirement of legacy example source.
+- **Current constraints.** New current and raw examples use trailing symbolic
+  continuation without redundant `\`; arbitrary incomplete expressions and
+  phrase operators do not continue.
 - **Disposition.** Open.
 
 ## Activation and retirement
