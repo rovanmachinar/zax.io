@@ -120,7 +120,7 @@ reasoning about:
 
 - use before a result slot is constructed;
 - incomplete or duplicate result completion;
-- use after a move or `last` transfer;
+- operations unavailable in moved-from or terminal source state;
 - references returned from argument or result temporaries;
 - source and destination result slots consumed more than once; and
 - reentrant observation between completed earlier bindings and not-yet-bound
@@ -129,6 +129,22 @@ reasoning about:
 Future safe-subset work must decide which cases the language guarantees are
 rejected, which rely on a selected lifetime strategy, and which narrow unsafe
 control can acknowledge an unproved but valid operation.
+
+[Zax transfer stances](../../language/transfer-stances.md) and
+[intent acknowledgements](../../language/intent-acknowledgements.md) now
+distinguish:
+
+- defined terminal-source reuse, which requires intent acknowledgement;
+- an unavailable operation in terminal state, which remains invalid;
+- and an unproved lifetime or alias claim, which may require unsafe
+  responsibility.
+
+Transfer implementation blame belongs at the declaration when analysis can
+prove duplicate exclusive ownership, resource loss, double disposition,
+incomplete destination state, or a source left unsafe to destroy. Failure to
+visibly take a resource is not itself a violation; `copy`, `move`, and `last`
+implementations may legally preserve more source state than their maximum
+authority permits.
 
 ## Panic boundary
 

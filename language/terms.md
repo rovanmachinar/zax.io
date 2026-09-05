@@ -176,8 +176,9 @@ and cannot be clarified through ordinary whitespace or grouping.
 ||value| // candidate asymmetric circumfix resembles a missing final |
 ```
 
-Unlike an operator-attachment error, the intended form needs an explicit future
-interpretation mechanism rather than ordinary punctuation repair.
+Unlike an operator-attachment error, the intended form needs an explicit
+[intent acknowledgement](intent-acknowledgements.md) rather than ordinary
+punctuation repair.
 
 ## Layout-intent error
 
@@ -254,6 +255,20 @@ directly in the selected type.
 It is not conversion from a hidden `Integer` and introduces no runtime range
 check. See [Zax integer literals and realization](integer-literals.md).
 
+## Intent acknowledgement
+
+An **intent acknowledgement** confirms that the compiler's defined but
+suspicious interpretation is deliberate:
+
+```zax
+intent<terminal-source-reuse>{
+  resource.releaseRemainingHandle()
+}
+```
+
+It grants no capability and cannot make invalid source valid. See
+[Zax intent acknowledgements](intent-acknowledgements.md).
+
 ## Lifecycle operation
 
 A **lifecycle operation** establishes, transitions, or ends a value or member
@@ -287,6 +302,13 @@ Exact Boolean short-circuit operations are barriers because consumption would
 erase their conditional runtime evaluation. Compiler-owned lifecycle and flow
 boundaries may be barriers or noncomponents for their own reasons. This differs
 from signature protection.
+
+## Moved-from state
+
+A **moved-from state** is the live source state established by an accepted `move`
+consumer. The original owner still destroys the value later. The type's
+contract decides which other operations remain meaningful. See
+[Zax transfer stances](transfer-stances.md#move).
 
 ## Native endianness
 
@@ -503,6 +525,19 @@ meanings, and "receiver object" incorrectly suggests an object-oriented model.
 All three qualifier axes may constrain a receiver operand. See
 [Zax qualifiers](qualifiers.md#receiver-operands).
 
+## Receiver stance
+
+A **receiver stance** is the transfer stance offered by the receiver operand
+when selecting a type-defined function or operator:
+
+```zax
+document : Document deep
+document.publish()
+```
+
+It is independent from parameter and result stances. See
+[Zax transfer stances](transfer-stances.md#receiver-stance).
+
 ## Redundant-structure intent error
 
 A **redundant-structure intent error** occurs when source supplies two competing
@@ -652,17 +687,25 @@ behavior. It is distinct from the compiler host and may be named explicitly by
 environment-relative type paths. See
 [Zax integers](integers.md#native-representation-and-software-emulation).
 
+## Terminal source state
+
+A **terminal source state** is the destruction-valid state established by an
+accepted `last` consumer. The outer source lifetime remains owned by its original
+declaration and its destructor still runs. Ordinary later use requires a
+defined terminal-state operation and an intent acknowledgement. See
+[Zax transfer stances](transfer-stances.md#last).
+
 ## Transfer stance
 
-A **transfer stance** qualifies how a source may satisfy a selected consumer.
-`copy`, `deep`, `move`, and `last` identify distinct candidate stances whose
-complete preference, propagation, and source syntax remain future transfer
-design.
+A **transfer stance** says how one complete source or receiver is offered to a
+consumer. `copy`, `deep`, `move`, and `last` are the four stances.
 
-A stance expression does not itself perform a transfer. Construction,
-assignment, parameter binding, or another consumer produces any source-state
-effect after accepting it. Optional-specific consequences are taught by
-[Zax optional values](optional-values.md#the-three-ordinary-state-and-transfer-operations).
+The **offered stance** comes from the declaration or a one-use `as <stance>`
+restatement. The **accepted stance** is the consumer selected after fallback.
+The accepted consumer, not the stance expression itself, performs transfer and
+establishes source state.
+
+See [Zax transfer stances](transfer-stances.md).
 
 ## Transparent alias
 

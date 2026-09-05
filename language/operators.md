@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -681,7 +681,41 @@ optional-presence contract must be recognized by the analyzer. The lifetime
 obligation is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#conditionally-live-storage-and-access-proof).
 
-### Optional reset and transfer-source operations
+### Transfer-stance source forms
+
+The reserved post-unary phrases:
+
+```zax
+source as copy
+source as deep
+source as move
+source as last
+```
+
+preserve the source's complete value shape and restate one offered transfer
+stance for the immediate consumer.
+
+The form itself performs no `copy`, `move`, destruction, or runtime call because
+it only changes the stance available to selection. A selected constructor,
+assignment, parameter, result slot, receiver-qualified function, or another
+consumer produces any source effect after accepting the stance.
+
+These forms are distinct from binary conversion:
+
+```zax
+converted := source as DestinationType
+moved := source as move
+```
+
+Candidate-tree formation recognizes a complete destination type argument for the
+binary form and one exact reserved post-unary phrase for the stance form. The
+source does not require an exact phrase fence.
+
+Complete `copy`/`deep`/`move`/`last` meaning, fallback, declaration stance,
+receiver behavior, and source state are defined by
+[Zax transfer stances](transfer-stances.md).
+
+### Optional reset and protected transfer-source operations
 
 `reset value` is a protected pre-unary optional phrase. It destroys a present
 boxed value, leaves the same wrapper absent, and returns a reference to that
@@ -692,10 +726,9 @@ reset optionalValue
 (reset optionalValue) = [{}]
 ```
 
-`last value` and `move value` are protected pre-unary optional source forms.
-They preserve the optional type and attach distinct transfer stances. Producing
-the stance has no effect until a constructor, assignment, parameter binding, or
-another consumer accepts it:
+`last value` and `move value` are protected pre-unary optional source adapters.
+They produce the same complete optional type and present distinct transfer
+stances to a consumer:
 
 ```zax
 source : MyType?
@@ -703,9 +736,15 @@ source : MyType?
 terminallyTransferred : MyType? = last source
 ```
 
-The accepted consumer owns the source-state effect. A terminal payload transfer
-leaves the source wrapper absent; a nonterminal move preserves source presence
-and leaves a present boxed value live in its defined moved-from state.
+Neither form performs postfix optional access or produces a bare boxed
+`MyType`. An absent wrapper can therefore remain absent without creating an
+invalid boxed access.
+
+`last value` is not merely another spelling of `value as last`. When accepted,
+the optional immediately enters terminal source state for analysis, keeps the
+required boxed state live through the complete consumer, then becomes absent.
+`move value` schedules no wrapper cleanup; it preserves source presence and
+leaves a present boxed value live in its defined moved-from state.
 
 Postfix optional access yields a reference under the boxed qualifications after
 proof. It is not a runtime-checking `unwrap` operation. Safe source that lacks

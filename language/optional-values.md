@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Optional type formation, absence and presence, boxed construction and lifetime, reset, transfer effects, proven access, nested optionals, qualification, and related diagnostics; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`move`/`last` effects; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
-| Does Not Own | General constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); general transfer preference or lifetime strategies; pointer validity; function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
+| Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
+| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); lifetime strategies; pointer validity; function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
 | Source / Provenance | Retired legacy optional design input, refined against current construction, qualifier, operator, invocation, flow, integer, and identity design |
 
 ## Start with absence and presence
@@ -36,15 +36,15 @@ Absence is not uninitialized memory. An implementation may use a tag, a valid
 unused representation, or another strategy, but the programmer-visible rule is
 the same: an absent wrapper contains no live `MyValue` to access or destroy.
 
-## The three ordinary state and transfer operations
+## Reset, move, and last
 
-Reset, terminal transfer, and nonterminal move have different source effects:
+Reset, terminal transfer, and nonterminal `move` have different wrapper effects:
 
-| Completed operation | Boxed source lifetime afterward | Source wrapper afterward | Destination/result |
-| --- | --- | --- | --- |
-| `reset value` | Ended when present | Absent | Reference to the same wrapper |
-| A consumer accepts `last value` | Ended when terminally transferred | Absent after terminal transfer | Receives the optional state using compatible `last` semantics |
-| A consumer accepts `move value` | Remains live in its defined moved-from state | Preserves absence or presence | Receives the optional state using compatible `move` semantics |
+| Completed operation | Boxed source afterward | Source wrapper afterward |
+| --- | --- | --- |
+| `reset value` | Lifetime ended when present | Absent immediately |
+| Complete consumer of `last value` | Remaining payload state dispositioned | Absent after consumer completion |
+| Complete consumer of `move value` | Present payload remains live and moved-from | Preserves absence or presence |
 
 `reset` acts immediately:
 
@@ -53,9 +53,11 @@ reset present
 reset present // no-op: the same live wrapper is already absent
 ```
 
-`last value` and `move value` are transfer-qualified source expressions of the
-same optional type. They do nothing until a constructor, assignment, parameter
-binding, or another consumer accepts them:
+### Move and last source adapters
+
+`last value` and `move value` are pre-unary optional phrase operators. They
+first change the stance offered to a consumer; they do not transfer a payload by
+themselves:
 
 ```zax
 source : MyValue?
@@ -68,14 +70,55 @@ terminallyTransferred : MyValue? = last source
 moved : MyValue? = move anotherSource
 ```
 
-Ordinary copy leaves `source` unchanged. A selected terminal transfer leaves
-`source` absent after transferring a present payload. A selected nonterminal
-move leaves `anotherSource` present when it started present, with one live
-moved-from `MyValue`.
+Both forms preserve the complete optional type:
 
-The exact general preference among `copy`, `move`, `last`, references, and other
-transfer forms remains future transfer design. Optional behavior fixes only the
-state consequences after a selected consumer accepts one of those stances.
+```zax
+last source        // MyValue? offered under `last`, plus scheduled cleanup
+move anotherSource // MyValue? offered under `move`
+```
+
+They do not produce `source.` or expose a bare `MyValue`. A consumer receives an
+optional source, may observe absence, and must prove presence before postfix
+access. An absent wrapper performs no boxed transfer.
+
+Ordinary `copy` leaves `source` unchanged. When a consumer accepts
+`last source`, `source` immediately enters terminal state for analysis. Its boxed
+state remains available to that consumer until the complete call or lifecycle
+operation finishes. The adapter then removes any remaining boxed value and
+leaves `source` absent.
+
+When a consumer accepts `move anotherSource`, an absent wrapper stays absent. A
+present wrapper stays present with one live moved-from `MyValue`.
+
+Reference- and by-value consumers use the same `last` cleanup boundary: the
+source wrapper becomes absent after the complete singular call, construction,
+assignment, or other consumer finishes.
+
+Later ordinary use during that consumer is a terminal-source reuse error even
+while the represented payload remains physically live:
+
+```zax
+observe(
+  last source,
+  wasPresent: ?source // error: terminal-source reuse
+)
+```
+
+This optional adapter is distinct from generic stance restatement:
+
+```zax
+source as last // offer `last`; schedule no optional-specific cleanup by itself
+last source    // offer `last` and leave this wrapper absent after completion
+```
+
+The operator catalog records that these optional forms are protected from
+conflicting user declarations. That classification does not change their
+ordinary phrase precedence.
+
+Complete stance meaning and fallback are defined by
+[Zax transfer stances](transfer-stances.md). The acknowledgement for a defined
+terminal-state operation is defined by
+[Zax intent acknowledgements](intent-acknowledgements.md).
 
 ## Default and present construction
 
@@ -166,7 +209,7 @@ program follows its graceful-crash behavior.
 
 ### Packet inputs that alias the old payload
 
-Packet entries bind before the old payload lifetime ends. A copy can therefore
+Packet entries bind before the old payload lifetime ends. A `copy` can therefore
 establish an independent snapshot, but a reference does not become independent
 merely because it was evaluated first:
 
@@ -257,7 +300,7 @@ destinationOptional = sourceOptional
 
 The destination place must be type-side `varying`, reached through a writable
 path whose declaration has replacement permission. The source transfer stance
-selects copy, move, terminal transfer, or another compatible construction.
+selects `copy`, `move`, terminal transfer, or another compatible construction.
 
 ### Assignment through postfix access
 
@@ -727,17 +770,21 @@ available. `S` means proof or selected transfer behavior decides it.
 
 ### Transfer stance reference
 
-The stance expression alone has no state effect:
+Generic stance restatement has no state effect until a consumer accepts it:
 
-| Source accepted by consumer | Source wrapper requirements | Boxed requirements | Source wrapper afterward | Boxed source afterward |
-| --- | --- | --- | --- | --- |
-| Ordinary copy | - | Compatible copy | Unchanged | Unchanged |
-| `last value` | Mutable through writable access when terminal transfer changes presence | Compatible `last` transfer | Absent after terminal payload transfer | Present payload lifetime ends |
-| `move value` | Wrapper qualifiers do not propagate inward; presence does not change | Compatible nonterminal move | Preserve absence/presence | Present payload remains live and moved-from |
+| Accepted source | Optional-specific source effect |
+| --- | --- |
+| `value as copy` | Produce the same optional type; wrapper and present payload remain unchanged |
+| `value as deep` | Produce the same optional type; wrapper and source payload remain unchanged; a present payload supplies the exact `deep` contract |
+| `value as move` | Produce the same optional type; accepted whole-optional `move` contract determines source state; no optional cleanup is scheduled by the form |
+| `value as last` | Produce the same optional type; accepted whole-optional `last` contract determines terminal source state; no optional cleanup is scheduled by the form |
+| `move value` | Produce the same optional type; preserve absence/presence; leave a present payload live and moved-from |
+| `last value` | Produce the same optional type; mark terminal when accepted; after complete consumer, leave wrapper absent and payload dispositioned |
 
 Whether an absent qualified optional satisfies a consumer follows that
-consumer's result contract. Same-type transfer can propagate absence; a future
-unwrapping consumer may panic or be unavailable.
+consumer's contract. Same-type transfer can propagate absence; a future
+unwrapping consumer may panic or be unavailable. General fallback and accepted
+source state are defined by [Zax transfer stances](transfer-stances.md).
 
 ## References, pointers, and other boxed types
 
@@ -796,25 +843,26 @@ release or destroy another value.
 
 Even a zero-storage boxed type requires a semantic presence distinction.
 
-## Outermost transfer stance carries inward
+## Optional interception and payload forwarding
 
-Transfer semantics attach to the outermost completed source:
+Transfer stance attaches once to the complete optional source:
 
 ```zax
 MyValue readonly ? writable * immutable * varying deep
 ```
 
-A generated operation is expected to carry `copy`, `deep`, `move`, or `last`
-inward as it unwraps or decomposes each layer. A present optional forwards the
-stance to its boxed transfer; an absent optional performs no boxed transfer.
-Nested wrappers carry the stance through each present layer.
+The optional layer owns presence and conditional payload lifetime. When its
+selected contract forwards transfer:
 
-Complete propagation, custom interception, pointer ownership, reference
-authority, result qualification, and whether a stance permits or requires the
-specialized operation remain future transfer design. This rule does not imply
-matching pre-unary `copy` or `deep` optional operations.
+- an absent optional performs no boxed transfer;
+- a present optional forwards the accepted stance to its payload as required by
+  the optional operation;
+- nested wrappers intercept at each present layer;
+- wrapper qualifiers do not rewrite boxed qualifications;
+- and pointer or reference payloads retain their own ownership and referent
+  authority.
 
-Candidate general post-unary forms remain future work:
+These generic post-unary forms are current:
 
 ```zax
 source as copy
@@ -823,9 +871,34 @@ source as move
 source as last
 ```
 
-The design goal is ordinary unfenced use. Transfer and source-structure work
-must verify that keyword roles can be recognized unambiguously; an exact phrase
-fence may be required if no coherent unfenced grammar exists.
+They need no phrase fence. This rule does not imply matching protected
+pre-unary `copy` or `deep` optional adapters.
+
+Custom containing operations own their member policy. `move` or `last` on a custom
+body does not blindly stamp every projected member with destructive stance.
+Complete projection and custom interception are defined by
+[Zax transfer stances](transfer-stances.md#projection-and-aliases).
+
+## Swapping optional values
+
+Same-type optional values support the protected swap form:
+
+```zax
+left : MyValue?
+right : MyValue? = value
+
+left <<>> right
+```
+
+After completion, `left` has the optional state formerly held by `right`, and
+`right` has the state formerly held by `left`. Absence and presence remain
+distinct, and a present state carries its payload.
+
+Swap requires both wrapper paths to permit the applicable change. It does not
+flatten nested optional layers or collapse pointer/function empty-like payload
+states. The exact internal layout and transfer strategy are not prescribed.
+General swap form and association are listed by the
+[operator catalog](operator-catalog.md#assignment-and-swap-forms).
 
 ## Costs and representation
 
@@ -864,7 +937,10 @@ Diagnostics should identify both the failure and the deciding distinction:
 - wrapper mutation through readonly or immutable access;
 - complete-wrapper replacement without varying place authority;
 - use of an invalidated boxed reference;
-- unsupported `copy`/`move`/`last` transfer;
+- unsupported `deep` transfer or unavailable accepted fallback;
+- ordinary use after protected terminal transfer was accepted;
+- protected `last` cleanup that would outlive its complete consumer;
+- swap through an ineligible wrapper path;
 - a requested nested conversion or admission operation that does not exist.
 
 Formatters and source-preserving tools must retain:

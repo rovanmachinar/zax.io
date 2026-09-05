@@ -20,6 +20,10 @@ structural compatibility proposals on this page remain legacy input.
 > and future casting work. Nothing on this page is current design except where a
 > current owner is linked.
 >
+> Current `as copy`, `as deep`, `as move`, and `as last` source restatement is
+> defined by [Zax transfer stances](language/transfer-stances.md). Those forms do
+> not perform a cast or transfer by themselves.
+>
 > **Integer conversion disposition.** Fundamental integer conversion is now
 > current conceptual design in
 > [Zax integers](language/integers.md#integer-identity-types).
@@ -573,41 +577,18 @@ forms as candidate syntax.
 > [reserved phrase form](language/operator-catalog.md#reserved-phrase-forms) with
 > two shapes: a default-qualified concrete type identity, and a value compatible
 > with the expression's default type. Its complete qualifier-default, transfer,
-> generic, and type-result behavior remains future work. The legacy
-> `deep`/`last`/`move`/`shallow`/`lease`/`copy` qualifier set below is
-> unreviewed legacy material.
+> generic, and type-result behavior remains future work.
 
-The `deep`, `last`, and `move` qualifiers can be reset to their default qualification state by casting `as default` on a type. These qualifiers become converted to `shallow`, `lease`, or `copy` as appropriate. This allows for qualifications to become easily stripped from an input argument type in a generic fashion. Since `shallow`, `last`, `move`, `deep`, `lease`, and `copy` are all mutually exclusive, casting using `as default` simplifies the qualification reset process.
+The remaining transfer question is whether value-shaped `as default` resets an
+explicit declaration or use-site stance to implicit `copy`:
 
-````zax
-print final : ()(...) = {
-    // ...
-}
+```zax
+source : MyType move
+defaulted := source as default
+```
 
-MyType :: type 
-    a : Integer
-    b : String
-}
-
-func final : ()(value : MyType& lease) = {
-    print("Called after each func")
-}
-
-func final : ()(value : MyType& deep) = {
-    func(value as default)
-}
-
-func final : ()(value : MyType& last) = {
-    func(value as default)
-}
-
-func final : ()(value : MyType move) = {
-    func(value as default)
-}
-
-myType : MyType
-
-func(myType as deep)
-func(myType as last)
-func(myType as move)
-````
+This source is unresolved evidence, not an accepted transfer-reset contract.
+Future `as default` work must reconcile it with current declaration stance,
+one-use `as <stance>` restatement, qualifier defaults, generic metadata, and
+result typing. It must not revive the superseded `shallow`/`lease` equivalence or
+silently perform transfer.

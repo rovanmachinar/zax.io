@@ -6,8 +6,8 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -45,6 +45,7 @@ Zax recognizes:
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from` |
+| Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
 | Delimited/multi-part | Call, index, and [mixfix](mixfix-operators.md) forms |
@@ -385,6 +386,40 @@ admission/projection belongs to [Zax identity types](identity-types.md).
 
 User-defined words do not independently grant unsafe authority.
 
+## Transfer-stance forms
+
+These exact forms are reserved post-unary phrases at ordinary phrase precedence:
+
+| Form | Result role |
+| --- | --- |
+| `value as copy` | Preserve the complete value shape and offer `copy` |
+| `value as deep` | Preserve the complete value shape and offer `deep` |
+| `value as move` | Preserve the complete value shape and offer `move` |
+| `value as last` | Preserve the complete value shape and offer `last` |
+
+The form itself performs no transfer or user-code invocation. A selected
+consumer accepts the stance and owns any source effect.
+
+Post-unary stance restatement is distinct from binary conversion:
+
+```zax
+converted := source as DestinationType
+moved := source as move
+```
+
+Phrase recognition needs no exact phrase fence. Complete stance meaning and
+fallback are defined by [Zax transfer stances](transfer-stances.md).
+
+Repeated restatement groups from the left at ordinary phrase precedence:
+
+```zax
+result := source as move as copy
+// (source as move) as copy; the consumer sees `copy`.
+```
+
+This is legal but normally pointless: no consumer observes the intermediate
+`move`, so `as copy` replaces it without any transfer occurring.
+
 ## Optional forms
 
 These exact forms are protected for optional operands:
@@ -394,12 +429,12 @@ These exact forms are protected for optional operands:
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
 | `reset value` | Pre-unary phrase at ordinary phrase level | Leave the same wrapper absent and return its reference |
-| `last value` | Pre-unary phrase at ordinary phrase level | Preserve the optional type under `last` transfer stance |
-| `move value` | Pre-unary phrase at ordinary phrase level | Preserve the optional type under `move` transfer stance |
+| `last value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type, offer `last`, and schedule optional payload cleanup at consumer completion |
+| `move value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type and offer `move` without scheduling wrapper absence |
 
-Producing `last value` or `move value` does not itself transfer or change state.
-A selected consumer creates any effect. Complete optional behavior and source
-consequences are defined by [Zax optional values](optional-values.md).
+Protected optional forms are distinct from generic post-unary stance
+restatement. Complete optional behavior and source consequences are defined by
+[Zax optional values](optional-values.md).
 
 `T? ?` is two optional type layers and requires the separating space. Compact
 `T??` contains the conditional-expression token. `[{}]` is the canonical
@@ -498,16 +533,16 @@ Natural unacknowledged source is a confusable-form intent error:
 ||myValue| // error: explicit intent acknowledgement is required
 ```
 
-The operation is available when `bare{...}` confirms that the asymmetric form is
-intentional:
+The operation is available when an intent acknowledgement confirms the
+asymmetric interpretation:
 
 ```zax
-bare{ ||myValue| }
+intent<asymmetric-saturating-magnitude>{ ||myValue| }
 ```
 
-This specific source use is provisionally accepted. Complete `bare{...}`
-tokenization, nesting, reflection, and keyword-neutral behavior remain future
-source work.
+The category and its defined-but-suspicious source contract are owned by
+[Zax intent acknowledgements](intent-acknowledgements.md). `bare{...}` remains
+future keyword-neutral source.
 
 `|myValue||` has no assigned operation.
 
@@ -520,6 +555,16 @@ myDestination = mySource
 ```
 
 It is right-associative. Declaration initialization remains separate syntax.
+The generated same-type form returns readonly `copy` access to its destination
+receiver, allowing:
+
+```zax
+myFirst = mySecond = myThird
+```
+
+Custom assignment may declare another result shape. Exact generated signatures
+and reconstructive replacement belong to
+[construction, replacement, and destruction](construction-and-destruction.md#generated-copy-construction-and-assignment).
 
 Swap uses:
 

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -1426,6 +1426,44 @@ A keyword-role conflict is a related lexical interpretation question rather than
 permission to ignore grammar. These terms are defined by
 [language-design terms](terms.md).
 
+### Intent acknowledgement enclosure
+
+Defined but suspicious source uses:
+
+```zax
+intent<category>{
+  source
+}
+```
+
+The category is a lower-case hyphenated identifier registered by
+[Zax intent acknowledgements](intent-acknowledgements.md). The payload must
+independently form exactly one complete expression or effective statement. It
+cannot borrow a missing operand, separator, or body from outside the enclosure.
+
+The acknowledgement does not:
+
+- create an operator or expression result;
+- create a declaration scope or lifetime boundary;
+- remain as a final expression-tree node;
+- grant qualifier, lifetime, or unsafe authority;
+- suppress unrelated diagnostics;
+- change precedence or operator selection;
+- or add a required runtime operation.
+
+Its braces disappear for scope purposes:
+
+```zax
+intent<category>{
+  value : Integer
+}
+
+value = 5 // value remains in the surrounding scope
+```
+
+Ordinary layout applies inside the payload. Exact token-level grammar, nesting,
+and source-reflection representation remain future source-contract details.
+
 Most rules in this document are deliberate intent or layout errors. The category
 is intentionally bounded and does not require recognizing every malformed token
 sequence.
@@ -1468,7 +1506,8 @@ The candidate payload must independently form exactly one complete expression or
 effective statement and cannot obtain a missing operand or separator from
 outside. The enclosure creates no scope. After that completeness check, it is
 transparent to final precedence and mixfix matching while preserving
-keyword-neutral and confusable-form intent. Semicolon composition, continuation,
+keyword-neutral interpretation. It does not acknowledge confusable forms;
+`intent<...>{...}` owns that role. Semicolon composition, continuation,
 qualification, protection, and lifetime remain unchanged. Strict neutralization,
 unavailable nesting, and the enclosure's interaction with reflection and
 formatting remain with that future work; the phrase no-spanning rule above is

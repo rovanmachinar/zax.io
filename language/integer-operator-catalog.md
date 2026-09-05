@@ -196,7 +196,7 @@ Protected unsigned integers have no ordinary unary negation.
 | Wrapping | `\|%myValue\|` | Retain minimum representation |
 | Optional | `\|?myValue\|` | Absent |
 | Combined report | `\|!myValue\|` | Report wrapped/saturated alternatives and overflow |
-| Saturating | `bare{ \|\|myValue\| }` | Return the signed maximum |
+| Saturating | `intent<asymmetric-saturating-magnitude>{ \|\|myValue\| }` | Return the signed maximum |
 
 Unsigned magnitude is the same value. Optional and reporting forms remain
 available so generic numeric code can use one policy.
@@ -208,8 +208,15 @@ positive magnitude. For the minimum signed value, it returns the signed maximum.
 For unsigned values, it returns the same value.
 
 Natural `||myValue|` is an intent error because it resembles a malformed norm.
-`bare{ ||myValue| }` explicitly acknowledges the asymmetric form. Complete
-`bare{...}` mechanics remain future source work.
+The registered intent category explicitly acknowledges the asymmetric form:
+
+```zax
+myMagnitude :=
+  intent<asymmetric-saturating-magnitude>{ ||myValue| }
+```
+
+The acknowledgement contract is defined by
+[Zax intent acknowledgements](intent-acknowledgements.md).
 
 ## Division and remainder
 
@@ -279,7 +286,7 @@ Ordinary pre forms return writable access to the updated place:
 myUpdated := ++myValue
 ```
 
-Ordinary post forms return the previous value by copy:
+Ordinary post forms return the previous value by `copy`:
 
 ```zax
 myPrevious := myValue++

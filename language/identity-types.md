@@ -419,14 +419,18 @@ myIdentity := MyIdentity from myUnderlying
 
 The operation needs a viable way to establish the underlying stored value:
 
-- copy;
-- move;
+- `copy`;
+- `deep` copy;
+- `move`;
 - consuming/`last` transfer;
 - direct construction; or
 - another declared transfer.
 
 Identity syntax does not manufacture copyability. If no applicable construction
-or transfer exists, by-value admission is unavailable.
+or transfer exists, by-value admission is unavailable. `move` may fall back to
+`copy`; `last` may fall back to `move` and then `copy`; `deep` requires an exact `deep`
+contract. Complete stance meaning and source state are defined by
+[Zax transfer stances](transfer-stances.md).
 
 A same-storage identity reference is a different operation. It would create a
 view of existing storage rather than a new value, perform no copy, and schedule
@@ -445,8 +449,8 @@ alignment, shape, and same-storage-reference guarantees remain future
 owned-composition/layout work.
 
 Identity does not weaken qualifications. Projection, admission, construction,
-and transfer use the applicable place, value, access, copy, move, and lifetime
-rules.
+and transfer use the applicable place, value, access, `copy`, `deep`, `move`, `last`,
+and lifetime rules.
 
 Storage compatibility never grants implicit conversion.
 

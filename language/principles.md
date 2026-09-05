@@ -47,13 +47,21 @@ Examples include:
 
 - labels and explicit positional forms;
 - complete result declarations selecting a result family;
-- explicit copy, move, reference, or `last` intent;
+- explicit `copy`, `deep`, `move`, reference, or `last` intent;
 - selectable memory and lifetime policies; and
 - future structural, generic, and metaprogramming relationships.
 
 [Function invocation](function-invocation.md) applies this principle by
 diagnosing incomparable call candidates and accepting explicit labels,
 declarations, transfers, and prototype bindings as disambiguation.
+[Transfer stances](transfer-stances.md) let a programmer distinguish ordinary
+copying, independent copying, resource transfer, and final resource reuse
+without requiring separate source syntax for every constructor, call,
+assignment, and operator.
+
+Defined source that strongly resembles a mistake may require an
+[intent acknowledgement](intent-acknowledgements.md). That mechanism confirms a
+specific suspicious interpretation; it does not make invalid source valid.
 
 The tension is that expressive flexibility increases the number of forms and
 interactions a programmer must learn. Good defaults and precise diagnostics keep
@@ -167,7 +175,8 @@ minimum cost at all times.
 
 Examples include:
 
-- liveness analysis optimizing a selected move without choosing move semantics;
+- liveness analysis implementing a selected `move` or `last` transfer without
+  choosing another stance or user body;
 - temporary storage being elided without changing lifetime effects;
 - result construction being fused without changing ordering or destruction; and
 - direct calls replacing an unnecessary function-value slot without changing the

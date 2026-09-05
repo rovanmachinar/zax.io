@@ -33,6 +33,17 @@ A future semantic control must:
 Compiler debugging modes may instrument a claim and panic when misuse is
 detected. Such instrumentation is tooling, not a language guarantee.
 
+## Intent acknowledgement is separate
+
+[Zax intent acknowledgements](../../language/intent-acknowledgements.md) now
+owns defined but suspicious source such as deliberate terminal-source reuse.
+Intent confirms an interpretation the compiler already understands. It does not
+accept proof responsibility and cannot make an invalid operation valid.
+
+This raw input retains only semantic permissions or assertions that change what
+the compiler may trust about an unproved lifetime, alias, construction, or other
+required property. Lint suppression remains separate from both.
+
 ## Permission regions
 
 Some operations are valid only when the programmer accepts responsibility for a
@@ -117,11 +128,15 @@ their final identifiers:
 
 - completing every result slot on every normal path;
 - constructing each result slot at most once per lifetime;
-- preventing use after move or `last`;
+- preventing operations unavailable in moved-from or terminal state;
 - preventing a returned reference from escaping a temporary;
 - consuming each source-result and destination slot at most once; and
 - preserving diagnostic provenance for the contract or analysis that rejected a
   call.
+
+Ordinary defined reuse after accepted `last` is an intent error and uses
+`intent<terminal-source-reuse>{...}`. Unsafe analysis control is needed only
+when a required valid lifetime, alias, or operation property cannot be proved.
 
 These names identify future-work concerns. They are not accepted keywords.
 

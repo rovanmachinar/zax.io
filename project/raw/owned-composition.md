@@ -73,6 +73,24 @@ external. Future work must classify:
 - operations whose meaning does not survive substitution; and
 - source additions that would expand an exposed identity later.
 
+[Zax transfer stances](../../language/transfer-stances.md) adds exact-surface
+pressure:
+
+- qualifications and transfer stance participate in the complete prototype;
+- an exposed declaration must preserve `copy`/`deep`/`move`/`last` behavior and source
+  effects;
+- qualifier-generic declarations denote open compile-time families, not an
+  automatically unbounded runtime surface;
+- `own` must select a finite set of exact prototypes or concrete generic
+  specializations for exposure;
+- an exact unavailable, bodyless, defaulted, delegated, or forbidden shape must
+  retain that declaration state after transformation;
+- and signature substitution must not erase the qualifier metadata needed by
+  downstream selection.
+
+Future work must decide how an owner names, filters, or infers those concrete
+specializations and how later source additions affect the exposed surface.
+
 ## Projection and admission exclusions
 
 Arbitrary source conversion, identity admission, and unsafe boundaries cannot be

@@ -85,6 +85,25 @@ Under this candidate model:
 This framing is a proposal for later work, not terminology accepted by current
 language design.
 
+### Generated copy self-shape pressure
+
+[Zax construction, replacement, and destruction](../../language/construction-and-destruction.md#generated-copy-construction-and-assignment)
+defines generated `copy` as exact qualifier-complete declarations. If
+`MyType mutable` and `MyType immutable` become distinct concrete family members,
+future work must decide:
+
+- whether each member receives its own generated copy-constructor and assignment
+  family;
+- whether source and destination mutability shapes must match;
+- whether a consuming transformation may cross shapes;
+- whether mutable and immutable variants may share implementation without
+  pretending their prototypes are identical;
+- how final/varying source-place variants are generated;
+- and how reflection and generic constraints expose each exact declaration.
+
+No runtime operation may branch on an unresolved mutable/immutable self shape.
+Each selected callable remains one concrete prototype.
+
 ## API-surface pressure
 
 An immutable variant may intentionally expose a smaller API surface:

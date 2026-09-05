@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); or complete pointer/lifetime rules |
+| Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); or complete pointer/lifetime rules |
 
 ## Mental model
 
@@ -21,12 +21,31 @@ Each question has its own qualifier axis:
 
 | Axis | Stances | Governs |
 | --- | --- | --- |
-| Place replacement | `final` / `varying` | Whether the qualified storage place may ordinarily receive another value lifetime, and whether a particular declaration may exercise that authority |
-| Value mutability | `mutable` / `immutable` | Whether the current value lifetime's contained state may change through ordinary behavior |
-| Access capability | `writable` / `readonly` | Whether the current path may perform an otherwise permitted content mutation or place replacement |
+| Place replacement | `final` / `varying` | `final` promises that the place keeps the same value lifetime; `varying` permits another lifetime in that place, and the declaration side controls whether this path may initiate it |
+| Value mutability | `mutable` / `immutable` | `immutable` promises that the current value's contents do not change through ordinary safe behavior; `mutable` makes no such promise |
+| Access capability | `writable` / `readonly` | `readonly` promises that this path performs no change; `writable` may perform an otherwise permitted content mutation or place replacement |
 
 These are called **place-replacement qualifiers**, **value-mutability
 qualifiers**, and **access qualifiers**.
+
+Transfer stance is not a fourth per-layer qualifier axis. `copy`, `deep`, `move`,
+and `last` describe how one complete source or receiver is offered to a
+consumer:
+
+```zax
+source : Buffer mutable readonly final & move
+```
+
+This is:
+
+- a mutable current `Buffer` value;
+- readonly access through this path;
+- a final referenced place; and
+- one `move` stance on the complete source.
+
+`readonly` narrows only access. It does not erase mutable/immutable or
+final/varying truth. Complete transfer meaning, fallback, and projection are
+defined by [Zax transfer stances](transfer-stances.md).
 
 Begin with omitted value and access defaults:
 
@@ -470,7 +489,7 @@ involve:
 
 A consuming transition ends the former mutable capability. A scoped
 non-mutating view that later permits mutation again is readonly, not temporarily
-immutable. Exact uniqueness proofs, freezing operations, copy selection, cost
+immutable. Exact uniqueness proofs, freezing operations, `copy` selection, cost
 visibility, and syntax remain future work.
 
 ## Construction and deep immutability
@@ -563,7 +582,7 @@ This document owns why reconstructive replacement is required by the qualifier
 model and its qualification boundary. Complete fallback, member transition,
 resource retention, result, destruction, and alias behavior is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
-Complete move/copy/`last` per-slot preference, recoverable panic, callbacks,
+Complete `move`/`copy`/`last` per-slot preference, recoverable panic, callbacks,
 reentrancy, async, and concurrency remain future focused work.
 
 If panic is terminal, partially transitioned storage does not return to ordinary
@@ -732,13 +751,17 @@ Function results are governed by the resolved prototype:
 - a returned pointer or reference carries the prototype's per-level
   qualifications;
 - a returned by-value value carries its declared value mutability; and
+- a completed result carries its declared transfer stance; and
 - the caller's destination introduces an independently resolved place.
 
 An inferred or generic result ultimately resolves to such a prototype. Complete
 generic result resolution remains later function design.
 
 Captures preserve or strengthen the captured source qualifications and never
-inherit pliability implicitly.
+inherit pliability implicitly. A reference capture behaves like an alias and
+does not silently inherit a destructive `move` or `last` declaration stance.
+By-value capture stance, repeated invocation, and exact syntax remain future
+lambda work.
 
 Declaration-side replacement permission survives parameter binding, result
 routing, and capture. A declaration-final argument cannot regain replacement
@@ -765,7 +788,9 @@ authority or require qualification-changing executable adaptation.
 The [receiver operand](terms.md#receiver-operand) is the implicit operand
 representing the instance on which a type-defined function or operator acts.
 All three qualifier axes may constrain it and participate in candidate
-selection.
+selection. Receiver transfer stance is an independent callable slot whose
+complete behavior is defined by
+[Zax transfer stances](transfer-stances.md#receiver-stance).
 
 No operator, including `=` or `+=`, receives conventional qualifier behavior
 merely because of traditional meaning. The reconstructive `=` scenario is
@@ -792,6 +817,12 @@ place. `final` does not prohibit an operator named `=`. An operation involving
 readonly prevents selection only of a candidate requiring writable access
 through that operand; it does not prohibit arbitrary effects elsewhere.
 
+An exact `move` or `last` receiver normally requires mutable value state through
+writable access when it may extract represented resources. The selected
+implementation receives that authority, but ordinary nested uses of `_` and its
+members return to `copy` stance unless explicitly renewed. Qualifier authority
+never increases merely because a transfer stance was accepted.
+
 The generated reconstructive candidate requires immutable, type-side varying,
 declaration-side varying, and writable. It is unavailable for a mutable value,
 through a readonly receiver operand, or through a declaration-side final path
@@ -801,6 +832,11 @@ A temporary supplies the qualifications of its resolved result and
 compiler-managed temporary place. An operation through a pointer or reference
 uses the dereferenced instance's qualifications, not the pointer binding's place
 qualification.
+
+A directly constructed compiler-managed unnamed by-value temporary also offers
+`last` transfer stance because its lifetime structurally ends after its one
+complete consumer. This does not alter its mutable/immutable, final/varying, or
+writable/readonly qualifications and does not make a pointee terminal.
 
 Omitted receiver-operand qualifiers use the defaults applicable where the
 operation is defined. Complete generated operator families, temporary destruction
@@ -964,16 +1000,23 @@ Postfix optional access is not ordinary member projection. It crosses the
 semantic `?` indirection boundary and therefore exposes the independently
 qualified boxed layer as described above.
 
-## Move-out and destruction
+## Transfer and destruction
 
-A final live place cannot be ordinarily replaced. Move and copy are contextual
-operations rather than persistent qualifier axes.
+A final live place cannot be ordinarily replaced, but final does not freeze the
+resources contained by its current mutable value. A selected `move` or `last`
+consumer may transfer resources from a final place when:
 
-A final place may permit destructive move-out when the operation truly consumes
-the source as part of ending its lifetime. This supports reclaiming or recycling
-expensive resources. It does not permit transfer from a still-live readonly or
-immutable source into mutable or writable state without an explicit unsafe
-operation.
+- the current value is mutable;
+- the access path is writable; and
+- the exact consumer accepts that stance.
+
+`move` leaves a live moved-from source. `last` leaves a live destruction-valid
+terminal source. Neither stance itself ends the outer lifetime or replaces its
+place.
+
+Readonly or immutable source does not acquire ordinary resource-extraction
+authority merely because `move` or `last` is offered. Unusual readonly contracts
+remain possible only when their actual behavior respects those qualifications.
 
 During destruction, the current instance receives terminal mutable and writable
 authority without requiring `unsafe pliable`. Destruction may dismantle the
@@ -982,8 +1025,10 @@ cannot create an alias usable after the instance's lifetime.
 
 Destructor sequencing is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#destruction).
-Moved-from states and proof of terminal consumption remain lifetime and
-ownership work.
+Moved-from and terminal source meaning is defined by
+[Zax transfer stances](transfer-stances.md#move).
+Complete pointer ownership, terminal capabilities, and lifetime policy remain
+future lifetime work.
 
 ## Concurrency boundary
 

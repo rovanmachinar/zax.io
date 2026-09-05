@@ -3,31 +3,13 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining keyword-neutral source, confusable-form intent, or transparent source enclosures |
-| Applies To | The complete candidate `bare{...}` model and its source, scope, continuation, operator, and mixfix consequences |
-| Owns | Preservation of the candidate mental model, representative valid/invalid source, constraints, alternatives, activation pressure, and retirement criteria |
-| Does Not Own | Accepted bare-source semantics or current source/phrase ownership |
+| Audience | Future work defining keyword-neutral source or transparent source enclosures |
+| Applies To | The complete candidate `bare{...}` keyword-neutral model and its source, scope, continuation, operator, and mixfix consequences |
+| Owns | Preservation of the candidate keyword-neutral mental model, representative valid/invalid source, constraints, alternatives, activation pressure, and retirement criteria |
+| Does Not Own | Intent acknowledgements, accepted source semantics, or current source/phrase ownership |
 | Source / Provenance | Operator-catalog promotion review, follow-up source-intent analysis, and operator-phrase review |
 
 ## Why this input exists
-
-Some intent problems can be repaired with ordinary whitespace, grouping, or
-layout:
-
-```zax
-!(!value)
-```
-
-Other coherent forms cannot retain their intended source through those remedies.
-The candidate asymmetric saturating-magnitude circumfix is:
-
-```zax
-||value|
-```
-
-Natural source strongly resembles a norm expression missing its final `|`.
-Future work needs a general way to acknowledge that form without making it
-unsafe or permanently prohibiting it.
 
 Operator phrases create related lexical pressure when words could otherwise be
 keywords:
@@ -53,7 +35,6 @@ After that completeness check, the enclosure:
 - creates no final precedence boundary;
 - creates no expression-tree node or mixfix hole;
 - neutralizes non-operator keyword roles;
-- permits recognized confusable-form operators;
 - and leaves grammar, operator selection, qualification, protection, lifetime,
   and diagnostics otherwise active.
 
@@ -117,10 +98,9 @@ The candidate processing model is:
 
 1. recognize `bare{...}` and determine whether the surrounding position requires
    an expression or effective statement;
-2. parse the payload independently with non-operator keyword roles neutralized
-   and recognized confusable forms enabled;
+2. parse the payload independently with non-operator keyword roles neutralized;
 3. require one complete unit of that category;
-4. retain lexical-role and confusable-form acknowledgement on its tokens;
+4. retain lexical-role acknowledgement on its tokens;
 5. remove the enclosure as a precedence, tree, hole, scope, and runtime boundary;
 6. form the complete surrounding tree normally; and
 7. perform ordinary and mixfix selection without weakening semantic rules.
@@ -297,47 +277,19 @@ makes it one valid effective statement.
 Strings and comments retain their own lexical modes. Words inside a literal are
 not reinterpreted merely because the literal occurs inside bare source.
 
-## Confusable asymmetric circumfix
+## Confusable forms moved to intent acknowledgement
 
-The operator catalog preserves asymmetric `||...|` as an intent-gated
-saturating-magnitude form:
-
-```zax
-saturated := bare{ ||value| }
-```
-
-This specific acknowledgement is provisionally accepted for using the
-saturating-magnitude operation. This raw input retains the general enclosure
-mechanics.
-
-Natural unacknowledged source remains a confusable-form intent error:
+[Zax intent acknowledgements](../../language/intent-acknowledgements.md) now
+owns explicit confirmation of defined but suspicious source. Asymmetric
+saturating magnitude uses:
 
 ```zax
-saturated := ||value| // error: explicit intent acknowledgement is required
+saturated :=
+  intent<asymmetric-saturating-magnitude>{ ||value| }
 ```
 
-A programmer can state either intended operation:
-
-```zax
-norm := ||value||
-saturated := bare{ ||value| }
-```
-
-`bare{...}` cannot invent an unrecognized form. `|value||` has no assigned
-operator meaning and remains invalid.
-
-## Intent categories
-
-Future work must preserve the distinctions among:
-
-- layout-intent errors, repaired through physical presentation;
-- operator-attachment intent errors, repaired through whitespace or grouping;
-- redundant-structure intent errors, repaired by removing a competing marker;
-- confusable-form intent errors, which require explicit interpretation; and
-- keyword-role conflicts, which require a keyword-neutral interpretation.
-
-The bare enclosure addresses only confusable forms and keyword roles. It does not
-suppress the other diagnostics.
+`bare{...}` no longer acknowledges confusable forms. This raw input retains only
+the distinct keyword-neutral enclosure pressure.
 
 ## What bare source does not permit
 
@@ -375,7 +327,7 @@ and the remaining literal consequences are preserved in
 
 A local fence and this enclosure are therefore complementary rather than
 competing: the fence requires one exact phrase component, while the enclosure
-would neutralize a competing keyword role or acknowledge a confusable form.
+would neutralize a competing keyword role across its complete payload.
 Future bare-source work must decide whether the enclosure is still justified now
 that fencing exists.
 
@@ -394,13 +346,11 @@ that fencing exists.
 - How does source reflection represent tokens whose enclosure is absent from the
   final expression tree, alongside the same question for phrase fences preserved
   in [raw reflection input](reflection.md)?
-- Which confusable forms, beyond asymmetric saturating magnitude, justify the
-  mechanism?
 
 ## Activation and retirement
 
-Activate this input for keyword-neutral source, confusable-form intent, source
-reflection, transparent lexical enclosures, or the next focused source work item.
+Activate this input for keyword-neutral source, source reflection, transparent
+lexical enclosures, or the next focused source work item.
 Accepted operator-phrase words, presentation, and fencing have already moved to
 their current owners and are no longer decided here.
 

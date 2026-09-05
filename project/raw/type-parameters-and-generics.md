@@ -163,6 +163,51 @@ Future work must decide:
 The result must never silently change between by-value identity construction and
 same-storage reference view.
 
+## Qualifier-parameterized declaration families
+
+[Zax qualifiers](../../language/qualifiers.md) and
+[transfer stances](../../language/transfer-stances.md) require every ordinary
+callable prototype to resolve one exact mutable/immutable, final/varying,
+writable/readonly, and transfer shape. Omission supplies concrete defaults; it
+does not create qualifier erasure or implicit generic specialization.
+
+A future explicit generic mechanism should let an author produce exact
+specializations without hand-writing every valid combination.
+
+Illustrative syntax:
+
+```zax
+relay$(Mutability, PlaceStance) final : (
+  result : MyValue Mutability readonly PlaceStance &
+)(
+  input : MyValue Mutability readonly PlaceStance &
+) = {
+  // ...
+}
+```
+
+The spelling is not accepted. Future work must decide:
+
+- how qualifier parameters are named and constrained;
+- whether qualifier arguments are inferred from value inputs;
+- how a result repeats inferred input metadata;
+- when the generic body is checked against all constraints;
+- whether invalid specializations remain latent until demanded;
+- how concrete declarations compare with inferred specializations;
+- how generated lifecycle families interact with programmer generic families;
+- whether stance itself may be a generic parameter;
+- how diagnostics show the inferred concrete prototype;
+- and how source compatibility changes when another specialization becomes
+  viable.
+
+Every selected specialization remains one exact concrete prototype. Only
+demanded specializations need executable code, and implementation deduplication
+must not erase language-level identity.
+
+Runtime surfaces are different. Future `own`, function-value, and dispatch work
+must select a finite exact set rather than reserve space for every theoretical
+specialization of an open generic family.
+
 ## Generated type families
 
 Endian enums are described as conceptually generated families with explicitly

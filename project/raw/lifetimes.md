@@ -5,7 +5,7 @@
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item refining pointer and lifetime concepts |
 | Applies To | Intentional lifetime-policy plurality, its costs, and displaced pointer/reference binding replacement |
-| Owns | Preservation of aligned direction, displaced binding-replacement syntax, and required future decisions |
+| Owns | Preservation of aligned lifetime-policy direction, displaced binding-replacement syntax, pointer/reference ownership and provenance, reference origin, terminal-capability extension pressure, aliasing, and required future decisions |
 | Does Not Own | Accepted lifetime semantics or current qualifier/construction behavior |
 | Source / Provenance | Work items `001`, `005`, `006`, and `012`; Zax purpose, construction/replacement aliasing, invocation lifetime pressure, optional layer/transfer pressure, and the corrected declaration-side `final`/`varying` model |
 
@@ -174,47 +174,103 @@ Future lifetime and ownership work must define:
 - exact destruction order among caller argument and result temporaries;
 - reference origin through nested result routing;
 - when a returned reference aliases argument or result temporary storage;
-- moved-from source state after copy, move, or `last`;
-- source-shell destruction and resource disposition;
 - when a lifetime strategy may extend, reject, or unsafely permit an escape; and
 - how an async call broadens the synchronous completion boundary.
 
-## Optional- and layer-derived transfer pressure
+## Accepted transfer constraints on lifetime work
 
-[Zax optional values](../../language/optional-values.md) establishes the
-optional-specific source effects that future transfer work must preserve:
+[Zax transfer stances](../../language/transfer-stances.md) now owns:
 
-| Accepted source stance | Optional source after a consumer |
-| --- | --- |
-| `copy` | Wrapper and boxed value remain unchanged |
-| `deep` | Wrapper remains unchanged; a present payload supplies recursively independent transfer under the selected deep contract |
-| `move` | Absence remains absent; presence remains with one live moved-from boxed value |
-| `last` | A terminally transferred present payload ends and the wrapper becomes absent |
+- `copy`, `deep`, `move`, and `last` source intent;
+- fallback;
+- by-value versus reference effects;
+- moved-from and terminal source state;
+- receiver and projection behavior;
+- synchronous consumer completion;
+- and exactly-once resource disposition.
 
-A transfer-qualified source expression has no effect until a constructor,
-assignment, parameter binding, or another consumer accepts it. Future work must
-decide:
+[Zax optional values](../../language/optional-values.md) owns protected optional
+`move`/`last` adapters and cleanup.
 
-- exact `copy`/`deep`/`move`/`last` candidate preference;
-- whether a stance permits or requires its specialized transfer;
-- pre-unary versus post-unary source forms;
-- whether a by-value parameter consumes during immediate binding or a terminal
-  reference/capability permits later body consumption;
-- result qualifications and the valid moved-from contract;
-- source-shell destruction and exactly-once resource disposition;
-- later-use analysis after terminal qualification.
+Future lifetime work may strengthen guarantees or reject unsafe escapes but must
+not:
 
-Transfer stance is expected to attach to the outermost completed composite type
-and carry inward through generated operations:
+- silently infer another stance;
+- treat stance as one property at every indirection level;
+- invent pointee authority when a pointer value transfers;
+- erase exact final/varying or mutable/immutable truth;
+- let a reference capture inherit destructive declaration stance silently;
+- or change synchronous optional cleanup into an unbounded capability.
+
+Current transfer design also establishes:
+
+- a directly constructed compiler-managed unnamed by-value temporary inherently
+  offers `last` to its complete consumer;
+- an omitted owned by-value result remains `copy` but may require explicit
+  terminal intent at its final mapping boundary;
+- a reference result does not make its referent terminal merely because the
+  result slot is temporary; and
+- pointer-value transfer does not make the pointee terminal.
+
+Future lifetime work must preserve those ownership distinctions when defining
+temporary extension, reference origin, pointers, or owning handles.
+
+### Cross-thread lifetime-transfer pressure
+
+The candidate cross-thread preparation contract preserved by
+[raw async input](async.md#cross-thread-preparation-contract-pressure) must
+distinguish movement of a value from validity of its lifetime machinery on
+another thread.
+
+Future lifetime work must decide:
+
+- whether allocation may be released from a different thread;
+- whether reference counts or shared ownership are atomic where needed;
+- whether aliases remain confined to the originating thread;
+- whether an owning pointer may cross while its pointee remains thread-affine;
+- how provenance and reference origin survive thread transfer;
+- how thread-local arenas, executors, callbacks, and registrations constrain the
+  value;
+- whether a lifetime policy can upgrade or rehome those relationships;
+- and which guarantees remain after cancellation or failed preparation.
+
+An accepted `last` source may permit direct ownership transfer, but it does not
+make thread-affine resources or non-atomic shared lifetime state safe. A deep
+copy may remain thread-affine. An ordinary copy may be sufficient only when its
+existing lifetime contract is already cross-thread capable.
+
+This pressure does not establish synchronized access or data-race safety and does
+not accept another transfer stance.
+
+### Pointer, reference, and terminal-capability pressure
+
+Ordinary stance-qualified reference parameters bind authority to existing
+storage for one synchronous call:
 
 ```zax
-MyType readonly ? writable * immutable * varying deep
+consume final : ()(
+  input : MyValue mutable writable & last
+) = {
+  inspect(input)
+  transfer(input.resource as last)
+}
 ```
 
-A present optional forwards the stance to its boxed transfer; an absent optional
-performs no boxed transfer. Nested wrappers forward through each present layer.
-Future work must define custom interception, pointer ownership, reference
-authority, and whether a weaker operation such as copy remains viable.
+The accepted `last` contract does not itself decide:
+
+- whether a terminal capability may be stored or returned;
+- whether a pointer transfers ownership of its pointee or only its pointer value;
+- how reference origin survives forwarding;
+- whether a lifetime policy extends or rejects an escape;
+- how repeated or partial terminal capabilities interact;
+- or whether an explicit legacy `lease` concept remains useful.
+
+Legacy pointer material used `lease` for a bounded nonterminal reference or
+pointer and required explicit `lease`/`last` restatement when forwarding. Current
+transfer design replaces that overload-warning model with copy-default named
+reference use and explicit destructive renewal. Future pointer/lifetime work
+must disposition the remaining useful `lease` evidence without reintroducing
+implicit destructive selection.
 
 References have a hidden handle location, cannot be rebound, and accept no
 reference-layer qualifiers. Optional references, pointers to references, and
@@ -237,7 +293,7 @@ source : Integer
 
 copied := source
 reference : & = source
-moved := move source
+moved := source as move
 ```
 
 Declarations and bindings owns whether `:=` defaults to value construction and

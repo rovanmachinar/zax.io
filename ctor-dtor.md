@@ -12,10 +12,12 @@ Declaration initialization and qualifier eligibility are defined by
 Shared constructor-call inputs, defaults, evaluation, result forwarding, and
 fixed-arity selection are defined by
 [Zax function invocation](language/function-invocation.md).
+Current `copy`/`deep`/`move`/`last` intent and fallback are defined by
+[Zax transfer stances](language/transfer-stances.md).
 
 The remainder of this page is legacy input for unreviewed allocation, global,
-`once`, move/copy/`last`, and related behavior. Its examples may use superseded
-syntax or assumptions.
+`once`, and related behavior. Its examples may use superseded syntax or
+assumptions.
 
 ### Basic constructors and destructors
 
@@ -499,147 +501,6 @@ MyOtherType :: type {
         // `containedTypeA` will be allocated and constructed automatically
     }
 }
-````
-
-
-### Default constructors
-
-Constructors on types need not be implemented. The compiler will create a few constructors automatically, namely an empty constructor (allowing the type to be instantiated without an assignment), and a copy constructor will be created. If any of the contained types support `deep` copy construction or `last` copy construction, variation of those types of constructors will be created as well if referenced.
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-// a default empty constructor is created
-myType1 : MyType
-
-// a default copy constructor is created
-myType2 : MyType = myType1
-
-// a default deep copy constructor is created
-myType3 : MyType = myType2 as deep
-````
-
-
-#### Disabling of default constructors
-
-Constructors can be disabled by declaring a constructor as `final` and should not exist by assigning the pointer value to nothing. Any type attempting to access that version of the constructor will be disallowed at compile-time since the compiler will recognize that the constructor cannot be called.
-
-
-##### Disabling the default empty constructor
-
-The default empty constructor can be disabled by the following method:
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-
-    // the default empty constructor is disabled
-    +++ final : ()()
-
-    +++ final : ()(value : Integer) = {
-        value1 = value
-    }
-}
-
-// ERROR: a default empty constructor is not available
-myType1 : MyType
-
-// use the custom constructor to instantiate the instance
-myType2 : MyType = 42
-
-// a default copy constructor is created
-myType3 : MyType = myType2
-
-// a default deep copy constructor is created
-myType4 : MyType = myType2 as deep
-````
-
-
-##### Disabling the default copy constructor
-
-The default copy constructor can be disabled by the following method:
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-
-    // the default copy constructor is disabled
-    +++ final : ()( : MyType readonly &)
-}
-
-// a default empty constructor is created
-myType1 : MyType
-
-// ERROR: the copy constructor is disabled
-myType2 : MyType = myType1
-
-// ERROR: the copy constructor is disabled
-myType3 : MyType = myType1 as deep
-````
-
-
-##### Disabling alternative `deep` and `last` copy constructors
-
-The default alternative `deep` and `last` copy constructor variations can be disabled by the following method:
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-
-    // the default copy constructor is still available since that version
-    // of the function can be automatically generated still
-
-    +++ final : ()( : MyType & last)
-    +++ final : ()( : MyType readonly & deep)
-}
-
-// a default empty constructor is created
-myType1 : MyType
-
-// a default copy constructor is created
-myType2 : MyType = myType1
-
-// ERROR: the `deep` copy constructor is disabled
-myType3 : MyType = myType1 as deep
-````
-
-
-##### Enabling only alternative `deep` and `last` copy constructors
-
-A default copy constructor can be disabled which would normally disable the `last` and `deep` constructors too. However, the default `last` and `deep` constructors can be automatically re-enabled by applying the `default` keyword as exampled in the following:
-
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-
-    // the default copy constructor is still available since that version
-    // of the function can be automatically generated still
-
-    +++ final : ()( : MyType readonly &)
-    +++ final : ()( : MyType & last) = default
-    +++ final : ()( : MyType readonly & deep) = default
-
-    // ERROR: this version would not create a default as the = #: would
-    // cause the type to point to an empty version of its own type (i.e.
-    // a function pointer to nothing)
-    // +++ final : ()( : MyType readonly & deep) = #:
-}
-
-// a default empty constructor is created
-myType1 : MyType
-
-// ERROR: the default copy constructor is disabled
-myType2 : MyType = myType1
-
-// The `deep` copy constructor was declared
-myType3 : MyType = myType1 as deep
 ````
 
 

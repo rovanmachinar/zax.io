@@ -82,6 +82,8 @@ Future work must decide:
 - whether an alias is visible through reflection or erased to its target;
 - whether qualified type uses have distinct reflected identities;
 - how a generic instantiation reports its parameters; and
+- how a qualifier-generic declaration family differs from one exact demanded
+  specialization; and
 - how recursive and self-referential types are reported without infinite
   expansion.
 
@@ -98,7 +100,13 @@ Future work must decide:
 - whether reflection can observe a private member from outside its permitted
   context; and
 - whether a declaration's replacement permission — as distinct from the
-  underlying place stance reported by `is final` — is reflectable.
+  underlying place stance reported by `is final` — is reflectable;
+- how transfer stance appears on declarations, parameters, results, and
+  receivers;
+- whether a declaration is programmer-defined, generated, explicitly defaulted,
+  delegated with `existing`, bodyless, or forbidden; and
+- how one compiler-owned generated family exposes its exact qualifier-complete
+  declarations.
 
 That last question is a live consequence: `is final` deliberately reports the
 resolved type-use or referent-place truth, so a program currently has no way to

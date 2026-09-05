@@ -54,6 +54,8 @@ using the language with the language maintainer who decides its design.
 | `project/handoff.md` | Generic source for the new-session copy/paste prompt | Current source; agents do not proactively read it |
 | `project/rehydrate.md` | Generic source for the post-compaction copy/paste prompt | Current source; agents do not proactively read it |
 | `project/documentation.md` | Documentation architecture | Current for the concerns owned here |
+| `project/teaching-debt.md` | Suggested process for a separately assigned teaching refresh | Current task-specific guidance; not ordinary onboarding |
+| `project/teaching-debt-log.md` | Durable unresolved current-owner teaching observations | Live non-authoritative queue; read only for targeted disposition or refresh |
 | `project/work/` | The one active numbered work unit | Non-normative working material |
 | `project/raw/` | Indexed future-work input whose lasting location is not yet known | Non-authoritative and available through consequence-driven reading |
 | `project/archive/` | Completed project records | Historical and audit-only |
@@ -169,6 +171,16 @@ required for ordinary onboarding, but a work item may read or update a specific
 file when a concrete consequence makes it relevant. The next applicable
 documentation fit dry run must propose whether each file moves to a
 domain-oriented owner, remains temporary, or retires.
+
+### Teaching-debt guidance and log
+
+`project/teaching-debt.md` explains motivated, suggested techniques for a
+separately assigned refresh of current `language/` teaching. It does not define
+language meaning or impose one content template.
+
+`project/teaching-debt-log.md` preserves only concrete unresolved reader
+friction that remains after promotion disposition. It is not raw language
+design, an audit, ordinary onboarding, or a prompt to search for problems.
 
 ### Future specification or contract
 
@@ -405,6 +417,74 @@ unresolved input in indexed raw material, and historical provenance in project
 records or archives. Retain legacy text in an ordinary public reading path only
 while it remains unique useful input for an unresolved concern or teaches a
 concrete current compatibility boundary.
+
+## Teaching debt
+
+Current language owners may accumulate teaching debt as a natural consequence
+of incremental cross-owner design. This is not inherently an agent or process
+failure: the active concern becomes more familiar than adjacent reader tasks,
+later concepts change prerequisite order, and several individually reasonable
+edits may become difficult for a cold reader only in combination.
+
+That inevitability is not permission to lower the teaching standard. Agents
+still make a conscientious reader-focused effort in every current `language/`
+section they materially change. The teaching-debt process captures residual
+problems despite that effort or outside the authorized change; it is not a place
+to defer knowingly poor teaching.
+
+Teaching debt is material reader friction in a current `language/` owner whose
+meaning may be correct but whose motivation, examples, terminology order, costs,
+or local handoffs make that meaning unnecessarily difficult to learn.
+
+It does not include:
+
+- semantic contradictions or unresolved design;
+- style-only preferences;
+- adequate prose that could merely be prettier;
+- root legacy pages;
+- `project/raw/`;
+- `project/archive/`;
+- or project-process prose.
+
+### Opportunistic recognition
+
+While reading current owners for assigned work, an agent may record concrete
+firsthand teaching friction under an optional distinct heading in the active
+work record. Do not search for teaching debt, scan unrelated current owners, or
+read the [teaching-debt log](teaching-debt-log.md) to discover expected
+observations. If required reading remains understandable under the criteria
+above, do not invent a concern.
+
+A useful observation identifies the current owner and section, the blocked
+reader task, concrete evidence, why the issue is material, and possible
+future circumstances that should trigger a refresh. It need not prescribe a
+solution.
+
+### Promotion and archival disposition
+
+Promotion reconsiders provisional observations because the authorized rewrite
+may resolve, consolidate, invalidate, or remove them.
+
+Before archival, every observation is:
+
+- resolved by promotion;
+- discarded as mistaken or superseded;
+- entered in the live
+  [teaching-debt log](teaching-debt-log.md) when it remains valid in a current
+  owner outside the authorized promotion; or
+- retained as a promotion blocker when it remains in a section materially
+  changed by that promotion.
+
+No teaching concern may survive only in archived numbered work.
+
+The log is read only as needed to update or deduplicate a specific independently
+noticed concern. It is not ordinary onboarding, a checklist, or a test answer
+key.
+
+The language maintainer may select a bounded worst-first cluster from the log
+for a separate teaching-debt work item. Suggested, motivated refresh techniques
+are owned by [teaching-debt guidance](teaching-debt.md); they are not a rigid
+content template.
 
 ## Authority and maturity
 
@@ -840,6 +920,10 @@ For an authorized documentation change, check the applicable items:
 - Additional reading remains possible when justified.
 - Audit-only material is absent from ordinary routes.
 - Current references do not depend on archived material.
+- Provisional teaching observations are resolved, discarded, logged, or remain
+  explicit blockers before archival.
+- The teaching-debt log contains only unresolved current `language/` concerns
+  and is absent from ordinary concept-work reading.
 - Moves update destinations, indexes, and references coherently.
 - No obsolete compatibility stub remains without a real constraint.
 - Lower-case naming is followed except for `README.md`.

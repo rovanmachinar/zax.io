@@ -27,8 +27,13 @@ producing them.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
+- Read [Zax transfer stances](language/transfer-stances.md) for why `copy`,
+  `deep`, `move`, and `last` exist; how source and receiver intent select
+  consumers; and how source state changes.
 - Read [Zax function invocation](language/function-invocation.md) for ordinary
   calls, arguments, defaults, results, result routing, and callable selection.
+- Read [Zax intent acknowledgements](language/intent-acknowledgements.md) for
+  defined but suspicious-looking source that requires explicit confirmation.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
   for constructors, construction packets, generated lifecycle operations,
   same-storage replacement, and destruction.
@@ -71,7 +76,9 @@ producing them.
 - [Declarations and bindings](language/declarations-and-bindings.md)
 - [Identity types](language/identity-types.md)
 - [Qualifiers](language/qualifiers.md)
+- [Transfer stances](language/transfer-stances.md)
 - [Function invocation](language/function-invocation.md)
+- [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)

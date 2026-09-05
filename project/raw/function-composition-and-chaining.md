@@ -37,6 +37,25 @@ must define:
 - lambda and closure type identity;
 - and reflection.
 
+[Zax transfer stances](../../language/transfer-stances.md) now constrains
+capture:
+
+- constructing the callable is the transfer consumer; later invocation is not
+  the capture transfer point;
+- a by-value capture owns its captured storage and may adopt a declaration
+  stance;
+- a reference capture behaves like an alias and does not silently inherit `move`
+  or `last` from the source declaration;
+- destructive use through a reference capture requires an explicit
+  `as move` or `as last` restatement;
+- repeated invocation must not accidentally repeat a one-time destructive
+  transfer; and
+- forwarding through generated callable types must preserve the exact accepted
+  stance and affected object.
+
+Exact capture syntax, once-only callable contracts, lifetime, allocation, and
+reflection remain future lambda/callable work.
+
 `>>` retains the operator catalog's shift-level precedence for every use. Types
 cannot assign composition another precedence.
 

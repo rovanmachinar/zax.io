@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, declaring, or evaluating word-spelled Zax operations |
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments and type receivers are used by phrases; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
+| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type receivers, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
 | Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
@@ -227,6 +227,40 @@ and return a runtime value. Type parameter slots, type arguments, and
 `operator type` receivers are general declaration and invocation concerns owned by
 [declarations and bindings](declarations-and-bindings.md#type-parameter-slots-and-type-arguments)
 and [function invocation](function-invocation.md#type-parameter-slots).
+
+### Reserved transfer-stance phrases
+
+These exact post-unary phrases are language-reserved:
+
+```zax
+source as copy
+source as deep
+source as move
+source as last
+```
+
+They restate the complete source value's transfer stance for one consumer. They
+do not invoke a user-defined phrase implementation and perform no transfer by
+themselves.
+
+The word `as` also begins binary conversion whose right operand is a complete
+type argument:
+
+```zax
+converted := source as DestinationType
+moved := source as move
+```
+
+Candidate formation uses the grammar and exact reserved forms:
+
+- a concrete destination type completes binary `as`;
+- the exact stance word completes one post-unary reserved phrase;
+- expected results do not choose between source structures;
+- and natural source needs no exact phrase fence.
+
+Complete transfer semantics belong to
+[Zax transfer stances](transfer-stances.md). Exact fixity, precedence, and
+reservation belong to the [operator catalog](operator-catalog.md).
 
 ### Phrase components inside a mixfix
 

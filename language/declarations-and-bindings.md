@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
+| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
 
 ## Mental model
 
@@ -104,6 +104,24 @@ Initializer and constructor selection are defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
 The declaration guarantees only that `item` is introduced and initialized
 directly from the supplied source.
+
+An initializer may state its own transfer stance. If it does not, `copy` is
+still present as the default. A destination declaration stance becomes active
+only after construction:
+
+```zax
+makeItem final : (
+  result : Item move
+)() = {
+  // ...
+}
+
+item : Item copy = makeItem()
+```
+
+`makeItem()` offers `move` while constructing `item`. Later ordinary uses of
+`item` offer `copy`. Complete stance meaning and fallback are defined by
+[Zax transfer stances](transfer-stances.md).
 
 Optional declarations preserve the same distinction among same-type
 construction, first-layer construction, and acknowledged additional depth:
@@ -486,20 +504,16 @@ Zax distinguishes three independent concerns:
 
 | Pair | Governs |
 | --- | --- |
-| `final` / `varying` | Whether a storage place may be replaced |
-| `mutable` / `immutable` | Whether the underlying value may ever change |
-| `writable` / `readonly` | Whether the current access path may perform an otherwise permitted content mutation or place replacement |
+| `final` / `varying` | `final` promises the place keeps the same value lifetime; `varying` permits another lifetime in that place |
+| `mutable` / `immutable` | `immutable` promises the current value's contents do not change through ordinary safe behavior; `mutable` makes no such promise |
+| `writable` / `readonly` | `readonly` promises this access path performs no change; `writable` may perform an otherwise permitted content mutation or place replacement |
 
 In short:
 
-- mutable means the underlying value is permitted to change;
-- immutable means the underlying value is guaranteed not to change;
-- writable means this access path may change the value; and
-- readonly means this access path may observe but not change the value.
-
-Mutable means someone may change the value. Writable means this access may
-change it. Readonly means this access may not change it. Immutable means no
-access may change it.
+- `mutable` does not promise stable contents;
+- `immutable` does promise stable contents;
+- `writable` means this path may perform an otherwise permitted change; and
+- `readonly` means this path only observes.
 
 `readonly` identifies the access-path promise without conflating it with
 immutable state or compile-time constant evaluation.
@@ -638,19 +652,76 @@ An ordinary conversion may remove permissions or request weaker access:
 
 Type-side final/varying truth is preserved for an alias of the same place, while
 the declaration-name side may narrow that alias's own replacement permission. A
-new by-value destination, constructed result, copy, or move destination resolves
+new by-value destination, constructed result, `copy`, or `move` destination resolves
 its own independent place stance.
 
 The complete cast lattice, unsafe conversions, reference projection, and capture
 projection remain later design. They must preserve the constraints established
 by [Zax qualifiers](qualifiers.md).
 
-### Move, copy, and future capabilities
+### Declaration transfer stance
 
-Move and copy are contextual transfer operations rather than persistent
-qualifications of an entire value. Their availability depends on the complete
-source, destination, qualifier, policy, and overload context. Ordinary reference
-passing aliases a value and is neither a move nor a copy.
+A value declaration may state how the completed value is ordinarily offered to
+future consumers:
+
+```zax
+template : Document deep
+resource : Resource move
+stable : Resource copy
+```
+
+Omission resolves to `copy`:
+
+```zax
+ordinary : Resource
+// The declaration's ordinary transfer stance is `copy`.
+```
+
+Transfer stance appears after the complete type use. It is one property of the
+complete value, not another independently repeated qualifier layer and not
+another declaration-name-side axis:
+
+```zax
+resource : Resource mutable writable varying & move
+```
+
+A use-site `as copy`, `as deep`, `as move`, or `as last` may restate the stance
+for one consumer. Ordinary reference passing aliases a value and is not itself a
+`copy` or `move`.
+
+An owned declaration carries its stance into an unstanced member projection. An
+explicit member declaration stance wins, and a same-place alias has its own
+declaration stance rather than silently inheriting destructive intent:
+
+```zax
+owner : Buffer move
+alias : Buffer mutable writable & = owner
+
+consume(alias)         // alias offers `copy`
+consume(alias as move) // explicit `move` through this alias
+```
+
+The alias reaches the same storage but has its own declaration stance. Complete
+projection, receiver, fallback, and source-state behavior is defined by
+[Zax transfer stances](transfer-stances.md).
+
+An inferred declaration may adopt the concrete value type and transfer stance of
+its initializer:
+
+```zax
+makeResource final : (
+  result : Resource move
+)() = {
+  // ...
+}
+
+resource := makeResource()
+```
+
+Here `resource` may infer both `Resource` and the produced `move` stance. It does
+not infer `Resource &` or `Resource *`: stance does not say whether a declaration
+is a value, reference, or pointer. Those shapes remain explicit or require
+future dedicated inference rules.
 
 This design does not classify broader capabilities such as sendability,
 synchronization safety, pinning, known layout, copying, or interior freezing.
@@ -840,6 +911,17 @@ updated : Integer writable & = destination = source
 
 This supports right-associated assignment chains when each selected result binds
 to the next destination. Custom `=` overloads may return another result shape.
+
+Generated same-type `copy` assignment instead returns readonly `copy` access to
+the assignment receiver `_`. That is sufficient for right-associated assignment
+without granting another writable path:
+
+```zax
+first = second = third
+```
+
+Its exact qualifier-complete signature family and returned `_` are defined by
+[construction, replacement, and destruction](construction-and-destruction.md#generated-copy-construction-and-assignment).
 
 Generated operators participate in ordinary candidate selection with qualifier
 requirements. The compiler-recognized reconstructive `=` scenario requires an
@@ -1100,6 +1182,33 @@ make final : (
 }
 ```
 
+A result's initializer decides how that slot is constructed. Once the result
+exists, the stance written on the result declaration decides how later consumers
+see it:
+
+```zax
+make final : (
+  result : Item move
+)() = {
+  return source as copy
+}
+```
+
+`source as copy` controls construction of `result`. After construction,
+ordinary uses of `result` in the body offer `move`, and the caller also receives
+a `move`-stanced result.
+
+Forwarding through another result declaration crosses both contracts: the
+producer's stance fills the new slot, and the forwarding result declaration
+controls what its caller receives.
+
+An omitted owned by-value result still has implicit `copy`. At its structurally
+final mapping boundary, invocation may require explicit intent when offering
+`last` could materially change the accepted consumer. Reference results are
+excluded because their slots do not own the referent. Complete behavior is
+defined by
+[Zax function invocation](function-invocation.md#result-mapping-and-terminal-opportunity).
+
 At a result-routing site, adjacent `name:` selects the result label and may
 introduce a same-named inferred binding:
 
@@ -1215,9 +1324,9 @@ It establishes constraints that later work must preserve:
 - complete inference may add rules without making later uses determine an
   earlier inferred declaration;
 - complete inference must decide whether `:=` introduces a value or preserves a
-  reference/pointer layer; current optional transfer examples do not establish
-  that general rule, and `: & =` remains the explicit way to request a reference
-  shape at the current conceptual depth;
+  reference/pointer layer; an inferred value may adopt its producer's transfer
+  stance, but stance does not imply reference shape, and `: & =` remains the
+  explicit way to request a reference at the current conceptual depth;
 - functions and captures may refine recursive bindings without allowing
   executable ordinary self-initialization;
 - function invocation may use declarations as inputs and result destinations
@@ -1228,8 +1337,8 @@ It establishes constraints that later work must preserve:
   ordinary value initializers self-referential;
 - constructors and lifetime policies must preserve default, direct, and explicit
   `unsafe ???` distinctions, including stored-member and delayed construction;
-- move, copy, ownership, and qualifier design must preserve independent binding,
-  value, and access capabilities;
+- transfer, ownership, and qualifier design must preserve independent binding,
+  declaration stance, value, place, and access capabilities;
 - operator design must not permit operator overloads to introduce unresolved
   names;
 - flow-control design must preserve header-binding scope, nested block scope, and

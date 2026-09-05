@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states and generated behavior; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
 
 ## Mental model
 
@@ -329,7 +329,7 @@ For each value-producing entry in source order:
 
 1. evaluate its expression;
 2. immediately initialize or bind the selected input slot according to its
-   copy, move, `last`, reference, pointer, or other parameter semantics; and
+   `copy`, `move`, `last`, reference, pointer, or other parameter semantics; and
 3. complete the observable effects of that binding before evaluating the next
    entry.
 
@@ -344,8 +344,11 @@ plan. Packet order does not reorder members.
 - A copied input captures the source value when that entry is evaluated.
 - A reference input binds at evaluation but observes later changes to its
   referent.
-- A move or `last` input performs its eventual transfer semantics during that
-  entry's evaluation.
+- A by-value `deep`, `move`, or `last` input performs its required parameter
+  construction during that entry's binding.
+- A `move`- or `last`-stanced reference binds directly to caller-owned storage;
+  the selected lifecycle body may take resources later during its complete
+  call.
 - A call-site member initializer supplies the already evaluated input used when
   the construction plan reaches that member.
 
@@ -358,12 +361,12 @@ value : Example = [{
 }]
 ```
 
-If `snapshot` selects copy semantics, its input captures `1` before
+If `snapshot` selects `copy` semantics, its input captures `1` before
 `changeSourceToTwo` runs. If it selects reference semantics, the bound reference
 later observes `2`.
 
 The compiler may use a conceptual temporary to preserve this behavior and may
-elide it only when observable copy, move, construction, and destruction behavior
+elide it only when observable `copy`, `move`, construction, and destruction behavior
 does not change.
 
 A temporary bound to a reference input survives through completion of the
@@ -479,7 +482,7 @@ myFunc : ()() = default // error: no language-defined default implementation
 ```
 
 Callable compatibility alone does not establish lifecycle-contract
-compatibility. `existing` makes reuse explicit when copy, move, source-state, or
+compatibility. `existing` makes reuse explicit when `copy`, `move`, source-state, or
 cost behavior might otherwise differ.
 
 `= forbidden` prohibits the exact shape:
@@ -512,11 +515,119 @@ shape suppresses generation of that shape.
 
 For a containing type, a generated operation selects member operations that
 satisfy the generated lifecycle contract. It does not select any callable member
-operation merely because one exists. Complete copy, move, `last`, and containing
-fallback rules remain future ownership and lifetime work.
+operation merely because one exists.
+
+Generated `copy` is the conservative transfer baseline. Zax does not generally
+generate `deep`, `move`, or `last` operations:
+
+- `deep` requires an exact `deep` declaration;
+- `move` falls back to `copy` when no `move` declaration exists;
+- `last` falls back to `move` and then `copy`;
+- and a generated containing `copy` selects the exact member `copy` operations
+  required by its contract.
+
+Complete stance meaning and fallback are defined by
+[Zax transfer stances](transfer-stances.md#fallback).
 
 Reflection must eventually distinguish declared, generated, explicitly
 defaulted, delegated-to-existing, bodyless, and forbidden operations.
+
+### Generated copy construction and assignment
+
+Generated `copy` is one compiler-owned schema exposed as exact,
+qualifier-complete declarations. It is not a qualifier-erased prototype.
+
+Construction creates a new value lifetime, so both mutable and immutable values
+may have generated `copy` constructors. For a mutable value shape, the compiler
+conceptually supplies exact source-place variants:
+
+```zax
++++ final : ()(
+  : MyValue mutable readonly final & copy
+) = default
+
++++ final : ()(
+  : MyValue mutable readonly varying & copy
+) = default
+```
+
+The source parameter is compiler-anonymous. Construction has no receiver stance
+because no destination lifetime exists yet.
+
+A corresponding immutable value shape may receive immutable source variants.
+Ordinarily `mutable` and `immutable` qualify the same representation. Future
+mutability-indexed type-family design may instead permit independently defined
+shapes; each such concrete shape still receives only its appropriate
+constructors.
+
+Canonical same-type `=` treats the destination as a complete value. Its receiver
+place must therefore be `varying`: that place permits the complete value to be
+assigned as a unit. For a mutable varying receiver, the compiler conceptually
+supplies:
+
+```zax
+operator binary '=' final : (
+  : MyValue mutable readonly varying & copy
+)(
+  : MyValue mutable readonly final & copy
+) mutable writable varying = default
+
+operator binary '=' final : (
+  : MyValue mutable readonly varying & copy
+)(
+  : MyValue mutable readonly varying & copy
+) mutable writable varying = default
+```
+
+The result and source slots are compiler-anonymous. The language-defined body
+returns readonly `copy` access to the assignment receiver `_`, permitting
+right-associated assignment:
+
+```zax
+first = second = third
+```
+
+The `final`-source and `varying`-source forms are different declarations.
+
+A `final` receiver promises that its place continues to hold the same value
+lifetime. It may still mutate the contents of a mutable value through eligible
+member functions or member assignments, but canonical whole-value assignment is
+unavailable:
+
+```zax
+stable final : MyValue mutable final
+
+stable.member = replacement // may mutate the current value
+stable = anotherValue       // error: canonical whole-value assignment needs a varying place
+```
+
+A domain-specific `=` may explicitly accept a `final` receiver when it defines
+coherent in-lifetime behavior rather than replacing the complete value.
+
+An immutable value cannot use an ordinary assignment that mutates its contents.
+When it occupies a `varying` place, the compiler-owned reconstructive `=`
+skeleton may instead construct a new immutable value, disposition the old one,
+end the old lifetime, and establish the new lifetime in the same place. That
+reconstructive family preserves:
+
+- immutable receiver truth;
+- type-side varying capability;
+- declaration-side varying replacement permission;
+- writable access;
+- exact source qualification;
+- readonly `copy` access to the new current receiver lifetime; and
+- exactly-once old-resource disposition.
+
+One concrete value shape is `mutable` or `immutable`, never both. There is no
+runtime branch over mutability or place stance inside one generated declaration.
+An independently defined immutable shape receives constructors but no ordinary
+mutating assignment; reconstructive `=` remains a separate compiler-owned
+lifecycle process.
+
+Generation is suppressed or replaced only by the exact generated shape. A
+nearly matching programmer declaration may coexist with the generated
+declaration and produce demand-time ambiguity. Diagnostics should show the exact
+generated signature and the mismatching layer.
 
 ## Reconstructive replacement
 
@@ -808,7 +919,7 @@ replacement representation's size, alignment, and layout.
 If a future type-family design gives mutable and immutable variants different
 representations, sharing one family name does not make cross-variant
 same-storage replacement viable. A different representation may require
-separately suitable storage and a construction, copy, or consuming
+separately suitable storage and a construction, `copy`, or consuming
 transformation.
 
 Unions and overlapping storage likewise need future active-member transition
@@ -1174,7 +1285,7 @@ future async, lifetime, and concurrency work.
 ## Identity admission boundary
 
 By-value identity admission requests a new value. It requires an applicable
-copy, move, consuming/`last` transfer, direct construction, or another declared
+`copy`, `move`, consuming/`last` transfer, direct construction, or another declared
 way to establish the identity's underlying stored value.
 
 Identity syntax does not manufacture copyability. When no applicable
@@ -1196,7 +1307,7 @@ Programmers must be able to discover:
 - automatic versus explicit member lifecycle operations;
 - temporaries retained while a construction packet evaluates;
 - declared constructor defaults evaluated after explicit packet inputs;
-- copy, move, `last`, and reference binding performed for packet entries;
+- `copy`, `move`, `last`, and reference binding performed for packet entries;
 - generated fallback replacement as `---` followed by `+++`;
 - resources retained or reconstructed by custom replacement;
 - copies or snapshots required to avoid alias hazards;

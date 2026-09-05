@@ -17,6 +17,11 @@ conceptually by
 [Zax function invocation](language/function-invocation.md). Exact identifiers
 and the registries below remain legacy diagnostics input.
 
+Current transfer diagnostics are defined conceptually by
+[Zax transfer stances](language/transfer-stances.md). Defined but suspicious
+source and its acknowledgement categories are defined by
+[Zax intent acknowledgements](language/intent-acknowledgements.md).
+
 ### `error` directive
 
 #### Forcing the compiler to issue an error
@@ -134,10 +139,6 @@ The following are registered errors, and their meaning:
 * `output-failure`
     * an attempt to generate output or copy an asset to the output failed
     * name=`$file$` - the file name that could not be created or updated
-* `explicit-last-cannot-receive-lease`
-    * an attempt to call an explicitly by-reference or by-pointer `last` qualified value with a `lease` qualified value
-* `explicit-copy-cannot-receive-move`
-    * an attempt to call an explicit by-value `copy` with a `move` qualified value
 * `forward-symbol-type-mismatch`
     * an `forward` of a symbol was performed but the defined symbol type does not match the `forward`
 
@@ -290,8 +291,6 @@ The following are registered warnings, default states, and their meaning:
     * a specific `type` mutability qualifier was selected which is not supported
 * `specifier-ignored` (always)
     * a qualifier was specified which is ignored in the context
-* `asynchronous-not-deep` (always)
-    * `task`, `promise` and `[[asynchronous]]` functions having pass by-value arguments should have a `deep` qualifier for parallel processing
 * `unknown-directive` (error)
     * a directive not prefixed with `x-` was encountered which was not understood
 * `unknown-directive-argument` (error)
@@ -322,10 +321,6 @@ The following are registered warnings, default states, and their meaning:
     * the style of the code is found to be undesirable and language or compiler changes in the future may be breaking
 * `descope-directive-required` (always)
     * calling an `[[inline-descope]]` function requires the `[[descope]]` declaration to acknowledge the current scope is polluting with new variables from an inlined function
-* `lease-or-last` (error)
-    * the compiler is uncertain if a `lease` or `last` polymorphic version of a function should be used where a function that received a `last` instance is then passing that instance to another function which accepts both a `lease` or a `last` instance
-* `copy-or-move` (error)
-    * the compiler is uncertain if a `move` or `copy` polymorphic version of a function should be used where a function that received a `move` instance is then passing that instance to another function which accepts both a `move` or a `copy` instance
 * `allocation-into-raw-pointer` (always)
     * the compiler detected an attempt to allocate into a raw pointer rather than using a `unique` or other managed pointer type
 * `generated-file-not-touched` (error)

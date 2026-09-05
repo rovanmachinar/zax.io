@@ -846,9 +846,10 @@ myOptional := (: U8? = 355) // error: 355 does not fit U8
 ```
 
 Default absence, optional conversion, and optional construction are separate.
-Complete optional wrapper construction, packets, `copy`/`move`/`last` source
-effects, reset, proven access, and boxed lifetime behavior is defined by
-[Zax optional values](optional-values.md).
+General `copy`/`deep`/`move`/`last` intent and fallback are defined by
+[Zax transfer stances](transfer-stances.md). Complete optional wrapper
+construction, packets, protected `move`/`last` effects, reset, proven access, and
+boxed lifetime behavior is defined by [Zax optional values](optional-values.md).
 
 ## Environment-selected destinations
 

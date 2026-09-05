@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; evaluation and binding order; result slots and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
+| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -68,6 +68,7 @@ Their:
 - ordered slots;
 - names and labels;
 - types and qualifications;
+- transfer stances;
 - input defaults; and
 - result-acknowledgement policy
 
@@ -233,6 +234,71 @@ only this declaration's permission is narrower. Complete capability-versus-permi
 behavior is owned by
 [qualifiers](qualifiers.md#type-side-truth-versus-declaration-side-permission).
 
+### Transfer-aware value and reference parameters
+
+A transfer stance first changes which parameter contract the argument may
+satisfy. The stance expression performs no transfer because no consumer has been
+selected or run yet. After selection, the parameter's binding form determines
+which object the function may change.
+
+The ordinary contracts are:
+
+```zax
+read final : ()(
+  input : Message readonly & copy
+) = {
+}
+
+consume final : ()(
+  input : Message mutable writable & move
+) = {
+}
+```
+
+A reference-shaped `move` or `last` parameter refers directly to caller-owned
+storage. The selected function may take ownership of resources from that value
+during the call:
+
+```zax
+consume final : ()(
+  input : Message mutable writable & move
+) = {
+  send(input.payload as move)
+}
+```
+
+A by-value `move` or `last` parameter instead constructs an independent
+parameter first. The caller's source is preserved by that copy-in barrier;
+resource transfer affects the local parameter:
+
+```zax
+consume final : ()(
+  input : Message move
+) = {
+  send(input.payload)
+}
+```
+
+By-value `deep` performs `deep` construction at the binding boundary and retains
+`deep` stance in the body. By-value `copy` performs ordinary `copy`
+construction.
+
+For an ordinary writable source and otherwise equal `move`/`last` candidates, the
+normal mutable/writable reference form is better than by value. A readonly
+restatement can make that reference nonviable:
+
+```zax
+consume((message as readonly) as move)
+```
+
+If a readonly-reference variant also remains viable, neither candidate may be
+better overall: the reference may avoid copying, while by value preserves
+caller-owned storage. The later selection model calls this **incomparable**. The
+call is ambiguous rather than silently choosing one ownership effect.
+
+Complete stance meaning, fallback, projection, and source post-state are defined
+by [Zax transfer stances](transfer-stances.md).
+
 ## Positional and named inputs
 
 An ordinary positional input is an expression:
@@ -384,15 +450,22 @@ observe(
 
 If the first parameter copies, it captures `1`. If it references `source`, it
 binds before the mutation but may observe `2` when the body later reads the
-referent. A move or `last` transfer likewise occurs before
-`changeSourceToTwo(source)` starts.
+referent.
 
-For an optional source, a selected `last` consumer leaves the source wrapper
-absent after terminal payload transfer, while a selected `move` consumer
-preserves source presence and a live moved-from payload. Merely producing
-`last optional` or `move optional` has no effect until the mapped parameter or
-another consumer accepts that stance. Complete optional state behavior is
-defined by [Zax optional values](optional-values.md#the-three-ordinary-state-and-transfer-operations).
+A by-value `move`, `last`, or `deep` parameter performs its required construction
+during this immediate binding step. A reference-shaped `move` or `last`
+parameter immediately refers to existing storage, but its selected body may take
+resources later during the call.
+
+Producing `source as move`, `source as last`, or an optional phrase form has no
+effect by itself because it only changes the stance offered to selection. The
+selected consumer decides what transfer, if any, occurs.
+
+When a consumer accepts `last optionalValue`, the optional immediately enters
+terminal source state for analysis but keeps required boxed state live until the
+complete consumer finishes. Complete optional state and cleanup behavior is
+defined by
+[Zax optional values](optional-values.md#move-and-last-source-adapters).
 
 This order is programmer-visible. An optimization may elide storage or operations
 only when it preserves:
@@ -450,7 +523,7 @@ evaluate in input-parameter declaration order in the selected callee's visible
 prototype.
 
 ```zax
-operation(
+configure(
   third:,
   first: makeFirst(),
   second: makeSecond()
@@ -525,6 +598,7 @@ Each result declaration establishes:
 
 - an ordered result slot;
 - a source-facing label, type, and qualifications; and
+- a transfer stance that becomes active after construction; and
 - an obligation to contain one complete value on every normal exit.
 
 An ordinary result slot begins unconstructed:
@@ -560,6 +634,22 @@ Neither path first constructs an absent result and assigns over it. Complete
 optional construction and transfer is defined by
 [Zax optional values](optional-values.md#parameters-and-results).
 
+A result's initializer or return expression decides how the result slot is
+constructed. Once the slot exists, the stance written on its declaration decides
+how later consumers see it:
+
+```zax
+make final : (
+  result : Item move
+)() = {
+  return source as copy
+}
+```
+
+`source as copy` constructs `result`. After construction, ordinary uses of
+`result` in the body offer `move`, and the caller also receives a `move`-stanced
+result.
+
 A function always returns the types written in its selected prototype, even
 when the compiler evaluates the call early. A number literal in `return` can
 take that declared result type directly:
@@ -572,6 +662,56 @@ makeByte final : (result : Byte)() = {
 
 Here `55` is checked against `Byte`, and the caller receives a `Byte`. See
 [Zax integer literals and realization](integer-literals.md#concrete-results-and-compile-time-execution).
+
+### Result mapping and terminal opportunity
+
+A result's declared stance is part of the producer prototype. Omission means
+implicit `copy`; caller context does not silently rewrite that contract.
+
+An owned by-value result slot is temporary source storage, however. When that
+slot maps into its one complete consumer, selection can determine whether a
+`last` offer would materially change the accepted contract:
+
+```zax
+consume final : ()(
+  input : Item readonly & copy
+) = {
+}
+
+consume final : ()(
+  input : Item mutable writable & last
+) = {
+}
+
+make final : (
+  result : Item
+)() = {
+  return source
+}
+
+consume(make())
+// error: state the terminal result intent explicitly
+```
+
+This intent error requires:
+
+- an owned by-value result slot;
+- implicit result stance;
+- structurally final mapping of that slot;
+- and a materially different `last`-capable consumer or source outcome.
+
+The producer may declare `result : Item last` or `result : Item copy`. The
+caller may write `make() as last`, or acknowledge deliberately retained implicit
+behavior with `intent<implicit-stance-at-terminal-use>{...}`.
+
+No error is needed when no `move`/`last` consumer is available, `last` would
+accept the same `copy` contract with the same outcome, or the result is discarded.
+Each slot of a multiple-result sequence is considered independently.
+
+A reference result is excluded because its slot owns an access path, not the
+referred-to value. Destroying the result slot does not establish that the
+referent is terminal. Pointer and owning-handle results remain future lifetime
+work.
 
 ### Opt-in result initialization
 
@@ -1246,7 +1386,7 @@ value : Integer = makeRandom()
 ```
 
 results declared as `Integer`, a qualified `Integer`, or `Integer &` may be
-same-family candidates subject to direct copy, move, reference, and qualification
+same-family candidates subject to direct `copy`, `move`, reference, and qualification
 rules.
 
 A `Widget` result does not participate merely because an `Integer` constructor
@@ -1346,8 +1486,12 @@ A candidate is viable only when:
   and transfer behavior;
 - explicit source-result labels exist;
 - an applicable expected-result shape is compatible;
-- every required result receives a valid disposition; and
-- the declaration is available for invocation.
+- and every required result receives a valid disposition.
+
+Private declarations outside the caller's permitted context are ineligible
+before preference. Availability of an eligible visible candidate is checked
+after preference so a uniquely best bodyless, forbidden, or unsupported
+generated declaration can report unavailable-best rather than falling through.
 
 A number literal can directly supply a parameter declared with an integer type:
 
@@ -1384,12 +1528,106 @@ B: conversion, exact
 Neither dominates the other. The call is ambiguous.
 
 The per-slot better relation must be asymmetric, transitive, and acyclic. It need
-not declare every pair comparable. Copy versus readonly reference, move versus
-`last`, or another semantically different operation may remain incomparable.
+not declare every pair comparable.
 
-The detailed type, qualification, reference, pointer, copy, move, and `last`
-precedence table remains future work. Its eventual rules must fit this
-partial-order structure.
+Transfer fallback compares accepted stance:
+
+- `copy` accepts `copy`;
+- `deep` accepts only `deep`;
+- `move` prefers `move`, then falls back to `copy`;
+- `last` prefers `last`, then falls back to `move` and `copy`.
+
+Value/reference binding, exact qualification, type conversion, receiver stance,
+and applicable result quality remain independent dimensions. Better stance does
+not automatically defeat worse ownership or qualification behavior.
+
+An exact mutable/writable `move` or `last` reference is better than ordinary
+copy-in processing when the source is mutable/writable and every other comparison
+is no worse. A readonly reference versus by value, or exact `last` by value
+versus fallback `move` by reference, may have no clear overall winner and remain
+incomparable.
+
+Receiver stance is another slot:
+
+- exact receiver stance admits only that stance;
+- unstanced receiver declaration is fallback for every stance;
+- exact receiver stance beats fallback when other comparisons permit dominance;
+- receiver matching does not use the source stance fallback ladder.
+
+The remaining complete type, qualification, indirection, generic-specialization,
+and generated-candidate preference table is future callable-selection work. Its
+eventual rules must fit this partial-order structure.
+
+### Demand-time ambiguity
+
+Distinct declarations remain legal even when no natural call can currently
+select one without ambiguity. The compiler does not need a global
+declaration-time proof that every callable is naturally selectable.
+
+At a use:
+
+- no viable candidate is an error;
+- several nondominated viable candidates are ambiguous;
+- an eligible visible declaration may be uniquely best but unavailable to
+  invoke, for example because it is bodyless, forbidden, or requires generated
+  behavior the language cannot supply;
+- that unavailable-best case is an error;
+- and selection does not fall through to a weaker available declaration.
+
+A private declaration outside its permitted context is ineligible before this
+comparison. It cannot become the unavailable best candidate or block a visible
+public declaration.
+
+A resolved function value or exact typed function alias may select one complete
+prototype before invocation. Complete exact-prototype syntax and comparison with
+future generic specializations remain later callable-selection work.
+
+### Terminal opportunity requires intent
+
+**Terminal** means that analysis can prove this is the source's final ordinary
+use before its existing lifetime reaches destruction. It is an opportunity
+because a `last` consumer could take ownership of resources that would otherwise
+be released soon.
+
+Invocation never silently upgrades implicit `copy` or explicit `move` to
+`last`. When analysis proves that an implicit source use is terminal and
+offering `last` could materially change the accepted contract, the call is an
+[intent error](intent-acknowledgements.md):
+
+```zax
+forward(resource)
+// error: state copy, move, last, or deep intent explicitly
+```
+
+The programmer states the stable choice:
+
+```zax
+forward(resource as last)
+forward(resource as move)
+forward(resource as copy)
+forward(resource as deep)
+```
+
+No intent error is needed when `last` would accept the same contract and produce
+the same source post-state. For example, a copy-only function has no
+terminal-aware alternative:
+
+```zax
+inspect final : ()(
+  value : Record readonly & copy
+) = {
+}
+
+inspect(record)
+```
+
+Decorating this call would not change the selected function or source state. An
+explicit declaration stance is not upgraded.
+
+Branches may contain separate path-terminal uses. Loop analysis may recognize
+more cases over time. Improved analysis produces new intent errors rather than
+silently selecting another user body. Destruction does not count as ordinary
+later use.
 
 If a number literal fits several overloads, ordinary source prefers an
 `Integer` parameter; source with unsigned intent prefers a `UInteger`
@@ -1410,8 +1648,8 @@ work.
 Explicit and implicit omission count equally:
 
 ```zax
-operation(value)
-operation(value, option:)
+configure(value)
+configure(value, option:)
 ```
 
 when both forms activate the same callable default.
@@ -1520,6 +1758,19 @@ inspect(makeBuffer())
 If `inspect` receives `Buffer readonly &`, the temporary remains live throughout
 `inspect`.
 
+A directly constructed compiler-managed unnamed by-value temporary has
+structurally known destruction after its one complete consumer. It inherently
+offers `last`:
+
+```zax
+result := (: Source).get()
+```
+
+If `get` has an exact `last` receiver variant, that variant may be selected.
+This is not analysis-dependent upgrading of a named value. A named receiver uses
+its declaration stance, and a programmer can restate another stance on the
+temporary explicitly.
+
 This does not permit a reference into the temporary to escape:
 
 ```zax
@@ -1539,8 +1790,11 @@ the producer's result slots survive until their transfers or bindings into
 `consume` complete. A temporary result bound to an outer reference parameter
 survives through the outer call.
 
-Exact caller temporary destruction order, returned alias validity, moved-from
-states, and ownership disposition remain future lifetime work.
+Transfer stance does not change when ordinary argument or result temporaries
+reach destruction. It changes which resources remain owned by those values at
+that point. Each temporary is destroyed once at its ordinary completion
+boundary. Exact caller temporary destruction order, returned alias validity,
+pointer ownership, and cross-call origin remain future lifetime work.
 
 Async suspension requires a broader completion and lifetime model. It is not
 ordinary synchronous completion.
@@ -1609,7 +1863,7 @@ Invocation diagnostics should distinguish:
   or fail to converge;
 - incomparable undominated candidates;
 - a uniquely best but unavailable candidate;
-- use after an earlier move or `last`;
+- use after an earlier `move` or `last`;
 - a reference escaping a temporary;
 - redundant explicit continuation; and
 - contradictory continuation indentation.
@@ -1725,8 +1979,8 @@ Later work must preserve:
 
 The following remain explicit future work:
 
-- the detailed precedence table for types, qualifications, indirection, copy,
-  move, reference, pointer, and `last`;
+- the detailed precedence table for types, qualifications, indirection, `copy`,
+  `move`, reference, pointer, and `last`;
 - complete closure layout, capture syntax, reassignment, recursive function
   values, and raw function pointers;
 - generics, concepts, specialization, and generic result deduction;
