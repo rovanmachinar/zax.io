@@ -2,18 +2,20 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical project record / non-normative / audit-only |
 | Work Item | `013` |
 | Created | 2026-09-02 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Complete pointer/reference grammar, final lifetime-policy selection, async/concurrency, complete generics, optional combinators, or formal layout/ABI rules |
+| Archived | 2026-09-05 |
+| Outcome | Promoted transfer stances, intent acknowledgements, integrated owner behavior, teaching-debt guidance, and indexed future pressure |
+| Owns | Historical evidence and project provenance for the completed bounded review |
+| Does Not Own | Current language meaning, active project work, complete pointer/reference grammar, final lifetime-policy selection, async/concurrency, complete generics, optional combinators, or formal layout/ABI rules |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical audit record. It is excluded from ordinary onboarding
+and current design reading. Promoted language meaning is owned by current
+`language/` documents, and unresolved future pressure is owned by indexed raw
+inputs.
 
 ## Fixed initiating input
 
@@ -86,7 +88,7 @@ through which an outer transfer stance must remain understandable.
 - Wrapper, pointer, referent, and boxed qualifications remain independently
   attached.
 - Optional-specific source consequences already documented in
-  [Zax optional values](../../language/optional-values.md) must be preserved.
+  [Zax optional values](../../../language/optional-values.md) must be preserved.
 - A false unsafe lifetime assertion may have undefined consequences without a
   required runtime check.
 - Zax has no exception-style rollback model.
@@ -162,37 +164,37 @@ without the separately required discussion, alignment, and authorization.
 
 ### Required
 
-- [Documentation architecture](../documentation.md) - governs focused reading,
+- [Documentation architecture](../../documentation.md) - governs focused reading,
   numbered work, reader-first promotion, disposition, and dry runs.
-- [Optional values](../../language/optional-values.md#reset-move-and-last) -
+- [Optional values](../../../language/optional-values.md#reset-move-and-last) -
   supplies current concrete source-state requirements and inward-propagation
   pressure.
-- [Raw lifetime strategies](../raw/lifetimes.md#accepted-transfer-constraints-on-lifetime-work) -
+- [Raw lifetime strategies](../../raw/lifetimes.md#accepted-transfer-constraints-on-lifetime-work) -
   is the main live input for transfer preference, source state, terminal
   references, reference addressability, and resource disposition.
-- Focused [evaluation and immediate binding](../../language/function-invocation.md#evaluation-and-immediate-binding),
-  [partial-order preference](../../language/function-invocation.md#partial-order-preference),
-  and [temporary lifetime](../../language/function-invocation.md#temporary-lifetime-and-call-completion) -
+- Focused [evaluation and immediate binding](../../../language/function-invocation.md#evaluation-and-immediate-binding),
+  [partial-order preference](../../../language/function-invocation.md#partial-order-preference),
+  and [temporary lifetime](../../../language/function-invocation.md#temporary-lifetime-and-call-completion) -
   provide call timing, consumer selection, result transfer, and completion
   boundaries.
-- Focused [construction packet binding order](../../language/construction-and-destruction.md#evaluation-and-binding-order),
-  [generated lifecycle operations](../../language/construction-and-destruction.md#declared-and-generated-lifecycle-operations),
-  [optional wrapper replacement](../../language/construction-and-destruction.md#optional-complete-wrapper-replacement),
-  and [self-aliasing](../../language/construction-and-destruction.md#self-aliasing-and-interior-aliases) -
+- Focused [construction packet binding order](../../../language/construction-and-destruction.md#evaluation-and-binding-order),
+  [generated lifecycle operations](../../../language/construction-and-destruction.md#declared-and-generated-lifecycle-operations),
+  [optional wrapper replacement](../../../language/construction-and-destruction.md#optional-complete-wrapper-replacement),
+  and [self-aliasing](../../../language/construction-and-destruction.md#self-aliasing-and-interior-aliases) -
   provide lifecycle generation, ordering, destruction, and alias constraints.
-- Focused [qualifier capability and permission](../../language/qualifiers.md#type-side-truth-versus-declaration-side-permission),
-  [optional qualification layers](../../language/qualifiers.md#optional-qualification-layers),
-  and [transfer and destruction](../../language/qualifiers.md#transfer-and-destruction) -
+- Focused [qualifier capability and permission](../../../language/qualifiers.md#type-side-truth-versus-declaration-side-permission),
+  [optional qualification layers](../../../language/qualifiers.md#optional-qualification-layers),
+  and [transfer and destruction](../../../language/qualifiers.md#transfer-and-destruction) -
   provide the qualification and terminal-authority model.
-- Focused [direct initialization](../../language/declarations-and-bindings.md#direct-initialization)
-  and [declaration boundaries](../../language/declarations-and-bindings.md#boundaries-and-maturity) -
+- Focused [direct initialization](../../../language/declarations-and-bindings.md#direct-initialization)
+  and [declaration boundaries](../../../language/declarations-and-bindings.md#boundaries-and-maturity) -
   provide value construction and unresolved `:=` inference pressure.
-- Focused [optional transfer-source operations](../../language/operators.md#optional-reset-and-protected-transfer-source-operations),
-  [operator phrases](../../language/operator-phrases.md), and
-  [optional forms](../../language/operator-catalog.md#optional-forms) - provide
+- Focused [optional transfer-source operations](../../../language/operators.md#optional-reset-and-protected-transfer-source-operations),
+  [operator phrases](../../../language/operator-phrases.md), and
+  [optional forms](../../../language/operator-catalog.md#optional-forms) - provide
   current source forms, phrase recognition, fencing, result holes, and optional
   pre-unary behavior.
-- [Transfer stance terminology](../../language/terms.md#transfer-stance) -
+- [Transfer stance terminology](../../../language/terms.md#transfer-stance) -
   provides the current shared term and maturity boundary.
 - Legacy default copy/deep/last constructor evidence was consumed during
   promotion and is no longer a live required-reading path.
@@ -201,13 +203,13 @@ without the separately required discussion, alignment, and authorization.
 
 - Read focused legacy pointer `last`/`lease` material when a concrete reference,
   pointer, terminal-capability, or consumer-timing question requires it.
-- Read [raw analysis controls](../raw/analysis-controls.md) and
-  [raw safety input](../raw/safety.md) when an unsafe, proof, panic-check, or
+- Read [raw analysis controls](../../raw/analysis-controls.md) and
+  [raw safety input](../../raw/safety.md) when an unsafe, proof, panic-check, or
   diagnostic question becomes concrete.
-- Read [raw callable-composition input](../raw/function-composition-and-chaining.md)
+- Read [raw callable-composition input](../../raw/function-composition-and-chaining.md)
   when transfer through capture, callable construction, or composition becomes
   necessary.
-- Read [raw generic input](../raw/type-parameters-and-generics.md) when
+- Read [raw generic input](../../raw/type-parameters-and-generics.md) when
   substitution changes stance, generated operation, or inference behavior.
 - Read pointer ownership, async, or structural material only when an immediate
   transfer consequence cannot be dispositioned coherently without it.
@@ -1264,16 +1266,16 @@ record is the live capture.
 
 #### Qualifier generics, metadata, reflection, and `own`
 
-The indexed [raw generic input](../raw/type-parameters-and-generics.md) must
+The indexed [raw generic input](../../raw/type-parameters-and-generics.md) must
 define qualifier parameters, constraints, inference, dependent result
 qualification, demand-driven specialization, diagnostics for invalid
 specializations, and interaction with generated families.
 
-The indexed [raw reflection input](../raw/reflection.md) must preserve the
+The indexed [raw reflection input](../../raw/reflection.md) must preserve the
 distinction between a generic declaration family and each concrete
 specialization without erasing exact prototype identity.
 
-The indexed [raw `own` input](../raw/owned-composition.md) must require future
+The indexed [raw `own` input](../../raw/owned-composition.md) must require future
 `own` work to select and promote finite exact prototypes or concrete
 specializations. It must preserve qualifications and transfer behavior and must
 not create an unbounded runtime surface for an open generic family.
@@ -1320,15 +1322,15 @@ Future lambda/capture work must preserve:
 - and forwarding through generated callable types.
 
 The indexed
-[raw callable-composition input](../raw/function-composition-and-chaining.md)
+[raw callable-composition input](../../raw/function-composition-and-chaining.md)
 is the live destination. Documentation fit must retain the material there or
 propose a dedicated lambda owner before this work is archived.
 
 #### Safety and analysis controls
 
-Existing [raw safety](../raw/safety.md),
-[analysis-control](../raw/analysis-controls.md), and
-[lifetime](../raw/lifetimes.md) inputs remain the live destinations for:
+Existing [raw safety](../../raw/safety.md),
+[analysis-control](../../raw/analysis-controls.md), and
+[lifetime](../../raw/lifetimes.md) inputs remain the live destinations for:
 
 - use after move or last;
 - source/result consumption at most once;
@@ -1345,7 +1347,7 @@ creating a language guarantee.
 #### Async and concurrency
 
 All completion rules here are synchronous. The indexed
-[raw async input](../raw/async.md) retains suspension, cancellation, thread
+[raw async input](../../raw/async.md) retains suspension, cancellation, thread
 transfer, executor-lifetime, completion, and disposition pressure.
 
 ### Likely promotion ownership
