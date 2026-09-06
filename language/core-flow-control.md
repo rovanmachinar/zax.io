@@ -8,7 +8,7 @@
 | Implementation State | Not established by this repository |
 | Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, and explicit `scope`; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
 | Does Not Own | Expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
-| Source / Provenance | Legacy [flow control](../flow-control.md) and [scope](../scope.md) evidence |
+| Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
 ## Mental model
 
@@ -652,6 +652,9 @@ scope destruction. Construction and result completeness must hold on every norma
 path produced by branches, loops, and transfers. The automatic local, body, and
 header lifetime ordering is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#scope-exit-destruction-and-flow-transfers).
+Each scope and surviving header region forms a
+[life path](lifetimes-and-references.md#start-with-a-life-path); no contained
+instance or reference target outlives the path a transfer exits.
 
 ### `return` as a flow exit
 
@@ -984,7 +987,6 @@ The following remain explicit future work and are not established here:
   preserve ordinary exit and result-completion rules ([except](../except.md));
 - complete function capture and closure representation, including callable-like
   scope capture;
-- complete pointer and reference lifetime strategies and ownership;
 - async suspension, cancellation, executors, and concurrent flow;
 - `[[likely]]`, `[[unlikely]]`, and other reachability or likelihood directives;
   and

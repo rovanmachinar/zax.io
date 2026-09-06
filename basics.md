@@ -34,6 +34,8 @@ alias
 alias keyword
 alias operator
 alias type
+anchored
+atomic
 await
 break
 case
@@ -41,7 +43,6 @@ case continue
 catch
 channel
 continue
-collect
 readonly
 copy
 deep
@@ -63,8 +64,6 @@ forward namespace
 forward type
 forward union
 forward variable
-handle
-hint
 if
 if / else
 immutable
@@ -72,8 +71,6 @@ import
 writable
 last
 lazy
-lease
-managed
 move
 mutable
 mutator
@@ -94,6 +91,8 @@ replacement +++
 return
 scope
 shallow
+shareable
+strong
 switch
 task
 true
@@ -109,6 +108,12 @@ while
 yield
 yield suspend
 ````
+
+This remains a legacy keyword inventory rather than an authoritative catalog.
+Current pointer ownership uses `unique`, `shareable`, `strong`, `weak`,
+`anchored`, and pointer-layer `atomic`. The former pointer meanings of `own`,
+`handle`, `hint`, `lease`, and `collect` are superseded; any future `own` use for
+composition is a separate unresolved concept.
 
 
 #### Keyword disambiguation
@@ -497,48 +502,30 @@ The language defines a default namespace named `Module`. The namespace is the ro
 
 ### Hello World
 
-A simple hello world example is illustrated below:
+Zax does not require or intrinsically recognize a function named `main`.
+Application source at global scope forms the program's global execution path.
+This legacy target-selection spelling makes the intended execution environment
+explicit:
 
 ````zax
-:: import Module.System.Io
-
-main final [[execute=target]] : ()() = {
-    out.writeLine("Hello world!")
-}
-
-main()
-````
-
-An explanation of each step of the code:
-
-````zax
-// import a module named `Io` defined under namespace `Module.System.Standard`
-// and define all types as being directly injected into the current namespace
 :: import Module.System.Standard.Io
 
-// define a function which accepts no input arguments and returns no results
-// but only allow this function to be executed on the target system at
-// runtime; without a `[[execute=target]]` the `main` function would execute
-// immediately during the compilation process rather than on the compilation
-// target system;
-main final [[execute=target]] : ()() = {
-    // using the `out` variable defined in `Module.System.Standard.Io` call a
-    // function named `writeLine` that outputs the value to the standard out
+runApplication final [[execute=target]] : ()() = {
     out.writeLine("Hello world!")
 }
 
-// call the function at global scope to cause the function to execute (although
-// the code will only execute on a target system since the function can only
-// execute on the compilation target system)
-main()
+runApplication()
 ````
 
-A few key differences about `main` compared to other languages:
-1. A main entry point need not be named `main` but can be called anything desired
-1. Calling a `main` function is required as a linker will not automatically presume a `main` function must exist
-1. Defining a `main` function using the `[[execute=target]]` is necessary otherwise the `main` function will execute at compile-time
-1. Multiple `main` entry points are legal and they will be executed in the order found (unless they cannot be resolved immediately for host compile-time execution)
-1. No entry point is required at all if a module is a library or code is exported in another fashion
-1. Imported modules with their own entry points to perform compile-time code testing during a compilation process on a host system is normal and to be expected
-1. Reading command line arguments are specific concept of a `Standard` application (as the concept of command line arguments are not a universal concept to all systems)
-1. Returning a result to a command line executable is done via a `mutator` as part of a `Standard` application (as the concept of a single integer return result is not universal to all systems)
+Global declarations and expressions form one conceptual global execution path.
+Global instances live within the process life path and are destroyed in reverse
+of their established construction order when that path ends. Exact cross-module
+and dependency ordering remains future work. See
+[Zax lifetimes and references](language/lifetimes-and-references.md#common-life-paths).
+
+Command-line arguments, environment variables, exit status, and similar startup
+facilities are platform-library behavior rather than intrinsic parameters of a
+language-defined `main`.
+
+Complete compile-time versus target execution selection remains legacy
+compiler-directive input; the function name has no entry-point significance.

@@ -5,8 +5,11 @@
 
 Default function-value initialization is defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md).
-Complete `Nothing` representation, construction, pointer, and custom fallback
-behavior remains legacy input on this page.
+Current pointer presence and ownership behavior is defined by
+[Zax pointers and arenas](language/pointers-and-arenas.md#presence-and-weak-acquisition).
+Complete pointer-to-`Nothing` representation, dereference, construction, and
+custom fallback behavior remains legacy input here and is preserved for future
+review in [raw Nothing-instance input](project/raw/nothing-instances.md).
 
 Current invocation of function values in their default `Nothing` state is
 defined by

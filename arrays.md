@@ -9,7 +9,15 @@ multi-index mapping are preserved for future review in
 [raw indexing and slicing input](project/raw/indexing-and-slicing.md). Examples
 below do not establish those complete contracts.
 
-Zax arrays are multi dimensional. Arrays can be of a fixed size or they can be of a dynamic size. All array dimensions have an implicit `length` `mutator` to indicate the length of an array. Arrays are zero based indexes for their lookup. Once arrays are allocated they cannot be resized but their contents can be replaced if an array is `mutable` and `writable`.
+Current lifetime design requires every collection operation to expose which
+element places remain stable and which end or relocate; see
+[lifetimes and references](language/lifetimes-and-references.md#arrays-and-collections).
+Exact dynamic growth, segmentation, removal, and reference-stability contracts
+remain future array work.
+
+Legacy input below proposes multidimensional, fixed-size, and dynamically
+allocated arrays with zero-based indexing and `length`. Its claims that an array
+cannot resize are not accepted as the final dynamic-array contract.
 
 ````zax
 randomNumber final : (result : Integer)() = {

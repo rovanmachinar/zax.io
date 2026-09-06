@@ -121,7 +121,9 @@ should nevertheless define a safe subset with explicit guarantees.
 
 Code that stays within that subset should receive the guarantees assigned to it.
 Operations that leave those guarantees should be recognizable and auditable.
-The exact guarantees and unsafe-boundary mechanism remain future design work.
+Current proof, unsafe-responsibility, contract-evolution, and lint boundaries are
+defined by [Zax safety and analysis](safety-and-analysis.md). Exact unsafe syntax,
+category identifiers, and formal guarantees remain future design work.
 
 Safety does not include universal correctness. Memory guarantees do not prevent
 deadlock, starvation, resource exhaustion, flawed algorithms, incorrect
@@ -131,12 +133,22 @@ authorization, weak cryptography, or other logic errors.
 
 No single lifetime strategy fits every program.
 
-Zax intends to support multiple strategies with different guarantees and
-runtime, memory, synchronization, and compile-time costs. Their final names,
-representations, conversion rules, and failure modes remain future design work.
+Zax supports one explicit lifetime foundation with several ownership and
+allocation strategies. Every instance lives within a life path; references
+borrow fixed instance places without owning them; raw-pointer operations require
+proof or unsafe responsibility; unique pointers transfer one owner; and
+strong/weak pointers provide shared ownership and observation through visible
+control-block costs.
+Arenas separately control storage and allocation disposition.
 
 The plurality is intentional. The language and documentation must make the
-choice among strategies understandable.
+choice among strategies understandable, including runtime, memory,
+synchronization, compile-time, destruction-timing, and storage-recovery costs.
+See [Zax lifetimes and references](lifetimes-and-references.md) and
+[Zax pointers and arenas](pointers-and-arenas.md).
+
+Exact allocator interfaces, pointer representation, cycle-collection mechanics,
+thread-affinity syntax, and async lifetime behavior remain future design work.
 
 ### First-class asynchronous programming
 

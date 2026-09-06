@@ -7,7 +7,7 @@
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The transfer-stance mental model; declaration and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
-| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); or pointer/lifetime policy |
+| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
 ## Why transfer stance exists
@@ -459,6 +459,25 @@ If `log(input)` inherited `move`, it could select a move-aware logger and leave
 `input` moved-from before `send`. Explicit restatement makes the actual resource
 transfer visible. The same rule applies to `last`.
 
+The copy-default rule also prevents terminal authority from escaping
+implicitly:
+
+```zax
+consume final : ()(
+  input : Message mutable writable & last
+) = {
+  stored : Message mutable writable & last = input
+  // error: named input ordinarily offers copy
+
+  explicit :
+    Message mutable writable & last = (input as last)
+}
+```
+
+The explicit form constructs another reference bound to the same instance place
+and carrying `last` declaration stance. It remains subject to independent
+reference-lifetime proof, and ordinary later use again offers `copy`.
+
 ### By-value deep
 
 A by-value `deep` parameter is deep-constructed first and retains `deep` inside
@@ -500,6 +519,40 @@ ambiguity rather than guessing.
 
 Complete viability and partial-order comparison belong to
 [function invocation](function-invocation.md).
+
+### Pointer ownership transitions
+
+Pointer ownership uses the same stance vocabulary while the destination pointer
+type states the requested ownership result.
+
+```zax
+shared : MyValue * strong = prepared as last
+```
+
+Here `prepared` must be `MyValue * unique shareable`. The transfer activates its
+reserved control block and vacates the unique source.
+
+The reverse claim is conditional:
+
+```zax
+owner : MyValue * unique = shared as last
+```
+
+It succeeds only when the source is the sole strong allocation-root owner and no
+weak observer remains. Failure constructs an empty `unique`; the terminal strong
+source retains its ownership until ordinary destruction.
+
+Weak-to-strong acquisition is `copy`:
+
+```zax
+owner : MyValue * strong = observer
+```
+
+This copies participation in a still-live ownership relationship rather than
+copying the pointee. Failure produces an empty strong pointer.
+
+Complete pointer forms, control blocks, anchoring, atomicity, arenas, and
+failure behavior are defined by [Zax pointers and arenas](pointers-and-arenas.md).
 
 ## Declaration stance
 
@@ -873,8 +926,9 @@ Each slot of a multiple-result producer is considered independently.
 
 Reference results are excluded. A reference result owns only an access path, so
 destruction of its result slot does not prove the referent is terminal. Pointer
-values and owning handles require future pointer/lifetime design; transfer of a
-pointer value does not automatically make its pointee terminal.
+ownership follows the selected pointer contract; transfer of a pointer value
+does not automatically make its pointee terminal. See
+[Zax pointers and arenas](pointers-and-arenas.md).
 
 ## Terminal opportunity must be explicit
 
@@ -1048,9 +1102,10 @@ A replacement cannot end `owner.payload` and then continue using a reference to
 that ended lifetime. A custom replacement may transfer the member before
 dispositioning the remaining old state.
 
-The compiler diagnoses conflicts it can prove. Future lifetime and safety work
-may add reference-origin contracts, operation-specific self-safe behavior,
-effect summaries, or narrow unsafe assertions for valid but unproved cases.
+The compiler diagnoses conflicts it can prove. Reference-origin and successor
+boundaries are defined by
+[lifetimes and references](lifetimes-and-references.md); the reusable proof and
+unsafe model is defined by [safety and analysis](safety-and-analysis.md).
 
 Every successful transfer or replacement must disposition each source resource,
 old destination resource, member lifetime, result slot, and temporary exactly
@@ -1122,7 +1177,7 @@ Focused future work remains for:
 
 - detailed cross-axis callable preference and generic-specialization comparison;
 - qualifier-generic syntax and constraints;
-- pointer ownership, provenance, terminal capabilities, and rebinding;
+- detailed pointer provenance and casting beyond the current ownership model;
 - moved-from and terminal operation eligibility;
 - lambda capture and repeated invocation;
 - async suspension and cancellation;

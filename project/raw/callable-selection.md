@@ -73,8 +73,16 @@ Future work must define:
 - when generic arguments or qualifiers are inferred;
 - visibility and availability;
 - whether aliases preserve labels and defaults;
+- how an opaque reference result preserves its origin relationship to a
+  receiver, named input, one of several inputs, or another stable life path;
 - interaction with generated declarations;
 - and diagnostics when no declaration has that exact shape.
+
+Concrete bodies use the static origin model defined by
+[Zax lifetimes and references](../../language/lifetimes-and-references.md#returned-references).
+This input retains only the contract pressure that appears when the body is
+opaque or separately represented; it does not establish programmer-written
+lifetime parameters.
 
 Future `own` work has a complete prototype when deciding which callable surface
 is promoted and should use the same exact-signature discipline.

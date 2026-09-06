@@ -7,9 +7,14 @@ Current function-result acknowledgement, discardable results, omitted inputs,
 result routing, and the position-specific `return #` behavior that preserves or
 default-completes a result slot are defined by
 [Zax function invocation](language/function-invocation.md#return-and-completion).
-This page remains legacy input for local, type, and memory-policy uses of `#`.
+This page remains legacy input for local and type uses of `#`. The separate
+**deferred-recovery allocation** concept—prompt instance destruction with
+arena-delayed storage recovery—is defined by
+[Zax pointers and arenas](language/pointers-and-arenas.md#allocation-disposition).
+Legacy allocation material used `discard`, but no allocation keyword is
+currently established.
 
-The current [operator catalog](language/operator-catalog.md#counts-and-reductions)
+The current [operator catalog](language/operator-catalog.md#counts-masks-positions-and-reductions)
 also recognizes attached `#`-prefixed count and reduction tokens such as
 `#bits`, `#<bits`, and `#^bits`. Future discard review must preserve the
 distinction between those expression forms and standalone contextual `#`; the

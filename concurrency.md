@@ -13,6 +13,11 @@ Current `copy`/`deep`/`move`/`last` meaning is defined by
 themselves establish thread safety, sendability, shared-backing safety, or async
 lifetime.
 
+Current reference and ownership boundaries are defined by
+[Zax lifetimes and references](language/lifetimes-and-references.md#thread-boundary)
+and [Zax pointers and arenas](language/pointers-and-arenas.md#arenas), including
+its separate [thread-transfer rules](language/pointers-and-arenas.md#thread-transfer).
+
 The retired material in this page proposed automatic `deep` propagation and
 automatic `last` results for asynchronous work. Those claims are no longer
 current. The unresolved question is which explicit transfer, capture, lifetime,
@@ -592,51 +597,21 @@ defer producer.cancel()
 
 ### Allocators and threading
 
-When allocation is performed on the context using the standard allocator operator (`@`), the allocator will use the standard allocator (`___.allocator`) which is usually set to the sequential allocator (`___.sequential.allocator`). The sequential allocator is typically faster than the parallel allocator (`___.parallel.allocator`) as the sequential allocator only needs to allocate memory using thread unaware allocation algorithms and frees using the thread unaware algorithms.
+Current pointer and allocator thread behavior is defined by
+[Zax pointers and arenas](language/pointers-and-arenas.md#arenas):
 
-The downside to a sequential allocator is that allocation and deallocation assume thread local heaps which can have unintended consequences. The sequential allocators do not use any thread locking mechanisms as they assume only the current thread can manipulate a thread's heap at any given time without locks. However, if one thread performs a thread heap allocation and another thread performs the deallocation then that memory needs to be reinserted into the original thread's heap (which cannot be done by another thread). In this specific case, the freed memory is inserted into a thread-safe dangling list for the original thread that performed the allocation. When the original thread wakes up and decides to examine the dangling points for that thread then the dangling memory blocks can be reinserted back into the original thread heap (which usually happens during parallel allocation of if more space is needed for the thread heap). If the originating thread has quit prior to freeing a thread heap allocation then that dangling memory should be recycled into another thread's heap when freed.
+- each arena declares whether it is thread-confined, synchronized, movable, or
+  able to queue cross-thread release;
+- `unique` may cross only when instance and destructor affinity permit it;
+- local `strong`/`weak` accounting does not cross threads;
+- `strong atomic`/`weak atomic` makes lifetime accounting cross-thread capable;
+- pointer-layer atomicity does not make pointee operations data-race safe; and
+- references do not safely cross thread boundaries.
 
-A double "at" symbol, known as the parallel allocator operator (`@@`), is a compiler shortcut to force allocation using parallel/thread-safe allocators for the types (and its contained types). When the parallel allocator operator is encountered the standard allocator is replaced by the parallel allocator temporarily for the current allocation (and reset back to the original allocation completes). An "at" symbol with a "bang", known as the sequential allocator operator (`@!`), forces the sequential allocator to be used for the type (and its contained types) by replacing the standard allocator (`___.allocator`) temporarily.
-
-Whenever a `strong` pointer type is allocated, the standard allocator (`___.allocator`) in the context is replaced by the parallel allocator temporarily (i.e. assigned to `___.parallel.allocator`). This is done to ensure that any allocated data is entirely allocated in a thread-safe manner (and deallocated later in a thread-safe manner). Once the allocation is complete, the original standard allocator is restored allowing any future constructor and allocations of other types to use the potentially faster sequential (`___.sequential.allocator`) allocator if that allocator was previously in use.
-
-Caution: care must be taken when transferring an allocated `own` pointer to a `strong` pointer. Pointers qualified as `unique` or `own` are allocated using the standard allocator which is typically set to the sequential allocator by default. If an `own` pointer gets transferred later into a `strong` pointer or across thread boundaries, then consider using parallel allocators.
-
-Functions declared as `promise`, `task`, or `channel` are implicitly asynchronous. The parallel allocators are automatically substituted over the sequential allocators for a function call implicitly asynchronous or functions declared explicitly asynchronous using the `[[asynchronous]]` directive. The previous allocators are restored automatically upon exit of the asynchronous function's call.
-
-A sequential allocator is designed to favour allocations that deallocate from the same thread for speed efficiency reasons. But memory deallocated on different threads should eventually cause dangling memory to become reintegrated into the original thread's heap (at the cost of efficiency).
-
-The language does not enforce the rules of allocation, but instead gives tools to ensure that allocations are as optimal as possible depending on the coder's intentions.
-
-
-````zax
-SimpleType :: type {
-    value : Integer
-}
-
-MyType :: type {
-    value1 : Integer
-    value2 : String
-    value3 : SimpleType * @     // might be allocated using the parallel or
-                                // sequential allocator depending how
-                                // the container type allocated the type
-}
-
-DoubleType :: type {
-    myType1 : MyType * own @    // even though standard allocator was
-                                // specified, parallel allocation will happen
-                                // in this example (as the container was
-                                // allocated using the parallel allocator)
-    myType2 : MyType * own @    // same as above
-
-    myType3 : MyType * own @!   // override any request to use the parallel
-                                // allocator and allocate using the sequential
-                                // allocator
-}
-
-
-doubleType : DoubleType * own @@ // allocate using the parallel allocator
-````
+Exact thread-affinity syntax, destructor scheduling, cross-thread preparation,
+allocator APIs, and async cancellation remain in
+[raw async input](project/raw/async.md) and
+[raw pointer and arena mechanics](project/raw/pointer-and-arena-mechanics.md).
 
 
 ### Context and threading

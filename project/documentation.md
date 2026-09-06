@@ -856,6 +856,12 @@ receive that assignment.
 Current documents do not link to archived work as ordinary supporting material.
 The archive index may identify completed work for targeted discovery.
 
+Archived records are historical snapshots, not a second live documentation
+tree. Their prose and links may name paths that existed when the work was
+performed. A targeted audit uses Git history to recover that repository state.
+Do not retain otherwise valueless compatibility stubs or rewrite archived
+records merely to keep every historical link resolving in the current tree.
+
 ## Operating-prompt source maintenance
 
 The new-session handoff source and post-compaction rehydration source are
@@ -927,7 +933,10 @@ For an authorized documentation change, check the applicable items:
 - Moves update destinations, indexes, and references coherently.
 - No obsolete compatibility stub remains without a real constraint.
 - Lower-case naming is followed except for `README.md`.
-- Local links and heading anchors resolve.
+- Local links and heading anchors resolve throughout the live tree. Historical
+  links inside `project/archive/` may require Git history and are excluded from
+  live-link validation; the current archive router's own live links must still
+  resolve.
 - Markdown renders coherently.
 - Staged and unstaged review boundaries are preserved, including untracked paths
   when that boundary is being relied upon or reported.

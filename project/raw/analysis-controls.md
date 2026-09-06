@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
-| Applies To | Source-local semantic permissions and assertions, analysis provenance, contract-version evolution, and the boundary between unsafe controls and lint suppression |
-| Owns | Preservation of construction-derived requirements, concrete examples, the aligned contiguous non-scoping unsafe-enclosure constraint, multiple exact categories, the contract-dependent severity of redundant controls, remaining syntax, activation pressure, and retirement criteria |
-| Does Not Own | Accepted analysis-control semantics or current safety/diagnostic ownership |
+| Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
+| Owns | Preservation of construction-derived categories, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
+| Does Not Own | Current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
 | Source / Provenance | Work items `005`, `006`, `007`, and `012`; construction/lifecycle, invocation/result, core-flow, and optional proof/alias pressure |
 
 ## Reading posture
@@ -15,6 +15,12 @@
 identifies places where compiler analysis may reject a valid low-level program.
 This file preserves the future source-control and portability questions without
 making provisional spellings current language syntax.
+
+Current general prove/assert/permit/reject behavior and language-contract
+evolution are owned by
+[Zax safety and analysis](../../language/safety-and-analysis.md). The examples
+below preserve candidate categories and source forms, not a competing current
+definition.
 
 It is not required for ordinary construction or qualifier use.
 
@@ -277,6 +283,11 @@ Source validity therefore follows the selected contract, not merely the executab
 compiler's current cleverness. Compiler experimentation does not silently change
 portable source validity, and a newly clever compiler does not by itself break
 source whose contract did not change.
+
+Removing an assertion that only one implementation has made redundant may make
+the source depend on that stronger implementation. Portability improves only
+when a selected language contract requires every conforming compiler to prove
+the case.
 
 This rule is general. It applies to every static analysis, not only conditional
 live-storage presence or one lifecycle feature.

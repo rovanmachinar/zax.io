@@ -36,6 +36,24 @@ or capture may provide an access path.
 Different paths to the same value may have different capabilities. See
 [Zax qualifiers](qualifiers.md).
 
+## Allocation disposition
+
+An **allocation disposition** is the allocation-time choice that determines when
+the resident instance is destroyed, when its backing block becomes reusable,
+and whether unreachable strong-reference cycles may be collected.
+
+It is independent from pointer ownership. See
+[Zax pointers and arenas](pointers-and-arenas.md#allocation-disposition).
+
+## Anchored pointer
+
+An **anchored pointer** targets a direct contained-member place while its
+ownership is kept by the control block for the enclosing allocation root.
+
+`strong anchored` and `weak anchored` are never unique owners of the member they
+target. See
+[Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
+
 ## Binding
 
 A **binding** associates a source-level name with a declaration. The binding
@@ -91,6 +109,16 @@ provide one missing typed value.
 authorize general implicit conversion, construction chains, or fallback after
 an ordinary ambiguity or selected failure. See
 [Zax operators](operators.md#contextual-completion).
+
+## Control block
+
+A **control block** stores or reaches the state required for shared pointer
+ownership, weak observation, ownership closure, and the allocation's disposition
+and arena relationships.
+
+It may be coallocated with the instance or stored in a separate control-block
+arena. See
+[Zax pointers and arenas](pointers-and-arenas.md#object-and-control-block-arenas).
 
 ## Compiler host
 
@@ -154,6 +182,9 @@ executing.
 Use this term when discussing the body independent of invocation or overload
 selection. At a call or operator-selection boundary, use **receiver operand**.
 Do not use "receiver object"; Zax is not object-oriented.
+
+The current instance is not the same term as the **resident instance** occupying
+an arbitrary instance place.
 
 ## Deliberate intent or layout error
 
@@ -278,6 +309,14 @@ Ordinary `+++`, contextual `replacement +++`, `---`, and the compiler-owned
 generated replacement skeleton participate in lifecycle operations. An
 arbitrary operator is not a lifecycle operation merely because it uses `=`.
 See [Zax construction, replacement, and destruction](construction-and-destruction.md).
+
+## Life path
+
+A **life path** bounds the existence of one or more instances. Every instance is
+constructed, lives, and is destroyed within a life path and never outlives it.
+
+Paths may be lexical, structural, conditional, or dynamically owned. See
+[Zax lifetimes and references](lifetimes-and-references.md#start-with-a-life-path).
 
 ## Mixfix operator
 
@@ -461,11 +500,14 @@ complete before the callable body begins. See
 
 ## Place
 
-A **place** is storage that can hold a value. Replacing a place changes which
-value that storage holds.
+An **instance place**, usually shortened to **place**, is the stable typed
+position within a life path through which a resident instance is reached.
+Replacing a varying place changes which resident instance that place exposes
+without ending the place itself.
 
 Place replacement is distinct from changing the contents of the value already
-stored there. See [Zax qualifiers](qualifiers.md).
+stored there. See [Zax qualifiers](qualifiers.md) and
+[Zax lifetimes and references](lifetimes-and-references.md#life-path-instance-place-and-resident-instance).
 
 ## Pointee
 
@@ -495,6 +537,15 @@ from an identity value to its immediate underlying type. It does not mean member
 access and need not create an access path. Documentation uses the qualified term
 when that distinction matters; see
 [Zax identity types](identity-types.md#identity-projection).
+
+## Ownership anchor
+
+An **ownership anchor** is the allocation root and control block that an
+anchored strong or weak pointer uses to keep storage alive while targeting a
+direct contained-member place.
+
+The target place and ownership anchor are intentionally different. See
+[Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
 
 ## Protected intrinsic signature
 
@@ -570,7 +621,9 @@ prototype.
 
 The slot begins as an output obligation and must contain one complete value on
 every normal exit. A result initializer may opt into construction before body
-entry. See [Zax function invocation](function-invocation.md#result-slots).
+entry; that constructed/unconstructed entry state participates in compatible
+prototype behavior. See
+[Zax function invocation](function-invocation.md#result-slots).
 
 ## Reconstructive replacement
 
@@ -607,6 +660,25 @@ A **referent** is the place or value reached through a reference.
 The binding storing a reference and its referent are distinct qualification
 layers.
 
+## Reference binding
+
+A **reference binding** permanently associates one reference instance with one
+instance place. The resident instance in a varying place may be renewed, but the
+reference never retargets to another place.
+
+See
+[Zax lifetimes and references](lifetimes-and-references.md#references-never-rebind).
+
+## Resident instance
+
+The **resident instance** is the completely constructed instance currently
+available through an instance place.
+
+A varying place may expose successive resident instances. Do not use this term
+for `_` merely because a type-defined body is executing; that established role
+is the **current instance**. See
+[Zax lifetimes and references](lifetimes-and-references.md#life-path-instance-place-and-resident-instance).
+
 ## Semantic error
 
 A **semantic error** is source that parses successfully but violates a type,
@@ -642,6 +714,23 @@ natively represent or directly operate on the requested width.
 A **software fallback** is a type-selection result that uses software emulation
 because no native candidate satisfies the request. See
 [Zax integers](integers.md#native-representation-and-software-emulation).
+
+## Shareable unique pointer
+
+A **shareable unique pointer** has exclusive ownership and a dormant control
+block reserved for entry into local or atomic strong/weak ownership.
+
+It is written `T * unique shareable`. See
+[Zax pointers and arenas](pointers-and-arenas.md#shareable-unique-ownership).
+
+## Strong and weak pointers
+
+A **strong pointer** participates in shared ownership and keeps its allocation
+root alive. A **weak pointer** observes that ownership without keeping it open.
+
+Weak-to-strong construction may fail and produce an empty strong pointer.
+Pointer-layer `atomic` controls cross-thread lifetime accounting, not pointee
+thread safety. See [Zax pointers and arenas](pointers-and-arenas.md).
 
 ## Symbolic operator
 
@@ -805,9 +894,10 @@ See [Zax qualifiers](qualifiers.md).
 ## Value lifetime
 
 A **value lifetime** is the period during which one particular value exists in a
-place.
+place as its resident instance.
 
 Construction establishes a value lifetime. Destruction or reconstructive
-replacement ends it. Contained member lifetimes may begin or end at different
-points from the complete enclosing lifetime. See
-[Zax construction, replacement, and destruction](construction-and-destruction.md#mental-model).
+replacement ends it. Complete replacement renews every member resident
+instance. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#mental-model)
+and [Zax lifetimes and references](lifetimes-and-references.md).

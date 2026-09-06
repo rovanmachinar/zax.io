@@ -136,6 +136,28 @@ The complete operation may map to specialized behavior without making an
 individual bit an ordinary addressable `Boolean &`. A lasting bit proxy would
 need an explicit type, lifetime, qualification, and cost model.
 
+## Element-place stability
+
+[Zax lifetimes and references](../../language/lifetimes-and-references.md#arrays-and-collections)
+requires every dynamic collection operation to expose which element places
+continue and which end or relocate.
+
+Future array and indexing work must decide:
+
+- whether an in-capacity append preserves every existing element place;
+- whether insertion or removal preserves places before or after the affected
+  range;
+- whether contiguous growth relocates every element;
+- whether segmented growth relocates only one segment;
+- how slices and iterators report their stability guarantee;
+- whether any owning element view exists;
+- and which operations invalidate raw pointers, references, or anchored
+  relationships.
+
+Storage capacity and unchanged logical index do not by themselves preserve one
+element place. These guarantees are programmer-visible API behavior rather than
+hidden implementation choices.
+
 ## Activation and retirement
 
 Activate this input for arrays, indexing, slicing, ranges, bit places, bounds,

@@ -7,7 +7,7 @@
 > `EnumType underlying type`, `enumValue underlying value`,
 > `enumValue as UnderlyingType`, and `EnumType unsafe from rawValue` — recorded
 > by the
-> [operator catalog](language/operator-catalog.md#generated-enum-operations).
+> [operator catalog](language/operator-catalog.md#generated-underlying-and-enum-forms).
 > Endian behavior is owned by [Zax endianness](language/endianness.md).
 >
 > Everything else on this page remains legacy enum input. In particular, whether

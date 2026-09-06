@@ -14,6 +14,8 @@ fixed-arity selection are defined by
 [Zax function invocation](language/function-invocation.md).
 Current `copy`/`deep`/`move`/`last` intent and fallback are defined by
 [Zax transfer stances](language/transfer-stances.md).
+The general life-path, instance-place, and reference model is defined by
+[Zax lifetimes and references](language/lifetimes-and-references.md).
 
 The remainder of this page is legacy input for unreviewed allocation, global,
 `once`, and related behavior. Its examples may use superseded syntax or
@@ -525,45 +527,8 @@ print(uniqueId())
 ````
 
 
-### Global construction order
-
-The order of globals construction is based on declaration order, except where dependency detection requires a type be declared prior to another type. The compiler will error upon global vales attempting to assign values in a circular manner.
-
-The order of destruction is reverse order to construction intermixed with any `once` variables that become constructed or destructed along the way. Global variables are only constructed one time and destructed one time, although, they can be assigned new values.
-
-By their nature, globals are not thread-safe. Care must be taken to ensure any global variables accessed do not cause thread collisions. Globals will use the thread aware allocators for default allocated global variables. The programmer may swap out thread aware allocators for thread local allocators in their main entry point to ensure the fastest allocator is being utilized.
-
-````zax
-MyType :: type {
-    name own : String
-}
-
-mySingleton final : (result : MyType &)() = {
-    singleton once : MyType = "Alice"
-    return singleton
-}
-
-valueA : MyType = "Bob"
-
-singleton := mySingleton()
-
-valueB : MyType = value3
-
-valueC : MyType = "Debbie"
-````
-
-The order of construction will be:
-````txt
-valueA
-singleton
-valueC
-valueB
-````
-
-The oder of of destruction will be:
-````txt
-valueB
-valueC
-singleton
-valueA
-````
+Global instances live in the process life path and follow defined construction
+and reverse-destruction order. Current behavior is taught by
+[Zax lifetimes and references](language/lifetimes-and-references.md#common-life-paths).
+Exact global dependency and `once` ordering is preserved by
+[raw global and once lifetime input](project/raw/global-and-once-lifetimes.md).

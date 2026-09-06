@@ -42,10 +42,14 @@ capture:
 
 - constructing the callable is the transfer consumer; later invocation is not
   the capture transfer point;
+- ordinary capture defaults to `copy`; when the captured name is a reference,
+  this copies the referent into the callable's capture path rather than storing
+  another reference;
 - a by-value capture owns its captured storage and may adopt a declaration
   stance;
-- a reference capture behaves like an alias and does not silently inherit `move`
-  or `last` from the source declaration;
+- an explicit reference capture behaves like an alias, retains the original
+  fixed target, requires lifetime proof for every invocation, and does not
+  silently inherit `move` or `last` from the source declaration;
 - destructive use through a reference capture requires an explicit
   `as move` or `as last` restatement;
 - repeated invocation must not accidentally repeat a one-time destructive
@@ -55,6 +59,35 @@ capture:
 
 Exact capture syntax, once-only callable contracts, lifetime, allocation, and
 reflection remain future lambda/callable work.
+
+Preserve both legacy explicit reference-capture shapes:
+
+```zax
+// Legacy illustrative syntax.
+callback := [&source, alternate : & = otherSource] {
+  use(source)
+  use(alternate)
+}
+```
+
+`&source` keeps the source name. `alternate : & = otherSource` proposed a named
+reference capture. Neither spelling is accepted yet.
+
+Legacy `scope` input also proposed callable-like capture:
+
+```zax
+// Legacy illustrative syntax.
+scope [myInput, &myOutput] {
+  myOutput = transform(myInput)
+}
+```
+
+Future work must decide whether this remains an independently useful restricted
+scope form or is better expressed by ordinary declarations, a lambda, or a
+direct call. It must preserve the current capture rule: ordinary capture copies
+the source value, while explicit reference capture borrows one fixed target and
+requires lifetime proof. If callable-like restricted scope remains, names not
+listed in its capture list are not visible inside that scope.
 
 `>>` retains the operator catalog's shift-level precedence for every use. Types
 cannot assign composition another precedence.

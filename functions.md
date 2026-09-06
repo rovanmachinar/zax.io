@@ -14,118 +14,24 @@ Current qualifier behavior for parameters, results, captures, and
 Current ordinary calls, argument/default binding, result slots and routing,
 fixed-arity callable selection, compatible visible prototypes, and synchronous
 completion are defined by
-[Zax function invocation](language/function-invocation.md). The remaining
-`copy`/`deep`/`move`/`last` model is defined by
-[Zax transfer stances](language/transfer-stances.md). The remaining material
-below is legacy input for captures, reassignment, raw function pointers,
-composition, `mutator`, `once`, variadic, and related future function behavior.
+[Zax function invocation](language/function-invocation.md).
+`copy`/`deep`/`move`/`last` behavior is defined by
+[Zax transfer stances](language/transfer-stances.md).
 
+Current capture lifetime behavior is defined by
+[Zax lifetimes and references](language/lifetimes-and-references.md#capture-and-stored-references):
 
-### Functions value capturing
+- ordinary capture, including capture of a reference name, copies the referent
+  into the callable's capture path;
+- explicit reference capture borrows one fixed target and requires lifetime
+  proof for every invocation.
 
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-changeValue final : (result : Boolean)() = {
-    // ...
-}
-
-a : Integer = 1
-b : Integer = 2
-
-func : ()() = [a, b] {
-    // The value of `a` and `b` are captured by-value and `1` and `2` will
-    // always be displayed (unless the captured `a` or `b` is changed
-    // locally)
-    print(a, b)
-
-    // If the function `changeValue()` returns `true` then the captured
-    // `a` will become `42` but the global `a` will retain its original value.
-    if changeValue()
-        a = 42
-}
-
-// No need to specify the captured values as they are already contained
-// within the captured function.
-func()
-````
-
-
-#### Function declaration and definition with capturing value reassignment
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-// Declare and define a variable and function type with no return results, an
-// `Integer` input argument, with the ability to capture variables and
-// assign the function to point to nothing.
-magicNumber : ()(value : Integer)
-`
-// variable representing the current message to display
-messageToDisplay : String = "You've found the number"
-
-// assign the `magicNumber` to code to execute and capture the value of
-// `messageToDisplay` for later usage
-magicNumber = [messageToDisplay] {
-    if value == 1001
-        print("Horray -=> ", messageToDisplay)
-}
-
-// reassign the `messageToDisplay` to an entirely new value
-messageToDisplay = "Move along, nothing to see here people"
-
-// execute the `magicNumber`'s code which will display the value of the message
-// as it was originally captured and not the new value
-magicNumber(1001)   // will display "Horray -=> You've found the number"
-````
-
-
-### Functions can capture reference
-
-Functions can capture by reference (or by other type) by declaring a new variable that refers to the original variable.
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-assert final : ()(okay : Boolean) = {
-    // ...
-}
-
-changeValue : (result : Boolean)() = {
-    // ...
-}
-
-a : Integer = 1
-b : Integer = 2
-
-// Both `a` and `b` are captured by reference. The variable `a` maintains the
-// `a` variable name whereas `b` is captured as a reference into a new variable
-// named `altB`.
-func : ()() = [&a, altB : & = b] {
-    // The value of `a` and `b` are captured by reference and will always
-    // display and reference the contents of the global scope `a` or `altB`.
-    print(a, altB)
-
-    // If the function `changeValue()` returns `true` then the captured
-    // `a` will become `42` which is a reference of the global value.
-    if changeValue()
-        a = 42
-}
-
-func()
-assert(a == 1 || a == 42)
-
-a = 5
-
-func()
-assert(a == 5 || a == 42)
-````
+Exact capture syntax, callable representation, composition, repeated invocation,
+and callable reflection remain in
+[raw function-composition input](project/raw/function-composition-and-chaining.md).
+The remaining material below is legacy input for reassignment, raw function
+pointers, composition, `mutator`, `once`, variadic, and related future function
+behavior.
 
 
 ### Function input capturing and chaining

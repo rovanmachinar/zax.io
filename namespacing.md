@@ -9,6 +9,11 @@ and qualified-path resolution behavior are defined by
 page remains legacy input for complete module, import, export, visibility, and
 namespace behavior.
 
+A namespace also introduces a life path within global execution. Its instances
+end before the containing unnamed global path. Current lifetime terminology and
+ordering are defined by
+[Zax lifetimes and references](language/lifetimes-and-references.md#common-life-paths).
+
 ### Zax module files and relationships
 
 #### Default `module.zax` file

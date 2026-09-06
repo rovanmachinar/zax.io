@@ -9,6 +9,21 @@
 | Does Not Own | Accepted async semantics or runtime contracts |
 | Source / Provenance | Work items `001`, `005`, `006`, and `012`; foundational async, lifecycle, invocation completion, and optional construction/transfer pressure |
 
+Current synchronous and ownership constraints are defined by
+[Zax lifetimes and references](../../language/lifetimes-and-references.md) and
+[Zax pointers and arenas](../../language/pointers-and-arenas.md):
+
+- ordinary references do not safely cross thread boundaries;
+- synchronous temporary extension does not cross suspension;
+- unique ownership may cross only when instance affinity permits it;
+- pointer-layer `atomic` protects shared lifetime accounting, not pointee
+  operations;
+- object and control-block arenas must outlive their dependencies; and
+- final destruction must occur on a permitted thread or executor.
+
+Future async work must preserve these constraints or explicitly revise them
+through a separately reviewed language decision.
+
 ## Aligned pressure
 
 Asynchronous programming, coroutines, and concurrency are foundational Zax

@@ -537,7 +537,13 @@ func final : ()(value : Integer) = {
 
 ### `using` statement
 
-A `using` statement is akin to a shortened `if` statement where a condition is not specified and always assumed to be `true`. This allows a temporary resource to declared and used within a `using` scope. Unlike a [`scope`](scope.md) capture where variables outside the `scope` become restricted, a `using` allows full usage of local variables. If a value is declared in an initialization statement then that value's scope only exists within the context of a `using` control flow.
+A `using` statement is akin to a shortened `if` statement where a condition is
+not specified and always assumed to be `true`. This allows a temporary resource
+to be declared and used within a `using` scope. Callable-like restricted capture
+is preserved separately in
+[raw function-composition input](project/raw/function-composition-and-chaining.md).
+If a value is declared in an initialization statement, that value's scope exists
+only within the `using` control flow.
 
 ````zax
 print final : ()(...) = {

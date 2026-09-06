@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or pointer/lifetime provenance beyond the call boundary stated here |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -601,6 +601,10 @@ Each result declaration establishes:
 - a transfer stance that becomes active after construction; and
 - an obligation to contain one complete value on every normal exit.
 
+The result place is available before body execution. Its resident instance may
+be established before body entry when the prototype declares an initializer, or
+the body may remain responsible for constructing it.
+
 An ordinary result slot begins unconstructed:
 
 ```zax
@@ -710,8 +714,10 @@ Each slot of a multiple-result sequence is considered independently.
 
 A reference result is excluded because its slot owns an access path, not the
 referred-to value. Destroying the result slot does not establish that the
-referent is terminal. Pointer and owning-handle results remain future lifetime
-work.
+referent is terminal. Pointer ownership follows the selected pointer contract,
+not temporary result-slot lifetime. See
+[lifetimes and references](lifetimes-and-references.md#returned-references) and
+[pointers and arenas](pointers-and-arenas.md).
 
 ### Opt-in result initialization
 
@@ -741,6 +747,13 @@ make final : (
 After every input and omitted default is complete, opted-in result initializers
 run in result-slot declaration order in the selected callee's visible prototype.
 They may refer to any completed input parameter.
+
+Pre-body constructedness is part of body/prototype compatibility. A body that
+expects a live result on entry cannot be reused with a prototype that leaves
+that result unconstructed. A body that expects to construct a result cannot be
+paired with a prototype that already constructed it. Compatible prototypes may
+change initializer expressions only when they establish the same per-result
+entry state required by the body.
 
 An initially unconstructed result may instead be constructed later:
 
@@ -1724,7 +1737,8 @@ It may not require the body or slots to:
 - reorder values;
 - convert incompatible values;
 - synthesize missing values; or
-- reinterpret transfer behavior.
+- reinterpret transfer behavior; or
+- enter the body with a different constructed/unconstructed result state.
 
 If entering the original body requires executable adaptation, write a wrapper or
 lambda.
@@ -1774,11 +1788,13 @@ temporary explicitly.
 This does not permit a reference into the temporary to escape:
 
 ```zax
-view := returnView(makeBuffer())
+view : Buffer readonly & = returnView(makeBuffer())
+// error: the reference would outlive the temporary target
 ```
 
-The applicable lifetime strategy must reject the escape, establish a defined
-owning or extending mechanism, or require an explicit unsafe operation.
+The reference result retains the temporary's origin, so this stored escape is an
+error. A different owning result may explicitly preserve a dynamic life path;
+unsafe source cannot make a temporary survive after its path ends.
 
 For nested calls:
 
@@ -1793,8 +1809,20 @@ survives through the outer call.
 Transfer stance does not change when ordinary argument or result temporaries
 reach destruction. It changes which resources remain owned by those values at
 that point. Each temporary is destroyed once at its ordinary completion
-boundary. Exact caller temporary destruction order, returned alias validity,
-pointer ownership, and cross-call origin remain future lifetime work.
+boundary.
+
+After body-local scope exit and complete result mapping:
+
+1. source result slots are destroyed in reverse result declaration order;
+2. parameter instances are destroyed in reverse parameter declaration order;
+3. caller-side receiver, argument, and nested-result temporaries are destroyed
+   in reverse construction order when their complete consumer no longer needs
+   them.
+
+This keeps parameters and referenced caller temporaries alive through result
+mapping. Returned-reference origin and escape are defined by
+[lifetimes and references](lifetimes-and-references.md#returned-references);
+pointer ownership is defined by [pointers and arenas](pointers-and-arenas.md).
 
 Async suspension requires a broader completion and lifetime model. It is not
 ordinary synchronous completion.

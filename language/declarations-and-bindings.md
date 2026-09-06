@@ -599,16 +599,18 @@ results, and captures. A declaration-final path cannot regain replacement
 authority merely by being supplied to a callable whose referent type remains
 varying.
 
-An immutable reference tracking a varying place must spell `varying`
-explicitly. Omission must not silently introduce a path that may observe
-successive immutable lifetimes.
+An omitted type-side stance on a reference inherits the actual referent-place
+truth. A reference to a varying place therefore remains bound to that place and
+may observe its completely established successor resident instance. It cannot
+misreport the place as final. See
+[Zax qualifiers](qualifiers.md#varying-places-with-immutable-lifetimes) and
+[Zax lifetimes and references](lifetimes-and-references.md#references-never-rebind).
 
 The reserved `is final` query reports the resolved type-use or referent-place
 truth, not this declaration's replacement permission.
 
-Independent replacement or rebinding of a pointer or reference *binding* itself
-is a separate concern from replacement through the declaration, and its exact
-syntax remains later pointer and reference design.
+A pointer may be repointed according to its pointer contract. A reference never
+rebinds; assignment through it acts on its fixed referent place.
 
 Copying by value creates a new place with its own declaration stance.
 

@@ -30,6 +30,15 @@ producing them.
 - Read [Zax transfer stances](language/transfer-stances.md) for why `copy`,
   `deep`, `move`, and `last` exist; how source and receiver intent select
   consumers; and how source state changes.
+- Read [Zax lifetimes and references](language/lifetimes-and-references.md) for
+  life paths, instance places, fixed reference binding, replacement, borrowing,
+  escape, and capture.
+- Read [Zax pointers and arenas](language/pointers-and-arenas.md) for raw,
+  unique, shared, weak, and anchored ownership; allocation disposition; control
+  blocks; and arena behavior.
+- Read [Zax safety and analysis](language/safety-and-analysis.md) for safe
+  guarantees, compiler proof, narrow unsafe responsibility, contract evolution,
+  and lint boundaries.
 - Read [Zax function invocation](language/function-invocation.md) for ordinary
   calls, arguments, defaults, results, result routing, and callable selection.
 - Read [Zax intent acknowledgements](language/intent-acknowledgements.md) for
@@ -77,6 +86,9 @@ producing them.
 - [Identity types](language/identity-types.md)
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)
+- [Lifetimes and references](language/lifetimes-and-references.md)
+- [Pointers and arenas](language/pointers-and-arenas.md)
+- [Safety and analysis](language/safety-and-analysis.md)
 - [Function invocation](language/function-invocation.md)
 - [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
@@ -109,7 +121,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)
 - [Flow control](flow-control.md)
-- [Scope](scope.md)
 
 ### Types and data modeling
 
@@ -126,11 +137,10 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Memory and lifetime
 
-- [Pointers and references](pointers.md)
-- [Memory allocation](memory-allocation.md)
-- [Custom allocators](custom-allocators.md)
-- [Handle and hint pointers](handle-hint.md)
-- [Strong and weak pointers](strong-weak.md)
+- [Lifetimes and references](language/lifetimes-and-references.md) — current
+  life-path and non-owning reference design
+- [Pointers and arenas](language/pointers-and-arenas.md) — current dynamic
+  ownership and allocation design
 - [Constructors and destructors](ctor-dtor.md)
 - [Discard operator](discard.md)
 

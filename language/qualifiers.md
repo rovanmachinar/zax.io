@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); or complete pointer/lifetime rules |
+| Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and arenas](pointers-and-arenas.md) |
 
 ## Mental model
 
@@ -210,9 +210,11 @@ access or declaration reflection.
 
 Declaration-side `final` restricts whole-value replacement *through that
 declaration*. It is not a statement about independently replacing or rebinding
-the pointer or reference binding itself. Exact syntax for that separate operation
-must be established by focused pointer, reference, and lifetime work rather than
-by overloading the same word with two meanings.
+the pointer binding itself. A pointer may be repointed according to its pointer
+type and permissions. A reference binds permanently to one instance place and
+never rebinds. Complete behavior is defined by
+[lifetimes and references](lifetimes-and-references.md#references-never-rebind)
+and [pointers and arenas](pointers-and-arenas.md#pointer-instances-and-pointees).
 
 ## What each axis promises
 
@@ -279,7 +281,7 @@ The axes combine when deciding whether a change is available:
 | Mutate the current value lifetime's contents | `mutable` + `writable` |
 | Use generated reconstructive replacement for an immutable value | `immutable` + type-side `varying` + declaration-side `varying` + `writable` |
 | Observe a stable immutable place | `immutable` + `readonly` + `final` |
-| Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + explicit type-side `varying` |
+| Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + type-side `varying`, explicit or inherited |
 
 ## Varying places with immutable lifetimes
 
@@ -305,25 +307,25 @@ declaration-side `varying` in addition to writable access; a declaration-side
 `final` alias of the same place could observe the transition but never initiate
 it.
 
-The referent's `varying` stance must be explicit when creating an immutable
-place-tracking reference. Omission must not silently introduce this unusual
-behavior:
+The reference remains bound to `message`'s place while that varying place
+receives a successor resident instance. This is ordinary reference behavior,
+not a separate tracking policy. An omitted type-side stance inherits the actual
+referent-place truth:
 
 ```zax
 implicit : Message immutable readonly & = message
-// error: varying place tracking must be explicit
+display(implicit) // observes the completely established resident instance
 ```
 
-A final referent view is also unavailable:
+A final referent view is unavailable:
 
 ```zax
 stable : Message immutable readonly final & = message
 // error: message's place is varying
 ```
 
-A future lifetime strategy could temporarily prevent replacement while a stable
-borrow exists. Baseline qualifier behavior does not require that alias-tracking
-mechanism.
+The complete place, resident-instance, and member-renewal model is defined by
+[lifetimes and references](lifetimes-and-references.md#mutation-and-replacement).
 
 ## Qualifier attachment
 
@@ -568,15 +570,18 @@ The replacement constructor:
 - receives `_` with the old representation and resources;
 - has transitional mutable and writable construction authority without
   `unsafe pliable`;
-- may retain, destroy, replace, move, copy, or initialize members in place;
+- may retain, move, copy, or otherwise recycle old resources while renewing and
+  establishing every member resident instance;
 - selects its declared right-hand operand through ordinary parameter and
   overload rules;
 - may return additional declared results; and
 - must establish a complete valid instance before returning normally.
 
-An untouched resource may remain in its existing field and allocation. Reusing
-an address does not automatically preserve raw interior pointers when a
-contained pointee lifetime ends or is reconstructed.
+An untouched resource may remain in the same field and allocation, but complete
+replacement still renews that member resident instance. Reusing an address or
+resource does not preserve the old member lifetime. Reference consequences are
+defined by
+[lifetimes and references](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary).
 
 This document owns why reconstructive replacement is required by the qualifier
 model and its qualification boundary. Complete fallback, member transition,
@@ -972,13 +977,27 @@ permission. Changing indirection form cannot present a varying referent as final
 or a final referent as varying.
 
 The declaration-side permission of the pointer or reference binding constrains
-replacement through that declaration. Independently replacing or rebinding the
-pointer or reference binding itself is a separate operation whose exact syntax
-remains later indirection design.
+replacement through that declaration. Replacing a pointer's pointer value is
+separate from replacing its pointee. A reference never rebinds; assignment
+through it acts on the referenced place.
 
 Changing indirection form may not silently strip referent qualifications or
-increase ordinary access authority. Complete pointer/reference grammar,
-rebinding, ownership, and alias analysis remain later work.
+increase ordinary access authority. Complete reference lifetime is defined by
+[lifetimes and references](lifetimes-and-references.md), and pointer ownership by
+[pointers and arenas](pointers-and-arenas.md).
+
+Pointer-layer ownership and accounting words qualify `*` rather than the
+pointee:
+
+```zax
+sole : MyValue * unique
+shared : MyValue * strong atomic
+member : Member * strong anchored
+```
+
+`unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic`
+do not rewrite `MyValue` or `Member` qualifications. Their complete ownership
+and ordering grammar is defined by the pointer owner.
 
 ## Members and nested access
 
@@ -1027,8 +1046,10 @@ Destructor sequencing is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#destruction).
 Moved-from and terminal source meaning is defined by
 [Zax transfer stances](transfer-stances.md#move).
-Complete pointer ownership, terminal capabilities, and lifetime policy remain
-future lifetime work.
+Complete pointer ownership is defined by
+[pointers and arenas](pointers-and-arenas.md). Reference lifetime and explicit
+terminal forwarding are defined by
+[lifetimes and references](lifetimes-and-references.md#move-last-and-reference-lifetime).
 
 ## Concurrency boundary
 
@@ -1130,5 +1151,5 @@ Later work may refine syntax and adjacent mechanisms while preserving:
   authority; and
 - the separation of mutability from lifetime and thread safety.
 
-Independent replacement or rebinding of a pointer or reference binding itself
-remains future pointer, reference, and lifetime work.
+Pointer repointing remains distinct from pointee replacement. References never
+rebind.

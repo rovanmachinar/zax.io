@@ -3,6 +3,15 @@
 
 ## Context Type]
 
+This page remains legacy input for implicit context propagation and
+customization. Current dynamic storage is arena-backed, pointer ownership and
+allocation disposition are defined by
+[Zax pointers and arenas](language/pointers-and-arenas.md), and exact allocation
+and arena syntax remains deferred in
+[raw pointer and arena mechanics](project/raw/pointer-and-arena-mechanics.md).
+The concrete `@` examples below are therefore evidence rather than accepted
+allocation syntax.
+
 ### Automatic system context
 
 A system type is automatically constructed and passed between functions. The Zax language will setup an implicit context variable with a reserved triple underscore `___` name. The context variable points to a context type containing things like allocators, loggers of whatever other extended context data is attached to the context type. Every function called is passed the context pointer implicitly. The types that exist within the context type can be interacted with by any function and specific types within the context can be modified to optionally change their values. One example scenario would be to replace the allocator context member to point to a new allocator.

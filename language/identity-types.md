@@ -434,9 +434,15 @@ contract. Complete stance meaning and source state are defined by
 
 A same-storage identity reference is a different operation. It would create a
 view of existing storage rather than a new value, perform no copy, and schedule
-no independent destruction. Exact reference-admission, representation-cast,
-alias, qualifier, lifetime, and type-receiver rules remain future
-owned-composition and lifetime work.
+no independent destruction. It constructs another reference bound permanently
+to the same instance place and forwards the underlying origin and lifetime
+requirements. Identity syntax cannot hide replacement, move, or destruction of
+that place.
+
+Exact identity-reference admission, representation-cast, alias, qualifier, and
+type-receiver syntax remain future owned-composition work. Complete reference
+behavior is defined by
+[lifetimes and references](lifetimes-and-references.md#same-storage-identity-views).
 
 The compiler never silently substitutes a reference view for a requested
 by-value result.

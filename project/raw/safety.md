@@ -2,50 +2,17 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Raw placeholder / non-authoritative |
+| Status | Raw residual future-work input / non-authoritative |
 | Audience | A future numbered work item defining safety guarantees and unsafe boundaries |
-| Applies To | Safe-subset guarantees, unsafe mechanisms, and comparative safety input |
-| Owns | Preservation of aligned pressures, the contract-qualified prove-or-narrowly-assert philosophy, and unresolved comparison material |
-| Does Not Own | Accepted safety guarantees or unsafe syntax |
+| Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
+| Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
+| Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
 | Source / Provenance | Work items `001`, `005`, `006`, and `012`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, and general panic-contract pressure |
 
-## Aligned direction
-
-Maximizing compiler-enforced safety is not Zax's organizing goal. Zax should
-nevertheless define a safe subset with explicit guarantees.
-
-Code using only safe operations and interfaces should receive the guarantees
-assigned to that subset. Operations leaving those guarantees must be
-recognizable and auditable without forcing the whole language into one
-restrictive ownership model.
-
-The final mechanism need not use an `unsafe { ... }` scope. Narrow operation
-markers, unsafe declarations or interfaces, effect propagation, and reviewed
-safe wrappers around unsafe implementations require evaluation.
-
-## Prove or narrowly assert, qualified by contract
-
-The generalized philosophy behind Zax's static analysis is:
-
-> For every property mandatory under the selected language contract, Zax attempts
-> to prove the operation valid. If proof cannot be established, the operation is
-> rejected unless a narrow semantic assertion explicitly accepts responsibility
-> for an unproved but valid boundary. An assertion cannot make a known violation
-> valid.
-
-Two consequences must survive into the future safety owner:
-
-1. what must be proved is decided by the selected contract, not by how clever the
-   executable compiler happens to be; and
-2. an assertion is a claim about an unproved but valid boundary, never a way to
-   permit a known violation.
-
-The contract also decides what a now-redundant control means: advisory when the
-contract does not require the case, potentially a hard error when the selected
-contract requires the case to be recognized as safe, and nonconforming when a
-compiler demands an assertion for a contract-mandated passing case. The detailed
-matrix and provenance questions are preserved in
-[raw analysis-control input](analysis-controls.md#contract-dependent-redundant-controls).
+Current general behavior has moved to
+[Zax safety and analysis](../../language/safety-and-analysis.md). This file
+retains the categories and comparative pressure that future safety work must
+still disposition.
 
 ## Guarantee categories to investigate
 
@@ -248,6 +215,8 @@ Future work must define Zax's promises first, then compare them carefully.
 
 ## Activation and retirement
 
-Activate this input before publishing safety guarantees, defining unsafe
-boundaries, or making construction lifecycle diagnostics mandatory. Consume its
-findings through that work and retire or archive this placeholder afterward.
+Activate this residual input when a future contract assigns exact guarantees to
+one of the unresolved categories above, formalizes domain diagnostics, or
+performs the preserved language comparison. Move accepted details into
+[Zax safety and analysis](../../language/safety-and-analysis.md) and applicable
+domain owners, then retire this file.

@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); or flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)) |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
 
@@ -19,6 +19,14 @@ Zax distinguishes three related states:
 3. **The complete enclosing lifetime exists.** Ordinary code may use the
    complete instance after construction finishes and before replacement or
    destruction begins.
+
+Each instance lives within a
+[life path](lifetimes-and-references.md#start-with-a-life-path). An
+[instance place](lifetimes-and-references.md#life-path-instance-place-and-resident-instance)
+is the stable typed position through which its complete resident instance is
+reached. This document defines how lifecycle operations establish and end those
+instances; the lifetime owner defines how references remain valid across those
+events.
 
 Allocation may obtain storage, but allocation alone does not construct a value.
 Construction establishes a complete value in storage. Destruction ends a
@@ -730,19 +738,35 @@ When selected, the replacement constructor:
 - receives the prior representation and resources through `_`;
 - has transitional construction authority;
 - may retain, assign, move, copy, destroy, reconstruct, or otherwise recycle
-  members;
+  old resources while renewing every member resident instance;
 - uses the existing outer allocation; and
 - must establish a complete valid replacement instance on every normal return.
 
-The example retains `id`. Running the ordinary destructor first would unregister
-it and defeat recycling.
+The example retains the `id` resource and representation. Running the ordinary
+destructor first would unregister it and defeat recycling. Complete replacement
+nevertheless renews `id`'s member resident instance along with every other
+member. Resource reuse is not member-lifetime retention, and leaving bits at an
+address after ending a member lifetime does not preserve that old instance.
 
-An untouched member retains its exact language-level lifetime and resource.
-Leaving bits at an address after ending a member lifetime is not retention.
+For a member carried forward in place, renewal is a language-level lifetime
+boundary controlled by the replacement constructor:
+
+- the old member resident instance ends as part of the enclosing replacement;
+- no ordinary member `---` or `+++` hook is generated around the carried
+  representation;
+- the replacement constructor transfers that representation and its resources
+  into the successor member instance; and
+- normal return publishes the successor only after the complete replacement is
+  valid.
+
+The retained resource therefore receives one continuing owner rather than a
+destructor followed by reconstruction. References to the old member still cross
+a real resident-instance boundary even though no member hook ran.
 
 The compiler tracks member transitions. Normal return requires one live valid
 value for every required member and exactly one disposition for every resource
-the transition ceased to retain.
+the transition ceased to retain. A carried resource counts as transferred into
+the successor member, not left undispositioned.
 
 ### Replacement results
 
@@ -885,7 +909,6 @@ value = makeReplacementUsing(value)
 Safe cases may include:
 
 - a by-value snapshot established before transition;
-- a reference whose exact pointee lifetime is retained until its final use;
 - an operation designed to handle exact self-aliasing; or
 - a lifetime policy that proves nonconflicting access.
 
@@ -894,22 +917,25 @@ A future narrow unsafe permission may allow a use whose safety the compiler
 cannot prove. The permission belongs at the risky operation, not on every `&`
 declaration.
 
-Complete reference origin, borrow, provenance, and lifetime-policy mechanisms
-remain future pointer and lifetime work.
+Complete reference origin, fixed place binding, and the unsafe successor-member
+boundary are defined by
+[lifetimes and references](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary).
 
 ### Raw pointers
 
 Same-storage replacement does not categorically invalidate every raw pointer.
 
 - A pointer into retained storage may continue to name the same location.
-- A pointer to an exact retained member lifetime may remain valid.
 - A pointer to a value whose lifetime ended no longer identifies that old live
   value, even when another value later occupies the address.
 - Reusing an address does not by itself decide whether the intended pointee
   survives.
 
-Raw pointers are unsafe. Future pointer and lifetime policies may provide
-stronger checked guarantees.
+Raw pointers carry no ownership or intrinsic lifetime guarantee. A use is safe
+when analysis proves its required origin and lifetime facts; otherwise it needs
+narrow unsafe responsibility. Managed ownership, including direct-member
+anchored pointers, is defined by
+[pointers and arenas](pointers-and-arenas.md).
 
 ### Representation boundary
 
@@ -1259,8 +1285,10 @@ The language needs distinct future unsafe controls for:
 - terminal member reconstruction.
 
 The final source syntax, analysis provenance, and contract-version behavior
-remain future safety and analysis-control work. No broad unsafe marker can make
-a known-ended lifetime valid again.
+remain future analysis-control work. The general distinction among proof,
+unsafe assertion, unsafe permission, and no valid interpretation is defined by
+[safety and analysis](safety-and-analysis.md). No broad unsafe marker can make a
+known-ended lifetime valid again.
 
 ## Panic and allocation boundaries
 
@@ -1274,9 +1302,15 @@ require exception-style rollback to the old value or recoverable
 partial-construction unwinding.
 
 Automatic allocation occurs before construction of the allocated value.
-Ordinary allocation exhaustion is commonly fatal. Manual allocator APIs may
-offer checked failure through ordinary control flow when a program has a real
-recovery strategy.
+The selected allocation operator decides how exhaustion appears:
+
+- a panicking form prevents normal construction completion and panics;
+- a non-panicking form constructs a pointer member containing `Nothing`, so the
+  enclosing instance may still complete; or
+- an unchecked form makes a false success guarantee undefined.
+
+Complete behavior is defined by
+[pointers and arenas](pointers-and-arenas.md#allocation-failure).
 
 Constructors, replacement constructors, and destructors are synchronous.
 Suspending lifecycle operations, cancellation, and concurrent replacement remain

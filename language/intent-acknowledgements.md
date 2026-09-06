@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, reviewing, or tooling Zax source |
 | Applies To | Explicit acknowledgement of defined but suspicious-looking source; not a formal grammar or diagnostic specification |
 | Implementation State | Not established by this repository |
-| Owns | The intent-acknowledgement mental model; `intent<category>{...}` use; distinction from unsafe responsibility and lint suppression; the current category registry; common costs, diagnostics, and source-stability requirements |
-| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category; unsafe proof assertions; or exact diagnostic identifiers |
+| Owns | The intent-acknowledgement mental model; `intent<category>{...}` use; the current category registry; intent-specific costs, diagnostics, and source-stability requirements |
+| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category; the complete intent/unsafe/lint distinction, unsafe assertions and permissions ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
 | Source / Provenance | Transfer terminal-use review and prior confusable-form intent input |
 
 ## Defined source can still look mistaken
@@ -79,13 +79,11 @@ Complete tokenization, payload shape, layout, and source-tree behavior belong to
 
 ## Intent, unsafe, and lint suppression are different
 
-These mechanisms answer different questions:
-
-| Mechanism | Programmer statement |
-| --- | --- |
-| `intent<...>{...}` | "This defined but suspicious interpretation is deliberate." |
-| `unsafe<...>{...}` | "This operation is valid, and I accept responsibility for a required property the compiler cannot prove." |
-| Lint suppression | "Do not report this advisory diagnostic here." |
+`intent<...>{...}` says: “This defined but suspicious interpretation is
+deliberate.” It does not accept proof responsibility or suppress an advisory
+lint. The complete distinction among intent, unsafe assertions, unsafe
+permissions, and lint suppression is owned by
+[Zax safety and analysis](safety-and-analysis.md#intent-unsafe-and-linting-are-different).
 
 ### Intent is not unsafe
 
@@ -108,8 +106,9 @@ unsafe<replacement-alias>{
 }
 ```
 
-The unsafe syntax and category shown here remain subject to the separate safety
-and analysis-control design.
+The complete distinction is defined by
+[Zax safety and analysis](safety-and-analysis.md). Exact unsafe syntax and
+categories remain future analysis-control design.
 
 ### Intent is not a warning switch
 
@@ -127,6 +126,13 @@ copying a diagnostic message.
 | `implicit-stance-at-terminal-use` | Keep implicit transfer stance at a proven terminal opportunity where explicit stance could materially change the accepted contract | [Transfer stances](transfer-stances.md#terminal-opportunity-must-be-explicit) |
 | `terminal-source-reuse` | Perform a defined operation after accepted `last` transfer | [Transfer stances](transfer-stances.md#last) |
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
+
+Anchored owning pointers also require intent acknowledgement when replacement
+of their target or an enclosing direct place can renew the resident member
+instance. That behavior is defined by
+[pointers and arenas](pointers-and-arenas.md#replacement-intent). Its exact
+category identifier remains unsettled and examples mark the spelling
+provisional rather than adding it to this accepted registry prematurely.
 
 ### Implicit stance at terminal use
 
