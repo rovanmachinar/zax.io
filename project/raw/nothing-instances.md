@@ -7,7 +7,7 @@
 | Applies To | Real global `Nothing` instances, pointer presence, generated member-access checks, custom `Nothing`, compatible overlap, and thread safety |
 | Owns | Preservation of the current candidate model, representative behavior, deciding questions, activation pressure, and retirement criteria |
 | Does Not Own | Accepted pointer presence or ownership behavior |
-| Source / Provenance | Legacy `nothing.md`; work item `014` follow-up |
+| Source / Provenance | Legacy `nothing.md`; work items `014` and `015` |
 
 ## Candidate mental model
 
@@ -110,6 +110,8 @@ but this file does not yet establish one required representation.
 Future work must preserve:
 
 - pointer `Nothing` remains distinct from optional absence;
+- `@!` and `@!<` allocation failure produces the destination pointer role's
+  ordinary semantic `Nothing`;
 - a present optional pointer may itself contain `Nothing`;
 - raw non-`Nothing` state proves no lifetime or provenance;
 - weak termination remains distinct from a live pointer to `Nothing`;

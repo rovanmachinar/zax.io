@@ -44,6 +44,13 @@ Zax distinguishes:
 - **mixfix operators**, one operation selected from a tree containing several
   recognized components and operand holes.
 
+The reserved `@`, `@!`, `@<`, and `@!<` spellings are
+**declaration-bound allocation initializers**. They use the symbolic token
+catalog but are not ordinary open unary operators: a declaration supplies the
+resident type and pointer result role, and user declarations cannot overload
+their allocation behavior. See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
+
 **Fixity** states where an operation's operands occur relative to its recognized
 components:
 
@@ -715,7 +722,7 @@ Complete `copy`/`deep`/`move`/`last` meaning, fallback, declaration stance,
 receiver behavior, and source state are defined by
 [Zax transfer stances](transfer-stances.md).
 
-### Optional reset and protected transfer-source operations
+### Optional and pointer reset
 
 `reset value` is a protected pre-unary optional phrase. It destroys a present
 boxed value, leaves the same wrapper absent, and returns a reference to that
@@ -725,6 +732,20 @@ wrapper:
 reset optionalValue
 (reset optionalValue) = [{}]
 ```
+
+For a pointer, `reset` releases the allocation, ownership, observation, or
+scheduled-disposition relationship for which the pointer or its declaration has
+authority, then leaves the pointer at `Nothing`:
+
+```zax
+reset pointer
+```
+
+An open-ended raw pointer requires allocation-root and disposition-authority
+proof or narrow unsafe responsibility. Complete pointer behavior is defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
+
+### Protected transfer-source operations
 
 `last value` and `move value` are protected pre-unary optional source adapters.
 They produce the same complete optional type and present distinct transfer

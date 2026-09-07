@@ -7,7 +7,7 @@
 | Applies To | Async I/O, coroutines, concurrency, scheduling, and optional runtime support |
 | Owns | Preservation of aligned pressures and unresolved boundaries |
 | Does Not Own | Accepted async semantics or runtime contracts |
-| Source / Provenance | Work items `001`, `005`, `006`, and `012`; foundational async, lifecycle, invocation completion, and optional construction/transfer pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, and `015`; foundational async, lifecycle, invocation completion, optional construction/transfer, execution-context, and process-wide collection pressure |
 
 Current synchronous and ownership constraints are defined by
 [Zax lifetimes and references](../../language/lifetimes-and-references.md) and
@@ -50,6 +50,23 @@ These costs should remain visible and selectable where practical.
 
 Async I/O, coroutines, concurrency, scheduling, and parallelism are related but
 distinct. A future design must not collapse them merely because they interact.
+
+## Execution-context and collection pressure
+
+[Zax execution context](../../language/execution-context.md) establishes one
+current `___` instance per thread execution path. Future async work must define:
+
+- which context an async task captures;
+- whether a task observes later replacement on its originating thread;
+- how context changes are restored across suspension;
+- what happens when a task resumes on another thread; and
+- whether a child task inherits, copies, or explicitly receives a context.
+
+Cycle collection is explicitly triggered for the complete process rather than
+one arena. Future concurrency work must define how that pass coordinates
+threads, suspended tasks, local and atomic ownership, graph mutation, roots,
+destructors, and cancellation. An arena may publish global memory pressure but
+does not independently collect an arena-local subgraph.
 
 ## Suspending lifecycle pressure
 

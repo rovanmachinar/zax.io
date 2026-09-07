@@ -616,4 +616,7 @@ allocator APIs, and async cancellation remain in
 
 ### Context and threading
 
-A new context instance must be set-up for any spawned thread/fiber as the context variable's (i.e. `___`) instance is tied to an individual thread/fiber. This allows the context instance to use optimized thread-unaware operations.
+The current per-thread `___` model is defined by
+[Zax execution context](language/execution-context.md). Exact inheritance,
+replacement, and restoration behavior for spawned threads, fibers, and async
+tasks remains future [async input](project/raw/async.md).

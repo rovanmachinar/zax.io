@@ -7,7 +7,7 @@
 | Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, and source-presentation review |
 | Owns | Preserved reflection, integer metadata, representative-source, activation-pressure, and retirement questions |
 | Does Not Own | Accepted reflection semantics or the current domain facts reflected |
-| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, and work item `012` optional-layer metadata pressure |
+| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, work item `012` optional-layer metadata pressure, and work item `015` allocation metadata pressure |
 
 ## Why this input exists
 
@@ -103,6 +103,10 @@ Future work must decide:
   underlying place stance reported by `is final` — is reflectable;
 - how transfer stance appears on declarations, parameters, results, and
   receivers;
+- how a compatible visible prototype identifies the concrete minted
+  implementation it reuses without implying body reprocessing;
+- how internal implementation-prototype facts differ from outward alias labels,
+  defaults, stance, presence, and scheduled/open presentation;
 - whether a declaration is programmer-defined, generated, explicitly defaulted,
   delegated with `existing`, bodyless, or forbidden; and
 - how one compiler-owned generated family exposes its exact qualifier-complete
@@ -111,6 +115,28 @@ Future work must decide:
 That last question is a live consequence: `is final` deliberately reports the
 resolved type-use or referent-place truth, so a program currently has no way to
 ask whether *this* declaration may exercise replacement.
+
+## Allocation reflection
+
+Current allocation behavior is defined by
+[Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md).
+Future reflection must expose enough information to distinguish:
+
+- `@`, `@!`, `@<`, and `@!<`;
+- resident type and pointer result role;
+- explicit, context-provided, role-implied, and defaulted policy choices;
+- object and detached control-block arenas;
+- inline or detached control placement;
+- allocation disposition and collection eligibility;
+- declaration-attached versus open-ended raw state;
+- selected constructor and construction-packet source;
+- allocation records versus ownership control blocks;
+- the operation currently holding final disposition authority; and
+- a protected `reset` from its destructor and storage-recovery components.
+
+Source reflection must preserve an explicit `@{...}` enclosure and applicable
+intent acknowledgement even when every stated value equals the effective
+default.
 
 ## Optional layer and source metadata pressure
 

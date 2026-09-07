@@ -116,7 +116,33 @@ The same model applies across Zax:
 | Dynamic allocation | An arena supplies storage for a separately owned path |
 
 The details of pointer-owned dynamic paths are in
-[Zax pointers and arenas](pointers-and-arenas.md).
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md).
+
+A raw pointer still owns no path, but a declaration may independently schedule
+the disposition of an allocation it creates:
+
+```zax
+scheduled : Document * = @
+alias : Document * = scheduled
+```
+
+The allocation path is bounded by `scheduled`'s declaration life path unless
+its disposition responsibility is transferred. `alias` copies only the raw
+address and cannot safely outlive that path.
+
+Replacing or resetting `scheduled` ends the old allocation path according to its
+recorded disposition and invalidates dependent aliases. A terminal transfer sets
+`scheduled` to `Nothing`; its later scheduled cleanup is therefore a no-op.
+
+An open-ended raw allocation has no declaration-attached owner:
+
+```zax
+manual : Document * = @<
+```
+
+Its lifetime remains safe only when analysis proves another owner or a complete
+manual `reset` protocol. An opaque relationship may require narrow unsafe
+responsibility; a known-ended or known-interior path is rejected.
 
 ## References borrow one fixed place
 

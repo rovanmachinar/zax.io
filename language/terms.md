@@ -39,11 +39,41 @@ Different paths to the same value may have different capabilities. See
 ## Allocation disposition
 
 An **allocation disposition** is the allocation-time choice that determines when
-the resident instance is destroyed, when its backing block becomes reusable,
-and whether unreachable strong-reference cycles may be collected.
+the resident instance is destroyed and when its backing block becomes reusable.
 
 It is independent from pointer ownership. See
-[Zax pointers and arenas](pointers-and-arenas.md#allocation-disposition).
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-disposition).
+
+## Allocation policy
+
+An **allocation policy** combines an allocation disposition with independent
+choices such as collection eligibility, object and control-block arenas, and
+control-block placement. Failure and open-ended raw behavior are selected by the
+exact `@` allocation form rather than by policy values.
+
+See [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-forms).
+
+## Allocation record
+
+An **allocation record** stores or reaches the allocation root, object arena,
+destructor, size, alignment, disposition, and any additional metadata needed for
+correct release.
+
+Every dynamic allocation has recoverable allocation-record information. An
+allocation record is distinct from the ownership control block used for
+shareable and shared ownership. See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-roots-and-records).
+
+## Allocation root
+
+An **allocation root** is the top-level life path and typed instance place
+created directly by one dynamic allocation operation. Its allocation record
+governs the complete allocated storage and final disposition. An interior member
+or array element is not an independent allocation root merely because a pointer
+can target it.
+
+See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-roots-and-records).
 
 ## Anchored pointer
 
@@ -117,7 +147,8 @@ ownership, weak observation, ownership closure, and the allocation's disposition
 and arena relationships.
 
 It may be coallocated with the instance or stored in a separate control-block
-arena. See
+arena. It is distinct from the allocation record available to raw and blockless
+`unique` allocations. See
 [Zax pointers and arenas](pointers-and-arenas.md#object-and-control-block-arenas).
 
 ## Compiler host
@@ -196,6 +227,24 @@ mistake.
 It is distinct from ordinary syntax rejection and semantic error. Source-layout
 cases are owned by [Zax source structure](source-structure.md); flow-shape cases
 by [Zax core flow control](core-flow-control.md).
+
+An **acknowledgement-required intent error** has one defined but suspicious
+interpretation and may be confirmed by an applicable
+`intent<category>{...}` enclosure. A **non-acknowledgeable intent error**
+recognizes a malformed or forbidden near miss that must be rewritten; an intent
+enclosure cannot make it valid. See
+[Zax intent acknowledgements](intent-acknowledgements.md#non-acknowledgeable-intent-errors).
+
+## Declaration-attached raw allocation
+
+A **declaration-attached raw allocation** uses a raw pointer value while its
+destination declaration's life path independently schedules allocation
+disposition. Copying the raw address does not copy that schedule. An accepted
+terminal transfer leaves the source pointer at `Nothing`, so its later scheduled
+cleanup is a no-op.
+
+See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#scheduled-raw-allocations).
 
 ## Confusable-form intent error
 
@@ -318,6 +367,20 @@ constructed, lives, and is destroyed within a life path and never outlives it.
 Paths may be lexical, structural, conditional, or dynamically owned. See
 [Zax lifetimes and references](lifetimes-and-references.md#start-with-a-life-path).
 
+## Minted implementation
+
+A **minted implementation** is one callable body after it has been checked
+against its own implementation prototype and its internal operations have been
+selected. A compatible visible prototype may adapt call-boundary setup and
+outward presentation but does not reprocess or remint that body.
+
+Future generic specialization is different: a generic body may be reprocessed
+for each demanded concrete argument set, and each result becomes a separate
+minted implementation.
+
+See
+[Zax function invocation](function-invocation.md#minted-implementation-model).
+
 ## Mixfix operator
 
 A **mixfix operator** is one complete overloadable operation selected from an
@@ -378,6 +441,15 @@ panic or non-completion, and must satisfy the function's result obligations. See
 [Zax core flow control](core-flow-control.md),
 [Zax function invocation](function-invocation.md), and
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
+
+## Open-ended raw allocation
+
+An **open-ended raw allocation** has no declaration-attached or managed
+disposition owner. Safe use requires another proved owner or a complete manual
+`reset` protocol; otherwise the programmer assumes narrow unsafe responsibility.
+
+See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#open-ended-raw-allocations).
 
 ## Operand hole
 

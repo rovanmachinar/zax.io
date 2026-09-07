@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, reviewing, or tooling Zax source |
 | Applies To | Explicit acknowledgement of defined but suspicious-looking source; not a formal grammar or diagnostic specification |
 | Implementation State | Not established by this repository |
-| Owns | The intent-acknowledgement mental model; `intent<category>{...}` use; the current category registry; intent-specific costs, diagnostics, and source-stability requirements |
+| Owns | The intent-acknowledgement mental model; acknowledgeable versus non-acknowledgeable intent errors; `intent<category>{...}` use; the current category registry; intent-specific costs, diagnostics, and source-stability requirements |
 | Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category; the complete intent/unsafe/lint distinction, unsafe assertions and permissions ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
 | Source / Provenance | Transfer terminal-use review and prior confusable-form intent input |
 
@@ -116,6 +116,38 @@ Intent errors are hard source errors until acknowledged or rewritten. A linter
 cannot change whether source is accepted, and lint suppression cannot provide
 an intent acknowledgement.
 
+### Non-acknowledgeable intent errors
+
+Not every diagnostic about apparent intent has a valid interpretation to
+acknowledge.
+
+- An **acknowledgement-required intent error** has one defined but
+  suspicious-looking meaning. An applicable `intent<category>{...}` enclosure
+  confirms that meaning.
+- A **non-acknowledgeable intent error** recognizes a malformed, duplicate, or
+  deliberately forbidden near miss so the compiler can provide a precise repair.
+  It must be rewritten.
+
+For example, redundant detached control-block placement has one meaning:
+
+```zax
+intent<redundant-control-placement>{
+  owner : MyValue * strong =
+    @{
+      control: ControlBlockPlacement.Detached,
+      controlArena: myControlArena
+    }
+}
+```
+
+By contrast, an empty allocation-policy enclosure has no accepted form:
+
+```zax
+owner : MyValue * unique = @{} // error: use @
+```
+
+Wrapping the latter in `intent<...>` cannot create a valid initializer.
+
 ## Current category registry
 
 Category names describe the semantic situation being acknowledged rather than
@@ -126,6 +158,8 @@ copying a diagnostic message.
 | `implicit-stance-at-terminal-use` | Keep implicit transfer stance at a proven terminal opportunity where explicit stance could materially change the accepted contract | [Transfer stances](transfer-stances.md#terminal-opportunity-must-be-explicit) |
 | `terminal-source-reuse` | Perform a defined operation after accepted `last` transfer | [Transfer stances](transfer-stances.md#last) |
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
+| `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
+| `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer at `Nothing` | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
 
 Anchored owning pointers also require intent acknowledgement when replacement
 of their target or an enclosing direct place can renew the resident member
@@ -165,6 +199,45 @@ intent<implicit-stance-at-terminal-use>{
 ```
 
 This keeps the implicit `copy` result behavior. It does not offer `last`.
+
+A scheduled raw result also requires this acknowledgement when its declaration
+leaves stance implicit:
+
+```zax
+intent<implicit-stance-at-terminal-use>{
+  makeValue final : (
+    result : MyValue * = @
+  )() = {
+  }
+}
+```
+
+The clearer ordinary declaration is `result : MyValue * last = @`. Explicit
+`copy` or `move` instead states a deliberate borrowed outward contract and
+remains subject to caller lifetime proof.
+
+### Conditionally unallocated member
+
+```zax
+MyType :: type {
+  member : Member * = @
+
+  +++ final : ()(
+    condition : Boolean,
+    arena : MyArena &
+  ) = {
+    intent<conditionally-unallocated-member>{
+      if condition
+        _.member = @{ arena }
+    }
+  }
+}
+```
+
+The direct member allocation suppresses automatic pointee allocation for this
+constructor. The acknowledgement confirms that a normal path may deliberately
+leave the valid scheduled pointer at `Nothing`; it does not permit an
+indeterminate pointer representation.
 
 ### Terminal-source reuse
 

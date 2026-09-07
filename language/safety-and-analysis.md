@@ -271,6 +271,38 @@ Raw-pointer operations require explicit unsafe responsibility only where the
 safe contract requires a fact the compiler cannot prove. A known-invalid
 pointee remains invalid inside unsafe source.
 
+The same boundary governs raw allocation adoption and reset:
+
+```zax
+manual : MyValue * = @<
+reset manual
+```
+
+Safe reset requires proof that `manual` identifies the allocation root and that
+the operation has sole disposition authority. When the relationship may be valid
+but provenance or alias information is opaque, narrow unsafe responsibility may
+assert those facts. A pointer proved to identify an interior member, ended
+allocation, stack/global place, or allocation with a competing disposer remains
+known-invalid.
+
+Transfer of scheduled or managed ownership into an ordinary raw destination
+deliberately opens the allocation. It likewise requires another proved
+disposition owner or narrow unsafe responsibility.
+
+Reallocation through an open-ended raw destination does not reset its old
+allocation:
+
+```zax
+open : MyValue * = @<
+open = @<{ anotherArena }
+```
+
+This is safe when analysis proves `open` is `Nothing` or its prior allocation
+was dispositioned. A proved live overwrite is a known resource loss and is
+rejected. If opaque code may have reset or transferred the prior allocation,
+narrow unsafe responsibility may assert that missing fact. Intent
+acknowledgement cannot supply lifecycle proof.
+
 ## Runtime failure and unsafe failure
 
 Defined runtime failure is not the same as unsafe undefined behavior.
@@ -339,20 +371,28 @@ required semantic extension is unsupported.
 
 ## Panic boundary
 
-Current Zax design has no general exception-style rollback model.
+A panic blocks the operation that encountered its condition. A narrowly
+applicable helper may repair that condition and allow the same operation to
+complete as though the failure had not occurred. Otherwise the process crashes
+gracefully.
 
-If a panic is fatal, no recoverable partial-construction continuation exists. If
-a future panic handler resumes execution during construction, replacement, or
-destruction, it must define:
+Resolution does not:
 
-- how incomplete state becomes complete again;
-- which result is supplied for a failed expression;
-- destruction and cleanup of partial work;
-- once-only operand evaluation;
-- handler failure; and
-- the point at which ordinary access resumes.
+- skip the failed operation;
+- supply an unrelated substitute result;
+- unwind completed members;
+- roll back construction or replacement;
+- continue after incomplete destruction; or
+- expose partial lifecycle state to ordinary code.
 
-Do not infer those behaviors from the existence of a panic.
+Panic categories can be enabled or disabled independently. A future narrow
+contract may promise that one selected panic condition cannot occur and permit
+the compiler to omit its check. If the condition occurs anyway, behavior is
+undefined. Other panic categories remain enabled.
+
+For allocation, this is not a third unchecked operator: `@` remains panicking
+and `@!` must still detect request failure to return `Nothing`. Exact
+panic-category names and control syntax remain future analysis-control work.
 
 ## Diagnostics
 

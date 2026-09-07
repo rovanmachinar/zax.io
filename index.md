@@ -33,9 +33,12 @@ producing them.
 - Read [Zax lifetimes and references](language/lifetimes-and-references.md) for
   life paths, instance places, fixed reference binding, replacement, borrowing,
   escape, and capture.
-- Read [Zax pointers and arenas](language/pointers-and-arenas.md) for raw,
-  unique, shared, weak, and anchored ownership; allocation disposition; control
-  blocks; and arena behavior.
+- Read [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md) for
+  declaration-bound allocation, raw and managed ownership, allocation policy,
+  control blocks, reset, collection, and arena behavior.
+- Read [Zax execution context](language/execution-context.md) for the per-thread
+  `___` context, its application-wide shape, replacement, and context-provided
+  default arenas.
 - Read [Zax safety and analysis](language/safety-and-analysis.md) for safe
   guarantees, compiler proof, narrow unsafe responsibility, contract evolution,
   and lint boundaries.
@@ -87,7 +90,8 @@ producing them.
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)
 - [Lifetimes and references](language/lifetimes-and-references.md)
-- [Pointers and arenas](language/pointers-and-arenas.md)
+- [Pointers, allocation, and arenas](language/pointers-and-arenas.md)
+- [Execution context](language/execution-context.md)
 - [Safety and analysis](language/safety-and-analysis.md)
 - [Function invocation](language/function-invocation.md)
 - [Intent acknowledgements](language/intent-acknowledgements.md)
@@ -139,8 +143,8 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 - [Lifetimes and references](language/lifetimes-and-references.md) — current
   life-path and non-owning reference design
-- [Pointers and arenas](language/pointers-and-arenas.md) — current dynamic
-  ownership and allocation design
+- [Pointers, allocation, and arenas](language/pointers-and-arenas.md) — current
+  dynamic allocation, ownership, disposition, and arena design
 - [Constructors and destructors](ctor-dtor.md)
 - [Discard operator](discard.md)
 
@@ -157,7 +161,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Except error handling](except.md)
 - [Lazy functions](lazy.md)
 - [Concurrency](concurrency.md)
-- [Context type](context.md)
 - [Compiler warnings and errors](warnings-errors.md)
 
 ## Questions

@@ -321,7 +321,5 @@ The following are registered warnings, default states, and their meaning:
     * the style of the code is found to be undesirable and language or compiler changes in the future may be breaking
 * `descope-directive-required` (always)
     * calling an `[[inline-descope]]` function requires the `[[descope]]` declaration to acknowledge the current scope is polluting with new variables from an inlined function
-* `allocation-into-raw-pointer` (always)
-    * the compiler detected an attempt to allocate into a raw pointer rather than using a `unique` or other managed pointer type
 * `generated-file-not-touched` (error)
     * the compiler attempted to load a source file that was not touched by a generator routine

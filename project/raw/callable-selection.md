@@ -7,7 +7,7 @@
 | Applies To | Callable candidate comparison beyond the currently accepted fixed-arity partial-order baseline |
 | Owns | Naturally unselectable declaration pressure, cross-axis comparison, exact-prototype resolution, generic-specialization comparison, generated-versus-declared ambiguity, source compatibility, activation pressure, and retirement criteria |
 | Does Not Own | Accepted current invocation behavior; `switch`/`case` or pattern-like selection; generic syntax; or runtime dispatch implementation |
-| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection |
+| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection; work item `015` minted-implementation refinement |
 
 ## Why this input exists
 
@@ -67,6 +67,22 @@ myProcess(message)
 This is intentional contract selection. It is not merely a workaround for
 incomplete overload rules.
 
+Current
+[function invocation](../../language/function-invocation.md#minted-implementation-model)
+establishes that a concrete callable body is minted once under its implementation
+prototype. A compatible visible prototype changes permitted call-boundary setup
+or outward presentation without reprocessing the body.
+
+Future exact-prototype work must preserve:
+
+- body-entry facts required by the minted implementation;
+- fixed operations already selected inside the body;
+- results the minted implementation can actually produce;
+- separate visible labels, defaults, acknowledgement, stance, and scheduled/open
+  presentation; and
+- the distinction from generic specialization, which may reprocess a generic
+  body before minting each concrete implementation.
+
 Future work must define:
 
 - exact prototype spelling;
@@ -86,6 +102,51 @@ lifetime parameters.
 
 Future `own` work has a complete prototype when deciding which callable surface
 is promoted and should use the same exact-signature discipline.
+
+## Callable precondition and postcondition pressure
+
+Current result initializers can guarantee pointer presence by allocating before
+body entry:
+
+```zax
+makeFoo final : (
+  result : Foo * last = @
+)() = {
+}
+```
+
+Current syntax cannot express an unconstructed owning, raw, or optional result
+that is established later while still promising presence on every normal exit.
+Likewise, a pointer parameter cannot promise non-`Nothing` entry while retaining
+pointer ownership/rebinding semantics; a reference supplies non-`Nothing`
+borrowed access but is a different contract.
+
+Future callable contracts should investigate general preconditions and
+postconditions:
+
+```zax
+// Illustrative only; no syntax is accepted.
+makeFoo final : (
+  result : Foo * unique
+)() ensures ?result = {
+}
+
+useFoo final : ()(
+  foo : Foo *
+) requires ?foo = {
+}
+```
+
+The mechanism should generalize beyond pointers to optional presence, ranges,
+collection size, ownership state, and other value predicates. Future work must
+define:
+
+- what facts the minted body may assume on entry;
+- which normal exits must prove each result condition;
+- how visible compatible prototypes weaken or strengthen contracts;
+- what callers may assume after selection;
+- how opaque proof uses narrow unsafe responsibility;
+- and reflection and diagnostics.
 
 ## Cross-axis comparison
 

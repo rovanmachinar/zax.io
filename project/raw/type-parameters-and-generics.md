@@ -7,7 +7,7 @@
 | Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, and integer-family review |
 | Owns | Preserved type-parameter, generic, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
 | Does Not Own | Accepted generic semantics or current declaration/type behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers and work item `012` optional-depth substitution pressure |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers, work item `012` optional-depth substitution pressure, and work item `015` allocation-policy pressure |
 
 ## Why this input exists
 
@@ -204,6 +204,29 @@ Every selected specialization remains one exact concrete prototype. Only
 demanded specializations need executable code, and implementation deduplication
 must not erase language-level identity.
 
+### Generic processing versus compatible prototypes
+
+[Zax function invocation](../../language/function-invocation.md#minted-implementation-model)
+defines a non-generic callable body as minted once under its implementation
+prototype. A compatible visible prototype reuses that implementation without
+reprocessing its body.
+
+Future generics differ. A generic body may need to be reprocessed for each
+demanded concrete type, qualification, stance, value, or other generic argument:
+
+```text
+generic body + concrete argument set
+-> substitute the concrete contract
+-> check and select body operations
+-> mint one concrete implementation
+```
+
+Each concrete result has its own implementation-prototype facts. Reusing backend
+code for equivalent layouts must not erase those language-level specializations.
+Future work must define which facts are generic inputs, when reprocessing occurs,
+and how diagnostics distinguish the generic source from one minted concrete
+implementation.
+
 Runtime surfaces are different. Future `own`, function-value, and dispatch work
 must select a finite exact set rather than reserve space for every theoretical
 specialization of an open generic family.
@@ -348,6 +371,26 @@ generic source does not spell both `?` layers. Future generic work must preserve
 
 Generic diagnostics must show enough resolved structure to explain why an
 apparently simple initialization needs an explicit packet.
+
+### Allocation-policy constraints
+
+[Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md)
+allows the same pointer type to carry different allocation disposition,
+collection, arena, and control-block history. `T * strong` alone therefore
+cannot prove prompt destruction, prompt recovery, collectability, a particular
+arena capability, or cross-thread release.
+
+Future generic work must define how a declaration constrains:
+
+- object and control-block arena capabilities;
+- prompt, deferred-recovery, or attached-lifespan disposition;
+- collection eligibility;
+- declaration-attached versus open-ended raw allocation;
+- and whether a supplied allocation policy may be propagated to a nested
+  declaration.
+
+Those constraints must remain visible in callable compatibility and
+specialization. They must not infer a guarantee from hidden allocation history.
 
 - a concrete type argument is never a runtime value;
 - a type-receiver operation is not inherently compile-time;

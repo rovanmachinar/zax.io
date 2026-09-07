@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; mandatory layout validation; diagnostic categories; and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -209,6 +209,71 @@ existing valid source.
 
 The rule applies to ordinary symbolic unary operations. Call, index, projection,
 and other grammar-recognized postfix forms retain their own chaining rules.
+
+### Allocation-token attachment
+
+`@`, `@!`, `@<`, and `@!<` are exact longest-match allocation tokens. Their
+ordinary source position is a declaration initializer:
+
+```zax
+owner : MyValue * unique = @
+maybeManual : MyValue * = @!<
+```
+
+Any typed pointer destination may also use direct allocation assignment:
+
+```zax
+scheduled : MyValue * = @
+reset scheduled
+scheduled = @{ anotherArena }
+
+ordinary : MyValue *
+ordinary = @
+```
+
+Semantic analysis uses the destination's pointer role and scheduled/open
+contract. An undeclared or otherwise untyped `existing = @` remains invalid.
+
+An allocation-policy enclosure attaches directly to the token:
+
+```zax
+owner : MyValue * unique = @{ myArena }
+spaced : MyValue * unique = @ { myArena } // error
+```
+
+The enclosure permits at most one positional object arena; remaining inputs are
+named. Empty compact or spaced enclosures, two positional arenas, and duplicate
+named slots are non-acknowledgeable intent errors:
+
+```zax
+first : MyValue * unique = @{}  // error: use @
+second : MyValue * unique = @{ } // error: use @
+third : MyValue * strong =
+  @{ myObjectArena, myControlArena } // error: name controlArena
+```
+
+Ordinary enclosure layout applies inside a nonempty policy enclosure. A
+following construction packet is separate and therefore has whitespace before
+it:
+
+```zax
+owner : MyValue * strong =
+  @{ myArena } [{ endpoint }]
+```
+
+A trailing ordinary expression instead supplies an existing allocation for
+adoption or missing-metadata allocation:
+
+```zax
+prepared : MyValue * unique shareable =
+  @ originalValue as last
+```
+
+The construction-packet and trailing-source shapes are distinct; source does not
+reinterpret one as the other.
+
+Complete allocation semantics and policy inputs are defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure).
 
 ### Optional layers and empty construction packets
 
@@ -1421,6 +1486,12 @@ Intent diagnostics distinguish:
 - a **confusable-form intent error**, where a coherent recognized form is gated
   because its natural spelling strongly resembles a damaged neighboring form and
   ordinary whitespace/grouping cannot preserve the intended source.
+
+An **acknowledgement-required intent error** has one defined but suspicious
+interpretation and may use an applicable `intent<category>{...}` enclosure. A
+**non-acknowledgeable intent error** recognizes a malformed or forbidden near
+miss only to provide a precise diagnostic; it has no accepted interpretation and
+must be rewritten. An intent enclosure cannot make the latter valid.
 
 A keyword-role conflict is a related lexical interpretation question rather than
 permission to ignore grammar. These terms are defined by

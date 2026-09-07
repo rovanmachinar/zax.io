@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement and protected reset; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -49,6 +49,7 @@ Zax recognizes:
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
 | Delimited/multi-part | Call, index, and [mixfix](mixfix-operators.md) forms |
+| Allocation initializer | `@`, `@!`, `@<`, `@!<`, with optional attached `@{...}` policy |
 
 A type may overload a recognized form where its operand domain remains open.
 Declarations cannot invent arbitrary punctuation or assign another precedence.
@@ -420,7 +421,7 @@ result := source as move as copy
 This is legal but normally pointless: no consumer observes the intermediate
 `move`, so `as copy` replaces it without any transfer occurring.
 
-## Optional forms
+## Optional and pointer lifecycle forms
 
 These exact forms are protected for optional operands:
 
@@ -428,13 +429,14 @@ These exact forms are protected for optional operands:
 | --- | --- | --- |
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
-| `reset value` | Pre-unary phrase at ordinary phrase level | Leave the same wrapper absent and return its reference |
+| `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional absent, or release a pointer relationship and leave the pointer at `Nothing` |
 | `last value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type, offer `last`, and schedule optional payload cleanup at consumer completion |
 | `move value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type and offer `move` without scheduling wrapper absence |
 
 Protected optional forms are distinct from generic post-unary stance
 restatement. Complete optional behavior and source consequences are defined by
-[Zax optional values](optional-values.md).
+[Zax optional values](optional-values.md). Pointer `reset` is defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
 
 `T? ?` is two optional type layers and requires the separating space. Compact
 `T??` contains the conditional-expression token. `[{}]` is the canonical
@@ -581,6 +583,57 @@ replaces the complete wrapper lifetime, while `T? = [{...}]` is a distinct
 packet-construction boundary; see
 [Zax optional values](optional-values.md#construction-wrapper-replacement-and-boxed-assignment).
 
+## Allocation initializers
+
+`@`, `@!`, `@<`, and `@!<` are exact reserved declaration-bound allocation
+tokens:
+
+| Form | Request failure | Raw destination behavior |
+| --- | --- | --- |
+| `@` | Panic | Declaration-attached disposition |
+| `@!` | Produce `Nothing` | Declaration-attached disposition on success |
+| `@<` | Panic | Open-ended |
+| `@!<` | Produce `Nothing` | Open-ended on success |
+
+They are not ordinary open unary operators and require either a declaration
+initializer or an existing typed pointer destination:
+
+```zax
+owner : MyValue * unique = @
+ownerInArena : MyValue * unique = @{ myArena }
+
+scheduled : MyValue * = @
+reset scheduled
+scheduled = @{ anotherArena }
+
+ordinary : MyValue *
+ordinary = @
+
+missing = @ // error: no typed destination
+```
+
+An attached `@{...}` enclosure supplies allocation policy. A following
+construction packet remains a separate source component:
+
+```zax
+owner : MyValue * strong =
+  @{ myArena } [{ endpoint }]
+```
+
+A trailing ordinary expression instead supplies an existing allocation whose
+resident instance is preserved:
+
+```zax
+prepared : MyValue * unique shareable =
+  @ originalValue as last
+```
+
+The operation allocates only metadata required by the destination role. A
+construction packet and trailing source are distinct forms.
+
+Complete behavior is defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
+
 ## Call, index, and mixfix
 
 Call and index are recognized postfix delimited forms:
@@ -597,7 +650,8 @@ Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
 
 ## Deferred and unavailable forms
 
-- `@`, `@@`, and `@!` remain allocation evidence.
+- Legacy `@@` parallel-allocation meaning is superseded. Arena capabilities
+  express concurrency requirements.
 - `|>` remains function-chaining evidence.
 - `->` and `<-` remain result-shape transformation evidence.
 - Literal prefixes/quote behavior remain literal work.

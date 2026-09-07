@@ -11,8 +11,10 @@ This page remains legacy input for local and type uses of `#`. The separate
 **deferred-recovery allocation** concept—prompt instance destruction with
 arena-delayed storage recovery—is defined by
 [Zax pointers and arenas](language/pointers-and-arenas.md#allocation-disposition).
-Legacy allocation material used `discard`, but no allocation keyword is
-currently established.
+Legacy allocation material used `discard` for that policy. Current allocation
+instead selects
+`AllocationDisposition.DeferredRecovery` in the attached `@{...}` policy
+enclosure. The legacy allocation meaning of `discard` is superseded.
 
 The current [operator catalog](language/operator-catalog.md#counts-masks-positions-and-reductions)
 also recognizes attached `#`-prefixed count and reduction tokens such as

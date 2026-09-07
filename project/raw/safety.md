@@ -7,7 +7,7 @@
 | Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
 | Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
 | Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, `006`, and `012`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, and general panic-contract pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, and `015`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, and general panic-contract pressure |
 
 Current general behavior has moved to
 [Zax safety and analysis](../../language/safety-and-analysis.md). This file
@@ -113,33 +113,53 @@ visibly take a resource is not itself a violation; `copy`, `move`, and `last`
 implementations may legally preserve more source state than their maximum
 authority permits.
 
+Future callable preconditions and postconditions add proof pressure:
+
+- a precondition may let a minted body assume pointer/optional presence, a
+  numeric range, collection size, ownership state, or another predicate;
+- every normal exit must prove each promised result postcondition;
+- callers may rely on the selected visible prototype's guarantees;
+- compatible visible prototypes must not promise facts the minted
+  implementation cannot establish;
+- opaque but valid proof may require a narrow unsafe assertion at the operation
+  that hides the fact; and
+- a known violation cannot be made valid through intent acknowledgement or
+  unrelated unsafe permission.
+
+Exact contract syntax and the portable minimum proof set remain future work.
+
 ## Panic boundary
 
-Unresolved panic is currently fatal graceful crashing. If a panic resolves and
-execution continues within construction or replacement, ordinary completion
-obligations still apply.
+An unresolved panic is fatal graceful crashing. A matching helper may resolve a
+panic only by repairing the condition while the operation that encountered it
+remains blocked. That same operation then completes as though the failure had not
+occurred. Otherwise the program crashes.
 
-Do not infer general exception-style rollback or recoverable partial-construction
-unwinding. Reopen that design only for a concrete nonfatal panic use case.
+Resolution does not skip the failed operation, supply an unrelated substitute
+result, unwind completed members, roll back construction, continue after
+incomplete destruction, or expose partial lifecycle state to ordinary code.
 
-Required-result fixed-width arithmetic supplies that concrete pressure. Bare
-overflow panics and produces no result. A future handler cannot simply resume the
-failed operator with wrapping unless a resumable-panic contract defines:
+For example, an allocation-failure helper may obtain more backing storage, extend
+the arena, and let the same blocked request succeed. It cannot turn a failed
+`@` allocation into `Nothing`; source selects `@!` when that result is wanted.
 
-- how a replacement expression result is supplied;
-- once-only operand evaluation;
-- nested call and scope transfer;
-- destruction and partially completed mutation;
-- handler failure; and
-- optimization boundaries.
+Required-result fixed-width overflow likewise cannot resume with wrapping or a
+substitute result. Programs select optional, wrapping, saturating, or reporting
+operators when they need another local policy.
 
-Until then, overflow remains fatal graceful crashing. Programs select optional,
-wrapping, saturating, or reporting operators when they need another local policy.
+Future panic work must define helper discovery, eligibility, recursion, helper
+failure, and the exact continuation point while preserving once-only operand
+evaluation and the no-partial-continuation rule.
 
 Future safety work should test a general default-check contract across other
 runtime failure domains. Where a check is required by default, violation panics.
 An explicit unchecked contract may permit omitting the check and make violation
 undefined, provided the cost and responsibility remain visible and reproducible.
+
+Panic categories are independently enabled or disabled rather than controlled
+as one all-or-nothing mode. Allocation has no separate unchecked operator:
+disabling the allocation-failure panic category applies the general promise to
+ordinary `@`, while `@!` must retain its check to produce `Nothing`.
 
 This does not require runtime handles for static lifetime proof. A false unsafe
 optional-presence, reference-lifetime, or alias assertion may have undefined

@@ -7,7 +7,7 @@
 | Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
 | Owns | Preservation of construction-derived categories, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
 | Does Not Own | Current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
-| Source / Provenance | Work items `005`, `006`, `007`, and `012`; construction/lifecycle, invocation/result, core-flow, and optional proof/alias pressure |
+| Source / Provenance | Work items `005`, `006`, `007`, `012`, and `015`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, and panic-category pressure |
 
 ## Reading posture
 
@@ -378,8 +378,14 @@ unchecked contract -> omit the check; violation has undefined consequences
 ```
 
 Candidate domains include bounds, nonzero divisors, explicit panic-on-absence
-operations, and other checks whose runtime condition is well-defined. Each
-domain still owns its safe default and exact failure.
+operations, allocation failure, and other checks whose runtime condition is
+well-defined. Each domain still owns its safe default and exact failure.
+
+Categories are independently selectable rather than one all-or-nothing panic
+mode. For allocation, ordinary `@` checks request failure and enters panic.
+Disabling only that category may omit the check under a success guarantee; an
+actual failure then has undefined consequences. `@!` remains checked because its
+defined result must distinguish success from `Nothing`.
 
 Static proof obligations remain distinct. Optional presence, reference lifetime,
 and alias validity may be impossible or prohibitively expensive to track at

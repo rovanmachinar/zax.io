@@ -17,9 +17,10 @@ Current `copy`/`deep`/`move`/`last` intent and fallback are defined by
 The general life-path, instance-place, and reference model is defined by
 [Zax lifetimes and references](language/lifetimes-and-references.md).
 
-The remainder of this page is legacy input for unreviewed allocation, global,
-`once`, and related behavior. Its examples may use superseded syntax or
-assumptions.
+The remainder of this page is legacy input for global, `once`, and related
+behavior. Its examples may use superseded syntax or assumptions. Current
+declaration-bound allocation is defined by
+[Zax pointers, allocation, and arenas](language/pointers-and-arenas.md#allocate-through-a-declaration).
 
 ### Basic constructors and destructors
 
@@ -445,63 +446,6 @@ MyOtherType :: type {
         containedTypeB.---()
     }
 
-}
-````
-
-
-### Manual allocation and construction
-
-Allocation and construction can be separated.
-
-````zax
-print final : ()(...) = {
-    // ....
-}
-
-generateRandomUuid final : (Uuid uuid)() = {
-    // ...
-}
-
-follow final : ()(...) = {
-    // ...
-}
-
-unfollow final : ()(...) = {
-    // ...
-}
-
-MyType :: type {
-
-    uuid := generateRandomUuid()
-
-    +++ final : ()() = {
-        follow(_, uuid)
-    }
-
-    +++ final : ()(password : String) = {
-        follow(_, uuid, password)
-    }
-
-    --- final : ()() = {
-        unfollow(_, uuid)
-    }
-}
-
-MyOtherType :: type {
-    containedTypeA : MyType own @
-    containedTypeB : MyType @
-
-    +++ final : ()() = {
-
-        // both `containedTypeA` and `containedTypeB` are allocated
-        // as part of the construction process but they either of these
-        // can have their constructor manually called
-
-        containedTypeB.+++("my voice is my passport")
-
-        // only `containedTypeB` will be manually constructed whereas the
-        // `containedTypeA` will be allocated and constructed automatically
-    }
 }
 ````
 

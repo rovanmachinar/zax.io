@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working material / non-normative / audit-only |
 | Work Item | `014` |
 | Created | 2026-09-05 |
+| Completed | 2026-09-06 |
 | Owns | The bounded review defined by the fixed initiating input |
 | Does Not Own | Complete pointer grammar or ownership taxonomy, async suspension/cancellation, cross-thread preparation, complete generics, formal borrow checking, layout/ABI, or compiler implementation |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical project record. Its accepted findings were promoted
+into their current language owners before archival. The record remains
+non-authoritative and audit-only; current language documents own the meaning.
 
 ## Fixed initiating input
 

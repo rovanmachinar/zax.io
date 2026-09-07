@@ -3,7 +3,7 @@
 
 ## Compiler Directives
 
-> **Routing note.** This page remains legacy compiler-directive input. Two of its
+> **Routing note.** This page remains legacy compiler-directive input. Three of its
 > concerns now have live destinations:
 >
 > - **Execution context.** The `execute` directive's `host`, `target`, `dual`,
@@ -21,6 +21,12 @@
 >   not read the `host`/`target` directive vocabulary below as already answering
 >   that question. Current endian behavior is owned by
 >   [Zax endianness](language/endianness.md).
+> - **Panic categories.** Current panic behavior is defined by
+>   [Zax safety and analysis](language/safety-and-analysis.md#panic-boundary).
+>   Individual panic categories may be enabled or disabled, but exact control
+>   syntax remains future
+>   [analysis-control input](project/raw/analysis-controls.md). The `[[panic=...]]`
+>   spellings below remain legacy evidence rather than accepted syntax.
 >
 > Every directive, option, sizing example, and alignment detail on this page is
 > otherwise preserved unchanged as legacy evidence.
@@ -1285,7 +1291,7 @@ A `[[synchronous]]` and `[[asynchronous]]` directive are mutually exclusive and 
 
 ````zax
 MyType :: type {
-    value1 : Integer * @
+    value1 : Integer * = @
 }
 
 func final : ()(myType : MyType) promise [[synchronous]] = {

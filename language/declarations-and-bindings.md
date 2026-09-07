@@ -105,6 +105,76 @@ Initializer and constructor selection are defined by
 The declaration guarantees only that `item` is introduced and initialized
 directly from the supplied source.
 
+Dynamic allocation uses the same direct-initialization boundary:
+
+```zax
+owner : Item * unique = @
+scoped : Item * = @
+```
+
+`@` obtains storage, constructs `Item`, and initializes the pointer declaration.
+It does not first create an empty pointer and assign over it. A pointer
+declaration without an allocation initializer contains `Nothing`:
+
+```zax
+emptyOwner : Item * unique
+emptyView : Item *
+```
+
+An unbound assignment target still cannot supply a destination:
+
+```zax
+existing = @ // error
+```
+
+A previously declared typed pointer does supply one:
+
+```zax
+existing : Item *
+existing = @
+// Legal open-ended raw allocation; existing must be reset manually.
+```
+
+The explicit long form is also legal:
+
+```zax
+existing =
+  (: Item * = @) as last
+```
+
+For raw `@`/`@!` destinations, the declaration's life path schedules allocation
+disposition. `@<`/`@!<` deliberately leaves a successful raw allocation
+open-ended. Complete source, policy, pointer roles, and cleanup behavior are
+defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
+
+Direct allocation assignment uses the existing pointer destination's contract:
+
+```zax
+scheduled : Item * = @
+reset scheduled
+scheduled = @{ anotherArena }
+
+ordinary : Item *
+ordinary = @ // legal, but open-ended and not automatically reset
+```
+
+Input parameters are different. Their initializer syntax declares an omission
+default rather than a cleanup obligation on the parameter slot:
+
+```zax
+useItem final : ()(
+  item : Item * = @
+) = {
+  // item is an ordinary borrowed raw pointer.
+}
+```
+
+When omitted, invocation machinery owns the scheduled allocation temporary
+through call completion. Inside the body, `item = @` is ordinary raw allocation
+assignment: it creates an open-ended allocation that the callee must manually
+track because the borrowed parameter has no declaration-attached schedule.
+
 An initializer may state its own transfer stance. If it does not, `copy` is
 still present as the default. A destination declaration stance becomes active
 only after construction:

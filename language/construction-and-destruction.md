@@ -86,6 +86,76 @@ are under explicit construction control.
 - Normal completion requires every member not covered by an explicit unsafe
   initialization bypass to contain a valid live value.
 
+A pointer member allocates its pointee only when its declaration explicitly uses
+an allocation initializer:
+
+```zax
+Container :: type {
+  empty : Child * unique
+  allocated : Child * unique = @
+  maybeAllocated : Child * unique = @!
+}
+```
+
+`empty` contains `Nothing`. `allocated` obtains storage and constructs `Child`
+as part of automatic member initialization. `maybeAllocated` contains `Nothing`
+when its storage request fails, and the enclosing construction may still
+complete.
+
+Each member's omitted arena comes from the current thread execution context when
+that member's `@` operation executes. It does not inherit the arena that stores
+the enclosing instance. A constructor that requires a particular child arena
+accepts or otherwise receives it explicitly.
+
+Like a direct `_.member.+++()` call, a direct allocation assignment to the
+current instance places that member under explicit constructor control:
+
+```zax
+MyType :: type {
+  foo : Foo * = @
+  bar : Bar * = @
+
+  +++ final : ()(
+    arena : MyArena &
+  ) = {
+    _.foo = @{ arena }
+
+    if condition
+      _.bar = @{ arena }
+  }
+}
+```
+
+For this selected constructor:
+
+- the presence of direct `_.foo = @...` suppresses `foo`'s automatic pointee
+  allocation before body entry;
+- the pointer member itself is initialized to `Nothing`, with its
+  declaration-attached schedule ready to adopt an allocation;
+- the first reached direct allocation fills that empty slot; and
+- a later reached direct allocation dispositions the current allocation and
+  installs its replacement.
+
+Direct allocation assignment is available for any typed pointer destination.
+The constructor-specific behavior here is only suppression: syntactic
+`_.member = @...` tells the compiler not to perform that member's declared
+automatic pointee allocation before body entry.
+
+Every normal path may leave the pointer member at `Nothing`; the pointer resident
+instance is still fully constructed. However, a declaration written `= @`
+strongly signals automatic allocation. A selected constructor that may suppress
+that allocation on a normal path requires:
+
+```zax
+intent<conditionally-unallocated-member>{
+  if condition
+    _.bar = @{ arena }
+}
+```
+
+The acknowledgement confirms that `bar` may remain `Nothing`. It does not permit
+an indeterminate pointer representation.
+
 ```zax
 MyType :: type {
   t : T
@@ -348,6 +418,12 @@ constructor prototype's parameter order.
 
 After every input is ready, member construction follows the selected constructor
 plan. Packet order does not reorder members.
+
+For a dynamically allocated destination, all required object and detached
+control-block storage is obtained before this packet evaluation begins.
+`@!` therefore returns `Nothing` without evaluating packet entries when a
+storage request fails. Complete allocation ordering is defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-order-and-failure).
 
 - A copied input captures the source value when that entry is evaluated.
 - A reference input binds at evaluation but observes later changes to its
@@ -1292,22 +1368,26 @@ known-ended lifetime valid again.
 
 ## Panic and allocation boundaries
 
-Unresolved panic is fatal graceful crashing. A panic may resolve or be
-intentionally suppressed through its eventual mechanism; otherwise the process
-ends.
+An unresolved panic is fatal graceful crashing. A narrowly applicable panic
+helper may repair the condition while the operation that encountered it remains
+blocked. That same operation then completes as though the failure had not
+occurred. Otherwise the process ends.
 
-If execution continues inside construction or replacement after a resolved
-panic, normal completion obligations still apply. Zax does not currently
-require exception-style rollback to the old value or recoverable
-partial-construction unwinding.
+A panic does not skip the failed operation, supply a substitute value, unwind
+completed members, or let ordinary execution continue with partial construction,
+replacement, or destruction state.
 
 Automatic allocation occurs before construction of the allocated value.
-The selected allocation operator decides how exhaustion appears:
+The selected allocation initializer decides how exhaustion appears:
 
-- a panicking form prevents normal construction completion and panics;
-- a non-panicking form constructs a pointer member containing `Nothing`, so the
+- `@` prevents normal construction completion and enters panic;
+- `@!` constructs a pointer member containing `Nothing`, so the
   enclosing instance may still complete; or
-- an unchecked form makes a false success guarantee undefined.
+- a future disabled allocation-failure panic category may omit the `@` check
+  under a programmer guarantee, with undefined behavior if failure occurs.
+
+The last case is a general category-specific panic control, not an unchecked
+allocation form. Other enabled panic categories remain active.
 
 Complete behavior is defined by
 [pointers and arenas](pointers-and-arenas.md#allocation-failure).

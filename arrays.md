@@ -255,59 +255,14 @@ myType1 : MyType[3] = [ 1, 2, 3 ]
 
 ### Dynamic array allocation
 
-Arrays can be dynamically allocated and discarded as needed. Arrays cannot be resized but they can be replaced. Dynamically allocated arrays are pointers and default to a `unique` pointer type.
+Legacy source proposed dynamic array allocation, reset, and inferred allocated
+copy forms. Those examples used superseded type-side `@` and `#` syntax and have
+been moved to [raw indexing and slicing input](project/raw/indexing-and-slicing.md)
+until array construction, dynamic length, and element-lifetime behavior are
+reviewed.
 
-Single dimensional:
-
-````zax
-// declare the length of an array
-length := 55
-
-// allocate the array of that length dynamically
-myArray : Integer[length] @
-
-// reset the array to its default state (pointing to nothing)
-myArray = #
-
-// ERROR: dynamically sized arrays require dynamic allocation
-anotherArray : Integer[length]
-````
-
-Multi-dimensional:
-
-````zax
-// declare the length of an array dimensions
-lengthInner := 55
-lengthOuter := 2
-
-// allocate the array of the dimension lengths dynamically
-myArray : Integer[lengthOuter][lengthInner] @
-
-// reset the array to its default state (pointing to nothing)
-myArray = #
-
-// ERROR: dynamically sized arrays require dynamic allocation
-anotherArray : Integer[lengthOuter][lengthInner]
-````
-
-
-### Dynamic array copy
-
-````zax
-// declare the length of an array
-size := 55
-
-// allocate the array of the length dynamically
-myArray : Integer[size] @
-
-// construct an array of a dynamic length and initialize the contents of the
-// array
-myArrayCopy : Integer[myArray.length] @ = myArray
-
-// shorten to the allocation to the following (where its `type` and length are
-// implied)
-myOtherArrayCopy : @ = myArray
-````
+Current scalar allocation syntax does not decide how a dynamic array states its
+element count or whether an array pointer defaults to `unique`.
 
 
 ### Slicing arrays

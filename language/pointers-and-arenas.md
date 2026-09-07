@@ -1,14 +1,14 @@
-# Zax pointers and arenas
+# Zax pointers, allocation, and arenas
 
 | Field | Value |
 | --- | --- |
 | Status | Current conceptual design |
-| Audience | Human developers choosing dynamic-storage, ownership, sharing, and pointer-lifetime behavior |
-| Applies To | Programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, and cross-thread lifetime accounting; not a formal grammar or ABI |
+| Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
+| Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | Raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; destruction/recovery/cycle-probing choices; control-block obligations; pointer presence and weak acquisition; pointer ownership transitions; pointer-facing costs and diagnostics |
-| Does Not Own | Non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; or exact allocation, arena, control-block, and pointer-cast syntax |
-| Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, and `Nothing` evidence reconciled with current transfer and lifetime design |
+| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset`; pointer presence and ownership transitions; allocation/pointer costs and diagnostics |
+| Does Not Own | General declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; arena API/registration; or pointer-cast syntax |
+| Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
 
 ## Choose ownership separately from allocation
@@ -37,6 +37,326 @@ The allocation separately determines:
 Separating these axes prevents one pointer family for every combination of
 ownership, allocator, destruction timing, and thread behavior.
 
+## Allocate through a declaration
+
+Every direct source allocation is a declaration initializer. The declaration
+supplies the resident type and resulting pointer role:
+
+```zax
+owner : MyValue * unique = @
+shared : MyValue * strong = @
+scoped : MyValue * = @
+```
+
+`@` requests storage from an arena, constructs one `MyValue`, establishes the
+destination pointer's ownership or cleanup relationship, and then publishes the
+pointer. Allocation obtains storage; ordinary construction still establishes
+the resident instance in that storage.
+
+A pointer declaration without `@` does not allocate:
+
+```zax
+empty : MyValue * unique
+view : MyValue *
+anotherView : MyValue * = view
+```
+
+`empty` and `view` contain `Nothing`. `anotherView` copies the raw address-like
+value from `view`.
+
+Allocation cannot appear as an independent expression. Assignment requires an
+already typed pointer destination:
+
+```zax
+ordinary : MyValue *
+ordinary = @ // legal open-ended raw allocation
+
+missing = @ // error: no typed destination
+```
+
+A declaration expression can instead supply a destination inside a larger
+expression:
+
+```zax
+ordinary =
+  (: MyValue * = @) as last
+```
+
+The explicit `last` transfers the temporary declaration's ownership or scheduled
+disposition instead of copying only a pointer value.
+
+### Direct allocation assignment
+
+Any typed pointer destination supplies enough pointee and pointer-role context
+for direct allocation assignment:
+
+```zax
+scheduled : MyValue * = @
+reset scheduled
+scheduled = @{ anotherArena }
+
+ordinary : MyValue *
+ordinary = @
+```
+
+The destination contract determines the result:
+
+| Destination | Direct allocation behavior |
+| --- | --- |
+| Scheduled raw | Reset the old allocation and install a scheduled replacement |
+| Open-ended raw | Do not reset; install another open-ended allocation |
+| Ordinary undecorated raw | Do not reset or create a schedule; result is open-ended |
+| `unique`, `unique shareable`, or `strong` | Release old ownership and install the new managed allocation |
+
+`ordinary = @` is the direct counterpart of allocating through a typed
+declaration expression and terminally mapping into an undecorated raw
+destination. It is legal, but the resulting allocation must be manually tracked
+and reset.
+
+For an open-ended destination, allocation assignment never performs an implicit
+reset:
+
+```zax
+open : MyValue * = @<
+open = @<{ anotherArena }
+// error when the prior open allocation is still live
+```
+
+This is safe when analysis proves `open` is already `Nothing` or its previous
+allocation was dispositioned. Overwriting a proved live open allocation is a
+non-acknowledgeable lifecycle error. When opaque code prevents proof of prior
+disposition, narrow unsafe responsibility—not intent acknowledgement—must supply
+the missing fact.
+
+The ordinary repair is explicit:
+
+```zax
+reset open
+open = @<{ anotherArena }
+```
+
+The replacement token must preserve the declaration's scheduled/open contract.
+Using `@<` to refill a scheduled slot or plain `@` to refill an open-ended slot
+is a non-acknowledgeable conflict.
+
+### Constructor inputs
+
+The existing construction packet follows the allocation form:
+
+```zax
+owner : MyValue * unique =
+  @ [{
+    endpoint
+  }]
+```
+
+The packet retains its ordinary constructor meaning. Allocation policy does not
+share that packet's namespace.
+
+Allocation first obtains all required object and control-block storage. Only
+then do packet entries evaluate from left to right and ordinary construction
+begin. A storage failure therefore does not evaluate constructor inputs or run
+the constructor.
+
+### Allocation forms
+
+The exact reserved forms are:
+
+| Form | Storage-request failure | Raw result |
+| --- | --- | --- |
+| `@` | Panic | Destination declaration schedules disposition |
+| `@!` | Return `Nothing` | Destination declaration schedules disposition after success |
+| `@<` | Panic | Open-ended; no automatic disposition owner |
+| `@!<` | Return `Nothing` | Open-ended after success |
+
+These are indivisible tokens, not compositions of independently invoked `@`,
+`!`, and `<` operators. `@!` reports request failure through the pointer's
+ordinary `Nothing` state; plain `@` still checks failure and panics.
+
+`@<` and `@!<` apply to raw pointer destinations. They do not make sense for
+`unique` or shared destinations whose pointer role already owns disposition.
+Such a combination is a non-acknowledgeable intent error:
+
+```zax
+invalid : MyValue * unique = @<
+// error: unique ownership and open-ended disposition conflict
+```
+
+There is no separate unchecked allocation form. A future safety control may
+disable the allocation-failure panic category under a promise that the condition
+cannot occur. That general panic control does not change allocation syntax, does
+not affect `@!`, and gives undefined behavior if the promised-impossible failure
+actually occurs.
+
+### Default allocation
+
+The short forms deliberately choose useful defaults:
+
+```zax
+prepared : MyValue * unique shareable = @
+preparedInArena : MyValue * unique shareable = @{ myArena }
+```
+
+| Concern | Default |
+| --- | --- |
+| Object arena | Current thread context's default object arena |
+| Control block for `unique shareable` or `strong` | Inline with the object allocation |
+| Disposition | `AllocationDisposition.Prompt` |
+| Collection | `AllocationCollection.Disabled` |
+| Construction | Zero-input constructor |
+
+The current thread's `___` execution context supplies omitted object and
+detached-control-block arenas. An explicit object arena replaces only that
+selection:
+
+```zax
+owner : MyValue * unique = @{ myArena }
+```
+
+The [execution-context owner](execution-context.md) defines the general `___`
+model. An enclosing allocation's arena does not automatically flow into nested
+allocations.
+
+### Allocation policy enclosure
+
+`@{ ... }` carries arena and allocation-policy inputs. The opening brace attaches
+directly to the allocation token:
+
+```zax
+valid : MyValue * unique = @{ myArena }
+invalid : MyValue * unique = @ { myArena }
+// error: the policy enclosure must attach to @
+```
+
+The enclosure permits at most one positional input, the object arena. Remaining
+inputs are named:
+
+```zax
+owner : MyValue * strong =
+  @{
+    arena: myObjectArena,
+    controlArena: myControlArena,
+    disposition: AllocationDisposition.DeferredRecovery,
+    collection: AllocationCollection.Collectable
+  } [{
+    endpoint
+  }]
+```
+
+Supplying `controlArena:` requests a detached control block. To request a
+detached block from the context's default control-block arena:
+
+```zax
+owner : MyValue * strong =
+  @{ control: ControlBlockPlacement.Detached }
+```
+
+The aligned policy values are:
+
+```text
+AllocationDisposition.Prompt
+AllocationDisposition.DeferredRecovery
+AllocationDisposition.AttachedLifespan
+
+AllocationCollection.Disabled
+AllocationCollection.Collectable
+
+ControlBlockPlacement.Inline
+ControlBlockPlacement.Detached
+```
+
+An empty enclosure has no accepted form; use `@`:
+
+```zax
+first : MyValue * unique = @{}  // error
+second : MyValue * unique = @{ } // error
+```
+
+Two positional arenas and duplicate named inputs are likewise errors:
+
+```zax
+invalid : MyValue * strong =
+  @{ myObjectArena, myControlArena }
+// error: name controlArena
+```
+
+Explicit `Detached` plus `controlArena:` has one defined meaning but redundantly
+states placement. It requires an applicable intent acknowledgement. `Inline`
+plus `controlArena:` is contradictory and cannot be acknowledged into validity.
+
+### Allocation order and failure
+
+The programmer-visible order is:
+
+1. Resolve the resident type, pointer role, policies, and required arena
+   capabilities.
+2. Evaluate written policy inputs once in source order.
+3. Resolve omitted arenas through the current `___`.
+4. Request object storage.
+5. Request detached control-block storage when needed.
+6. After every required request succeeds, evaluate construction-packet entries
+   from left to right.
+7. Run ordinary member construction and the selected constructor.
+8. Establish ownership or declaration-attached disposition.
+9. Publish the complete pointer.
+
+For `@!` and `@!<`, failure of a later storage request releases every earlier
+uncommitted reservation exactly once before producing `Nothing`.
+
+For `@` and `@<`, a failed request enters panic while the operation remains
+blocked. A narrowly applicable helper may repair the condition and allow that
+same request to succeed. Otherwise the program crashes gracefully. Panic does
+not return a substitute result, skip the failed operation, continue with partial
+state, or introduce exception-style unwinding.
+
+`@!` controls allocation-request failure only. It does not translate a
+constructor or nested-operation panic into `Nothing`.
+
+### Adopt an existing allocation
+
+A trailing source expression changes the operation from new-object construction
+to existing-allocation adoption:
+
+```zax
+originalValue : MyValue * unique = @
+
+prepared : MyValue * unique shareable =
+  @ originalValue as last
+```
+
+The existing resident instance is preserved. `@` allocates only metadata required
+by the destination role:
+
+- a proved raw allocation may become blockless `unique` without `@`;
+- raw or blockless `unique` may use `@` to allocate a detached dormant block for
+  `unique shareable`;
+- raw or blockless `unique` may use `@` to allocate and activate a detached block
+  for `strong`; and
+- a source that already satisfies the destination role uses ordinary transfer
+  without redundant `@`.
+
+A construction packet is unavailable in this form because no new resident
+instance is constructed.
+
+A function result may supply the source directly:
+
+```zax
+prepared : MyValue * unique shareable =
+  @ makeScheduledRawValue()
+```
+
+The producer's declared result stance and disposition authority—not its name—
+determine whether adoption is safe.
+
+When the source is runtime `Nothing`, both `@` and `@!` produce a `Nothing`
+destination without requesting metadata or entering panic. Applying this
+operation to a source statically proved `Nothing` is a non-acknowledgeable intent
+error because no work can occur.
+
+For `@!`, metadata-allocation failure leaves the destination at `Nothing`, keeps
+the source's original authority unchanged, and releases partial metadata. `@`
+blocks in panic until the failure is repaired or the program crashes.
+
 ## Pointer instances and pointees
 
 A pointer is an ordinary instance with its own life path. Its value identifies
@@ -46,15 +366,17 @@ The pointer place and pointee place are distinct:
 
 ```zax
 pointer : MyValue * = first
-pointer = second // repoints the pointer; does not replace first
+pointer = second // ordinary unscheduled raw assignment only repoints
 ```
 
 Replacing or destroying a pointer instance affects the pointee only when that
-pointer's ownership contract requires it.
+pointer's ownership contract or declaration-attached allocation requires it.
 
 Pointer-value transfer never implies pointee transfer by itself. A raw pointer
-move moves only an address-like value. A unique-owner move transfers the owned
-life path because `unique` explicitly says it does.
+copy or move ordinarily transfers only an address-like value. A `unique` owner
+transfers its owned life path because `unique` explicitly says it does. A
+scheduled raw declaration may transfer its separate disposition responsibility
+through an accepted `last` operation.
 
 ## Pointer ownership roles
 
@@ -96,6 +418,168 @@ pointer may leave no authority able to end the path.
 by itself prove a live pointee, valid provenance, alignment, or permitted
 access. When origin and lifetime analysis already proves those facts, the
 presence test may complete the safe proof.
+
+#### Scheduled raw allocations
+
+For a raw destination, `@` or `@!` attaches successful allocation disposition to
+the destination declaration's life path:
+
+```zax
+scoped : MyValue * = @
+maybeScoped : MyValue * = @!
+```
+
+The pointer remains raw. The declaration independently schedules disposition
+when its path ends or when the slot replaces the allocation:
+
+```zax
+alias : MyValue * = scoped
+```
+
+`alias` copies only the address. It does not copy the schedule and cannot safely
+outlive the allocation path owned by `scoped`.
+
+Assignment to the scheduled slot dispositions its old allocation and then adopts
+the new source's disposition authority:
+
+```zax
+scoped = uniqueOwner as last
+scoped = otherScheduledRaw as last
+```
+
+The source becomes `Nothing`. Its own scheduled cleanup remains in place but
+later observes `Nothing` and performs no disposition.
+
+An ordinary borrowed raw source is adoptable only when analysis proves that it
+identifies an allocation root and carries the sole disposition authority.
+Otherwise the adoption requires narrow unsafe responsibility. A known interior,
+ended, or independently owned target is rejected.
+
+Assigning `Nothing` dispositions a scheduled slot's current allocation before
+emptying it:
+
+```zax
+scoped = (: MyValue *)
+```
+
+#### Open-ended raw allocations
+
+`@<` and `@!<` deliberately create no declaration-attached cleanup owner:
+
+```zax
+manual : MyValue * = @<
+maybeManual : MyValue * = @!<
+```
+
+They are safe only when analysis proves another lifetime/disposition owner or a
+complete manual protocol. Otherwise creation or escape requires narrow unsafe
+responsibility.
+
+Assigning `Nothing` to an open-ended raw pointer discards only the address:
+
+```zax
+manual = (: MyValue *)
+```
+
+It does not disposition the allocation.
+
+#### Returning a scheduled raw allocation
+
+A callable that allocates a raw result should declare terminal transfer in its
+prototype:
+
+```zax
+makeValue final : (
+  result : MyValue * last = @
+)() = {
+  // result is allocated and scheduled before body entry.
+}
+```
+
+`= @` makes the allocation and schedule part of the visible result contract.
+`last` transfers that responsibility to the caller destination:
+
+```zax
+value : MyValue * = makeValue()
+```
+
+The producer result pointer becomes `Nothing`; its scheduled cleanup remains but
+is a no-op. If the result is discarded, its own slot retains responsibility and
+dispositions the allocation.
+
+`@!` produces the same contract with a possible `Nothing` result:
+
+```zax
+tryMakeValue final : (
+  result : MyValue * last = @!
+)() = {
+}
+```
+
+An omitted stance defaults to `copy` and requires
+`intent<implicit-stance-at-terminal-use>` acknowledgement because `last` would
+normally transfer the schedule. Explicit `copy` is legal and deliberately
+exposes a borrowed result: callers may use it only within the producer result
+slot's lifetime unless they restate `last` or prove another owner.
+
+Explicit raw `move` likewise does not transfer declaration-attached disposition
+and remains subject to the borrowed lifetime boundary. `deep` is available only
+when an exact deep-capable consumer exists; it never implies built-in pointee
+cloning.
+
+For results, `@` and `@<` promise presence on every normal exit; `@!` and `@!<`
+permit `Nothing`. A compatible visible prototype may change scheduled versus
+open-ended outward cleanup without reminting the implementation body, but it
+cannot change definite versus maybe-present guarantees.
+
+Complete result construction and mapping are defined by
+[Zax function invocation](function-invocation.md#opt-in-result-initialization).
+
+#### Allocation roots and records
+
+An **allocation root** is the top-level life path and typed instance place
+created directly by one dynamic allocation operation. Its allocation record
+governs the complete allocated storage and final disposition.
+
+```zax
+container : Container * unique = @
+member : Item * = pointerTo(container.items[0])
+```
+
+`container` targets the allocation root. `member` may target bytes and a live
+place inside that allocation, but the element is not an independently
+dispositionable allocation root.
+
+The distinction determines:
+
+- which complete destructor runs;
+- which object arena receives storage recovery;
+- which allocation record applies;
+- whether a pointer may become `unique`;
+- whether raw `reset` may disposition the allocation; and
+- what an anchored pointer keeps alive.
+
+An array's complete allocated array place is its root, not any individual
+element. The allocation root is a language-level place and path, not a promise
+that its address is the first physical byte.
+
+Every dynamic allocation retains or can recover an allocation record containing:
+
+- its allocation root;
+- object arena;
+- destructor;
+- size and alignment;
+- disposition;
+- and any link to additional metadata.
+
+The record may be represented before the resident storage, through arena
+metadata, or another implementation-defined mechanism. Its physical layout is
+not a language or ABI promise.
+
+An allocation record is not an ownership control block. Raw and blockless
+`unique` allocations have the former without the latter. Ownership control
+blocks add dormant shareability, strong and weak accounting, local or atomic
+mode, termination state, and collection metadata.
 
 ### Unique ownership
 
@@ -143,8 +627,25 @@ Ownership is still unique while this form is active:
 - `atomic` therefore has no separate unique form.
 
 A blockless unique owner must explicitly allocate a control block before it can
-become shareable. That operation may select a control-block arena and may fail
-because allocation fails. Exact source syntax remains future allocation work.
+become shareable:
+
+```zax
+originalValue : MyValue * unique = @
+
+prepared : MyValue * unique shareable =
+  @!{
+    controlArena: myControlArena
+  } originalValue as last
+```
+
+Because the existing object has no reserved inline block, this operation
+allocates a detached block. `@` blocks in panic on allocation failure;
+`@!` returns an empty `prepared` pointer.
+
+The operation is transactional. On success, `owner` becomes `Nothing` and
+`prepared` owns the same resident instance through a dormant control block. On
+`@!` failure, `prepared` is `Nothing`, `owner` remains an unchanged usable
+unique owner, and any partial block reservation is released.
 
 The legacy pointer qualifier `own` is superseded by `unique shareable`. Any
 future non-pointer use of `own` for composition is a separate concept and does
@@ -240,6 +741,61 @@ The operation:
 The presence test and strong increment are one indivisible ownership operation
 for an atomic weak pointer.
 
+## Resetting a pointer
+
+Protected pre-unary `reset` ends the relationship for which a pointer or its
+declaration has authority, then leaves the pointer containing `Nothing`:
+
+```zax
+reset pointer
+```
+
+| Pointer | Effect |
+| --- | --- |
+| Scheduled raw | Apply the allocation's recorded disposition |
+| Open-ended raw | Explicitly disposition the allocation; requires allocation-root and authority proof |
+| Borrowed raw | Unavailable unless analysis proves complete disposition authority |
+| `unique` | Release unique ownership |
+| `unique shareable` | Release unique ownership and its dormant block |
+| `strong` | Release this strong participation; destroy only when ownership closes |
+| `weak` | Release this weak observation and any final retained block |
+| Already `Nothing` | No-op |
+
+An anchored strong or weak pointer follows its shared ownership role: reset
+releases participation in the enclosing allocation's control block and leaves
+the anchored pointer at `Nothing`. It does not destroy the targeted member as an
+independent allocation.
+
+For raw pointers, safe reset requires proof that the pointer identifies the
+allocation root and that no competing authority will disposition it. An opaque
+but potentially valid relationship may use narrow unsafe responsibility. A
+proved interior pointer, ended allocation, stack/global place, or competing
+owner is known-invalid.
+
+Reset applies the disposition recorded at allocation:
+
+- `Prompt` destroys and recovers promptly;
+- `DeferredRecovery` destroys promptly while the arena retains storage; and
+- `AttachedLifespan` closes the pointer's local responsibility while destruction
+  and recovery remain attached to arena teardown.
+
+Resetting `Nothing` is a harmless no-op because this protected operation examines
+the pointer state rather than invoking a member through its pointee.
+
+Assignment to `Nothing` remains ordinary destination behavior. It releases a
+scheduled or managed destination's current relationship, but for an open-ended
+raw pointer it discards only the address:
+
+```zax
+manual : MyValue * = @<
+manual = (: MyValue *) // does not disposition the allocation
+```
+
+Resetting the same pointer again is harmless after the first reset leaves
+`Nothing`. A disposition attempt through a stale alias is rejected when analysis
+proves that the allocation already ended; an unproved alias relationship
+requires narrow unsafe responsibility.
+
 ## Pointer-layer `atomic`
 
 ```zax
@@ -269,6 +825,41 @@ between local and atomic shared families requires exclusive ownership through
 
 The destination pointer type and ordinary `copy`, `move`, or `last` stance state
 the intended transition.
+
+### Scheduled raw and managed ownership
+
+`last` may transfer declaration-attached raw disposition into managed ownership:
+
+```zax
+scheduled : MyValue * = @
+owner : MyValue * unique = scheduled as last
+```
+
+On success, `scheduled` becomes `Nothing`; its cleanup remains scheduled but
+later performs no disposition. `owner` becomes the allocation's unique owner.
+
+A scheduled raw destination may likewise adopt `unique` ownership or another
+scheduled raw allocation:
+
+```zax
+scheduled = uniqueOwner as last
+scheduled = otherScheduled as last
+```
+
+The destination first dispositions its old allocation, then adopts the new
+allocation. The accepted source becomes `Nothing`.
+
+Transferring either authority into an ordinary unscheduled raw destination makes
+the allocation open-ended:
+
+```zax
+raw : MyValue * = uniqueOwner as last
+// requires another proved disposition owner or narrow unsafe responsibility
+```
+
+An ordinary borrowed raw source can enter a scheduled or managed destination
+only when analysis proves its allocation root, provenance, and sole disposition
+authority. A known-invalid adoption is rejected.
 
 ### Shareable unique to shared
 
@@ -426,6 +1017,12 @@ An arena supplies storage for dynamic life paths. The process heap is one arena;
 custom arenas may choose locality, reuse, bulk recovery, and concurrency
 capabilities.
 
+An allocation with no explicit object arena uses the current thread execution
+context's default object arena. A requested detached block with no explicit
+control-block arena uses that context's default control-block arena. Each
+allocation reads the applicable context when its own `@` operation executes; an
+outer allocation's arena does not flow implicitly into contained allocations.
+
 An arena does not by itself keep every allocated instance alive. Owning pointers
 and the allocation disposition determine when ownership closes and when
 destruction occurs.
@@ -461,26 +1058,27 @@ representation is not a language promise.
 
 ## Allocation disposition
 
-Allocation chooses three related policies.
+Allocation independently chooses one disposition and whether the allocation may
+participate in cycle collection.
 
-### Destruction timing
+### Disposition
 
-- **Prompt:** destroy the resident instance when ordinary ownership closes.
-- **Attached lifespan:** retain the resident instance until arena teardown.
+| Value | Destruction | Storage recovery |
+| --- | --- | --- |
+| `AllocationDisposition.Prompt` | When ordinary ownership or scheduled disposition closes | Prompt |
+| `AllocationDisposition.DeferredRecovery` | Prompt | Arena teardown/reset |
+| `AllocationDisposition.AttachedLifespan` | Arena teardown | Arena teardown/reset |
 
-### Storage recovery
-
-- **Prompt recovery:** return the block to the arena for reuse after
-  destruction.
-- **Arena recovery:** retain the block until arena teardown or reset.
-
-Delayed destruction requires delayed recovery.
+These are the complete valid combinations. Attached destruction cannot use
+prompt storage recovery because storage cannot be recovered while its resident
+instance remains live.
 
 ### Cycle probing
 
-Shared allocations may opt into explicit detection of unreachable
-strong-reference cycles. Eviction closes ownership and applies the allocation's
-selected destruction and recovery behavior.
+Shared allocations may select `AllocationCollection.Collectable` to opt into
+explicit detection of unreachable strong-reference cycles. Omission selects
+`AllocationCollection.Disabled`. Eviction closes ownership and applies each
+allocation's selected disposition.
 
 Cycle probing augments reference counting. Acyclic zero-owner allocations still
 follow their ordinary prompt or attached policy.
@@ -495,9 +1093,18 @@ The control block alone cannot discover outgoing strong edges. The compiler
 must also provide generated traversal or equivalent type metadata.
 
 Memory pressure is a program-visible event rather than a mandatory automatic
-collection pause. An arena or platform library may report pressure; the
-programmer decides if and when to invoke cycle traversal. Ignoring the signal
-leaves later allocation to its ordinary failure contract.
+collection pause. An arena or platform library may report global pressure; the
+programmer decides if and when to invoke one process-wide cycle traversal.
+Ignoring the signal leaves later allocation to its ordinary failure contract.
+
+The collection graph is process-wide rather than partitioned by object or
+control-block arena. A cycle may span several arenas. Exact root discovery,
+cross-thread coordination, traversal, eviction ordering, and trigger spelling
+remain future collector work.
+
+`unique` does not participate because no strong ownership graph exists. A
+`unique shareable` allocation may select `Collectable`; its eligibility and
+metadata remain dormant until it enters `strong` or `strong atomic` ownership.
 
 ### Common combinations
 
@@ -511,40 +1118,39 @@ leaves later allocation to its ordinary failure contract.
 | Collected attached | Attached policy after closure or eviction | Arena teardown/reset | Enabled |
 
 **Deferred-recovery allocation** is the accepted concept. Legacy material used
-`discard`, but no allocation keyword is established. A unique or strong
-allocation may both select prompt destruction with arena-delayed recovery.
-
-Exact allocation syntax remains future arena work.
+`discard`, which is superseded. A unique or strong allocation may both select
+prompt destruction with arena-delayed recovery.
 
 ## Allocation failure
 
-The underlying arena request may fail and produce no allocation. The selected
-allocation operator determines how source observes that failure.
+The underlying arena request may fail and produce no allocation. `@` and `@!`
+determine how source observes that failure.
 
 ### Panicking allocation
 
-A panicking allocation either returns a non-`Nothing` pointer or panics. This is
+A `@` allocation either returns a non-`Nothing` pointer or enters panic. This is
 the ordinary default for automatic allocation performed while constructing a
 stack, global, or containing resident instance. Failure prevents normal
 construction completion.
 
+The operation remains blocked at the failure condition. A narrowly applicable
+panic helper may repair that condition and allow the same request to succeed as
+though it had not failed. Otherwise the program crashes gracefully. It does not
+continue with partial allocation or construction state.
+
 ### Non-panicking allocation
 
-A non-panicking allocation produces a pointer to `Nothing` when the arena cannot
+A `@!` allocation produces a pointer to `Nothing` when the arena cannot
 satisfy the request. Automatic pointer members may therefore remain `Nothing`
 while the containing instance completes successfully.
 
 This permits deliberately small or exhaustible arenas.
 
-### Unchecked allocation
-
-An unchecked allocation contract may omit the failure check when the programmer
-asserts that the request must succeed. If that assertion is false, the
-consequences are undefined.
-
-This is unsafe responsibility, not intent acknowledgement. The shape parallels
-checked, alternative-result, and unchecked arithmetic; exact allocation
-operators remain future syntax.
+There is no independent unchecked allocation mode. A future general safety
+control may disable the allocation-failure panic category while leaving other
+panic categories enabled. That promise may permit omission of the corresponding
+check and gives undefined behavior if failure actually occurs. It does not
+change `@!`, whose defined result requires detecting failure.
 
 ## Language-managed arena behavior
 
@@ -575,7 +1181,8 @@ machinery applies Zax lifecycle semantics over them.
 Arena destruction:
 
 1. closes the arena to new allocations;
-2. performs required collector disposition;
+2. coordinates any required process-wide collector disposition for dependencies
+   involving the arena;
 3. destroys attached-lifespan instances in the arena's defined order;
 4. verifies that no external owner, weak inline block, or other dependency would
    outlive the arena;
@@ -621,7 +1228,9 @@ boundary requires narrow unsafe responsibility.
 
 | Form or policy | Typical cost |
 | --- | --- |
-| Raw | Address-sized pointer and no ownership work; static proof or unsafe responsibility |
+| Borrowed raw | Address-sized pointer and no ownership work; static proof or unsafe responsibility |
+| Scheduled raw | Address-sized pointer plus declaration-attached disposition tracking and allocation-record access |
+| Open-ended raw | Address-sized pointer; programmer/proved manual disposition responsibility |
 | `unique` | Exclusive ownership and final disposition; no control block |
 | `unique shareable` | Reserved inline or detached control block |
 | `strong` / `weak` | Local count updates, control-block storage, possible weak-retained block |
@@ -654,8 +1263,19 @@ Representative diagnostics include:
 - raw pointer has no proved live pointee, provenance, alignment, or access
   permission;
 - raw pointer escaped the container or life path that established its proof;
+- open-ended raw allocation lost its last usable address;
+- raw reset target is not a proved allocation root;
+- raw allocation was dispositioned through a stale alias;
+- scheduled raw adoption lacks sole disposition authority;
+- scheduled raw result used `copy` where its cleanup must transfer;
 - panicking allocation could not satisfy its request;
-- unchecked allocation guarantee was false;
+- disabled allocation-failure panic occurred despite its promised-impossible
+  contract;
+- allocation policy enclosure is empty, has two positional arenas, or duplicates
+  one named slot;
+- detached placement redundantly accompanies `controlArena:` without an intent
+  acknowledgement;
+- inline placement contradicts `controlArena:`;
 - arena operation or teardown occurred on an incompatible thread;
 - allocation disposition does not provide prompt destruction; and
 - arena storage cannot be recovered while a resident instance remains live.
@@ -668,6 +1288,9 @@ Diagnostics should distinguish:
 - object arena;
 - control-block arena;
 - allocation disposition;
+- collection eligibility;
+- contextual, defaulted, or explicit policy origin;
+- declaration-attached or open-ended raw state;
 - pointer-layer atomicity; and
 - pointee thread safety.
 
@@ -687,6 +1310,11 @@ Allocation disposition may remain metadata rather than a pointer qualifier, but
 the allocation site and APIs must expose behavior that changes destruction,
 recovery, collection, or thread-affinity guarantees.
 
+Adding, removing, or changing an allocation token, policy input, default, or
+intent requirement is a source-compatibility event. Source reflection and
+tooling must preserve whether each effective choice was explicit, supplied by
+the current context, implied by the destination pointer role, or defaulted.
+
 ## Boundaries and maturity
 
 This document is current conceptual design, not a pointer ABI or arena interface
@@ -694,14 +1322,16 @@ specification.
 
 Still deferred:
 
-- exact allocation and control-block construction syntax;
 - custom arena and control-block interfaces;
+- custom control-block implementations;
 - deeper or unsafe ownership anchoring;
 - pointer representation and tagging;
 - complete casts, arithmetic, and provenance;
 - pointer-to-`Nothing` dereference behavior;
-- cycle-root discovery;
+- exact process-wide collection trigger spelling, cycle-root discovery,
+  traversal, and concurrent coordination;
 - prompt-disposition generic constraints;
+- exact category-specific panic-control syntax;
 - thread-affinity syntax;
 - atomic pointer-value containers; and
 - async cancellation and executor behavior.

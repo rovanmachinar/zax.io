@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; compatible prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -586,6 +586,55 @@ The default expression evaluates once for each actual omission. A captured
 environment or retained state needed by that delayed expression is a cost of the
 visible contract.
 
+A raw pointer parameter may allocate its omission default:
+
+```zax
+useValue final : ()(
+  value : MyValue * = @
+) = {
+  // value is borrowed raw; the body owns no cleanup obligation.
+}
+```
+
+`= @` is a default expression, not a cleanup contract on the parameter slot.
+When the caller omits `value`, caller-side invocation machinery owns the
+scheduled allocation temporary through call completion and binds its raw address
+to the parameter. When the caller supplies a value, that source retains its
+ordinary ownership or lifetime responsibility.
+
+General default expressions preserve the same boundary:
+
+```zax
+useValue final : ()(
+  value : MyValue * = makeScheduledValue()
+) = {
+}
+```
+
+If the producer returns a scheduled temporary, that temporary remains alive
+through the call and is dispositioned afterward.
+
+A terminally transferred open-ended default can also be adopted into an
+invocation-owned cleanup obligation:
+
+```zax
+makeOpenValue final : (
+  result : MyValue * last = @<
+)() = {
+}
+
+useValue final : ()(
+  value : MyValue * = makeOpenValue()
+) = {
+}
+```
+
+The caller-side boundary retains the allocation through call completion and
+resets it afterward. This is valid only when the result carries allocation-root
+and disposition authority. A global or ordinary borrowed result causes no
+cleanup to be invented. The callee sees a borrowed raw parameter in every case.
+Use a managed pointer parameter when ownership must transfer into the callee.
+
 ## Result slots
 
 A selected prototype declares an ordered result shape:
@@ -747,6 +796,99 @@ make final : (
 After every input and omitted default is complete, opted-in result initializers
 run in result-slot declaration order in the selected callee's visible prototype.
 They may refer to any completed input parameter.
+
+A raw pointer result may allocate and attach disposition to its result slot:
+
+```zax
+makeValue final : (
+  result : MyValue * last = @
+)() = {
+  // result is allocated, constructed, and scheduled before body entry.
+}
+```
+
+`= @` establishes the pre-body allocation and scheduled raw result.
+`last` is the recommended result stance because caller mapping must transfer that
+schedule rather than copy only the raw address:
+
+```zax
+value : MyValue * = makeValue()
+```
+
+The caller declaration adopts the allocation and schedules its disposition. If
+the result is discarded, the result slot retains responsibility and dispositions
+the successful allocation.
+
+Reporting allocation transfers either a successful schedule or `Nothing`:
+
+```zax
+tryMakeValue final : (
+  result : MyValue * last = @!
+)() = {
+}
+```
+
+A scheduled raw result with omitted stance defaults to `copy`, but that default
+is suspicious enough to require acknowledgement:
+
+```zax
+intent<implicit-stance-at-terminal-use>{
+  borrowValue final : (
+    result : MyValue * = @
+  )() = {
+  }
+}
+```
+
+The ordinary repair is `last`. Explicit `copy` is also legal and states a
+deliberate borrowed-result contract:
+
+```zax
+borrowValue final : (
+  result : MyValue * copy = @
+)() = {
+}
+```
+
+An immediate use may remain inside the producer result slot's lifetime. Retaining
+the copied address beyond that schedule requires another proved owner, a
+use-site `as last`, or narrow unsafe responsibility where the relationship may be
+valid but is opaque. A proved-invalid escape remains an error.
+
+Explicit raw `move` likewise does not transfer the declaration-attached schedule;
+it is subject to the same outward lifetime boundary. `deep` is available only
+when an exact deep-capable consumer exists and never implies built-in raw-pointee
+cloning. Only `last` ordinarily transfers a scheduled raw result's disposition
+responsibility.
+
+For result declarations, non-reporting `@` and `@<` also promise a non-`Nothing`
+pointer on every normal exit. The body may temporarily reset or replace the
+result but must restore presence. `@!` and `@!<` permit a normal `Nothing`
+result.
+
+| Result initializer | Body-entry state | Normal-exit guarantee |
+| --- | --- | --- |
+| `@` | Definitely present, scheduled | Definitely present |
+| `@!` | Possibly `Nothing`, scheduled after success | Possibly `Nothing` |
+| `@<` | Definitely present, open-ended | Definitely present |
+| `@!<` | Possibly `Nothing`, open-ended after success | Possibly `Nothing` |
+| None | Unconstructed result slot | Body must construct one complete pointer value |
+
+An opaque operation may use narrow unsafe responsibility to assert a
+presence fact that analysis cannot prove. A path proved to return `Nothing`
+cannot satisfy a non-reporting contract through unsafe assertion.
+
+Current result syntax cannot express a delayed-construction contract that leaves
+an owning, raw, or optional result unconstructed on body entry while promising
+presence on every normal exit. `= @` provides the promise by allocating before
+body entry; an uninitialized pointer or optional result permits delayed
+construction but exposes no presence guarantee to callers.
+
+References provide non-`Nothing` borrowed inputs, but do not preserve pointer
+ownership, rebinding, or absence state. General future callable preconditions and
+postconditions should express contracts such as “this pointer is present on
+entry” or “this optional/owning result is present on normal exit” without
+inventing pointer-only type qualifiers.
 
 Pre-body constructedness is part of body/prototype compatibility. A body that
 expects a live result on entry cannot be reused with a prototype that leaves
@@ -1693,6 +1835,28 @@ bindings provide source-level disambiguation.
 
 ## Compatible visible prototypes
 
+### Minted implementation model
+
+A callable declaration with a body is checked and **minted** against its own
+implementation prototype:
+
+```text
+implementation prototype + body
+-> establish body-entry facts
+-> select operations inside the body
+-> establish internal parameter/result behavior
+-> mint one implementation
+```
+
+A compatible visible prototype reuses that minted implementation. It does not
+reprocess the body, select different internal overloads, change internal
+scheduled assignment into open-ended assignment, or remint the callable.
+
+This differs from future generic specialization. A generic body may be
+reprocessed for each demanded concrete type, qualification, or other generic
+argument. Each resulting concrete specialization is then its own minted
+implementation.
+
 An exact prototype can select one member of an overload group:
 
 ```zax
@@ -1725,20 +1889,75 @@ betterOperation final : (
 Calls through `betterOperation` use `result`, `expires`, its `#` permission, and
 `anotherConfiguredTimeout()`.
 
-Compatibility is positional over ordered input and result slots. The new
-prototype may:
+Compatibility is positional over ordered input and result slots. A visible
+prototype supplies a call-boundary contract around the unchanged implementation:
+
+```text
+visible inputs/defaults
+-> satisfy the minted body's entry requirements
+-> invoke the minted body unchanged
+-> map its produced results
+-> satisfy the visible caller guarantees
+```
+
+The new prototype may:
 
 - relabel compatible slots;
 - replace call-boundary defaults; and
-- change caller result-acknowledgement policy.
+- change caller result-acknowledgement policy;
+- change outward result transfer stance when the minted result can satisfy that
+  mapping; and
+- expose a scheduled raw result as open-ended, or an open-ended minted result as
+  scheduled, while preserving the minted body's internal cleanup behavior.
 
-It may not require the body or slots to:
+It may not:
 
 - reorder values;
 - convert incompatible values;
 - synthesize missing values; or
-- reinterpret transfer behavior; or
-- enter the body with a different constructed/unconstructed result state.
+- enter the body with an unconstructed result when the implementation requires a
+  constructed one;
+- provide a possibly `Nothing` allocated result to an implementation minted
+  under a definitely present result;
+- promise callers a definitely present result when the minted implementation
+  may produce `Nothing`; or
+- change operations already selected inside the body.
+
+For allocated raw results, presence and outward cleanup are separate:
+
+```zax
+implementation final : (
+  result : MyValue * last = @
+)() = {
+  // Minted scheduled-result behavior.
+}
+
+manualResult final : (
+  result : MyValue * last = @<
+)() = implementation
+```
+
+The alias is compatible: both contracts provide and produce a definitely present
+pointer. The minted body retains its scheduled replacement behavior, while the
+visible boundary leaves final cleanup to `manualResult`'s caller.
+
+`@` and `@!` are incompatible in either direction:
+
+```zax
+maybeEntry final : (
+  result : MyValue * last = @!
+)() = implementation
+// error: implementation requires presence on entry
+```
+
+Conversely, an implementation minted with `@!` may return `Nothing`, so an alias
+using `@` would overpromise presence to callers.
+
+Changing outward stance does not alter internal stance-driven behavior already
+minted into the body. The boundary change is legal only when the produced result
+can satisfy it. In particular, exposing a scheduled raw result as explicit
+`copy` retains producer cleanup and therefore supports only lifetime-safe
+borrowed uses unless a caller restates `last` or proves another owner.
 
 If entering the original body requires executable adaptation, write a wrapper or
 lambda.

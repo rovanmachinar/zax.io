@@ -680,8 +680,8 @@ MyType :: type {
     }
 }
 
-myType1 : MyType *      // points to nothing
-MyType2 : MyType * @    // points to an allocated instance
+myType1 : MyType *       // points to Nothing
+myType2 : MyType * = @   // declaration-bound allocation
 
 myType1.doSomething()   // does nothing
 myType2.doSomething()   // does something

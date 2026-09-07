@@ -7,7 +7,7 @@
 | Applies To | `operator index`, direct indexed mixfix, slicing, bounds, and projection pressure |
 | Owns | Representative source, direct-operation requirements, unsettled syntax, activation pressure, and retirement criteria |
 | Does Not Own | Accepted indexing semantics or current integer/lifetime behavior |
-| Source / Provenance | Legacy `arrays.md` evidence and operator review |
+| Source / Provenance | Legacy `arrays.md` evidence, operator review, and work item `015` allocation-syntax disposition |
 
 ## Direct indexed operations
 
@@ -120,6 +120,41 @@ Future indexing work must decide:
 - how checked multiplication converts element count and element size into
   `TypeSize`; and
 - how ordinary, near, and far domains constrain container availability.
+
+## Dynamic array allocation
+
+Legacy array material proposed runtime-sized, multidimensional, and copied
+dynamic allocations:
+
+```zax
+// Legacy source; type-side @ is superseded.
+myArray : Integer[length] @
+myMatrix : Integer[outerLength][innerLength] @
+myArrayCopy : Integer[myArray.length] @ = myArray
+myInferredCopy : @ = myArray
+```
+
+Future array work must preserve the use cases without preserving that syntax.
+Direct source allocation is now declaration-bound and requires an explicit
+pointer result role. A possible shape is:
+
+```zax
+// Illustrative array type and construction only.
+myArray : Integer[length] * unique = @
+```
+
+Array work must decide:
+
+- how runtime element counts participate in the allocation request;
+- whether dynamic arrays default to `unique` or require it explicitly;
+- how element construction inputs are supplied;
+- copy versus element-wise construction;
+- partial element construction and non-panicking allocation;
+- reset and storage recovery;
+- and multidimensional size, overflow, layout, and arena requirements.
+
+It must retain the current allocation rule that all required storage exists
+before constructor or element-initializer expressions run.
 
 ## Bit places
 

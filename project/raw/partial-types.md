@@ -7,7 +7,7 @@
 | Applies To | Ownership, coherence, import, layout, intrinsic, identity, phrase-extension, and mixfix-extension pressure |
 | Owns | Preserved partial-type risks and possible owner-authorized intrinsic, identity, phrase, and mixfix routes |
 | Does Not Own | Accepted partial semantics or current type/operator ownership |
-| Source / Provenance | Legacy `partial.md` evidence and operator/operator-phrase review |
+| Source / Provenance | Legacy `partial.md` evidence, operator/operator-phrase review, and work item `015` execution-context shape pressure |
 
 ## Mixfix ownership pressure
 
@@ -184,6 +184,22 @@ type's surface. This applies to constructors, functions, symbolic operators,
 and phrases. Future partial work must decide which authorities may create that
 effect and how builds make the complete surface reproducible; it may not solve
 the problem by ignoring partial provenance during selection.
+
+### Execution-context shape
+
+[Zax execution context](../../language/execution-context.md) establishes one
+application-wide context shape assembled from a core shape and permitted partial
+additions. Future partial-type work must define:
+
+- who may add context members or functions;
+- how the complete shape is closed before runtime use;
+- how conflicts and initialization dependencies are diagnosed;
+- how separate builds agree on one shape; and
+- how reflection reports each contribution.
+
+Every runtime replacement context must use that same resolved shape. Partial
+extension cannot make the shape vary by thread or change after context-dependent
+operations begin.
 
 ## Future work must decide
 

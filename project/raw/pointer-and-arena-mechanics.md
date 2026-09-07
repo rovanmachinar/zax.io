@@ -3,11 +3,11 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining complete pointer, arena, control-block, provenance, or allocation syntax |
+| Audience | Future work defining complete pointer provenance, arena interfaces, custom control blocks, collector algorithms, recovery internals, or affinity |
 | Applies To | Mechanics deferred by current lifetime and pointer design |
-| Owns | Preservation of unresolved allocation grammar and failure operators, arena interfaces, custom control blocks, deeper/unsafe ownership anchoring, pointer provenance and casts, pointer-layer presence mechanics, cycle tracing, recovery and prompt-disposition policy, and thread-affine release |
+| Owns | Preservation of unresolved arena interfaces, custom control-block implementation, deeper/unsafe ownership anchoring, pointer provenance and casts, pointer-layer presence mechanics, cycle-tracing algorithms, recovery implementation, prompt-disposition generic pressure, and thread-affine release |
 | Does Not Own | Current reference lifetime or pointer ownership semantics; future `Nothing` resident-instance and representation behavior ([Nothing input](nothing-instances.md)) |
-| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; work item `014` |
+| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; work items `014` and `015` |
 
 ## Current constraints
 
@@ -27,45 +27,16 @@ Future work must preserve:
 - arena-backed dynamic allocation;
 - independent destruction timing, storage recovery, and cycle probing;
 - inline or detached control blocks;
+- declaration-bound `@`, `@!`, `@<`, and `@!<` allocation;
+- protected pointer `reset`;
+- universal allocation records distinct from shared-ownership control blocks;
 - destination-directed ownership transitions;
 - weak probing without acquisition;
 - weak-to-strong `copy`;
 - direct-member `anchored by`;
 - and no anchored-to-`unique` conversion.
 
-## Allocation source syntax
-
-Future grammar must express:
-
-- object arena;
-- optional separate control-block arena;
-- prompt or attached destruction;
-- prompt or arena-wide storage recovery;
-- cycle probing;
-- pointer ownership result;
-- inline or detached control-block preference;
-- custom arena or control-block implementation;
-- constructor inputs; and
-- allocation failure.
-
-Illustrative shape only:
-
-```zax
-value : MyValue * strong =
-  allocate MyValue
-    in myObjectArena
-    control in myControlArena
-    destruction prompt
-    recovery arena
-    cycles enabled
-```
-
-No spelling in this example is accepted syntax.
-
-The final form should avoid one operator or pointer type for every policy
-combination while keeping material costs visible.
-
-## Allocating shareability
+## Custom shareability implementation
 
 A blockless unique owner cannot become strong until a control block is
 allocated:
@@ -73,19 +44,17 @@ allocated:
 ```zax
 owner : MyValue * unique
 
-// Illustrative future source.
 prepared : MyValue * unique shareable =
-  owner with control in myControlArena
+  @!{
+    controlArena: myControlArena
+  } owner as last
 ```
 
-Future work must decide:
+Current allocation source and transactional failure behavior are defined by
+[Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md#shareable-unique-ownership).
+Future implementation work must decide:
 
-- whether the operation is a constructor, operator phrase, allocation packet, or
-  library-backed language operation;
-- how failure is represented;
-- how an inline block can be added without relocating the resident instance;
-- when only a detached block is possible;
-- how the allocation disposition is registered;
+- how allocation records locate detached blocks;
 - and how custom block implementations expose local and atomic shared modes.
 
 Shedding a detached block may recover its allocation. Shedding an inline block
@@ -168,6 +137,10 @@ appropriate to the pointer role. Real monitored sentinels, custom global
 representation are preserved by
 [raw Nothing-instance input](nothing-instances.md).
 
+`@!` and `@!<` produce the destination pointer role's ordinary semantic
+`Nothing` when a storage request fails. This is not optional absence and creates
+no ownership of a shared sentinel.
+
 No representation may weaken the rule that a raw non-`Nothing` pointer does not
 by itself prove a live pointee.
 
@@ -196,18 +169,16 @@ teardown. Current allocation disposition controls the programmer-visible
 destruction and recovery contract; an implementation must not silently change
 it.
 
-## Allocation failure operators
+## Allocation failure implementation
 
-Future source design must expose:
+Current source exposes panicking `@` and reporting `@!`. There is no independent
+unchecked allocation form. A future category-specific panic control may omit the
+allocation-failure check under a programmer guarantee; exact syntax remains in
+[analysis-control input](analysis-controls.md).
 
-- a panicking allocation form that returns a non-`Nothing` pointer or panics;
-- a non-panicking form that returns `Nothing` on arena exhaustion;
-- an unchecked form whose false success guarantee has undefined consequences;
-- automatic member allocation during stack/global/container construction;
-- and propagation of allocation choice into nested automatic allocations.
-
-The underlying arena request may report failure independently from the operator
-that chooses panic, `Nothing`, or unchecked behavior.
+Arena interfaces must report request success or failure in a form that lets the
+language implement `@!`, enter the allocation-failure panic for `@`, and retry a
+blocked request after a matching helper repairs its condition.
 
 ## Prompt-disposition requirements
 
@@ -245,15 +216,18 @@ Future arena work must define exact ordering among:
 The current contract requires panic rather than successful teardown when a
 dependency would outlive required backing storage.
 
-## Cycle collection
+## Process-wide cycle collection
 
-Cycle probing is optional allocation behavior layered on strong ownership.
+Cycle probing is optional allocation behavior layered on strong ownership. The
+programmer explicitly triggers one process-wide pass; an arena may report global
+memory pressure but does not initiate an arena-local collection.
 
 Future work must define:
 
 - compiler emission of collector support only when reachable build output uses
   collectable allocations;
 - root registration or stack/global metadata;
+- process-wide coordination across object and control-block arenas;
 - how external roots are distinguished from strong edges inside a candidate
   cycle;
 - how anchored pointers participate;
@@ -309,11 +283,14 @@ promise.
 
 ## Activation and retirement
 
-Activate this input when complete pointer syntax, allocation grammar, arena
-interfaces, control-block customization, unsafe anchoring, provenance, pointer
-casts, pointer-layer presence mechanics, cycle collection, memory recovery, or
-thread-affine release is reviewed. `Nothing` resident-instance, representation,
-and dereference behavior belongs to [raw Nothing input](nothing-instances.md).
+Activate this input when arena interfaces, control-block customization, unsafe
+anchoring, provenance, pointer casts, pointer-layer presence mechanics,
+process-wide cycle-collection algorithms, memory recovery implementation, or
+thread-affine release is reviewed. Current allocation and pointer source is
+owned by
+[Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md).
+`Nothing` resident-instance, representation, and dereference behavior belongs
+to [raw Nothing input](nothing-instances.md).
 
 Move accepted behavior into domain-oriented current owners, preserve remaining
 future concerns in narrower indexed inputs, then retire this file.

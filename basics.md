@@ -176,12 +176,6 @@ not current guarantees:
 *                   // post-unary pointer type declaration
 &                   // post-unary reference type declaration, or
                     // pre-unary capture by reference operator
-@                   // unary/binary standard allocator operator (allocate using
-                    // the standard allocator and construct type)
-@@                  // unary/binary parallel allocator operator (allocate using
-                    // the parallel allocator and construct type)
-@!                  // unary/binary synchronous allocator operator (allocate
-                    // using the synchronous allocator and construct type)
 .                   // post-unary dereference operator
 .                   // binary namespace resolution operator
 >>                  // binary function composition
@@ -192,6 +186,13 @@ not current guarantees:
 <-                  // pre-unary argument split operator (split type into
                     // multiple function arguments)
 ````
+
+Allocation now uses the declaration-bound `@`, `@!`, `@<`, and `@!<` family
+defined by
+[Zax pointers, allocation, and arenas](language/pointers-and-arenas.md#allocation-forms).
+Legacy parallel `@@` is superseded because concurrency is an arena capability.
+Legacy synchronous `@!` is superseded; current `@!` reports allocation failure
+through the pointer's `Nothing` state.
 
 
 #### Remaining historical operator-phrase input

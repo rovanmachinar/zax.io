@@ -532,6 +532,40 @@ shared : MyValue * strong = prepared as last
 Here `prepared` must be `MyValue * unique shareable`. The transfer activates its
 reserved control block and vacates the unique source.
 
+A declaration-attached raw allocation carries disposition responsibility in its
+declaration rather than in the raw pointer type:
+
+```zax
+scheduled : MyValue * = @
+owner : MyValue * unique = scheduled as last
+```
+
+An accepted transfer sets `scheduled` to `Nothing`. Its declaration cleanup
+remains scheduled but later has no allocation to disposition. The `unique`
+destination becomes the allocation owner.
+
+A scheduled raw destination may adopt a `unique` owner or another scheduled raw
+allocation:
+
+```zax
+scheduled = uniqueOwner as last
+scheduled = otherScheduled as last
+```
+
+It dispositions its previous allocation before adoption. The accepted source
+becomes `Nothing`.
+
+An ordinary raw destination cannot retain either ownership relationship:
+
+```zax
+raw : MyValue * = uniqueOwner as last
+// requires another proved disposition owner or narrow unsafe responsibility
+```
+
+This deliberately opens the allocation. A raw source may enter scheduled or
+managed ownership only when analysis proves the allocation root, provenance, and
+sole disposition authority.
+
 The reverse claim is conditional:
 
 ```zax
@@ -552,7 +586,8 @@ This copies participation in a still-live ownership relationship rather than
 copying the pointee. Failure produces an empty strong pointer.
 
 Complete pointer forms, control blocks, anchoring, atomicity, arenas, and
-failure behavior are defined by [Zax pointers and arenas](pointers-and-arenas.md).
+failure behavior are defined by
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md).
 
 ## Declaration stance
 
@@ -851,6 +886,18 @@ makeMessage final : (
 The `copy` restatement controls construction of `result`. Once constructed,
 `result` ordinarily offers `move`, including after return.
 
+For a callable declaration with a body, that internal stance behavior is minted
+once with the implementation. A compatible visible prototype may present a
+different outward result stance when call-boundary mapping can satisfy it, but it
+does not reprocess the body or change any internal operation selected from
+`result`.
+
+For example, an implementation minted with a scheduled raw `last` result may be
+exposed as explicit `copy` for deliberately borrowed caller use. The minted body
+retains its original stance and scheduled replacement behavior; the alias
+changes only outward mapping. Caller lifetime analysis still rejects a copied
+raw pointer that would outlive producer cleanup.
+
 Forwarding crosses two declarations:
 
 - the producer result stance controls transfer into the forwarding result slot;
@@ -926,9 +973,11 @@ Each slot of a multiple-result producer is considered independently.
 
 Reference results are excluded. A reference result owns only an access path, so
 destruction of its result slot does not prove the referent is terminal. Pointer
-ownership follows the selected pointer contract; transfer of a pointer value
-does not automatically make its pointee terminal. See
-[Zax pointers and arenas](pointers-and-arenas.md).
+ownership follows the selected pointer or declaration contract; transfer of an
+ordinary pointer value does not automatically make its pointee terminal. A
+scheduled raw result declared with `last` is an explicit exception because its
+result declaration owns disposition responsibility. See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md).
 
 ## Terminal opportunity must be explicit
 

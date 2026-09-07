@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [014: Reference origins and lifetime strategies](work/014-reference-origins-and-lifetime-strategies.md) |
-| Next work number | `015` |
+| Active work item | [015: Allocation operations and arena boundaries](work/015-allocation-operations-and-arena-boundaries.md) |
+| Next work number | `016` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
