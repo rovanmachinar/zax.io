@@ -2,18 +2,19 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working record / non-normative / audit-only |
 | Work Item | `015` |
 | Created | 2026-09-06 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | Arena API surface, arena registration or recognition, allocator implementation, complete pointer casts/provenance, collector graph algorithms, exact `Nothing` representation, variants/unions, complete arrays, async/concurrency, layout/ABI, or compiler lowering |
+| Completed | 2026-09-07 |
+| Owns | Historical evidence of the bounded review defined by the fixed initiating input |
+| Does Not Own | Current language meaning; arena API surface, arena registration or recognition, allocator implementation, complete pointer casts/provenance, collector graph algorithms, exact `Nothing` representation, variants/unions, complete arrays, async/concurrency, layout/ABI, or compiler lowering |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical collaborative working record retained for targeted
+audit only. Its promoted findings are owned by current language documentation;
+remaining future pressure is owned by live indexed raw input. Nothing here is a
+current source of language meaning.
 
 ## Fixed initiating input
 
