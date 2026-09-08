@@ -893,7 +893,7 @@ A **type-receiver operator** is an operation discovered through a concrete type
 identity rather than through an instance:
 
 ```zax
-BackingType := EnumType underlying type
+BackingType :: alias type EnumType underlying type
 ```
 
 It is declared with `operator type`, has no receiver instance, and is not

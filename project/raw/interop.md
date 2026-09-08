@@ -54,6 +54,20 @@ Representation coincidence on one target does not make two semantic states or
 type layers equivalent. Manual ABI use remains an explicit low-level boundary
 until a named contract accepts an exact optional representation.
 
+## Enum representation and admission pressure
+
+Current [enum behavior](../../language/enums.md) fixes an immediate integer
+backing and explicit admission boundary without promising a foreign ABI.
+Interop work must decide:
+
+- layout and calling-convention guarantees for exact and profile-selected
+  backing roles;
+- how foreign unknown values enter strict, relaxed, and flags enums;
+- whether adapters validate, preserve, or reject unknown values;
+- how enum aliases, defaults, and flags masks appear in generated bindings; and
+- whether persistent or foreign formats require explicit member values and
+  fixed exact backing.
+
 ## Activation and retirement
 
 Activate this input before defining assembly integration, FFI, ABI controls, or

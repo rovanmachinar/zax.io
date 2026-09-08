@@ -223,6 +223,9 @@ not introduce malformed alternatives merely to deny them.
 
 ## Default working style
 
+If the language maintainer sends `ping` as the complete message, respond with
+only `pong`. Do not analyze, use tools, or add other text for that message.
+
 Use one deep-reasoning agent by default; research, design, feasibility, and
 skeptical review do not require an orchestration pipeline. Delegate only when
 separate context materially helps. For a genuinely large delegated synthesis,

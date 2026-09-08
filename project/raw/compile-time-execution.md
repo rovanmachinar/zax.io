@@ -189,6 +189,12 @@ Future work must decide:
 - uncommitted integer realization must complete before an integer value crosses
   into runtime execution.
 
+Current [enum members](../../language/enums.md#members) accept integer constants
+resolved while the enum definition completes. Future compile-time execution may
+expand how those constants are produced, but it must preserve definition-time
+availability, exact backing representability, deterministic member order, and
+compile-time diagnostics.
+
 ## Activation and retirement
 
 Activate this input when compile-time execution, execution context, host/target

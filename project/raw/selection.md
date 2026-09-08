@@ -93,6 +93,24 @@ function-composition input so only one callback executes, both possible result
 paths converge, and a present callback receives a valid boxed lifetime without
 turning wrapper method syntax into implicit postfix access.
 
+## Enum selection pressure
+
+Current [enum behavior](../../language/enums.md#selection-pressure) does not make
+member names an automatically exhaustive set:
+
+- strict enum operations may produce defined unnamed values without broadening
+  ordinary backing admission;
+- relaxed enums admit every backing value;
+- flags admit unnamed submasks;
+- `unsafe from` can force any backing representation into a defined enum value;
+- duplicate-valued member names overlap; and
+- an empty strict enum may default to an unnamed backing-default value.
+
+Future selection must provide a catch-all or another way to cover remaining
+backing values. It must not infer exhaustiveness merely from a strict declaration
+or a list of all member names. Exact case syntax, overlap diagnostics, guards,
+bindings, and interaction with `case next` remain selection work.
+
 ## Activation and retirement
 
 Activate this input when a focused selection or pattern-matching work item

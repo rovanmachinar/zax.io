@@ -87,6 +87,7 @@ producing them.
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
 - [Identity types](language/identity-types.md)
+- [Enums](language/enums.md)
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)
 - [Lifetimes and references](language/lifetimes-and-references.md)
@@ -118,9 +119,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Basics](basics.md) — legacy foundations; current finite integer design is
   owned by [Zax integers](language/integers.md)
 - [Type definition](type-definition.md)
-- [Enums](enums.md) — legacy enum input; current generated enum operations are
-  in the [operator catalog](language/operator-catalog.md#generated-underlying-and-enum-forms)
-  and endian behavior is owned by [Zax endianness](language/endianness.md)
 - [Arrays](arrays.md)
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)

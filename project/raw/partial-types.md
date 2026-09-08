@@ -224,6 +224,18 @@ operations begin.
 - stored-member and layout changes; and
 - reflection and build-order independence.
 
+Current [enum bodies](../../language/enums.md#the-member-prologue-and-enum-body)
+seal after their original definition and add no stored per-value members. If
+future partial work permits enum extension, it must also decide:
+
+- whether members may be added after the original member prologue;
+- how added members affect implicit values and declaration order;
+- whether an existing default may change;
+- how flags additions change the allowed mask;
+- how generated string conversion and member iteration incorporate additions;
+- how case-conflicting names are diagnosed across partial pieces; and
+- how extension affects exhaustive selection and source compatibility.
+
 Import or declaration order must not resolve conflicts.
 
 ## Activation and retirement

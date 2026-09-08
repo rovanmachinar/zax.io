@@ -176,6 +176,13 @@ Future work must decide:
 
 ## Representation and reflection pressure
 
+Current [enum behavior](../../language/enums.md) deliberately adds no stored
+per-value members. A programmer composes an enum into another type when
+additional state is required. Future fat-identity or generalized owned-
+composition work must not silently expand enum representation because that
+would change immediate projection, raw adoption, size, alignment, construction,
+and ABI assumptions.
+
 Future work must decide:
 
 - whether owned single-value composition guarantees equal size, alignment, and

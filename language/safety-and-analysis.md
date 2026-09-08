@@ -7,7 +7,7 @@
 | Applies To | Cross-cutting programmer-visible safety and static-analysis behavior; not a formal proof system or diagnostic specification |
 | Implementation State | Not established by this repository |
 | Owns | The safe-subset model; required proof; narrow unsafe assertions and permissions; known-invalid boundaries; distinction from intent and lints; language-contract versus compiler-analysis evolution; cross-cutting safety diagnostics and source stability |
-| Does Not Own | Domain-specific validity rules; exact future unsafe syntax and category registry; intent acknowledgements ([intent acknowledgements](intent-acknowledgements.md)); or compiler implementation algorithms |
+| Does Not Own | Domain-specific validity and admission rules, including [enum admission](enums.md#admission-and-reachable-values); exact future unsafe syntax and category registry; intent acknowledgements ([intent acknowledgements](intent-acknowledgements.md)); or compiler implementation algorithms |
 | Source / Provenance | Current intent, construction, invocation, optional, lifetime, and pointer safety boundaries |
 | Supersedes | Accepted general safety direction formerly preserved only as project input |
 
@@ -209,10 +209,30 @@ Examples:
   completion;
 - [transfer stances](transfer-stances.md) defines moved-from and terminal source
   states; and
-- integer owners define overflow, narrowing, and required-result behavior.
+- integer owners define overflow, narrowing, and required-result behavior; and
+- [enums](enums.md) defines strict and flags admission domains and the values
+  produced by enum operations.
 
 An unsafe category does not become a duplicate definition of the domain rule it
 qualifies.
+
+### Enum raw-admission permission
+
+```zax
+raw : U8 = readByte()
+value := MyEnum unsafe from raw
+```
+
+Enum `unsafe from` is a defined permission to bypass the enum owner's ordinary
+admission policy while preserving the exact backing representation. A strict
+enum need not name the value, and a flags value may contain bits outside its
+safe allowed mask. The result is still a defined enum value whose available
+operations follow their declarations.
+
+This permission does not perform integer conversion or accept a different
+backing type. It changes no `optional from` result and does not expand ordinary
+safe admission. Complete enum consequences are defined by
+[Zax enums](enums.md#unsafe-from).
 
 ## Representative lifecycle boundaries
 

@@ -6,7 +6,7 @@
 | Audience | Future work defining intrinsic, custom, generic, fixed-point, arbitrary-width, or floating numeric families |
 | Applies To | Numeric type relationships and operator availability deferred by operator review |
 | Owns | Signedness-counterpart, finite-bit-extent, count-tier, conversion, delta/distance, storage, type-family, alias, float-representation, and policy applicability questions |
-| Does Not Own | Current finite-integer behavior or [enum behavior](enum-types.md) |
+| Does Not Own | Current finite-integer behavior or [enum behavior](../../language/enums.md) |
 | Source / Provenance | Legacy intrinsic-type, casting, and operator evidence; work item `012` nested optional conversion pressure |
 
 ## Current finite-integer disposition
@@ -291,14 +291,15 @@ surfaces without inheriting arithmetic merely from storage.
 
 ## Numeric interaction with enums
 
-An enum is backed by one fundamental intrinsic type but is an independent type.
-It receives no automatic integer arithmetic merely from that backing. Whether a
-future flag or another enum kind explicitly requests selected bitwise, reduction,
-shift, magnitude, or signedness behavior remains an *enum* question preserved in
-[raw enum input](enum-types.md).
+An enum is an independent identity backed by an eligible exact intrinsic or
+language-provided integer role. Strict enums receive no automatic integer
+arithmetic, relaxed enums reuse eligible exposed-identity behavior, and flags
+receive their mask-preserving bitwise surface. Complete behavior belongs to
+[Zax enums](../../language/enums.md).
 
-Numeric work should consult that file when a numeric decision would constrain
-enum behavior, and vice versa. This file no longer holds enum-specific questions.
+This file retains numeric-family questions only. Future custom numeric types do
+not become enum-eligible merely because they use integer storage; eligibility
+requires an explicit, separately reviewed capability.
 
 ## Floating representation
 
@@ -321,5 +322,5 @@ fixed-point, arbitrary-width, count and associated types, conversion,
 delta/distance, multiword operations, reversal, masked extraction/deposit,
 alias, float, or representation work. Move accepted behavior into numeric,
 type, cast, generic, or operator owners and retire this file after every item is
-dispositioned. Enum-specific questions are dispositioned through
-[raw enum input](enum-types.md) instead.
+dispositioned. Current enum-specific behavior remains with
+[Zax enums](../../language/enums.md).

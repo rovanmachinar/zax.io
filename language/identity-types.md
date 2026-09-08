@@ -7,7 +7,7 @@
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
-| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); qualifier semantics ([qualifiers](qualifiers.md)); complete owned-composition transformation; partial-extension authority; or structural type equivalence |
+| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); complete owned-composition transformation; partial-extension authority; or structural type equivalence |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
 ## Two ways to build on an existing type
@@ -36,6 +36,24 @@ myRaw = myCount // error: different identities
 ```
 
 The explicit `from` states where the program crosses between them.
+
+Enums specialize this model. An enum is an integer-backed identity that adds
+known member values and strict, relaxed, flags, string, and generated-operation
+policies defined by [Zax enums](enums.md).
+
+An enum may use a language-provided integer identity such as `Integer` as its
+immediate backing:
+
+```zax
+MyEnum :: enum {
+}
+
+Backing :: alias type MyEnum underlying type // Integer
+```
+
+The enum-to-`Integer` boundary and the deeper `Integer`-to-exact-intrinsic
+boundary remain separate. Immediate underlying operations cross only one
+boundary.
 
 ## Transparent aliases
 
@@ -363,7 +381,7 @@ When owner code needs the underlying relationship directly, each identity
 boundary provides operations for exactly its immediate layer:
 
 ```zax
-UnderlyingType := MyIdentity underlying type
+UnderlyingType :: alias type MyIdentity underlying type
 myUnderlying := myIdentity underlying value
 ```
 
@@ -525,6 +543,6 @@ layout/ABI contract, or an implementation mapping.
 
 Future work owns complete `own` transformation, partial authority,
 same-storage identity views, representation casts, generic identity factories,
-reflection shape, enum validity, and structural type equivalence. Those areas
-must preserve the explicit identity boundary and admission/exposure choices
-defined here.
+reflection shape, and structural type equivalence. Those areas and
+[current enum behavior](enums.md) must preserve the explicit identity boundary
+and admission/exposure choices defined here.

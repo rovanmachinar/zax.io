@@ -7,7 +7,7 @@
 | Applies To | Fundamental finite integer types and their programmer-visible behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Integer choice and mental model; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; endian eligibility; costs, diagnostics, portability, and source stability |
-| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); enum members, admission, and operation policy ([enums](enums.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
 | Source / Provenance | Legacy [basics](../basics.md) and [casting](../casting.md) integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
 
 ## Choosing an integer says what the value is for
@@ -636,9 +636,17 @@ Exact option/directive syntax remains future analysis-control work.
 
 ## Enum and endian boundaries
 
-An arbitrary exact integer such as `I57` may back an ordinary enum. Its
-underlying value remains logical `I57`; no operation exposes the `U64` storage
-carrier.
+An exact integer such as `I57` or a language-provided integer role such as
+`Integer`, `Long`, or `IndexSize` may back an enum. An arbitrary user identity
+does not become eligible merely because it ultimately uses integer storage.
+
+For an enum backed by `I57`, its underlying value remains logical `I57`; no
+operation exposes the `U64` storage carrier. For an enum backed by `Integer`,
+the immediate underlying type and value remain `Integer`; the profile-selected
+exact intrinsic lies across a second identity boundary.
+
+Flags require an unsigned eligible backing type. Their default backing is
+`UInteger`; strict and relaxed enums default to `Integer`.
 
 Endian families require:
 
@@ -658,7 +666,10 @@ I57 -> not endian eligible
 Eligibility is not limited to predefined names. Complete endian behavior is in
 [Zax endianness](endianness.md).
 
-Integer backing does not grant ordinary enum arithmetic.
+Integer backing does not grant ordinary enum arithmetic. Strict enums select
+operations explicitly, relaxed enums request the eligible exposed-identity
+surface, and flags receive their mask-preserving bitwise surface. Complete enum
+behavior is defined by [Zax enums](enums.md).
 
 ## Costs and diagnostics
 
@@ -718,7 +729,7 @@ a CPU-profile format, or an implementation mapping.
 
 Exact integer-factory syntax, relational-pair declarations, reflection metadata,
 CPU-provider files, literal grammar, pointer validity, partial authority,
-owned-composition transformation, enum validity, build-option syntax, and
-foreign correspondence remain future work. Those mechanisms must preserve the
-concrete types, identities, ranges, representation, conversions, and source
-behavior established here.
+owned-composition transformation, build-option syntax, and foreign
+correspondence remain future work. Those mechanisms and
+[current enum behavior](enums.md) must preserve the concrete types, identities,
+ranges, representation, conversions, and source behavior established here.

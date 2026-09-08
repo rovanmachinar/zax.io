@@ -29,7 +29,7 @@ form. This file keeps the deferred questions live.
 ## `type of`
 
 ```zax
-Selected := type of expression
+Selected :: alias type type of expression
 ```
 
 `type of` returns the selected expression's concrete static type identity. It
@@ -196,9 +196,19 @@ reproduce both. Future work must decide:
 
 ## Enum metadata
 
-Legacy enum material assumes compile-time metadata sufficient to convert between
-enum values and strings. Preserve that requirement here and route the enum-side
-questions to [enum types](enum-types.md).
+[Zax enums](../../language/enums.md) now owns demand-generated string
+conversion and the semantic requirements for future member iteration. General
+reflection remains responsible for deciding how tools and generic code inspect:
+
+- enum policy and backing identity;
+- declared members, names, values, aliases, order, and default;
+- generated, replaced, and forbidden operations;
+- ordinary admission versus reachable unnamed values; and
+- the relationship between narrow generated iteration and general declaration
+  metadata.
+
+Reflection must not claim that a runtime value remembers which duplicate-valued
+member name produced it.
 
 ## Integer-specific metadata
 

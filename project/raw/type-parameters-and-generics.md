@@ -235,7 +235,8 @@ specialization of an open generic family.
 
 Endian enums are described as conceptually generated families with explicitly
 illustrative names such as `BigEndianU32`. See
-[Zax endianness](../../language/endianness.md) and [enum types](enum-types.md).
+[Zax endianness](../../language/endianness.md) and
+[Zax enums](../../language/enums.md).
 
 Future generic work must decide:
 
@@ -244,6 +245,10 @@ Future generic work must decide:
 - whether family members are ordinary named types or a distinct kind;
 - how a family member's identity, reflection, and documentation appear; and
 - whether a family may be parameterized over more than the backing type.
+
+Every generated result must obey the ordinary enum policy, member, admission,
+operation, and backing rules. Generic generation does not create a second enum
+semantic model.
 
 ## Integer specializations and factory selection
 

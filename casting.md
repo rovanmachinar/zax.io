@@ -37,15 +37,12 @@ structural compatibility proposals on this page remain legacy input.
 > own attached prefix.
 >
 > **Enum conversion evidence.** The enum side of `as` and `unsafe as` is
-> dispositioned separately. `enumValue as UnderlyingType` is a current generated
-> enum operation recorded by the
-> [operator catalog](language/operator-catalog.md#generated-underlying-and-enum-forms).
-> The legacy claims that `unsafe as` converts an enum to a *non-underlying*
-> intrinsic type, that direct `as` to such a type is rejected, and that a
-> two-step conversion through the underlying type is the sanctioned route remain
-> **deferred** to enum and casting work and are preserved in
-> [raw enum input](project/raw/enum-types.md). Nothing here decides their
-> narrowing, overflow, or panic behavior.
+> now belongs to [Zax enums](language/enums.md#generated-boundary-operations).
+> `enumValue as UnderlyingType` projects to the exact immediate backing type.
+> Direct `as` to another integer type is rejected; the programmer projects to
+> the backing type and then uses ordinary integer conversion. The legacy
+> `enumValue unsafe as OtherInteger` shortcut is superseded. Raw backing
+> adoption uses `EnumType unsafe from rawValue`.
 
 ### Remaining intrinsic string-conversion input
 

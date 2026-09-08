@@ -7,8 +7,8 @@
 | Applies To | Programmer-facing endian semantic enum behavior; not a formal grammar, layout contract, or specification |
 | Implementation State | Not established by this repository |
 | Owns | The endian mental model; absolute, native, compiler-host, and target endianness; how the four generated enum operations behave for endian values; receiver-correct encode, transcode, decode, adoption, and raw extraction; backing-value validity for endian enums; the focused endian operation surface; native right-operand as-if semantics; unavailable and deferred endian operations; storage/shape compatibility without implicit transfer; endian costs, diagnostics, and examples |
-| Does Not Own | Complete enum validity/generation; integer families and backing eligibility ([integers](integers.md)); exact forms and shared selection ([operator catalog](operator-catalog.md), [operators](operators.md)); or general type compatibility/layout rules |
-| Source / Provenance | Legacy [enums](../enums.md) and [basics](../basics.md) endian conversion evidence, refined against current operator and enum behavior |
+| Does Not Own | General enum members, admission, strings, and generated behavior ([enums](enums.md)); integer families and backing eligibility ([integers](integers.md)); exact forms and shared selection ([operator catalog](operator-catalog.md), [operators](operators.md)); or general type compatibility/layout rules |
+| Source / Provenance | Legacy [basics](../basics.md) endian conversion evidence, refined against current enum, operator, and integer behavior |
 
 ## Mental model
 
@@ -70,14 +70,14 @@ order.
 
 ## The four generated enum operations
 
-Every enum, endian or not, receives four protected language-provided
-[operator phrase](operator-phrases.md) operations. For an endian enum they read
-as follows.
+Every enum receives four protected language-provided
+[boundary operations](enums.md#generated-boundary-operations). For an endian
+enum they read as follows.
 
 ### `underlying type`
 
 ```zax
-BackingType := BigEndianU32 underlying type // U32
+BackingType :: alias type BigEndianU32 underlying type // U32
 ```
 
 A post-unary type-receiver operation returning the exact fundamental intrinsic
@@ -105,7 +105,7 @@ The enum value supplies receiver discovery and the right operand is the exact
 underlying type argument. For an endian enum, `as` **decodes represented numeric
 meaning**.
 
-For an ordinary restricted enum, semantic decode and raw extraction commonly
+For an ordinary strict enum, semantic projection and raw extraction commonly
 produce the same value. Endian enums are exactly where they differ:
 
 | Operation | Question it answers |
@@ -125,8 +125,8 @@ big := BigEndianU32 unsafe from rawBigStorage
 A binary type-receiver operation that accepts a value of the enum's exact
 underlying fundamental type, preserves that backing value unchanged, performs no
 membership, range, or semantic validation, and establishes the independent enum
-type. It records the programmer's unchecked assertion that the raw storage
-already carries the claimed endian meaning.
+type. It is a defined unsafe permission through which the programmer states that
+the raw storage is to carry the claimed endian meaning.
 
 `unsafe from` belongs to the baseline enum model rather than being an
 endian-specific operation, so no endian-specific raw-adoption phrase exists.
@@ -170,7 +170,7 @@ Exit is owned by the enum value receiver:
 ```zax
 nativeValue := big as U32              // decode numeric meaning
 rawBigStorage := big underlying value  // exact stored backing value
-BackingType := BigEndianU32 underlying type
+BackingType :: alias type BigEndianU32 underlying type
 ```
 
 Putting the four directions together:
@@ -278,6 +278,10 @@ is unambiguous under the mental model:
 - population count, returning the backing integer's associated bit-count type;
   and
 - reduction AND, OR, XOR/parity, NAND, NOR, and XNOR.
+
+The language-provided endian family replaces or forbids the ordinary enum
+comparison and exposure defaults as needed. In particular, ordering remains
+unavailable even though ordinary enums have a default backing-value order.
 
 ```zax
 aBits : U32 = 305419896 // hexadecimal 12345678
@@ -430,8 +434,8 @@ Diagnostics should distinguish:
   signatures.
 
 `unsafe from` cannot diagnose that the programmer meant semantic encoding rather
-than raw adoption. Its purpose is to accept the programmer's unchecked
-representation assertion.
+than raw adoption. Its purpose is to grant the defined permission to preserve
+the supplied representation as an endian value.
 
 ## Boundaries and maturity
 
@@ -439,9 +443,9 @@ This document is current conceptual design, not a formal specification, layout o
 ABI contract, serialization framework, or implementation mapping.
 
 Exact generated endian type names, the generic mechanism producing the family,
-identity-family integration, ABI, complete enum validity and operation
-inheritance, safe restricted-enum creation, complete arithmetic and ordering
-behavior, and complete compile-time-context naming remain focused future work.
+identity-family integration, ABI, and complete compile-time-context naming
+remain focused future work. General enum behavior is defined by
+[Zax enums](enums.md).
 
 Exact operator forms, fixity, and precedence are in the
 [operator catalog](operator-catalog.md#endianness-reference). The shared operator

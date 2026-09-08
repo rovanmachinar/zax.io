@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -34,6 +34,17 @@ missing an operand.
 Grammar and explicit tokens determine structure. Indentation must truthfully
 present that structure, but indentation does not create blocks or decide which
 body owns a statement.
+
+### ASCII identifiers
+
+Zax identifiers use ASCII spelling. Identifier-specific capitalization and
+naming intent belongs to
+[declarations and bindings](declarations-and-bindings.md#naming-intent).
+
+Operations derived from identifier spelling, such as enum member lookup that
+ignores case, therefore fold ASCII letter case only. They do not depend on a
+runtime locale or Unicode-version changes. Complete identifier token grammar is
+separate from the statement and layout rules owned here.
 
 ## Explicit continuation
 

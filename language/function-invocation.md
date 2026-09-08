@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -126,6 +126,35 @@ Document :: type {
 
 Complete receiver qualification is defined by
 [Zax qualifiers](qualifiers.md#receiver-operands).
+
+### Type and instance calls to `once` functions
+
+A type-owned `once` function has one implementation shared by all instances and
+may be selected through either the type or an instance:
+
+```zax
+MyType.inspect()
+
+value : MyType
+value.inspect()
+```
+
+For `MyType.inspect()`, the type identity supplies member lookup without a
+runtime instance expression. `_` has the `Nothing` instance state inside the
+body. The implementation may perform type-level work or branch on whether an
+instance exists; it may not access an absent instance as though it were live.
+
+For `value.inspect()`, `value` evaluates once before the explicit arguments and
+supplies the ordinary receiver. `_` identifies that instance.
+
+Both forms select the same declared callable and explicit parameter/result
+contract. `once` does not create an overload tie between a hidden type-callable
+implementation and an instance implementation. Declaration, `final`, generated
+default, replacement, and prohibition behavior is defined by
+[declarations and bindings](declarations-and-bindings.md#type-callable-once-functions).
+
+This call rule does not define global or `once` value initialization, capture,
+concurrency, teardown, or generic-specialization behavior.
 
 ### `operator call`
 
@@ -2092,6 +2121,8 @@ Invocation diagnostics should distinguish:
 
 - no callable found;
 - invocation of a provably default-`Nothing` function value;
+- a type-qualified call to a non-`once` function;
+- unguarded instance use through `_` during a type-qualified `once` call;
 - unknown parameter or result labels;
 - label-versus-declaration intent errors;
 - duplicate parameter, source-result, or destination mapping;
@@ -2133,6 +2164,8 @@ Programmers must be able to discover:
 - hidden declared-default work;
 - copies, moves, `last`, references, pointers, and temporary extension;
 - indirect function-value calls;
+- type-qualified `once` calls without receiver evaluation;
+- instance-qualified `once` calls with ordinary once-only receiver evaluation;
 - environments retained for closures or default expressions;
 - result construction, remapping, omission, and discard;
 - a `return #` slot preserved, declaration-initialized, or type-default
@@ -2192,8 +2225,10 @@ Even deterministic selection cannot prevent every API evolution hazard:
   selected callable;
 - changing a result type's default-constructibility changes `return #` validity;
 - changing transfer or qualification requirements changes viability, cost, and
-  post-call source availability; and
-- adding or removing parentheses can change expression mode versus mapping.
+  post-call source availability;
+- adding or removing parentheses can change expression mode versus mapping; and
+- adding or removing `once` changes whether a type-qualified call is available
+  and whether one declaration is shared across instances.
 
 Possible future mitigations include label aliases, deprecation diagnostics,
 contract reflection, and versioned compatibility tooling. Source-order fallback
@@ -2223,6 +2258,10 @@ Later work must preserve:
 - compatible prototype adaptation without executable body adaptation;
 - temporary lifetime through synchronous completion; and
 - clear programmer-visible costs and diagnostics.
+
+Global and `once` value initialization, concurrent first use, teardown, capture,
+and generic-specialization behavior remain future work. They must preserve the
+type/instance call distinction established here.
 
 The following remain explicit future work:
 

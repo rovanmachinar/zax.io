@@ -160,6 +160,7 @@ copying a diagnostic message.
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
 | `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer at `Nothing` | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
+| `case-conflicting-enum-member-names` | Declare ASCII case-equivalent enum member names with different enum values | [Enums](enums.md#ascii-case-insensitive-lookup) |
 
 Anchored owning pointers also require intent acknowledgement when replacement
 of their target or an enclosing direct place can renew the resident member
@@ -167,6 +168,27 @@ instance. That behavior is defined by
 [pointers and arenas](pointers-and-arenas.md#replacement-intent). Its exact
 category identifier remains unsettled and examples mark the spelling
 provisional rather than adding it to this accepted registry prematurely.
+
+### Case-conflicting enum member names
+
+ASCII case-equivalent enum member names with different values strongly resemble
+a naming mistake:
+
+```zax
+intent<case-conflicting-enum-member-names>{
+  BoxKind :: enum U8 {
+    BlueBox = 1
+    Bluebox = 2
+  }
+}
+```
+
+The acknowledgement encloses the complete strict, relaxed, or flags enum
+declaration. It permits both declarations but changes neither value and chooses
+no preferred case-insensitive result. Exact lookup can distinguish the names;
+unique case-insensitive lookup returns absence for the ambiguous folded name.
+Complete conversion behavior is defined by
+[Zax enums](enums.md#ascii-case-insensitive-lookup).
 
 ### Implicit stance at terminal use
 

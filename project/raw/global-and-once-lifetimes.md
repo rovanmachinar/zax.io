@@ -15,7 +15,14 @@
 establishes that global instances live in the process life path and are destroyed
 in reverse of their established construction order.
 
-This file preserves how that exact order is selected.
+Current [declarations](../../language/declarations-and-bindings.md#type-callable-once-functions)
+and [invocation](../../language/function-invocation.md#type-and-instance-calls-to-once-functions)
+also establish the narrow function rule: a `once` function has one type-owned
+implementation and is callable through either the type or an instance.
+
+This file preserves global and `once` **value** lifecycle behavior, plus the
+remaining capture, concurrency, teardown, and generic-specialization questions.
+It does not reopen the accepted type/instance call surface.
 
 ## Ordering pressure
 

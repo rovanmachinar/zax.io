@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); or transparent alias/identity semantics ([identity types](identity-types.md)) |
+| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -477,6 +477,45 @@ members use their appropriate qualified form.
 
 Explicit access prevents copied code, a newly added member, or a forgotten local
 declaration from silently changing name resolution.
+
+### Type-callable `once` functions
+
+A `once` function declared inside a type has one type-owned implementation
+shared by all instances:
+
+```zax
+MyType :: type {
+  inspect final once : ()() = {
+    // `_` is Nothing for MyType.inspect() and the instance for value.inspect().
+  }
+}
+```
+
+It is callable through either the containing type or an instance:
+
+```zax
+MyType.inspect()
+
+value : MyType
+value.inspect()
+```
+
+On a type call, `_` has the `Nothing` instance state. On an instance call, `_`
+identifies that instance. A body that uses instance state must account for both
+call forms. `final` prevents reassignment under ordinary function declaration
+rules.
+
+For a language-generated `once` function:
+
+- omission permits demand-driven generation;
+- `= default` explicitly requests the language-defined implementation;
+- a declaration body supplies the owner's implementation; and
+- `= forbidden` disables the exact signature.
+
+This rule establishes type-callable function declaration and replacement. It
+does not establish global or `once` value initialization, concurrency, teardown,
+capture, or generic-specialization behavior. Invocation behavior is defined by
+[Zax function invocation](function-invocation.md#type-and-instance-calls-to-once-functions).
 
 ## Identifier namespace and paths
 
@@ -1090,6 +1129,10 @@ Complete projection, admission, identity bridges, representation relationships,
 and exposed/opaque behavior are defined by
 [Zax identity types](identity-types.md).
 
+`enum`, `enum relaxed`, and `enum flags` introduce specialized integer-backed
+identities. Their member prologue, backing eligibility, defaults, admission, and
+body behavior are defined by [Zax enums](enums.md).
+
 ### `forward`
 
 `forward` introduces a name before its complete declaration is otherwise
@@ -1365,7 +1408,10 @@ Diagnostics should distinguish:
 - duplicate bindings introduced by a result-routing construct; and
 - use of an unconstructed result slot as a live value;
 - an identity declaration missing either its admission or surface keyword; and
-- conflicting `admit`/`restricted` or `expose`/`opaque` intent.
+- conflicting `admit`/`restricted` or `expose`/`opaque` intent;
+- a type-qualified call to a function that is not `once`; and
+- a `once` function body that uses a missing instance without handling the
+  `Nothing` receiver state.
 
 Exact identifiers, wording, and presentation remain later diagnostics design.
 
@@ -1422,4 +1468,7 @@ It establishes constraints that later work must preserve:
   equivalence, layout, conversion, and reflection; and
 - future generic, composition, and partial work must preserve the explicit
   identity-declaration integration owned here and the behavior owned by
-  [Zax identity types](identity-types.md).
+  [Zax identity types](identity-types.md); and
+- future global and `once` lifetime work must preserve type-callable `once`
+  functions without treating the accepted call surface as a global-value
+  initialization rule.

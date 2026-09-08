@@ -7,7 +7,7 @@
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
 | Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement and protected reset; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), and [endianness](endianness.md) |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -472,17 +472,17 @@ Enums and identities receive immediate-boundary type/value forms:
 | Immediate underlying type | `MyType underlying type` | Enum or identity type model |
 | Immediate underlying value | `myValue underlying value` | Enum or identity type model |
 
-An identity original-definition body additionally receives a private final
-post-unary place form:
+An identity or enum original-definition body additionally receives a private
+final post-unary place form:
 
 | Operation | Exact form | Behavior owner |
 | --- | --- | --- |
-| Private immediate underlying place | `myIdentity underlying place` | Identity type model |
+| Private immediate underlying place | `myValue underlying place` | Identity or enum type model |
 
 These forms are regenerated for each outer boundary and are not mechanically
-forwarded by identity exposure. `underlying place` is not part of the current
-generated enum surface; a future enum definition body may motivate an
-equivalent private capability after enum validity and mutation are reviewed.
+forwarded by identity exposure. `underlying place` remains private to the
+original defining authority and requires an instance receiver. Complete enum
+owner behavior is defined by [Zax enums](enums.md).
 
 Every enum additionally receives:
 
@@ -491,10 +491,15 @@ Every enum additionally receives:
 | Semantic decode | `myEnum as UnderlyingType` | Enum and applicable semantic owner |
 | Raw adoption | `MyEnum unsafe from myRaw` | Enum and safety model |
 
-The exact underlying type argument is required for semantic decode.
+The exact underlying type argument is required for semantic decode. Raw adoption
+is a defined unsafe permission that bypasses the enum's ordinary admission
+policy and preserves the exact backing representation.
 
-Whether raw adoption should ultimately be classified as unchecked or unsafe
-remains future enum/safety review.
+Every enum also receives overridable comparison defaults using the comparison
+forms cataloged above. A `flags` enum receives overridable defaults for `|`,
+`&`, `^`, `&~`, and their direct mutation forms. Exact availability and
+type-specific behavior are defined by [Zax enums](enums.md); language-supplied
+semantic families may replace or forbid those defaults under their own owner.
 
 ## Endianness reference
 
