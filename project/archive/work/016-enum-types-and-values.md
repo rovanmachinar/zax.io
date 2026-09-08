@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working material / non-normative / audit-only |
 | Work Item | `016` |
 | Created | 2026-09-07 |
 | Owns | The bounded review defined by the fixed initiating input |
@@ -10,10 +10,10 @@
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical working record retained for targeted audits. Its
+aligned findings were promoted into current owners before archival. The record
+remains non-normative and is not part of ordinary onboarding or current language
+authority.
 
 ## Fixed initiating input
 
@@ -779,11 +779,13 @@ Flags receive the singular exact and case-insensitive lookup functions. A
 singular lookup resolves one declared name only; it does not parse numeric text,
 separators, or a textual flag composition.
 
-Flags additionally receive conceptual generated operations:
+Flags need future bulk conversion operations conceptually named `fromStrings`
+and `fromStringsIgnoringCase`. Their exact input type and declaration remain
+deferred until a suitable concrete collection or iterable contract exists:
 
 ```text
-fromStrings(iterable of String) -> MyFlags?
-fromStringsIgnoringCase(iterable of String) -> MyFlags?
+fromStrings(sequence of String) -> MyFlags?
+fromStringsIgnoringCase(sequence of String) -> MyFlags?
 ```
 
 Each element must resolve to one distinct member value. The resolved values are
@@ -801,32 +803,33 @@ provide the same signature. The owner may replace one or write `= forbidden`.
 requires no separate source request and need not materialize unused conversion
 tables or code.
 
-#### Generated iteration pressure
+#### Generated traversal pressure
 
-Two distinct generated iterators are required conceptually:
+Two traversal capabilities are required without assuming first-class iterator
+values before concepts can express their contracts:
 
-1. `matchingValuesIgnoringCase` accepts a string and yields each distinct
-   case-insensitive matching enum value once, in the order of its first matching
-   declaration. No match yields an empty iterator.
-2. `members` yields every declared member in source order and preserves
-   duplicate-valued aliases. Each entry exposes at least the declared ASCII name,
-   enum value, and declaration order.
+1. Member traversal visits every declaration in source order, preserves
+   duplicate-valued aliases, and exposes at least the declared ASCII name, enum
+   value, and declaration order.
+2. Case-insensitive match traversal visits each distinct matching enum value
+   once, in the order of its first matching declaration.
 
-Representative call intent is:
+An initial `each` design may provide compiler-known traversal directly:
 
 ```zax
-matches := Color.matchingValuesIgnoringCase(text)
-members := Color.members()
+// Illustrative only; exact `each` syntax remains future work.
+each member : in Color {
+  inspect(member)
+}
 ```
 
-Exact iterator result types, iteration protocol, iterable string input, and
-source syntax are deferred to future iterator work. That work must return to the
-enum owner and add concrete declarations and examples. Before this work item can
-be archived, this pressure needs an indexed live destination because no current
-iterator raw owner exists.
+Future concepts may enable equivalent first-class iterator-returning functions.
+Exact `each` syntax, compiler-known sources, iterator values, iterable string
+input, and user-defined protocols remain future work. That work must return to
+the enum owner with concrete declarations and examples.
 
 General enum reflection, metadata, and enum-to-string customization remain
-separate from these narrow generated operations.
+separate from these narrow traversal requirements.
 
 #### Exhaustive-selection pressure
 
@@ -963,7 +966,7 @@ Source-stability consequences include:
 | `enumValue unsafe as OtherInteger` | Reject; project to the backing and then use ordinary integer conversion. |
 | Direct `enumValue as OtherInteger` is rejected | Retain. |
 | Two-step conversion through the backing type | Retain under ordinary integer conversion rules. |
-| Compile-time enum metadata and enum-to-string | Replace the narrow conversion need with demand-generated functions; defer general reflection and iterator mechanics explicitly. |
+| Compile-time enum metadata and enum-to-string | Replace the narrow conversion need with demand-generated functions; defer general reflection, direct traversal, and concept-dependent iterator mechanics explicitly. |
 | `$EnumType` generic conversion example | Defer generic enum constraints and families to generic work. |
 
 #### Deferred consequences and lasting ownership
@@ -971,7 +974,7 @@ Source-stability consequences include:
 | Concern | Destination or required destination | Constraint and activation pressure |
 | --- | --- | --- |
 | Complete selection and matching | [Raw selection input](../raw/selection.md) | Activation must preserve defined unnamed values, flags combinations, aliases, and catch-all pressure. |
-| Iterator declarations and protocols | Indexed raw iterator destination required before archival | Future iterator work must define `members`, `matchingValuesIgnoringCase`, iterable string input, and concrete enum examples. |
+| Direct traversal and iterator protocols | [Raw iteration input](../raw/iteration.md) | `each` may first support compiler-known enum traversal; true iterator values and iterable parameters wait for concepts or an equivalent constraint model. |
 | General reflection and metadata | [Raw reflection input](../raw/reflection.md) | Preserve declaration names/order and aliases without claiming that a runtime value remembers which alias produced it. |
 | General compile-time member expressions | [Raw compile-time-execution input](../raw/compile-time-execution.md) | Member values must remain definition-time constants until broader compile-time integration is accepted. |
 | Generated enum and endian families | [Raw generic input](../raw/type-parameters-and-generics.md) | Do not invent generic syntax here; each generated result must obey the ordinary enum model. |
@@ -1698,9 +1701,9 @@ integration questions found by the initial dry run:
 2. `case-conflicting-enum-member-names` is the exact intent category, applied
    around the complete enum declaration.
 
-The iterator dependency does not itself cause failure. Its exact protocol may
-remain deferred because enum behavior is coherent without choosing iterator
-syntax, provided promotion creates the indexed raw destination described below.
+The traversal dependency does not itself cause failure. Enum behavior is
+coherent when declaration order, matching, and atomic conversion requirements
+are preserved without choosing `each` syntax or a first-class iterator protocol.
 
 No lasting owner was edited by this dry run. The result is **PASS**: the
 findings have a coherent human-facing structure, unique ownership, live
@@ -1774,7 +1777,7 @@ The document should teach in this order:
 8. underlying type/value/place, semantic projection, safe admission, and unsafe
    raw adoption;
 9. exact/case-insensitive string conversion and its ambiguity rules;
-10. deferred member/match iterators and flags string-array admission;
+10. deferred member/match traversal and flags multi-string admission;
 11. exhaustive-selection pressure;
 12. endian semantic enum handoff;
 13. costs, diagnostics, source stability, and reference details.
@@ -1797,8 +1800,9 @@ belong after the ordinary model they vary.
 | Case-conflicting enum-name acknowledgement | Proposed enum owner for the conflict behavior | [Intent acknowledgements](../../language/intent-acknowledgements.md) owns the exact category registry and enclosure meaning |
 | Endian encode/decode and focused operation surface | [Endianness](../../language/endianness.md) | Proposed enum owner teaches why semantic projection may differ from raw extraction |
 | Selection syntax and catch-all behavior | [Raw selection input](../raw/selection.md) | Proposed enum owner states only the enum facts selection must preserve |
-| Iteration protocol and concrete iterator signatures | Proposed indexed raw `iteration.md` | Proposed enum owner preserves semantic result/order requirements and marks syntax deferred |
-| General enum declaration metadata and reflection | [Raw reflection input](../raw/reflection.md) | Generated string operations and narrow iterators do not establish general reflection |
+| `each` and compiler-known enum traversal | Proposed indexed raw `iteration.md` | Proposed enum owner preserves semantic result/order requirements without assuming first-class iterator values |
+| Concepts-based iterator and iterable protocols | [Raw generic input](../raw/type-parameters-and-generics.md) and proposed raw `iteration.md` | Direct `each` work must not invent generic constraints implicitly |
+| General enum declaration metadata and reflection | [Raw reflection input](../raw/reflection.md) | Generated strings and narrow traversal requirements do not establish general reflection |
 | General compile-time-produced member constants | [Raw compile-time-execution input](../raw/compile-time-execution.md) | Proposed enum owner accepts only definition-time integer constants under the current boundary |
 | Generated enum families and endian-family names | [Raw generic input](../raw/type-parameters-and-generics.md) | Each produced type must obey the ordinary enum model |
 | Partial/open enum extension | [Raw partial-type input](../raw/partial-types.md) | Original enum bodies seal; future work must preserve member order, defaults, masks, and string behavior |
@@ -1817,10 +1821,11 @@ belong after the ordinary model they vary.
   distributed to the indexed raw owners below.
 - Create `project/raw/iteration.md` and add it to
   `project/raw/README.md`. It should combine the already indexed `each in` /
-  `each from` iteration pressure with the enum `members`,
-  `matchingValuesIgnoringCase`, and iterable-string-input pressure. It must state
-  that future iteration work returns to the enum owner with concrete declarations
-  and examples.
+  `each from` pressure with compiler-known enum member/match traversal and
+  multi-string flags input. It must keep true iterator values and general
+  iterable parameters deferred until concepts can express their contracts, and
+  require future work to return to the enum owner with concrete declarations and
+  examples.
 - Update raw files that currently point to enum raw input so they point to the
   current enum owner for accepted facts and retain only their independently
   unresolved concern.
@@ -1849,8 +1854,8 @@ This is the complete promotion set authorized after the PASS result.
 Create:
 
 1. `language/enums.md` - cohesive current conceptual enum owner.
-2. `project/raw/iteration.md` - indexed deferred iterator/iterable pressure with
-   representative enum requirements.
+2. `project/raw/iteration.md` - indexed direct-`each`, compiler-known traversal,
+   and later concept-dependent iterator pressure.
 
 Update current language owners and routers:
 
@@ -1878,45 +1883,47 @@ Update current language owners and routers:
 12. `language/function-invocation.md` and
     `language/declarations-and-bindings.md` - define the narrow type-callable
     `once` behavior needed by generated enum calls and replacement.
-13. `casting.md` - replace the retired enum-conversion deferral with the current
+13. `language/terms.md` - correct type-result examples to use type aliases.
+14. `casting.md` - replace the retired enum-conversion deferral with the current
     projection, two-step conversion, and raw-adoption model.
 
 Update and create live deferred destinations:
 
-14. `project/raw/README.md` - remove consumed enum input and index iteration.
-15. `project/raw/selection.md` - add defined unnamed values, flags combinations,
+15. `project/raw/README.md` - remove consumed enum input and index iteration.
+16. `project/raw/selection.md` - add defined unnamed values, flags combinations,
     aliases, and catch-all pressure.
-16. `project/raw/reflection.md` - point accepted enum facts to the current owner
+17. `project/raw/reflection.md` - point accepted enum facts to the current owner,
+    correct its `type of` alias example,
     and retain only general metadata/reflection pressure.
-17. `project/raw/compile-time-execution.md` - preserve broader constant-expression
+18. `project/raw/compile-time-execution.md` - preserve broader constant-expression
     eligibility required by future enum member expressions.
-18. `project/raw/type-parameters-and-generics.md` - point generated family
+19. `project/raw/type-parameters-and-generics.md` - point generated family
     constraints to the current enum owner.
-19. `project/raw/partial-types.md` - preserve enum extension consequences for
+20. `project/raw/partial-types.md` - preserve enum extension consequences for
     member order, defaults, admission, masks, strings, and body sealing.
-20. `project/raw/interop.md` - preserve enum layout, foreign unknown-value, and
+21. `project/raw/interop.md` - preserve enum layout, foreign unknown-value, and
     admission/adapter pressure.
-21. `project/raw/owned-composition.md` - preserve the future fat-identity pressure
+22. `project/raw/owned-composition.md` - preserve the future fat-identity pressure
     while recording that current enums add no storage.
-22. `project/raw/numeric-type-families.md` - replace obsolete exact-only enum
+23. `project/raw/numeric-type-families.md` - replace obsolete exact-only enum
     statements and raw-enum links with the current owner boundary.
-23. `project/raw/feature-catalog.md` - route enum features to the current owner
+24. `project/raw/feature-catalog.md` - route enum features to the current owner
     and `each` iteration to the new raw iteration input.
-24. `project/raw/global-and-once-lifetimes.md` - narrow the unresolved `once`
+25. `project/raw/global-and-once-lifetimes.md` - narrow the unresolved `once`
     dependency to value initialization, concurrency, teardown, capture, and
     generic-specialization behavior.
 
 Update project-process sources and the active record:
 
-25. `project/handoff.md` - add the complete-message `ping` / only-`pong` rule.
-26. `project/rehydrate.md` - add the synchronized rule.
-27. `project/work/016-enum-types-and-values.md` - record final dispositions and
+26. `project/handoff.md` - add the complete-message `ping` / only-`pong` rule.
+27. `project/rehydrate.md` - add the synchronized rule.
+28. `project/work/016-enum-types-and-values.md` - record final dispositions and
     repair links to retired inputs.
 
 Retire consumed inputs:
 
-28. `enums.md`.
-29. `project/raw/enum-types.md`.
+29. `enums.md`.
+30. `project/raw/enum-types.md`.
 
 No archive move, work-item `017`, project current-work pointer, staging,
 committing, or pushing belongs to this promotion set.
@@ -1950,8 +1957,9 @@ Promotion completed through the authorized PASS change set.
 - Current declaration, invocation, source, identity, integer, operator, endian,
   safety, and intent owners contain their local enum and narrow `once`
   integration.
-- `project/raw/iteration.md` is the indexed live destination for enum iterator,
-  iterable-string, and general `each` pressure.
+- `project/raw/iteration.md` is the indexed live destination for direct `each`,
+  compiler-known enum traversal, multi-string flags input, and later
+  concept-dependent iterator pressure.
 - Selection, reflection, compile-time execution, generics, partial extension,
   interop, owned composition, numeric-family, feature-catalog, and remaining
   `once` input retain only their independently unresolved concerns.
@@ -1960,6 +1968,13 @@ Promotion completed through the authorized PASS change set.
 - `casting.md` was added to the promotion set during validation because it
   contained a live link to the retired enum input and stale deferred conversion
   claims. Its enum note now routes to current behavior.
+- Post-promotion review replaced a misleading anonymous zero-storage member with
+  a named nested type, clarified the no-fat-representation rule, and corrected
+  type-producing examples to use `:: alias type`, including the cross-cutting
+  terminology owner.
+- Post-promotion review also removed the premature assumption that enum
+  traversal must return first-class iterators. Direct `each` over compiler-known
+  sources may precede concept-dependent iterator protocols.
 - `project/handoff.md` and `project/rehydrate.md` contain the synchronized
   complete-message `ping` / only-`pong` rule requested by the language
   maintainer.
@@ -1973,8 +1988,22 @@ Validation completed:
   the retired legacy enum page;
 - no live link depends on either retired enum input;
 - the prompt-source rule is textually synchronized; and
-- the maintainer's staged `016` review boundary remains intact, while the PASS
-  revision and promotion remain unstaged.
+- the language maintainer staged the complete 30-file promotion and review
+  corrections before closure.
 
-This promotion does not archive work item `016`, create `017`, update the
-current-work pointer, stage changes, commit, or push.
+### Closure result 2026-09-07
+
+The language maintainer approved the promoted enum design and post-promotion
+review corrections. Work item `016` closed with:
+
+- current enum behavior owned by `language/enums.md` and its integrated owners;
+- direct `each` and compiler-known traversal prepared as work item `017`;
+- first-class iterator protocols explicitly deferred until concepts can express
+  their constraints;
+- every remaining enum consequence assigned to a current owner or indexed raw
+  destination; and
+- final validation passing before archival.
+
+The work item moved to `project/archive/work/016-enum-types-and-values.md`,
+`project/README.md` now identifies `017` as active and `018` as next, and the
+archive index records this outcome. The creating agent does not analyze `017`.

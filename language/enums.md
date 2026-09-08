@@ -675,11 +675,13 @@ decomposition policy.
 
 ### Several string inputs for flags
 
-Flags conceptually receive:
+Flags need bulk conversion operations conceptually named `fromStrings` and
+`fromStringsIgnoringCase`. Their exact input type and declaration remain
+deferred until Zax has a suitable concrete collection or iterable contract:
 
 ```text
-fromStrings(iterable of String) -> Permission?
-fromStringsIgnoringCase(iterable of String) -> Permission?
+fromStrings(sequence of String) -> Permission?
+fromStringsIgnoringCase(sequence of String) -> Permission?
 ```
 
 Each input must resolve to one distinct member value. Zax ORs those values. An
@@ -701,21 +703,27 @@ Generated string functions are not protected:
 Demand generation does not require unused lookup tables or executable code to
 be materialized.
 
-## Deferred enum iteration
+## Deferred enum traversal
 
-Enum design requires two generated iteration capabilities, but exact iterator
-types and source syntax remain unsettled:
+Enum design requires two traversal capabilities, but it does not require a
+first-class iterator value before Zax has concepts capable of expressing an
+iterator protocol:
 
-- `matchingValuesIgnoringCase` accepts a string and yields each distinct
-  matching enum value once, in first matching declaration order; and
-- `members` yields every member declaration in source order, preserving aliases
-  and exposing at least its ASCII name, enum value, and declaration order.
+- member traversal visits every declaration in source order, preserves aliases,
+  and exposes at least its ASCII name, enum value, and declaration order; and
+- case-insensitive match traversal visits each distinct matching enum value
+  once, in first matching declaration order.
 
-No concrete source declaration is shown because the iteration protocol has not
-yet been reviewed. Future iteration work must return here and add declarations
+An initial `each` design may provide these as compiler-known traversal sources
+without producing an iterator value. A later concepts-based design may expose
+equivalent first-class iterator-returning functions. This document does not
+choose between those surfaces.
+
+No concrete source declaration is shown because `each` and iterator protocols
+have not yet been reviewed. Future work must return here and add declarations
 and examples.
 
-The member iterator supplies the primitive needed for programmer-defined flags
+Member traversal supplies the information needed for programmer-defined flags
 formatting and decomposition. It does not itself choose a decomposition policy.
 
 General reflection and metadata remain separate future work.
@@ -829,7 +837,8 @@ grammar, ABI contract, serialization specification, or implementation mapping.
 
 Still deferred:
 
-- exact iterator and iterable protocols;
+- `each` syntax and compiler-known traversal;
+- first-class iterator values, iterable concepts, and user-defined protocols;
 - broader compile-time production of member constants;
 - general reflection and metadata;
 - generic and generated enum families;

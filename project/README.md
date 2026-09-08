@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [016: Enum types and values](work/016-enum-types-and-values.md) |
-| Next work number | `017` |
+| Active work item | [017: Each iteration and compiler-known traversal](work/017-each-iteration-and-compiler-known-traversal.md) |
+| Next work number | `018` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
