@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [017: Each iteration and compiler-known traversal](work/017-each-iteration-and-compiler-known-traversal.md) |
-| Next work number | `018` |
+| Active work item | [018: Switch, cases, and value selection](work/018-switch-cases-and-value-selection.md) |
+| Next work number | `019` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

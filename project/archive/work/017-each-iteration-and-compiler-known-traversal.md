@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Completed historical record / non-normative / audit-only |
 | Work Item | `017` |
 | Created | 2026-09-07 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | First-class iterator concepts, complete generics, generators, coroutines, async or parallel iteration, or complete collection and range design |
+| Completed | 2026-09-08 |
+| Owns | Historical provenance for the bounded review defined by the fixed initiating input |
+| Does Not Own | Current iteration behavior, first-class iterator concepts, complete generics, generators, coroutines, async or parallel iteration, or complete collection and range design |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical audit record. Its aligned findings were promoted into
+their current owners before closure. This record remains non-authoritative and
+must not serve as a current source of language meaning.
 
 ## Fixed initiating input
 
@@ -1345,6 +1345,29 @@ Validation completed:
 record still names it as initiating evidence. All of its continuing value has a
 current owner or focused raw destination. Closure must retire it and its raw
 index entry while archiving this work item.
+
+### Closure
+
+Work item `017` is complete.
+
+- Current `each in`, `each from`, cursor protocol, active-`each` access,
+  erasure, mutation responsibility, costs, and diagnostics are owned by
+  `language/iteration.md`.
+- Shared flow, source, enum, and operator consequences are integrated into
+  their current owners.
+- Continuing generic, collection, reflection, and multi-token keyword-neutral
+  pressure is preserved in focused raw inputs.
+- Dedicated case-insensitive enum-match traversal was discarded in favor of
+  generated singular lookup and programmer-defined filtering over enum
+  declaration traversal.
+- Consumed legacy `each` material was removed or corrected.
+- `project/raw/iteration.md` has no remaining unique live value and retires with
+  this work item.
+- Work item `018` begins the separately aligned review of `switch`, `case`,
+  `default`, and runtime value selection.
+
+This file is archived under its unchanged subject filename and is excluded from
+ordinary onboarding and current design reading.
 
 ### Superseded initial reconstruction
 
