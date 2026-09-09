@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, and explicit `scope`; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | Expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
+| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
+| Does Not Own | Complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
 ## Mental model
@@ -15,7 +15,7 @@
 A core flow statement selects and runs a body under a predictable set of visible
 phases. It has:
 
-1. a complete flow introducer such as `if`, `while`, or `redo until`;
+1. a complete flow introducer such as `if`, `while`, `redo until`, or `each`;
 2. an optional flow label;
 3. construct-specific initializer, condition, and post sections;
 4. exactly one effective body statement; and
@@ -42,6 +42,10 @@ Ordinary loops also read as expected:
 ```zax
 while starting <= 100 {
   ++starting
+}
+
+each value : in values {
+  use(value)
 }
 ```
 
@@ -290,6 +294,26 @@ scope i := 0 ;; ++i {
 }
 ```
 
+Iteration uses a required traversal clause rather than a Boolean condition:
+
+```text
+traversal
+initializer ;; traversal
+;; traversal ;; post
+initializer ;; traversal ;; post
+```
+
+```zax
+each values := loadValues() ;;
+  value : in values ;;
+  record(value) {
+  use(value)
+}
+```
+
+The complete `in`/`from` source, entry-binding, progression, and erase model is
+owned by [Zax iteration](iteration.md).
+
 The keyword determines the header schema. A conditional loop's second section is
 a condition; a conditionless construct's second section is a post operation.
 This is construct-specific meaning, not an ambiguity.
@@ -444,6 +468,7 @@ The common progression model is:
 | `while` / `until` | initializer, test, selected body | post, test, selected body | test, selected body |
 | `redo while` / `redo until` | initializer, body without first test | post, test, selected body | test, selected body |
 | `forever` | initializer, body | post, body | body |
+| `each` | initializer, first entry or exhaustion | post, progression, next entry or exhaustion | progression, next entry or exhaustion |
 | explicit `scope` | initializer, body | post, then exit normally; `next` instead re-enters | re-enter body |
 
 For `while`, continuation selects the body when the condition is true. For
@@ -467,6 +492,13 @@ Normal loop fallthrough behaves like `next`: it runs post before the next test
 or unconditional entry. `break` skips post and exits. `continue` skips post and
 goes to the next test, or directly to the next body entry when the construct has
 no condition.
+
+For `each`, progression belongs to the traversal rather than to the
+programmer-written post. `continue` skips post but still progresses; otherwise
+it could repeat the same entry indefinitely. `with erase` and standalone erase
+may replace ordinary progression with a cursor-provided erase transition. Their
+complete availability and cursor effects are defined by
+[Zax iteration](iteration.md#erasing-during-traversal).
 
 An explicit `scope` is re-enterable; an arbitrary `{ ... }` block is not. Normal
 `scope` completion runs post and exits. `next` targeting the scope runs post and
@@ -639,6 +671,13 @@ Before a transfer arrives at its target, every body or nested scope it leaves is
 destroyed in reverse construction order. Target-header bindings remain alive when
 `next` or `continue` re-enters that target and are destroyed only when the
 complete target flow statement exits.
+
+For `each`, current entry bindings end after post and before progression.
+Standalone erase ends current entry access immediately and leaves a
+target-specific pending transition. A following `next` may run only a post that
+does not access the ended entry; `continue` skips post; neither performs a
+second progression. Complete erase behavior is owned by
+[Zax iteration](iteration.md#erase-perform-work-then-transfer).
 
 On normal body completion:
 

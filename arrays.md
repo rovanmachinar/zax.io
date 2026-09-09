@@ -19,9 +19,9 @@ Legacy input below proposes multidimensional, fixed-size, and dynamically
 allocated arrays with zero-based indexing and `length`. Its claims that an array
 cannot resize are not accepted as the final dynamic-array contract.
 
-````zax
+```zax
 randomNumber final : (result : Integer)() = {
-    // ...
+  // ...
 }
 
 // all types are automatically initialized to a `type`'s default value (unless
@@ -29,10 +29,16 @@ randomNumber final : (result : Integer)() = {
 // uninitialized).
 myArray : Integer[1000]
 
-each arrayValue : Integer in myArray {
-    arrayValue =  randomNumber()
+each arrayValue : Integer writable & in myArray {
+  arrayValue = randomNumber()
 }
+```
 
+The writable reference updates each array element in place. Complete direct and
+cursor-driven traversal behavior is owned by
+[Zax iteration](language/iteration.md#fixed-arrays).
+
+````zax
 // create a new array of the same length and copy the contents from the original
 // array; as this array is a fixed length, dynamic allocation is not needed in
 // this particular context (i.e. where a compiler can deduce a fixed length)

@@ -52,6 +52,9 @@ producing them.
 - Read [Zax core flow control](language/core-flow-control.md) for exact-`Boolean`
   conditions, `if`/`else`, loops, explicit `scope`, flow labels, and
   `break`/`continue`/`next`/`return`.
+- Read [Zax iteration](language/iteration.md) for `each in`, cursor-driven
+  `each from`, entry bindings, progression, active-traversal access, erasure,
+  mutation responsibilities, and costs.
 - Read [Zax operators](language/operators.md) for the shared operator mental
   model, declarations, receiver discovery, selection, expected results,
   evaluation, protected domains, and fallback.
@@ -99,6 +102,7 @@ producing them.
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)
+- [Iteration](language/iteration.md)
 - [Operators](language/operators.md)
 - [Operator phrases](language/operator-phrases.md)
 - [Operator catalog](language/operator-catalog.md)

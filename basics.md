@@ -118,27 +118,10 @@ composition is a separate unresolved concept.
 
 #### Keyword disambiguation
 
-The accepted rule is that a spelling has keyword status only where that keyword's
-construct is grammatically permitted; outside those positions the spelling is not
-a keyword. That rule is owned by
+The current rule is owned by
 [Zax source structure](language/source-structure.md#contextual-keyword-recognition).
-The remaining material on this page is unreviewed legacy evidence for the
-underscore convention.
-
-Keywords are reserved only within the context of where the keyword is allowed and legal. To disambiguate keywords from variables, variables can be postfixed with an underscore (`_`) but otherwise the underscore postfix (`_`) should never be used. Usage of keywords as variables is discouraged and usage of postfix underscores are also discouraged.
-
-`replacement` is contextual only when immediately followed by `+++` where a
-constructor declaration is legal. In every other context it remains an ordinary
-identifier and requires no underscore disambiguation.
-
-````zax
-// legal name because `readonly` is a keyword in some contexts
-readonly_ : Type readonly
-
-// foobar_ is not a legal name because it contains an _ postfix on a name
-// that is not a keyword
-foobar_ : Type readonly
-````
+It defines contextual keyword recognition and the optional postfix `_`
+keyword-role escape. This legacy page does not duplicate that source rule.
 
 
 ### Operators

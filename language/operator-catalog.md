@@ -6,8 +6,8 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement and protected reset; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, and cursor protocol forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -500,6 +500,24 @@ forms cataloged above. A `flags` enum receives overridable defaults for `|`,
 `&`, `^`, `&~`, and their direct mutation forms. Exact availability and
 type-specific behavior are defined by [Zax enums](enums.md); language-supplied
 semantic families may replace or forbid those defaults under their own owner.
+
+## Iteration protocol phrases
+
+`each from` recognizes these receiver-owned phrase forms:
+
+| Phrase words | Use shape | Protocol role |
+| --- | --- | --- |
+| `iterate` | `iterate <source>` | Produce an initial cursor or optional cursor |
+| `value at` | `value at <cursor>` | Produce the current value, reference, or proxy |
+| `advance` | `advance <cursor>` | Mutate to a successor and return `Boolean`, or return a replacement cursor or optional cursor |
+| `erase and advance` | `erase and advance <cursor>` | Erase current and mutate to or return a successor |
+| `erase` | `erase <cursor>` | Erase current without producing a successor |
+
+These are language-recognized protocol forms that a source or cursor type may
+declare on its own receiver. They are not global extension points and do not
+create a generic iterator constraint by themselves. Complete acquisition,
+result-shape, progression, erasure, and availability behavior is owned by
+[Zax iteration](iteration.md#cursor-driven-from-traversal).
 
 ## Endianness reference
 

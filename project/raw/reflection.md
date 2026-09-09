@@ -210,6 +210,31 @@ reflection remains responsible for deciding how tools and generic code inspect:
 Reflection must not claim that a runtime value remembers which duplicate-valued
 member name produced it.
 
+## Traversal reflection roles
+
+[Zax iteration](../../language/iteration.md) defines current enum and structural
+roles as:
+
+```text
+value, name, [future reflection]
+```
+
+Future reflection work owns the third role's type, contents, lifetime, storage,
+and compile-time/runtime availability. The position is preserved so later
+metadata does not reorder current bindings, but no reflection binding is
+currently available.
+
+Reflection must also distinguish:
+
+- structural traversal of accessible stored instance member places;
+- traversal of declarations belonging to a type;
+- enum member declarations and duplicate-valued aliases;
+- generated, function, operator, and type-owned `once` declarations; and
+- metadata that may be inspected only in a compile-time context.
+
+Adding declaration traversal must not silently broaden `each value : in
+instance`, whose current domain is stored instance member places.
+
 ## Integer-specific metadata
 
 The integer facts themselves are current in

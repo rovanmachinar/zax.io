@@ -259,8 +259,21 @@ Ordinary source outside a bare enclosure already handles the common phrase case
 without this mechanism: words inside a declared or fenced operator phrase carry
 phrase roles, and the compiler diagnoses only actual surviving ambiguity. See
 [keyword words in phrase roles](../../language/operator-phrases.md#keyword-words-in-phrase-roles).
-The remaining bare-source pressure is the case where a competing *keyword* role
-must be removed entirely.
+
+[Zax source structure](../../language/source-structure.md#contextual-keyword-recognition)
+also defines postfix `_` as a one-word keyword-role escape:
+
+```zax
+erase_ cursor
+```
+
+The `_` is removed from semantic identity and remains legal before the current
+language has a competing keyword interpretation. It therefore handles the
+single-word compatibility case without requiring an enclosure.
+
+The remaining bare-source pressure is the case where competing keyword roles
+must be removed across a complete expression or effective statement while
+preserving one transparent tree.
 
 This is not an ordinary `if` statement:
 
@@ -325,9 +338,10 @@ quote introduces a phrase fence. The accepted rule is owned by
 and the remaining literal consequences are preserved in
 [raw literal input](literal-operators.md).
 
-A local fence and this enclosure are therefore complementary rather than
-competing: the fence requires one exact phrase component, while the enclosure
-would neutralize a competing keyword role across its complete payload.
+A local fence, postfix `_`, and this enclosure are therefore complementary
+rather than competing: a fence requires one exact phrase component, `_`
+neutralizes one word, and the enclosure would neutralize competing keyword
+roles across its complete payload.
 Future bare-source work must decide whether the enclosure is still justified now
 that fencing exists.
 
@@ -349,8 +363,8 @@ that fencing exists.
 
 ## Activation and retirement
 
-Activate this input for keyword-neutral source, source reflection, transparent
-lexical enclosures, or the next focused source work item.
+Activate this input for multi-token keyword-neutral source, source reflection,
+transparent lexical enclosures, or the next focused source work item.
 Accepted operator-phrase words, presentation, and fencing have already moved to
 their current owners and are no longer decided here.
 

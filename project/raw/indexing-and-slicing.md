@@ -193,8 +193,31 @@ Storage capacity and unchanged logical index do not by themselves preserve one
 element place. These guarantees are programmer-visible API behavior rather than
 hidden implementation choices.
 
+## Traversal participation
+
+[Zax iteration](../../language/iteration.md) defines direct fixed-array
+traversal and the concrete cursor protocol. Future array, slice, range, proxy,
+and collection work must decide which source forms participate and must state:
+
+- whether the source supports direct `each in`, cursor-driven `each from`, or
+  both;
+- traversal order and whether it is restartable;
+- the value, reference, or proxy returned by `value at`;
+- whether progression is in-place or replacement-based;
+- whether element mutation preserves current and future positions;
+- which insertions, removals, growth, and relocation invalidate traversal;
+- whether several simultaneous cursors remain valid;
+- whether invalidation is statically diagnosable, runtime-checked, or a
+  documented programmer responsibility; and
+- whether erase-and-advance or erase-and-exit is available.
+
+A reverse, filtered, strided, or computed view can express its logical order
+through its cursor. It does not require a second meaning for `each in` or
+`each from`.
+
 ## Activation and retirement
 
 Activate this input for arrays, indexing, slicing, ranges, bit places, bounds,
-proxies, or indexed mixfix declarations. Move accepted behavior into array,
-index, source, qualifier, lifetime, and operator owners, then retire this file.
+proxies, collection cursor participation, or indexed mixfix declarations. Move
+accepted behavior into array, iteration, index, source, qualifier, lifetime,
+and operator owners, then retire this file.

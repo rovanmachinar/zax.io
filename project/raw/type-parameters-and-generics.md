@@ -377,6 +377,41 @@ generic source does not spell both `?` layers. Future generic work must preserve
 Generic diagnostics must show enough resolved structure to explain why an
 apparently simple initialization needs an explicit packet.
 
+### Cursor-protocol constraints
+
+[Zax iteration](../../language/iteration.md#cursor-driven-from-traversal)
+defines the concrete cursor protocol without requiring a generic concept:
+
+```text
+iterate source
+value at cursor
+advance cursor
+erase and advance cursor
+erase cursor
+```
+
+Future generic work must let a declaration constrain an unknown source or
+cursor by the protocol pieces it actually needs. It must be possible to express:
+
+- whether `iterate` returns one cursor or an optional cursor;
+- the stable concrete cursor type;
+- whether `value at` exists and its value, reference, or proxy result shape;
+- the relationship between a yielded reference and the source or cursor life
+  path;
+- whether progression mutates cursor state and returns `Boolean` or returns a
+  replacement cursor, optionally absent;
+- whether erase-and-advance or erase-and-exit is available;
+- required source, cursor, and yielded-value qualifications;
+- whether the cursor may be copied, moved, stored, or returned; and
+- cursor/source mutation and invalidation guarantees.
+
+A `#` traversal requires progression but no `value at` result. Constraints must
+therefore compose protocol capabilities rather than require one monolithic
+iterator interface.
+
+Generic syntax must describe these existing operations. It must not introduce a
+second cursor protocol or reinterpret concrete `each from` behavior.
+
 ### Allocation-policy constraints
 
 [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md)
@@ -411,6 +446,7 @@ specialization. They must not infer a guarantee from hidden allocation history.
 
 Activate this input when generics, type parameters, constraints, computed type
 results, type-receiver identity, integer factories, relational type pairs,
-associated types, or generated type families are reviewed. Move accepted
-behavior into generic, declaration, invocation, type, numeric, and reflection
-owners, then retire this file after every preserved question is dispositioned.
+associated types, cursor-protocol constraints, or generated type families are
+reviewed. Move accepted behavior into generic, declaration, invocation, type,
+numeric, iteration, and reflection owners, then retire this file after every
+preserved question is dispositioned.

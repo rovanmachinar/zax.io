@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -832,6 +832,34 @@ Their flow-control and conditional-expression meaning is owned by
 [core flow control](core-flow-control.md); this document owns only their token
 spacing and their relationship to statement composition.
 
+`each` uses the same separator and continuation rules around its traversal
+clause:
+
+```zax
+each values := loadValues() ;;
+  value : in values ;;
+  record(value) {
+  use(value)
+}
+```
+
+A positional traversal binding remains unenclosed. Parentheses select the
+wholly named form:
+
+```zax
+each outer: (
+  name: memberName :,
+  value: memberValue :
+) in record {
+  use(memberName, memberValue)
+}
+```
+
+`outer:` is the flow label because it immediately follows the complete
+introducer. Inside the binding packet, `name:` and `value:` are role labels;
+`memberName :` and `memberValue :` are declarations. Complete binding and
+traversal behavior is owned by [Zax iteration](iteration.md).
+
 ### Header continuation
 
 Top-level operands and sections continued across a flow header use one common
@@ -1172,6 +1200,35 @@ The rule is about position rather than about a reserved-word list, so a
 concept owner that shows a likely confusion should link here instead of
 restating the rule. The term itself is defined by
 [language-design terms](terms.md#contextual-keyword).
+
+### Postfix `_` keyword escape
+
+A single postfix `_` forces one word through non-keyword grammar and is removed
+from its semantic spelling:
+
+```zax
+erase outer:  // keyword operation and flow target
+erase_ cursor // ordinary non-keyword phrase `erase`
+```
+
+The escape affects recognition, not identity. A declaration remains named
+`erase`, not `erase_`, and `word` and `word_` cannot introduce two different
+semantic names.
+
+The escape remains legal when the current compiler has no keyword
+interpretation for the word in that position. Source may therefore protect a
+word before a later language revision adds a contextual keyword. A formatter
+preserves an explicit escape rather than removing currently redundant
+forward-compatibility intent.
+
+Only one trailing `_` is the escape. It does not recursively create a semantic
+name ending in `_`. After keyword suppression, ordinary grammar may recognize
+the word as an identifier, callable name, operator-phrase component, or another
+available non-keyword role.
+
+This narrow one-word mechanism does not replace the separate future
+`bare{...}` candidate for keyword-neutral treatment of a complete enclosed
+source tree.
 
 ## Comment lexical modes
 

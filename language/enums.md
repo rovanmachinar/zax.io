@@ -6,7 +6,7 @@
 | Audience | Human developers declaring, reading, converting, or operating on enum values |
 | Applies To | Programmer-facing strict, relaxed, flags, and language-supplied semantic enum behavior; not a formal grammar, ABI contract, or specification |
 | Implementation State | Not established by this repository |
-| Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; iteration and selection pressure; enum costs, diagnostics, and source stability |
+| Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; selection pressure; enum costs, diagnostics, and source stability |
 | Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, selection, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
 | Source / Provenance | Current identity, integer, declaration, operator, endianness, safety, and intent designs, incorporating reviewed legacy enum intent |
 
@@ -676,8 +676,10 @@ decomposition policy.
 ### Several string inputs for flags
 
 Flags need bulk conversion operations conceptually named `fromStrings` and
-`fromStringsIgnoringCase`. Their exact input type and declaration remain
-deferred until Zax has a suitable concrete collection or iterable contract:
+`fromStringsIgnoringCase`. [Zax iteration](iteration.md) now defines how a
+concrete collection or cursor is traversed, but the exact input type and
+declaration remain deferred until Zax has a suitable collection parameter or
+generic iterable constraint:
 
 ```text
 fromStrings(sequence of String) -> Permission?
@@ -703,30 +705,54 @@ Generated string functions are not protected:
 Demand generation does not require unused lookup tables or executable code to
 be materialized.
 
-## Deferred enum traversal
+<a id="deferred-enum-traversal"></a>
 
-Enum design requires two traversal capabilities, but it does not require a
-first-class iterator value before Zax has concepts capable of expressing an
-iterator protocol:
+## Enum declaration traversal
 
-- member traversal visits every declaration in source order, preserves aliases,
-  and exposes at least its ASCII name, enum value, and declaration order; and
-- case-insensitive match traversal visits each distinct matching enum value
-  once, in first matching declaration order.
+`each in` visits every declared member in source order and preserves
+duplicate-valued aliases:
 
-An initial `each` design may provide these as compiler-known traversal sources
-without producing an iterator value. A later concepts-based design may expose
-equivalent first-class iterator-returning functions. This document does not
-choose between those surfaces.
+```zax
+Box :: enum U8 {
+  RedBox = 1
+  Redbox = 2
+  GreenBox = 5
+  Greenbox = 5
+}
 
-No concrete source declaration is shown because `each` and iterator protocols
-have not yet been reviewed. Future work must return here and add declarations
-and examples.
+each value : in Box {
+  print(value as underlying value)
+}
+// 1, 2, 5, 5
+```
 
-Member traversal supplies the information needed for programmer-defined flags
-formatting and decomposition. It does not itself choose a decomposition policy.
+The current roles are enum `value` followed by declared ASCII `name`:
 
-General reflection and metadata remain separate future work.
+```zax
+each value :, memberName : in Box {
+  print(value as underlying value, memberName)
+}
+
+each (name: memberName :) in Box {
+  print(memberName)
+}
+```
+
+An inferred name is a compiler-provided
+`String readonly immutable final &`. An explicit `String` requests a copy. A
+future reflection role follows `value` and `name`, but no reflection binding or
+metadata type is current.
+
+There is no dedicated case-insensitive match traversal. Generated
+`fromStringIgnoringCase` remains the built-in singular lookup. Code needing
+several or domain-specific matches traverses declarations and applies its own
+matching and deduplication.
+
+Member traversal supplies the facts needed for programmer-defined flags
+formatting and decomposition. It does not choose a decomposition policy.
+Complete binding, flow, and cursor behavior is owned by
+[Zax iteration](iteration.md#enum-declarations). General reflection remains
+separate future work.
 
 ## Selection pressure
 
