@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working record / non-normative / audit-only |
 | Work Item | `018` |
 | Created | 2026-09-08 |
-| Owns | The bounded review defined by the fixed initiating input |
+| Closed | 2026-09-09 |
+| Owns | Historical record of the bounded review defined by the fixed initiating input |
 | Does Not Own | Complete generalized pattern matching, arbitrary destructuring, compile-time selection, generics, reflection, variants and unions, or query/comprehension syntax |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical, audit-only record of collaborative design work.
+Accepted findings were promoted into their lasting owners before closure. This
+record remains non-authoritative and is not part of ordinary design reading.
 
 ## Fixed initiating input
 
