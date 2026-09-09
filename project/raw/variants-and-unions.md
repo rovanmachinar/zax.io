@@ -19,8 +19,10 @@ Candidate terminology:
 These names and their source forms are not accepted.
 
 No reliable representative declaration syntax exists yet. Future work should not
-invent one until type declaration, selection, access, and lifecycle requirements
-are reviewed together.
+invent one until type declaration, current
+[switch, case, and default](../../language/switch.md), future
+[pattern matching](pattern-matching.md), access, and lifecycle requirements are
+reviewed together.
 
 ## Managed alternative pressure
 
@@ -84,5 +86,5 @@ Activate this input when variant, union, tagged-alternative, active-member,
 overlay-memory, or exhaustive-alternative selection is reviewed.
 
 Move accepted behavior into a dedicated type owner and the applicable
-construction, selection, lifetime, qualifier, safety, and layout owners, then
-retire this file.
+construction, runtime-selection, pattern, lifetime, qualifier, safety, and layout
+owners, then retire this file.

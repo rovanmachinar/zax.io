@@ -53,7 +53,8 @@ intent<category>{
 }
 ```
 
-The category names the exact concern being acknowledged. The payload remains
+The category names the exact concern being acknowledged. Each category defines
+the smallest complete contextual source unit it may enclose. The payload remains
 ordinary Zax source:
 
 - type and qualifier checking still applies;
@@ -61,6 +62,11 @@ ordinary Zax source:
 - lifetime and alias requirements still apply;
 - layout and source structure still apply;
 - and unrelated diagnostics remain active.
+
+Most categories enclose a complete expression, effective statement, or
+declaration. A category may instead permit another complete contextual unit,
+such as one complete switch clause. No acknowledgement can borrow a required
+operand, separator, declaration piece, or body from outside its enclosure.
 
 The acknowledgement adds no required runtime operation or check.
 
@@ -148,6 +154,26 @@ owner : MyValue * unique = @{} // error: use @
 
 Wrapping the latter in `intent<...>` cannot create a valid initializer.
 
+A redundant switch-targeting tail `break` is another non-acknowledgeable intent
+error:
+
+```zax
+switch value {
+  case 1
+    handleOne();
+    break // error: normal case completion already exits the switch
+}
+```
+
+It must be removed unless it skips a case/switch post or names an outer target.
+An acknowledgement cannot preserve the misleading implication that ordinary
+cases fall through. Complete behavior belongs to
+[switch, case, and default](switch.md#redundant-tail-break).
+
+A `default` reachable through no ordered search is also non-acknowledgeable. It
+is not functioning as a fallback and must be rewritten as a transfer-only
+labeled case.
+
 ## Current category registry
 
 Category names describe the semantic situation being acknowledged rather than
@@ -161,6 +187,10 @@ copying a diagnostic message.
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
 | `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer at `Nothing` | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
 | `case-conflicting-enum-member-names` | Declare ASCII case-equivalent enum member names with different enum values | [Enums](enums.md#ascii-case-insensitive-lookup) |
+| `unreachable-selection-clause` | Deliberately retain one semantically proven unreachable complete `case` or `default` clause | [Switch, case, and default](switch.md#ordering-effects-and-overlap) |
+| `empty-selection` | Deliberately retain a runtime switch containing no clauses | [Switch, case, and default](switch.md#empty-selection) |
+| `outer-target-through-ineligible-label` | Deliberately select an eligible outer target through a nearer same-named label that is ineligible for the written transfer keyword | [Core flow control](core-flow-control.md#label-namespace-and-shadow-permission) |
+| `partial-enum-selection` | Deliberately omit one or more distinct declared enum member values from explicit switch coverage | [Enums](enums.md#selection-with-enum-values) |
 
 Anchored owning pointers also require intent acknowledgement when replacement
 of their target or an enclosing direct place can renew the resident member
@@ -189,6 +219,100 @@ no preferred case-insensitive result. Exact lookup can distinguish the names;
 unique case-insensitive lookup returns absence for the ambiguous folded name.
 Complete conversion behavior is defined by
 [Zax enums](enums.md#ascii-case-insensitive-lookup).
+
+### Unreachable selection clause
+
+A clause proven unreachable under the complete flow graph may be retained by
+acknowledging that one complete contextual clause:
+
+```zax
+switch mode {
+  case MyMode.Primary
+    usePrimary()
+
+  // PrimaryAlias has the same value as Primary under generated equality.
+  intent<unreachable-selection-clause>{
+    case MyMode.PrimaryAlias
+      useAlias()
+  }
+}
+```
+
+The category neither changes case order nor makes the body reachable. Its
+payload includes the clause's required body and occupies one complete clause
+position in the switch. Enclosing only the test while borrowing a body from
+outside remains invalid.
+
+A reachable `goto` or `continue` edge can make an ordinarily shadowed clause body
+reachable, in which case this category is inapplicable. Uncertain or
+runtime-dependent overlap does not require acknowledgement.
+
+### Empty selection
+
+An empty switch has defined header and post behavior but strongly resembles
+unfinished source:
+
+```zax
+intent<empty-selection>{
+  switch initialize() ;; selectValue() ;; recordCompletion() { }
+}
+```
+
+The acknowledgement preserves the empty selection. It does not remove
+initializer, selector, post, or lifetime effects.
+
+### Outer target through an ineligible label
+
+A nearer same-named label can be ineligible for one transfer keyword while an
+outer target remains eligible:
+
+```zax
+while shadowable retry: condition {
+  switch value {
+    case retry: 1
+      handleOne()
+    case 2 {
+      intent<outer-target-through-ineligible-label>{
+        next retry: // deliberately target the outer loop
+      }
+    }
+  }
+}
+```
+
+The acknowledgement confirms the eligible outer target. It cannot make the
+nearer case a valid `next` target or reach an otherwise hidden or inactive
+construct. Complete lookup belongs to
+[core flow control](core-flow-control.md#label-namespace-and-shadow-permission);
+case eligibility belongs to
+[switch, case, and default](switch.md#labels-and-target-visibility).
+
+### Partial enum selection
+
+Enum switches audit explicit declared-member coverage separately from coverage of
+unnamed or unsafe-admitted backing values. `default` can cover the latter without
+silently covering an omitted declared member.
+
+```zax
+intent<partial-enum-selection>{
+  switch status {
+    case Status.Ready
+      startWork()
+    default
+      handleOtherDeclaredOrUnnamedStatus()
+  }
+}
+```
+
+The acknowledgement deliberately permits omitted declared values such as
+`Status.Waiting`. It does not make the switch exhaustive over unnamed values,
+change case order, or alter the selected comparison operations. Adding a new
+declared member continues to require review of an unacknowledged member-complete
+switch.
+
+Complete enum-domain rules belong to
+[Zax enums](enums.md#selection-with-enum-values); per-search-entry behavior
+belongs to [switch, case, and default](switch.md#enum-coverage-has-two-dimensions).
 
 ### Implicit stance at terminal use
 

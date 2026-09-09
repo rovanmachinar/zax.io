@@ -6,8 +6,8 @@
 | Audience | Human developers declaring, reading, converting, or operating on enum values |
 | Applies To | Programmer-facing strict, relaxed, flags, and language-supplied semantic enum behavior; not a formal grammar, ABI contract, or specification |
 | Implementation State | Not established by this repository |
-| Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; selection pressure; enum costs, diagnostics, and source stability |
-| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, selection, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
+| Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; enum-domain selection and coverage facts; enum costs, diagnostics, and source stability |
+| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
 | Source / Provenance | Current identity, integer, declaration, operator, endianness, safety, and intent designs, incorporating reviewed legacy enum intent |
 
 ## Start with known values
@@ -754,7 +754,7 @@ Complete binding, flow, and cursor behavior is owned by
 [Zax iteration](iteration.md#enum-declarations). General reflection remains
 separate future work.
 
-## Selection pressure
+## Selection with enum values
 
 Member names do not necessarily cover every enum value:
 
@@ -765,13 +765,73 @@ Member names do not necessarily cover every enum value:
 - duplicate-valued member cases overlap; and
 - an empty strict enum can default to an unnamed value.
 
-Future selection cannot treat a list of member names as exhaustive merely
-because an enum is strict. A selection needs a catch-all or another mechanism
-covering the remaining backing values unless its cases actually cover every
-possible value.
+Runtime selection therefore cannot treat a list of member names as exhaustive
+merely because an enum is strict. It audits two dimensions separately:
 
-Complete `switch`, pattern, guard, fallthrough, transfer, and diagnostic syntax
-remains future selection work.
+1. **Declared-member coverage:** every distinct declared member value is
+   explicitly handled for the applicable search entry.
+2. **Reachable-domain coverage:** every other reachable backing value can select
+   a body.
+
+```zax
+switch permissions {
+  case Permission.Read
+    allowRead()
+  case Permission.Write
+    allowWrite()
+  default
+    handleOtherPermissionValue()
+}
+```
+
+The two declared members are explicit. `default` covers unnamed flags
+combinations, owner-produced unnamed values, and unsafe-admitted backing values
+not selected earlier. It does not silently count as explicit handling of a later
+declared `Permission.Execute`.
+
+A deliberately partial member selection requires acknowledgement:
+
+```zax
+intent<partial-enum-selection>{
+  switch status {
+    case Status.Ready
+      startWork()
+    default
+      handleOtherDeclaredOrUnnamedStatus()
+  }
+}
+```
+
+The acknowledgement permits omitted declared values. It does not establish
+complete backing-domain coverage or change which operation each case selects.
+
+A selection without `default` remains domain-incomplete unless its actual tests
+cover every reachable value. A selection with `default` remains member-incomplete
+when it omits a distinct declared member without
+`intent<partial-enum-selection>{...}`.
+
+Under generated equality, duplicate-valued member names select the first matching
+case. A later duplicate-valued case is semantically unreachable and requires
+`intent<unreachable-selection-clause>{...}` when deliberately retained. Replaced
+equality may behave differently; reachability follows the operation actually
+selected rather than member declarations alone.
+
+Duplicate-valued aliases count as one distinct declared value for member
+coverage. Flags and relaxed enums still admit unnamed values beyond that member
+set.
+
+Coverage is assessed for every reachable ordered-search entry. A later test
+segment reached through `continue` does not retroactively complete the initial
+segment. Arbitrary user-defined predicates contribute only when the language can
+prove the values they cover.
+
+Only a reachable test contributes declared-member coverage. `goto` can make a
+case body reachable while bypassing its test, so it contributes no member
+coverage. Likewise, a member case physically following a positional default does
+not count for a search that can never reach its test.
+
+Complete case ordering, test interpretation, transfers, and diagnostics are
+defined by [Zax switch, case, and default](switch.md).
 
 ## Endian semantic enums
 
@@ -831,6 +891,8 @@ Diagnostics should distinguish:
 - direct conversion to a non-backing integer;
 - an unavailable, forbidden, or mismatched enum operation;
 - comparison or assignment across unrelated enum identities;
+- a switch omitting a distinct declared member value without
+  `intent<partial-enum-selection>{...}`;
 - an unacknowledged case-conflicting member name;
 - ambiguous unique case-insensitive conversion;
 - an unknown or ambiguous flags string input; and
@@ -847,6 +909,8 @@ Diagnostics should distinguish:
 - Adding a case-conflicting name may require intent acknowledgement or make
   unique case-insensitive lookup return absence.
 - Adding owner behavior may make unnamed values reachable.
+- Adding a distinct declared member makes a previously member-complete
+  unacknowledged switch incomplete even when that switch has `default`.
 - Replacing or forbidding generated behavior changes source availability.
 - Changing an enum's immediate backing can change range, representation, cost,
   and generated signatures.
@@ -871,6 +935,8 @@ Still deferred:
 - partial or open enum extension;
 - broader eligibility for user-defined backing identities;
 - fat identity or enum representation;
-- complete selection and pattern matching;
+- generalized pattern matching and variant payload binding; current enum use in
+  `switch` is defined by
+  [switch, case, and default](switch.md#enum-coverage-has-two-dimensions);
 - ABI, FFI, and persistence contracts; and
 - compiler lowering.

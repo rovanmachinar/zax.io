@@ -297,12 +297,17 @@ the mathematical result without another policy transformation.
 
 ## Flow label
 
-A **flow label** is a separately shaped name category that names a complete flow
-statement so that transfers eligible for that construct may target it.
+A **flow label** is a separately shaped name category that names eligible
+entry, completion, or exit points of a flow construct. Most labels name one
+complete flow statement. A tested runtime-selection case label additionally
+names its test entry for `continue`, body entry for `goto`, and current-case
+completion for `next`. A transfer-only case label has no test entry: it names
+body entry for `goto` and current-case completion for `next` while active.
 
 A flow label is not an ordinary identifier and does not share ordinary-identifier
 lookup. See
-[Zax core flow control](core-flow-control.md#flow-labels-and-transfer-targets).
+[Zax core flow control](core-flow-control.md#flow-labels-and-transfer-targets)
+and [Zax switch, case, and default](switch.md#labels-and-target-visibility).
 
 ## Indirection level
 
@@ -435,9 +440,10 @@ that every operation has a direct instruction or one uniform cost. See
 normally completes when it reaches its end without an abrupt transfer or panic;
 that completion runs any applicable post operation and satisfies required state.
 
-`break`, `continue`, `next`, and `return` are abrupt relative to enclosing flow
-bodies. An explicit `return` may still be a normal function exit, as opposed to
-panic or non-completion, and must satisfy the function's result obligations. See
+`break`, `continue`, `next`, `goto`, and `return` are abrupt relative to
+enclosing flow bodies. An explicit `return` may still be a normal function exit,
+as opposed to panic or non-completion, and must satisfy the function's result
+obligations. See
 [Zax core flow control](core-flow-control.md),
 [Zax function invocation](function-invocation.md), and
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
@@ -593,8 +599,9 @@ A pointer may target Nothing; a reference must have a valid referent.
 A **post operation** is the construct-specific flow-header section that runs on
 normal completion, and on a `next` transfer, while header bindings remain alive.
 
-`break`, `continue`, and `return` skip it. It is ordinary work, not a destructor
-or guaranteed cleanup hook. See [Zax core flow control](core-flow-control.md).
+`break`, `continue`, `goto`, and `return` skip it when they cross that phase. It
+is ordinary work, not a destructor or guaranteed cleanup hook. See
+[Zax core flow control](core-flow-control.md).
 
 ## Projection
 

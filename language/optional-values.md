@@ -7,7 +7,7 @@
 | Applies To | Optional type formation, absence and presence, boxed construction and lifetime, reset, transfer effects, proven access, nested optionals, qualification, and related diagnostics; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
-| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); [pointer ownership and validity](pointers-and-arenas.md); function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
+| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); [pointer ownership and validity](pointers-and-arenas.md); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
 | Source / Provenance | Retired legacy optional design input, refined against current construction, qualifier, operator, invocation, flow, integer, and identity design |
 
 ## Start with absence and presence
@@ -544,6 +544,73 @@ Optional type formation does not generate nested conversion or admission
 operations. If a declared operator returns `MyValue? ?`, that operator owns its
 exact outer and inner state. Type inference receives the declared result without
 changing it.
+
+## Selecting optional states
+
+Runtime selection can apply the recognized pre-unary presence operation to its
+retained selector:
+
+```zax
+switch optionalValue {
+  case ?
+    use(optionalValue.)
+  default
+    handleAbsent()
+}
+```
+
+The successful `?optionalValue` interpretation proves the exact boxed lifetime
+present on the ordinary body-entry path. The complementary form can establish
+presence by failure:
+
+```zax
+switch optionalValue {
+  case !
+    handleAbsent()
+  default
+    use(optionalValue.) // the recognized absence test failed
+}
+```
+
+An arbitrary user-defined Boolean operation does not establish optional presence
+merely because it appears in a case.
+
+Proof at a shared body must hold for every alternative that can select it:
+
+```zax
+case ?, emergencyMode {
+  use(optionalValue.) // error if emergencyMode can succeed while absent
+}
+```
+
+`continue` runs the target tests and may establish their recognized facts.
+`goto` enters a case body directly and carries only facts valid on that incoming
+path. A body with matched, continued, and direct entries may dereference only
+when all applicable paths prove the same boxed lifetime present.
+
+Nested optionals remain explicit and cross one layer at a time:
+
+```zax
+switch nested {
+  case ? {
+    switch nested. {
+      case ?
+        use(nested..)
+      default
+        handleInnerAbsent()
+    }
+  }
+
+  default
+    handleOuterAbsent()
+}
+```
+
+Cases do not bind optional payloads, and postfix `.` is access rather than a
+Boolean case test. Use ordinary proven access and nested selection when the
+payload itself needs further testing. Complete switch ordering, test
+interpretation, and transfers belong to
+[Zax switch, case, and default](switch.md#optional-presence-and-nested-layers).
 
 ## Conditional convergence
 

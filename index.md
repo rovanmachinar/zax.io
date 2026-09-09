@@ -51,7 +51,10 @@ producing them.
   same-storage replacement, and destruction.
 - Read [Zax core flow control](language/core-flow-control.md) for exact-`Boolean`
   conditions, `if`/`else`, loops, explicit `scope`, flow labels, and
-  `break`/`continue`/`next`/`return`.
+  `break`/`continue`/`next`/`goto`/`return`.
+- Read [Zax switch, case, and default](language/switch.md) for
+  ordered `switch`/`case` testing, case operators, clause posts, direct body
+  entry, `default`, exhaustiveness, and optional or enum selection.
 - Read [Zax iteration](language/iteration.md) for `each in`, cursor-driven
   `each from`, entry bindings, progression, active-traversal access, erasure,
   mutation responsibilities, and costs.
@@ -102,6 +105,7 @@ producing them.
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
 - [Core flow control](language/core-flow-control.md)
+- [Switch, case, and default](language/switch.md)
 - [Iteration](language/iteration.md)
 - [Operators](language/operators.md)
 - [Operator phrases](language/operator-phrases.md)
@@ -126,7 +130,10 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Arrays](arrays.md)
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)
-- [Flow control](flow-control.md)
+- [Flow control](flow-control.md) — legacy `using` and value-polymorphism input;
+  current ordinary flow and runtime selection are owned by
+  [core flow control](language/core-flow-control.md) and
+  [switch, case, and default](language/switch.md)
 
 ### Types and data modeling
 

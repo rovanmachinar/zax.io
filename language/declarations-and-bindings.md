@@ -1239,6 +1239,14 @@ one nested reuse of its spelling, and the inner label must itself say
 target eligibility, and `:` reference are owned by
 [core flow control](core-flow-control.md#flow-labels-and-transfer-targets).
 
+Case labels remain in this separate label namespace but are visible throughout
+their containing switch for applicable `continue` and `goto` transfers. They do
+not introduce ordinary bindings, and sibling cases cannot reuse one spelling.
+Whether a case label or same-named outer label is eligible depends on the
+transfer keyword and source position; complete behavior belongs to
+[core flow control](core-flow-control.md#flow-labels-and-transfer-targets) and
+[switch, case, and default](switch.md#labels-and-target-visibility).
+
 
 ### Stored members
 

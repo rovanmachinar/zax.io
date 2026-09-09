@@ -6,7 +6,7 @@
 | Audience | Human developers traversing arrays, enums, structured values, ranges, views, or generated sequences |
 | Applies To | Programmer-facing `each in` and `each from` behavior; not a formal grammar, collection contract, or implementation specification |
 | Implementation State | Not established by this repository |
-| Owns | The `each` mental model; direct and cursor-driven traversal; header phases and entry bindings; positional and named roles; compiler-known array, enum, and structural traversal; cursor acquisition, value production, progression, erasure, and active-`each` access; traversal costs, diagnostics, mutation responsibilities, and source stability |
+| Owns | The `each` mental model; direct and cursor-driven traversal; header phases and entry bindings; positional and named roles; compiler-known array, enum, and structural traversal; cursor acquisition, value production, progression, erasure, direct re-entry to a live current entry, and active-`each` access; traversal costs, diagnostics, mutation responsibilities, and source stability |
 | Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); general token and layout rules ([source structure](source-structure.md)); collection-specific place stability ([lifetimes and references](lifetimes-and-references.md)); complete reflection or type-declaration traversal; generic constraint syntax; or compiler lowering |
 | Source / Provenance | Legacy [flow control](../flow-control.md), legacy [arrays](../arrays.md), and current enum, flow, declaration, qualifier, lifetime, safety, operator, and transfer designs |
 
@@ -112,7 +112,8 @@ For one current entry:
 5. perform the source's progression transition; and
 6. establish bindings for the successor or complete on exhaustion.
 
-`continue` skips post but still progresses. `break` skips post and exits.
+`continue` skips post but still progresses. `goto` skips both and re-enters the
+current entry body directly. `break` skips post and exits.
 
 ```zax
 each value : in values ;; record(value) {
@@ -127,7 +128,7 @@ each value : in values ;; record(value) {
 }
 ```
 
-All three transfers use the shared target, label, and unwinding rules from
+All four transfers use the shared target, label, and unwinding rules from
 [core flow control](core-flow-control.md#flow-labels-and-transfer-targets).
 
 ```zax
@@ -138,6 +139,30 @@ each outer: value : in values {
   }
 }
 ```
+
+### `goto` and the current entry
+
+Bare `goto` targets the nearest eligible unlabeled active `each`. An explicit
+`goto each_label:` selects a labeled active `each`. Either form enters the body
+again without running post, advancing the source, or establishing another entry:
+
+```zax
+each repeat_entry: value : in values ;; record(value) {
+  use(value)
+
+  if needsAnotherPass(value)
+    goto repeat_entry:
+}
+```
+
+The current entry binding and cursor access must still be live. Body locals from
+the source entry are destroyed before the target body begins with a fresh body
+scope. The traversal binding remains the same current entry.
+
+This direct entry may intentionally repeat forever. It does not request another
+cursor value and does not imply progression. Shared active-body `goto` behavior
+is defined by
+[core flow control](core-flow-control.md#direct-body-entry-with-goto).
 
 The label attaches to the `each` statement as `outer:`. A traversal declaration
 uses a spaced colon as `value :`; `value:` would instead present label intent
@@ -664,6 +689,9 @@ target and never causes target search to skip an intervening construct.
 - `break with erase` skips post, ends current entry access, invokes `erase`,
   and exits without finding a successor.
 
+Every combined `goto ... with erase` form is invalid. `goto` directly re-enters
+the current body, while erasure ends the entry that body requires.
+
 ### Erase, perform work, then transfer
 
 The active-`each` family permits work after erasure:
@@ -700,6 +728,8 @@ After `from each erase`:
   invalidated entry state, and then adopts the prepared successor without
   another advance;
 - `break` targeting it discards the prepared successor and exits;
+- `goto` targeting that `each` is invalid because the current entry lifetime has
+  ended and direct body entry cannot recreate it;
 - a transfer beyond it, `return`, or panic exits normally; and
 - normal fallthrough is invalid while the erase transition remains pending.
 
@@ -713,6 +743,16 @@ from each erase
 next
 // Erase first, then run only a post independent of old entry access.
 ```
+
+Direct transfer beyond the erased traversal names both operations separately:
+
+```zax
+from each current_iteration: erase
+goto outer:
+```
+
+`goto outer: with erase` is invalid because its one target label cannot also name
+which crossed traversal owns the erase operation.
 
 For targeted erase:
 
@@ -792,6 +832,8 @@ control transfer exits early.
 - A reference binding performs no value construction.
 - A copied binding performs ordinary construction and destruction once per
   visited entry.
+- `goto` can repeat the current body and its per-entry work without paying post,
+  value production, or progression cost.
 - Structural `copy` performs and checks that work separately for each selected
   member type.
 - Runtime invalidation tracking is present only when a cursor or collection
@@ -816,9 +858,12 @@ Representative diagnostics distinguish:
 - unavailable `copy` for one structural member specialization;
 - unavailable `erase` or `erase and advance`;
 - `with erase` on a transfer target other than `each from`;
+- any combined `goto ... with erase` form;
 - an incapable inner target rather than silently selecting an outer one;
 - use of current value or underlying cursor after erase;
 - post access to invalidated entry state after `from each erase; next`;
+- `goto` to an `each` whose current entry has ended or whose progression
+  transition is pending;
 - fallthrough or wrong-target re-entry with an erase transition pending;
 - known source mutation that invalidates active traversal;
 - unsafe underlying cursor access without explicit responsibility;
@@ -865,6 +910,7 @@ The language preserves these distinctions:
 - transition absence is not an exposed end cursor;
 - adding an erase capability makes new source valid but does not change
   ordinary progression;
+- `goto` retains the current live entry and never silently progresses;
 - named role selection is explicit and independent of local identifier spelling;
 - the future reflection role follows enum and structural `value`/`name`
   positions without making reflection current; and

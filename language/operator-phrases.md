@@ -7,7 +7,7 @@
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type receivers, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
-| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
+| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
 ## Mental model
@@ -489,6 +489,28 @@ whether they form one mixfix or several operations. An unknown fenced form
 produces a phrase-not-found diagnostic, which is a different error from an
 unrecognized natural phrase.
 
+Runtime case tests may omit the selector operand:
+
+```zax
+case similar expected
+case 'is hot'
+case 'bad'
+```
+
+The case construct decides whether those words form a direct binary/post-unary
+test, an expression compared through equality, or a final operandless pre-unary
+test. Fencing still fixes only the exact phrase component; grouping fixes an
+equality-expression boundary:
+
+```zax
+case (similar expected)
+```
+
+This construct-specific ordering is defined by
+[switch, case, and default](switch.md#how-one-case-test-is-interpreted).
+Once an interpretation supplies a complete phrase operation, the ordinary
+candidate-tree and phrase rules in this document apply.
+
 ### Contextual completion never searches word combinations
 
 A number literal may use a visible peer type only after source has established
@@ -759,6 +781,12 @@ form is a source-compatibility event. It may make existing source ambiguous or
 invalid, but it must never silently reinterpret one viable tree through source,
 declaration, import, module, or discovery order.
 
+An ungrouped runtime case test has an explicit construct-specific exception:
+adding an exact-`Boolean` direct phrase may activate the higher-priority
+selector-relative interpretation instead of prior implicit equality. This is the
+documented case-test fallback, not ordinary phrase-tree tie-breaking. Grouping
+or explicit `==` preserves equality intent.
+
 ## Boundaries and maturity
 
 This document is current conceptual design for the operator phrase feature, not
@@ -772,4 +800,5 @@ identifiers, and generic or alias type receivers remain focused future work.
 For exact forms and precedence see the
 [operator catalog](operator-catalog.md); for the shared operator model see
 [operators](operators.md); for multi-component operations see
-[mixfix operators](mixfix-operators.md).
+[mixfix operators](mixfix-operators.md); for omitted-selector phrase use see
+[switch, case, and default](switch.md#how-one-case-test-is-interpreted).

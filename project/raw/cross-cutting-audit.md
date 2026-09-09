@@ -162,8 +162,8 @@ Each entry preserves:
 
 - **Concern.** Every deferred consequence must have a live, non-archive owner or
   indexed raw destination, so nothing is lost when numbered work is archived.
-- **Representative example.** The `case next` selection consequence, optional
-  proof pressure, and flow-derived analysis controls.
+- **Representative example.** Generalized pattern bindings, optional proof
+  pressure across direct body entry, and flow-derived analysis controls.
 - **Why local review misses it.** The check is about the set of deferrals as a
   whole, not any one owner.
 - **Likely owners.** [Documentation architecture](../documentation.md), the raw

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -454,6 +454,14 @@ that list across the following physical newline:
 ```zax
 return first: number:,
   second: text: = produce()
+
+switch value {
+  case firstCandidate,
+    secondCandidate,
+    thirdCandidate {
+    handleCandidate()
+  }
+}
 ```
 
 This is a narrow list rule, not general continuation for incomplete
@@ -860,6 +868,46 @@ introducer. Inside the binding packet, `name:` and `value:` are role labels;
 `memberName :` and `memberValue :` are declarations. Complete binding and
 traversal behavior is owned by [Zax iteration](iteration.md).
 
+Runtime selection uses `;;` for switch and clause posts:
+
+```zax
+switch choose: ;; readValue() ;; recordSelection() {
+  case failure: {
+    handleFailure()
+  }
+
+  case small: 1,
+    2,
+    3 ;; recordSmall() {
+    if failed()
+      goto failure:
+
+    handleSmall()
+  }
+
+  default fallback: ;; recordFallback()
+    handleFallback()
+}
+```
+
+The switch label follows `switch`; a clause label follows `case` or `default`.
+The outer braced region contains clauses. A tested case has one or more tests. A
+transfer-only case has a required label and no tests. Each tested case,
+transfer-only case, and default consumes one required effective body statement.
+A comma continues a case-test list, while `;;` separates a test list or testless
+clause from its post.
+
+Transfer-only cases may appear anywhere and are skipped by ordinary testing.
+Several positional defaults may likewise appear; their runtime search behavior
+belongs to the selection owner.
+
+An explicitly empty clause body is `{ }`. Compact `{}` is an intent error, and a
+bodyless tested case cannot borrow the body of a following clause.
+
+Cases have no initializer section. Complete selector, test, post, and transfer
+semantics belong to
+[switch, case, and default](switch.md#cases-bodies-and-posts).
+
 ### Header continuation
 
 Top-level operands and sections continued across a flow header use one common
@@ -1194,6 +1242,9 @@ next()        // next has no keyword status here
 continue          // transfer keyword
 continue outer:   // transfer keyword with a target
 continue()        // continue has no keyword status here
+
+goto outer:   // transfer keyword with a required target
+goto()        // goto has no keyword status here
 ```
 
 The rule is about position rather than about a reserved-word list, so a
@@ -1521,6 +1572,12 @@ Layout and separator diagnostics additionally distinguish:
 - composed operands at progressively deeper structural levels;
 - a body beginning more than one structural level deeper than its header;
 - sibling header operands or sections at conflicting continuation levels;
+- a malformed case-test comma list or clause post separator;
+- a tested case or default without one effective body;
+- an unlabeled testless case;
+- compact `{}` where a clause's explicit empty body requires `{ }`;
+- a `case` or `default` body whose indentation contradicts the enclosing switch
+  region;
 - a body-opening `{` separated onto the next physical line;
 - a scope-opening `{` without whitespace on both sides;
 - compact `T??` where two optional type layers require `T? ?`;
@@ -1576,9 +1633,12 @@ intent<category>{
 ```
 
 The category is a lower-case hyphenated identifier registered by
-[Zax intent acknowledgements](intent-acknowledgements.md). The payload must
-independently form exactly one complete expression or effective statement. It
-cannot borrow a missing operand, separator, or body from outside the enclosure.
+[Zax intent acknowledgements](intent-acknowledgements.md). Each category defines
+the smallest complete contextual source unit it may enclose. Most payloads form
+one complete expression, effective statement, or declaration. A category can
+instead permit another complete contextual unit, such as one complete
+`case`/`default` clause in a switch region. No payload can borrow a required
+operand, separator, declaration piece, or body from outside the enclosure.
 
 The acknowledgement does not:
 
@@ -1622,6 +1682,10 @@ Each requires whitespace on both sides and is distinct from `;` statement
 composition; neither may be inferred from `;`. Their flow-control and
 conditional-expression meaning is owned by
 [core flow control](core-flow-control.md).
+
+The switch clause region, case-list continuation, and case/default body
+presentation are current source structure. Their runtime meaning is owned by
+[Zax switch, case, and default](switch.md).
 
 Contextual keyword recognition is accepted as a positional rule: a spelling is a
 keyword only where its keyword construct is grammatically permitted. Words inside

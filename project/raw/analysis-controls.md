@@ -173,6 +173,28 @@ override syntax:
 - **Branch-dependent construction.** A conditional expression's arms may
   construct or select differently and must converge to one statically usable
   result shape per complete operation.
+- **Selection entry paths.** A runtime case body may be reached by a successful
+  test, by a positional `default`, by `continue` after re-testing, or directly
+  by `goto`; only facts valid on every incoming path are available in the body.
+  Direct entry cannot inherit optional presence, pointer validity,
+  initialization, or range facts from a bypassed test.
+- **Selection reachability and cycles.** Ordered tests may prove a later clause
+  unreachable, while backward `continue` or `goto` may create an intentional
+  cycle. Future analysis must distinguish language-defined proof from assumptions
+  about user-defined operator purity or algebra. A reachable incoming transfer
+  makes an ordinarily shadowed body reachable; a self-edge inside otherwise dead
+  source does not bootstrap reachability.
+- **Selection segments.** Transfer-only cases are skipped by ordered searches.
+  Positional defaults delimit test segments, and `continue` may start a later
+  search. Proof, completeness, and reachability are evaluated for each reachable
+  search entry rather than only initial switch entry.
+- **Enum coverage.** Declared-member coverage and complete reachable-backing
+  coverage are distinct. `default` may satisfy the latter without silently
+  satisfying omitted declared members. Duplicate-valued aliases represent one
+  distinct value, and arbitrary predicates contribute only when their covered
+  domain is provable. Only reachable tests contribute member coverage: `goto`
+  may make a body reachable while bypassing its test, and a case after a
+  positional default does not count for a search that cannot reach it.
 - **Obsolete proof assertions.** A smarter compiler may make a previously required
   proof override redundant. Whether that redundancy is advisory or an error
   follows the selected static-analysis contract; see

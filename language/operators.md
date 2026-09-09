@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, and unavailable-best rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -510,6 +510,30 @@ requiring every possible path to resolve at compile time.
 Optimization may elide work only when the selected operation, order, effects,
 results, and lifetimes remain unchanged.
 
+### Runtime case-test interpretation
+
+A runtime `case` supplies its retained selector as an omitted operand through a
+construct-specific sequence:
+
+```zax
+case < upperBound
+case expectedValue
+case ?
+```
+
+Runtime selection first tries a direct binary or post-unary operation, then
+equality with the complete written expression, then an exact operandless
+pre-unary component. Each final operation must return exactly `Boolean`.
+
+This sequence chooses the case interpretation before the ordinary operator model
+selects a declaration within that interpretation. Direct ambiguity and an
+unavailable uniquely best direct operation remain errors; case fallback does not
+erase them.
+
+The full ordering, grouping boundary, selector capture, evaluation behavior, and
+source-stability consequence are owned by
+[Zax switch, case, and default](switch.md#how-one-case-test-is-interpreted).
+
 ## Protected intrinsic domains
 
 A **protected intrinsic signature** is an exact operator signature whose every
@@ -905,6 +929,9 @@ Exact diagnostic identifiers remain future diagnostics work.
   invalid.
 - Adding a language-defined phrase or built-in signature may make previously
   unavailable source valid.
+- Adding an exact-`Boolean` direct operation applicable to an ungrouped case test
+  may activate its higher-priority selector-relative interpretation instead of
+  prior implicit equality; grouping or explicit `==` preserves equality intent.
 - Adding a range fact or declared identity bridge may enable a conversion.
 - Changing an integer role's associated type may change an operator result.
 - Changing precedence or tokenization would reinterpret existing source.
@@ -923,3 +950,7 @@ See the [operator catalog](operator-catalog.md) for exact forms,
 operators, floating/fixed-point/unbounded numeric families, call/index edge
 cases, allocation, pointers, generics, reflection, build-contract syntax, and
 panic recovery remain future focused work.
+
+Runtime `switch` uses the shared operator model after its construct-specific
+case interpretation; complete behavior is defined by
+[Zax switch, case, and default](switch.md).

@@ -1138,9 +1138,9 @@ On normal body completion:
 3. the construct tests, re-enters, or exits; and
 4. header bindings are destroyed when the complete construct exits.
 
-An abrupt transfer such as `break`, `continue`, `next`, or `return` destroys every
-body or nested scope it leaves, in reverse construction order, before control
-arrives at the target:
+An abrupt transfer such as `break`, `continue`, `next`, `goto`, or `return`
+destroys every body or nested scope it leaves, in reverse construction order,
+before control arrives at the target:
 
 ```zax
 while i := 0 ;; i < 100 ;; ++i {
@@ -1150,19 +1150,28 @@ while i := 0 ;; i < 100 ;; ++i {
 }
 ```
 
-`break` and `return` skip ordinary post operations but still perform this
-destruction. `next` runs the target's post operation before proceeding, while
-`continue` skips it; both keep the target's own header bindings alive because the
-complete target construct has not exited. A target header binding survives a
-`next` or `continue` re-entry and is destroyed only when the complete target flow
-statement exits.
-
 Which scopes a transfer crosses, whether the post operation runs, and how targets
 are selected are owned by
 [core flow control](core-flow-control.md#unwinding-destruction-and-completion).
 This document owns the automatic local and header lifetime order that results.
 Construction and result completeness must still hold on every normal path a
 branch, loop, or transfer produces.
+
+For construction and destruction, the important consequences are:
+
+- exited body-local lifetimes end before the transfer arrives;
+- a re-entered target's already-active header lifetimes remain alive;
+- every `next`, `continue`, or `goto` re-entry starts a fresh body scope at its
+  beginning after the previous body scope is completely destroyed and cannot
+  jump into a partially constructed scope; and
+- every incoming, repeated, and exiting path must preserve required construction
+  and destruction state.
+
+Explicit lifecycle calls such as `_.member.+++()` and `_.member.---()`, and
+allocation operations using `@`, remain ordinary ordered body operations. A
+transfer may bypass a later operation, while a backedge may reach an earlier
+operation again. The transfer neither supplies a skipped construction or
+destruction nor makes a repeated lifecycle transition or allocation valid.
 
 ## Conditionally live storage and access proof
 
@@ -1452,6 +1461,8 @@ Diagnostics should distinguish:
   dereference, without proof that a live value exists on that path;
 - missing or duplicate lifecycle transitions on normal paths;
 - normal completion with an incomplete instance or result;
+- a transfer path that bypasses required construction or destruction, or repeats
+  a lifecycle transition without establishing a valid intervening state;
 - possible self or interior alias conflict during replacement;
 - partial-instance access or escape requiring a future unsafe control; and
 - an inapplicable or unsupported future unsafe semantic assertion.
@@ -1489,6 +1500,8 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - declaration-order automatic construction and reverse automatic destruction;
 - automatic local and header lifetime ending and destruction order across normal
   and abrupt scope exits;
+- direct body entry preserving active target-header lifetimes while establishing
+  a fresh body scope and rerunning ordinary body operations from its beginning;
 - the programmer-visible obligation to prove a live value before access through
   conditionally live storage;
 - arbitrary control-flow order for explicit member lifecycle calls;

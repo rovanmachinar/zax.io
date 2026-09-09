@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | Complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
+| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
+| Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
 ## Mental model
@@ -74,8 +74,10 @@ while outer: i := 0 ;; i < 100 ;; ++i {
 }
 ```
 
-`next` runs the target's post operation before proceeding. `continue` skips it.
-Every transfer destroys the scopes it leaves before arriving at its target.
+`next` runs the target's post operation before proceeding. `continue` skips it
+and resumes the target's progression or test. `goto` skips both and enters an
+eligible active body directly. Every transfer destroys the scopes it leaves
+before arriving at its target.
 
 The remainder of this document layers that model: conditions, effective bodies
 and header schemas, `if`/`else` and post, loops and explicit `scope`, labels and
@@ -314,6 +316,19 @@ each values := loadValues() ;;
 The complete `in`/`from` source, entry-binding, progression, and erase model is
 owned by [Zax iteration](iteration.md).
 
+Runtime value selection uses a selector rather than a Boolean condition:
+
+```text
+selector
+initializer ;; selector
+initializer ;; selector ;; post
+;; selector ;; post
+```
+
+The selector evaluates once and remains retained through the complete switch.
+Complete case tests, clause posts, and selection behavior are owned by
+[Zax switch, case, and default](switch.md).
+
 The keyword determines the header schema. A conditional loop's second section is
 a condition; a conditionless construct's second section is a post operation.
 This is construct-specific meaning, not an ambiguity.
@@ -423,9 +438,9 @@ Execution is:
 
 A post operation runs after the selected body completes normally. It also runs
 when the condition is false and no `else` body exists. It does not run when
-`break`, `continue`, `next`, `return`, or a panic leaves the complete `if`; a
-targeted `break bad_stuff:` above deliberately skips it. Panic is fatal rather
-than an ordinary alternative flow path.
+`break`, `continue`, `next`, `goto`, `return`, or a panic leaves the complete
+`if`; a targeted `break bad_stuff:` above deliberately skips it. Panic is fatal
+rather than an ordinary alternative flow path.
 
 An `if` post operation is ordinary normal-completion work, not a destructor,
 `finally`, `defer`, or guaranteed cleanup hook. Deliberately bypassing it is
@@ -463,13 +478,13 @@ forever {
 
 The common progression model is:
 
-| Construct | Initial entry | Normal fallthrough or `next` | `continue` |
-| --- | --- | --- | --- |
-| `while` / `until` | initializer, test, selected body | post, test, selected body | test, selected body |
-| `redo while` / `redo until` | initializer, body without first test | post, test, selected body | test, selected body |
-| `forever` | initializer, body | post, body | body |
-| `each` | initializer, first entry or exhaustion | post, progression, next entry or exhaustion | progression, next entry or exhaustion |
-| explicit `scope` | initializer, body | post, then exit normally; `next` instead re-enters | re-enter body |
+| Construct | Initial entry | Normal fallthrough or `next` | `continue` | `goto` |
+| --- | --- | --- | --- | --- |
+| `while` / `until` | initializer, test, selected body | post, test, selected body | test, selected body | current active body directly |
+| `redo while` / `redo until` | initializer, body without first test | post, test, selected body | test, selected body | current active body directly |
+| `forever` | initializer, body | post, body | body | current active body directly |
+| `each` | initializer, first entry or exhaustion | post, progression, next entry or exhaustion | progression, next entry or exhaustion | current live entry body directly |
+| explicit `scope` | initializer, body | post, then exit normally; `next` instead re-enters | re-enter body | re-enter body |
 
 For `while`, continuation selects the body when the condition is true. For
 `until`, continuation selects the body while the condition is false.
@@ -490,8 +505,9 @@ while i := 0 ;; i < 100 ;; ++i {
 
 Normal loop fallthrough behaves like `next`: it runs post before the next test
 or unconditional entry. `break` skips post and exits. `continue` skips post and
-goes to the next test, or directly to the next body entry when the construct has
-no condition.
+goes to the next test, progression, or unconditional entry. `goto` also skips
+post but bypasses that test or progression and enters the already active target
+body directly.
 
 For `each`, progression belongs to the traversal rather than to the
 programmer-written post. `continue` skips post but still progresses; otherwise
@@ -503,8 +519,10 @@ complete availability and cursor effects are defined by
 An explicit `scope` is re-enterable; an arbitrary `{ ... }` block is not. Normal
 `scope` completion runs post and exits. `next` targeting the scope runs post and
 re-enters. `continue` targeting it skips post and re-enters. `break` skips post
-and exits. A `forever` body differs because normal completion implicitly repeats
-after post.
+and exits. `goto` targeting it also re-enters directly; it is distinct because
+the same transfer has observable test or progression differences on other
+constructs. A `forever` body differs because normal completion implicitly
+repeats after post.
 
 Comparing `forever` with an always-repeat decision and `scope` with a
 never-repeat decision is useful in design reasoning, but neither construct
@@ -550,6 +568,22 @@ label follows that complete introducer. The optional `shadowable` marker, when
 present, sits between the introducer and the label; see
 [Label namespace and shadow permission](#label-namespace-and-shadow-permission).
 
+Runtime selection uses the same placement for a switch and for its clauses:
+
+```zax
+switch choose: value {
+  case retry: 1
+    handleOne()
+  default fallback:
+    handleFallback()
+}
+```
+
+Case labels have switch-wide visibility for selection transfers rather than the
+ordinary enclosing-only visibility of a complete flow statement. Their complete
+test-entry and body-entry behavior belongs to
+[switch, case, and default](switch.md#labels-and-target-visibility).
+
 ### Label namespace and shadow permission
 
 Flow labels are a separate, explicitly shaped name category from ordinary
@@ -592,9 +626,31 @@ forever shadowable young: {
 - grants permission only to the next overlapping declaration; and
 - is not inherited by that inner declaration.
 
-An inner label must itself say `shadowable` to permit another nested reuse. While
-the inner label is active, references to that spelling cannot reach the hidden
-outer label.
+An inner label must itself say `shadowable` to permit another nested reuse.
+
+Target lookup considers the transfer keyword and source position as well as
+spelling. An eligible inner target hides an outer same-named target normally. A
+nearer same-named declaration that is ineligible for the written keyword makes
+reaching an eligible outer target a defined but suspicious interpretation:
+
+```zax
+while shadowable retry: condition {
+  switch value {
+    case retry: 1
+      handleOne()
+    case 2 {
+      intent<outer-target-through-ineligible-label>{
+        next retry: // deliberately target the outer loop
+      }
+    }
+  }
+}
+```
+
+Without the acknowledgement, the final transfer is an intent error. The
+acknowledgement does not make an actually ineligible target valid. Complete
+category behavior is registered by
+[intent acknowledgements](intent-acknowledgements.md#outer-target-through-an-ineligible-label).
 
 ### Bare and explicit target selection
 
@@ -619,6 +675,61 @@ For a particular transfer keyword:
 `continue if_label:` and `next if_label:` are errors: re-evaluating an `if` would
 turn selection into iteration, and treating them as exits would make them
 misleading synonyms for `break if_label:`.
+
+Runtime selection adds construct-specific targets:
+
+- `break` can target the complete switch;
+- `next` can target the active case or complete switch;
+- `continue` can resume at another case's tests or at the first switch test; and
+- `goto` can enter another case body directly.
+
+Complete eligibility, bare continuation, and case-label rules are defined by
+[switch, case, and default](switch.md#transfer-summary).
+
+### Direct body entry with `goto`
+
+`goto` enters the complete body boundary of an eligible already-active target
+without running that target's post, condition, traversal progression, or other
+entry test:
+
+```zax
+while resource := obtainResource() ;; resource.valid() {
+  grant := resource.obtainGrant()
+
+  if needToRedo()
+    goto // destroy grant, then restart with a fresh body scope
+}
+```
+
+This is not an arbitrary statement label:
+
+- a bare `goto` selects the nearest eligible unlabeled active body;
+- if that nearest eligible target is labeled, bare `goto` is an error and the
+  label must be named;
+- `goto label:` may explicitly select an eligible visible target;
+- the target must already be active;
+- entry begins at the target's complete body boundary;
+- it cannot enter an inactive construct from outside;
+- it cannot target `if`;
+- it cannot enter the middle of a block or composed statement; and
+- every lifetime, initialization, and proof requirement must hold on the new
+  incoming path.
+
+Every re-entry fully leaves the old body scope first. Its body-local values are
+destroyed in reverse construction order. Entry then begins at the target body's
+first statement with a fresh body scope; no body-local value survives. The
+target's active header lifetimes remain alive.
+
+For `each`, direct entry requires its current entry to remain live; complete
+traversal interaction belongs to [Zax iteration](iteration.md#goto-and-the-current-entry).
+Switch cases are the deliberate sibling-target exception because one active
+switch header encloses every case entry; see
+[switch, case, and default](switch.md#goto-enter-a-body-directly).
+
+Inside a switch clause, bare `goto` uses the following-clause rule defined by the
+selection owner. Failure to find a following clause is an error rather than
+permission to target an outer construct silently. A call such as `goto()` remains
+an ordinary expression when that spelling is callable.
 
 ```zax
 scope process_work: i := 0 ;; ++i {
@@ -656,21 +767,27 @@ Target references retain `:`:
 break outer:
 continue outer:
 next outer:
+goto outer:
 ```
 
 Omitting the colon in a target position is an error. `continue()` and `next()`
-remain ordinary call expressions: a spelling has keyword status only where its
-keyword construct is grammatically permitted, so these keywords are transfers
-only when written standalone or followed by a flow label. The general rule is
-owned by
+remain ordinary call expressions, as does `goto()`: a spelling has keyword
+status only where its keyword construct is grammatically permitted. The general
+rule is owned by
 [source structure](source-structure.md#contextual-keyword-recognition).
 
 ## Unwinding, destruction, and completion
 
 Before a transfer arrives at its target, every body or nested scope it leaves is
-destroyed in reverse construction order. Target-header bindings remain alive when
-`next` or `continue` re-enters that target and are destroyed only when the
-complete target flow statement exits.
+destroyed in reverse construction order. Target-header bindings remain alive
+when `next`, `continue`, or `goto` re-enters that target and are destroyed only
+when the complete target flow statement exits.
+
+For every re-entry transfer, destruction of the old body finishes before post,
+test, progression, or direct body entry begins. `next` then runs post and
+ordinary progression, `continue` skips post and performs ordinary progression,
+and `goto` skips both. Any resulting body entry creates fresh body-local
+lifetimes from the beginning of the body.
 
 For `each`, current entry bindings end after post and before progression.
 Standalone erase ends current entry access immediately and leaves a
@@ -686,8 +803,9 @@ On normal body completion:
 3. test, re-enter, or exit according to the construct; and
 4. destroy header bindings when the complete construct exits.
 
-`break` and `return` skip ordinary post operations but still perform applicable
-scope destruction. Construction and result completeness must hold on every normal
+`break`, `goto`, and `return` skip ordinary post operations they cross but still
+perform applicable scope destruction. `continue` likewise skips its target post;
+`next` runs it. Construction and result completeness must hold on every normal
 path produced by branches, loops, and transfers. The automatic local, body, and
 header lifetime ordering is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#scope-exit-destruction-and-flow-transfers).
@@ -922,8 +1040,9 @@ cancellation remain separate future design.
 - Conditions pay their visible evaluation cost at each defined test.
 - `redo` always pays one body execution before its first test.
 - `next` pays post cost; `continue` deliberately skips it.
-- `break`, `continue`, `next`, and `return` pay destruction cost for every scope
-  they unwind.
+- `goto` skips post and test/progression cost but pays the target body's work.
+- `break`, `continue`, `next`, `goto`, and `return` pay destruction cost for
+  every scope they unwind.
 - A normal-completion post operation may perform substantial ordinary work and is
   not hidden cleanup.
 - A conditional expression evaluates one arm and directly constructs its result.
@@ -952,12 +1071,20 @@ Representative semantic errors include:
   `Boolean`;
 - branch-dependent expression paths that fail to converge;
 - a transfer label naming a construct ineligible for that keyword;
+- bare `goto` with no eligible unlabeled target;
+- `goto` naming an inactive construct, an `if`, or a location other than a
+  complete eligible body;
+- direct body entry without the lifetime, initialization, or other facts required
+  by that body;
 - label shadowing without permission; and
 - an incomplete result or instance on a normal completion path.
 
 Representative deliberate intent or layout errors include:
 
 - a bare transfer stopped by a labeled eligible target;
+- an eligible outer target reached through a nearer same-named label that is
+  ineligible for the written keyword and lacks
+  `intent<outer-target-through-ineligible-label>{...}`;
 - a target reference without trailing `:`;
 - an `else` detached from the `if` it completes; and
 - a ternary in a `;;` header without disambiguating parentheses.
@@ -980,7 +1107,7 @@ Canonical flow formatting:
   newline between a preceding `}` and `else`;
 - uses explicit `\` continuation to move a whole header to the common
   continuation level rather than aligning under a variable-length label; and
-- preserves explicit target `:` references and labels.
+- preserves explicit target `:` references and labels, including `goto label:`.
 
 Exact source spacing and continuation rules are owned by
 [source structure](source-structure.md).
@@ -992,7 +1119,10 @@ The aligned rules deliberately protect against:
 - changing a value's type silently changing condition truthiness;
 - adding or removing `;;` silently turning a body into a post operation;
 - inserting a labeled eligible target silently redirecting a bare transfer;
-- adding a local binding changing label resolution, or vice versa; and
+- adding a local binding changing label resolution, or vice versa;
+- adding a same-named label changing whether an explicit outer transfer requires
+  intent acknowledgement;
+- adding a `goto` edge changing the facts available at a body entry; and
 - changing one ternary arm silently materializing a runtime-dependent stored
   type.
 
@@ -1002,7 +1132,8 @@ Some changes remain intentionally source-visible:
 - adding or changing an overload may alter a ternary branch's selected operation;
 - adding `else` or a post operation changes normal flow work;
 - adding a nested unlabeled loop or explicit `scope` may change a bare target;
-  and
+- adding a post operation changes the difference among `next`, `continue`, and
+  `goto`; and
 - changing construction or result shape changes path-completion obligations.
 
 ## Boundaries and maturity
@@ -1016,9 +1147,9 @@ The following remain explicit future work and are not established here:
 
 - complete `each` iteration protocols, ranges, arrays, and iterator
   customization;
-- complete `switch`, `case`, patterns, exhaustiveness, and fallthrough; future
-  selection work must reconsider legacy `case continue` under the accepted
-  `next`/`continue` distinction;
+- generalized patterns, payload binding, guards, and value-producing selection;
+  current `switch`, `case`, `default`, and direct case transfer are owned by
+  [Zax switch, case, and default](switch.md);
 - complete `using` and resource-management semantics; core `scope` here is an
   explicit flow target, not a resource construct;
 - runtime value-polymorphic declarations and stored branch-dependent types;
