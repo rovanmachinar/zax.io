@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, and completion; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, completion, destination ordering, and elision; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -1035,12 +1035,15 @@ foobar final : (
 ```
 
 Because `#` occupies a result position, the complete-result-shape rule still
-holds: a `#` slot is completed, not omitted. This keeps the broad meaning of `#`
-as an explicit "do not supply or retain a value here" acknowledgement while
-giving it position-specific behavior:
+holds: a `#` slot is completed, not omitted. Across result contexts, `#`
+explicitly declines an accessible value or destination at that position while
+the surrounding construct determines the lifetime consequence:
 
 - result declarations use `#` to permit caller omission;
-- caller mapping uses `#` to discard a produced result; and
+- ordinary caller mapping uses `#` to consume a produced result without exposing
+  a destination;
+- a `using` mapping keeps that result as an anonymous owned entry while
+  suppressing body access and disposal; and
 - return lists use `#` to preserve or default-complete the corresponding slot.
 
 `return #` differs materially from a bare return: `return #` may default-complete
@@ -1096,13 +1099,17 @@ The function still completes both slots. The marker changes caller
 acknowledgement:
 
 ```zax
-value := measure()    // trailing diagnostic may be omitted
-value:, # = measure() // explicit discard
-measure()             // error: requiredValue was not acknowledged
+value := measure() // trailing diagnostic may be omitted
+requiredValue: value:, diagnostic: # = measure() // explicit labeled discard
+measure() // error: requiredValue was not acknowledged
 ```
 
-Caller-side `#` explicitly consumes and discards one result. An unmarked result
-must be captured, routed, or explicitly discarded.
+Caller-side `#` explicitly consumes a result without making it accessible to the
+caller. It does not destroy that result immediately. The inaccessible source
+slot remains part of the complete result consumer and reaches its ordinary
+completion position unless a surrounding construct, such as `using`, establishes
+an anonymous destination lifetime for it. An unmarked result must be captured,
+routed, or explicitly discarded.
 
 A short capture consumes a prefix. Every unmentioned trailing result must permit
 omission.
@@ -1154,6 +1161,22 @@ call's original multiple-result sequence.
 Parentheses are therefore not cosmetic at a multiple-result boundary. A
 formatter must not add or remove them as stylistic cleanup.
 
+A `using` resource list is another mapping-capable context:
+
+```zax
+using (produceResources()) {
+  // Every result is enrolled in declared result order.
+}
+
+using ((produceResources())) {
+  // The inner grouping requires one expression value.
+}
+```
+
+Invocation owns the distinction between the bare result sequence and one grouped
+expression. [Zax `using`](using.md#multiple-results-and-names) owns which mapped
+results are enrolled, named, disposed, or destroyed.
+
 ### Operator result shapes
 
 An operator is a callable operation and may declare zero, one, or several result
@@ -1199,8 +1222,8 @@ An explicit routing group ends with one producer:
 
 ```zax
 consume(
-  first: number:,
-  second: text: = produce()
+  number: first:,
+  text: second: = produce()
 )
 ```
 
@@ -1209,8 +1232,27 @@ The producer executes once. The routing entries:
 - select `produce.number` and route it to `consume.first`; and
 - select `produce.text` and route it to `consume.second`.
 
-The first label in each pair names the destination parameter. The second names
-the source result.
+The first label in each pair selects the source result. The second selects the
+destination parameter. Result routing consistently reads from source to
+destination.
+
+`using` resource mapping reuses the same source/destination order, but its
+destination label introduces a body-visible resource binding rather than
+selecting a predeclared call parameter:
+
+```zax
+using (
+  resource: myResource:,
+  grant: myGrant: = acquirePair()
+) {
+  use(myResource, myGrant)
+}
+```
+
+The resource owner requires source-result labels whenever a several-result
+producer introduces names. A bare producer may instead enroll every result
+without naming it. Complete rules are in
+[Zax `using`](using.md#capture-by-source-result-label).
 
 ### Two cursors
 
@@ -1219,20 +1261,20 @@ Routing maintains independent cursors:
 - a source-result cursor; and
 - a destination-parameter cursor.
 
-A named destination resets the destination cursor after that parameter. A named
-source resets the source cursor after that result.
+A named source resets the source cursor after that result. A named destination
+then resets the destination cursor after that parameter.
 
-Named and positional routing may mix:
+Named and same-name routing may mix:
 
 ```zax
 consume(
-  first: number:,
-  : text: = produce()
+  number: first:,
+  text: = produce()
 )
 ```
 
-`number` routes to `first`. `text` routes to the positional destination after
-`first`.
+`number` routes to `first`. The single `text:` uses same-name shorthand and
+routes `produce.text` to `consume.text`.
 
 Same-name routing can use shorthand:
 
@@ -1243,46 +1285,82 @@ consume(text:, number: = produce())
 This routes `produce.text` to `consume.text` and `produce.number` to
 `consume.number`.
 
+A bare destination `:` instead supplies the current positional destination:
+
+```zax
+consume(
+  number: first:,
+  text: : = produce()
+)
+```
+
+Here `text` routes directly to the positional parameter after `first`. Bare `:`
+does not introduce a caller-visible name or a separate anonymous intermediate;
+the existing parameter slot is the destination.
+
 ### Existing destinations and new declarations
 
 Capture may mix a new binding with an existing positional destination:
 
 ```zax
-number:, existingText = produce()
+existingText : String = "previous"
+
+number:,
+text: existingText = produce()
 ```
 
-`number:` selects and introduces `number`. `existingText` receives the next
-positional result through ordinary assignment.
+`number:` selects and introduces the same-named binding. `text:` selects the
+labeled source result and routes it into `existingText` through ordinary
+assignment.
 
 These operations are not atomic. If an earlier destination completes and a later
 one panics, the earlier effect remains observable.
 
-### Typed intermediates
+### Typed destinations
 
-A spaced colon introduces a declaration expression rather than selecting a
-result label:
+A source-result selector may be followed by a complete typed destination
+declaration:
+
+```zax
+number:,
+text: message : String = produce()
+
+consume(number, message)
+```
+
+`text:` selects the producer result. That result directly initializes the
+caller-owned destination `message : String`; normal construction selects the
+conversion or transfer accepted by `String`.
+
+A typed declaration may also occur directly in a call routing group. It supplies
+the next positional argument after construction:
 
 ```zax
 consume(
-  first: number:,
-  second: text : String = produce()
+  number: first:,
+  text: message : String = produce()
 )
 ```
 
-`text : String` consumes the current positional source result. It does not select
-the result labeled `text`.
+This names the first destination parameter explicitly. The new `message`
+declaration is initialized from `produce.text` and supplies the next positional
+parameter. The source-result selector still appears before the destination
+declaration; the ordinary destination cursor identifies the parameter that
+receives the constructed intermediate.
 
-To select a labeled result and then construct a differently typed intermediate,
-use two clear steps:
+Omitting the declaration name creates an anonymous typed intermediate:
 
 ```zax
-number:, text: = produce()
-
 consume(
-  first: number,
-  second: widget : Widget = text
+  number: first:,
+  text: : MyTextConsumer = produce()
 )
 ```
+
+`produce.text` initializes the anonymous `MyTextConsumer`. That value then
+supplies the current positional parameter and remains alive through its complete
+consumer. Unlike bare `:`, the type makes this a destination declaration rather
+than a direct positional mapping.
 
 ### Anonymous typed declarations
 
@@ -1297,8 +1375,12 @@ anotherFunction(# : Integer = produce())
 ```
 
 These forms differ in how grouping, positional intent, or an anonymous binding
-name resolves the surrounding syntax. Canonical formatting may prefer one form
-later; their current parsing roles remain distinct.
+name resolves the surrounding syntax. Once `: Integer` and `# : Integer` have
+both resolved as ordinary anonymous declarations in a non-result-mapping
+expression, they have the same value behavior. Canonical formatting may prefer
+one form later; their parsing roles remain distinct. Complete ordinary
+declaration behavior is defined by
+[Zax declarations and bindings](declarations-and-bindings.md#anonymous-declarations-and-discard-names).
 
 Anonymous typed construction is required when an expression hole adds an
 optional layer around an already-optional source:
@@ -1333,18 +1415,63 @@ Source and destination discard act on different cursors:
 
 ```zax
 consume(
-  #: #,
-  first: number:,
-  second: text: = produce()
+  #,
+  number: first:,
+  text: second: = produce()
 )
 ```
 
-The outer `#:` supplies no consumer destination and invalidates the destination
-cursor. The inner `#` consumes and discards the current producer result and
-advances the source cursor. A later named destination reestablishes the
-destination cursor.
+The `#` consumes the current producer result without exposing a destination and
+advances the source cursor. It does not advance the destination cursor.
+
+A destination discard acts independently:
+
+```zax
+consume(
+  #:,
+  number: second:,
+  text: third: = produce()
+)
+```
+
+`#:` supplies no consumer destination and invalidates the destination cursor. It
+does not consume a source result. Later named source and destination labels
+reestablish their respective cursors. Source discard does not shorten the result's
+complete-consumer lifetime.
 
 Each source result and destination slot may be consumed at most once.
+
+The distinction is observable even when both forms are legal:
+
+```zax
+produceText final : (
+  text : String
+)() = {
+  return "produced"
+}
+
+consumeText final : ()(
+  text : String = "fallback"
+) = {
+  print(text)
+}
+
+consumeText(
+  text: : = produceText()
+) // produceText.text supplies consumeText.text
+
+consumeText(
+  text: # = produceText()
+) // discard produceText.text; use the parameter default
+```
+
+Bare `:` supplies and advances the current positional destination. `#` supplies
+no destination and does not advance that cursor. The second call is valid only
+because the unbound parameter can be completed by its default.
+
+Return-result routing uses the same distinction. Bare `:` supplies the current
+outer result slot. `#` does not; that outer slot must already be initialized or
+be completed elsewhere under the ordinary complete-result-shape rules.
 
 ### Several producer groups
 
@@ -1352,14 +1479,14 @@ Several groups execute in source order:
 
 ```zax
 consume(
-  first: number:,
-  : text: = before(),
+  number: first:,
+  text: : = before(),
 
   third:,
   fourth: = produce(),
 
   fifth:,
-  #: # = after()
+  # = after()
 )
 ```
 
@@ -1427,7 +1554,7 @@ wrapper final : (
 Return routing can remap labels:
 
 ```zax
-return outputText: text:, outputNumber: number: = produce()
+return text: outputText:, number: outputNumber: = produce()
 ```
 
 Grouping always requires one expression:
@@ -1442,8 +1569,8 @@ Result routing itself cannot be grouped as an expression:
 
 ```zax
 return (
-  outputText: text:,
-  outputNumber: number: = produce()
+  text: outputText:,
+  number: outputNumber: = produce()
 )
 // error: result routing cannot be grouped as an expression
 ```
@@ -2054,6 +2181,94 @@ the producer's result slots survive until their transfers or bindings into
 `consume` complete. A temporary result bound to an outer reference parameter
 survives through the outer call.
 
+### Result slots, destinations, and elision
+
+Result construction before mapping has two owners. The selected visible
+prototype determines which result slots are initialized before body entry and
+runs those initializers in result declaration order. This includes allocation
+forms such as `@`; the caller establishes the call boundary from that prototype.
+The implementation controls explicit construction in the body, and
+value-bearing return expressions evaluate left to right. A rebound body and
+visible prototype must agree on which result slots are already constructed at
+body entry. Selecting results in another order does not rewrite any of these
+construction effects.
+
+#### Caller-visible destination order
+
+Distinct source result slots complete after mapping in reverse result declaration
+order. New caller-owned destinations follow the visible order in which the
+caller introduces them:
+
+```zax
+resultA: firstA:,
+resultB: secondB: = makeResults()
+// Later destroy secondB, then firstA.
+
+resultB: firstB:,
+resultA: secondA: = makeResults()
+// Later destroy secondA, then firstB.
+```
+
+`makeResults` uses the same prototype-defined pre-body construction and the same
+implementation-defined body or return construction in both cases. The caller
+has changed only which destination it introduces first, so it has visibly
+changed the destinations' later destruction order.
+
+#### Existing destinations keep their order
+
+Routing into an existing destination establishes no new lifetime:
+
+```zax
+resultB: existingB,
+resultA: existingA = makeResults()
+```
+
+`existingA` and `existingB` retain the destruction positions established by
+their owning scopes. Likewise, call parameters are destroyed in reverse
+parameter declaration order, and result destinations declared by an enclosing
+function follow that function's result declaration order. Call-site
+source-selection order does not replace either prototype order.
+
+#### Elision moves destruction
+
+Elision may make one source result slot and its destination the same value. The
+unified value then has the destination's lifetime and destruction position; it
+does not also undergo a separate source-slot destruction. This can change the
+overall destruction order.
+
+For example, suppose `makeResults` declares `resultA` before `resultB`. A wrapper
+can discard the first result and map the second directly into its own result
+slot:
+
+```zax
+keepSecond final : (
+  kept : ResultB
+)() = {
+  #,
+  resultB: kept: = makeResults()
+}
+```
+
+When `resultB` is elided into `kept`, `resultA` remains a distinct source slot
+and is destroyed when the inner mapping completes. The unified `resultB`
+survives as `kept` and is destroyed later at the outer destination's position.
+The resulting order is `resultA` before `resultB`, rather than the reverse
+declaration order that two distinct source slots would have followed.
+
+```text
+producer result declarations:  resultA, resultB
+elided mapping:                 resultB -> outer destination
+inner mapping completion:      destroy resultA
+outer destination completion:  destroy unified resultB
+```
+
+Elision does not reorder prototype-defined pre-body initialization or the
+implementation's explicitly sequenced body and return construction of `resultA`
+and `resultB`. It changes lifetime and destruction by removing the separate
+intermediate identity and making the destination the produced value. An
+implementation may perform this storage unification only with those language
+effects.
+
 Transfer stance does not change when ordinary argument or result temporaries
 reach destruction. It changes which resources remain owned by those values at
 that point. Each temporary is destroyed once at its ordinary completion
@@ -2061,11 +2276,17 @@ boundary.
 
 After body-local scope exit and complete result mapping:
 
-1. source result slots are destroyed in reverse result declaration order;
+1. distinct source result slots are destroyed in reverse result declaration
+   order;
 2. parameter instances are destroyed in reverse parameter declaration order;
 3. caller-side receiver, argument, and nested-result temporaries are destroyed
    in reverse construction order when their complete consumer no longer needs
    them.
+
+An elided result is absent from the first step because its lifetime has become
+the destination lifetime. A `#` result remains in that step unless its
+surrounding construct explicitly establishes another anonymous destination
+lifetime.
 
 This keeps parameters and referenced caller temporaries alive through result
 mapping. Returned-reference origin and escape are defined by
@@ -2081,8 +2302,8 @@ A comma continues an already established comma-list across the following
 physical newline:
 
 ```zax
-return first: number:,
-  second: text: = produce()
+return number: first:,
+  text: second: = produce()
 ```
 
 When the first result begins after an otherwise complete bare `return`, explicit
@@ -2090,8 +2311,8 @@ continuation is necessary:
 
 ```zax
 return \
-  first: number:,
-  second: text: = produce()
+  number: first:,
+  text: second: = produce()
 ```
 
 The comma already continues the next newline. Adding `\` there is an intent
@@ -2099,17 +2320,17 @@ error:
 
 ```zax
 return \
-  first: number:, \ // error: comma already continues this newline
-  second: text: = produce()
+  number: first:, \ // error: comma already continues this newline
+  text: second: = produce()
 ```
 
 A continuation-only line can visibly carry the list across another newline:
 
 ```zax
 return \
-  first: number:,
+  number: first:,
   \
-  second: text: = produce()
+  text: second: = produce()
 ```
 
 Complete continuation and indentation behavior is defined by
@@ -2168,6 +2389,8 @@ Programmers must be able to discover:
 - instance-qualified `once` calls with ordinary once-only receiver evaluation;
 - environments retained for closures or default expressions;
 - result construction, remapping, omission, and discard;
+- source-slot completion, caller-owned destination order, and any lifetime or
+  destruction-order change caused by result elision;
 - a `return #` slot preserved, declaration-initialized, or type-default
   constructed;
 - branch-specific callable selection under a conditional expression;
@@ -2189,7 +2412,9 @@ Canonical formatting preserves:
 - omission versus type-default expressions;
 - parentheses that establish expression mode;
 - contextual `=` mapping boundaries;
-- source and destination labels;
+- source-result selectors before destination selectors;
+- bare positional destinations, anonymous typed destinations, and `#` discard;
+- `using` resource-list mapping boundaries;
 - explicit transfer intent;
 - comma-list continuation; and
 - one continuation reason per physical newline.
@@ -2220,6 +2445,13 @@ Even deterministic selection cannot prevent every API evolution hazard:
 - renaming a parameter or result label breaks labeled callers;
 - reordering parameters or results changes positional cursors;
 - changing result arity or discardability changes mappings;
+- replacing a routed bare positional destination with `#` leaves that
+  destination unsupplied;
+- reordering explicit destination introductions changes their later destruction
+  order without changing prototype- or implementation-defined result
+  construction;
+- enabling or preventing result elision may move destruction from a source-slot
+  completion boundary to the destination lifetime;
 - adding a result-only overload may make inferred calls ambiguous;
 - adding or changing an overload may change a conditional-expression arm's
   selected callable;
@@ -2248,6 +2480,9 @@ Later work must preserve:
 - all-results-or-no-results normal completion;
 - the distinction between one expression and a result sequence;
 - explicit result mapping and deterministic cursors;
+- visible-prototype-controlled pre-body result construction,
+  implementation-controlled body and return construction, caller-visible
+  destination ordering, and elision-driven lifetime unification;
 - narrow complete-declaration result selection;
 - position-specific `return #` preservation or default-completion within the
   complete-result-shape rule;

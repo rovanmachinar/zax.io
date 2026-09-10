@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -63,6 +63,43 @@ The complete rules are in
 The compiler may optimize storage reservation and initialization when doing so
 preserves behavior. That does not collapse the programmer-visible distinction
 between introducing a name and initializing its value.
+
+### Anonymous declarations and discard names
+
+An ordinary declaration may omit an accessible name:
+
+```zax
+{
+  : Resource = acquire()
+  work()
+}
+
+{
+  # : Resource = acquire()
+  work()
+}
+```
+
+These are alternative spellings with the same value behavior. Each constructs
+one anonymous `Resource`, introduces no identifier that later source can use,
+and destroys the value when its surrounding block ends. Outside a mapping
+construct such as function result routing or `using`, the missing name and
+explicit `#` have no different construction, elision, lifetime, or destruction
+effect. `#` only makes the programmer's discard intent explicit.
+
+Their inferred counterparts are also legal:
+
+```zax
+: = makeFirst()
+# := makeSecond()
+```
+
+The surrounding context still must accept a declaration at that position. In a
+result-routing group or `using` list, bare `:` and `#` additionally control
+destination or disposal behavior and are therefore not interchangeable. Those
+contextual differences are defined by
+[Zax function invocation](function-invocation.md#source-and-destination-discard)
+and [Zax `using`](using.md#anonymous-enrollment-and-discard).
 
 A declaration must provide either an explicit type or an initializer from which
 the type can be inferred:
@@ -1218,6 +1255,56 @@ section roles, and phase execution are owned by
 [core flow control](core-flow-control.md); token spacing and mandatory layout are
 owned by [source structure](source-structure.md).
 
+### Scoped-resource entries
+
+A declaration in a `using` resource list becomes visible after its initializer
+completes and remains visible to later entries and the body:
+
+```zax
+using (
+  connection := connect(),
+  grant := connection.acquireGrant()
+) {
+  use(connection, grant)
+}
+```
+
+These declarations belong to the `using` header rather than its body. Their
+owned values are destroyed only after the complete resource disposal phase.
+
+Several results may introduce bindings through source-result labels:
+
+```zax
+using (
+  resource: myResource:,
+  grant: myGrant: = acquirePair()
+) {
+  use(myResource, myGrant)
+}
+```
+
+The first label in each pair selects the producer result; the second introduces
+the new ordinary binding. A selected result may instead initialize a complete
+typed destination declaration:
+
+```zax
+using (
+  resource:,
+  grant: disposalGrant : MyCarryingGrant = acquirePair()
+) {
+  use(resource, disposalGrant)
+}
+```
+
+`grant:` selects the source result. The caller-owned
+`disposalGrant : MyCarryingGrant` destination determines the value and
+operations that participate in `using`. Positional typed declarations do not
+introduce new names for a several-result producer in this context. Complete
+result mapping belongs to
+[function invocation](function-invocation.md#result-routing-groups), and
+complete entry ownership, disposal, and lifetime belong to
+[Zax `using`](using.md#resource-entries).
+
 ### Flow labels and the ordinary namespace
 
 A flow label is a separate, explicitly shaped name category from the ordinary
@@ -1352,6 +1439,19 @@ A complete typed capture introduces ordinary declarations:
 number : Integer, text : String = produce()
 ```
 
+That form consumes results positionally. A source-result label may instead select
+the result before introducing an inferred or typed destination:
+
+```zax
+number: sum:,
+text: description : String = produce()
+```
+
+`number:` and `text:` select producer results. `sum:` introduces an inferred
+destination, while `description : String` introduces a typed destination
+initialized from the selected `text` result. This source/destination order is the
+same in declarations, call routing, return routing, and `using`.
+
 New declarations and existing destinations may coexist:
 
 ```zax
@@ -1367,6 +1467,12 @@ same-scope redeclaration, and declaration-versus-assignment rules continue to
 apply. Complete result labels, routing, omission, construction order, and
 completion are defined by
 [Zax function invocation](function-invocation.md#result-labels-and-acknowledgement).
+
+`using` applies these rules in a mapping-capable resource list. It permits
+same-name source-label capture and an explicit source/destination pair, including
+a complete typed destination declaration, but rejects positional introduction
+of several named resource bindings. See
+[Zax `using`](using.md#capture-by-source-result-label).
 
 ## Documentation attachment
 
@@ -1414,6 +1520,8 @@ Diagnostics should distinguish:
 - a declaration form used in a source position that does not accept it;
 - declaration-like spacing that conflicts with label intent;
 - duplicate bindings introduced by a result-routing construct; and
+- positional introduction of several named `using` results where source-result
+  labels are required;
 - use of an unconstructed result slot as a live value;
 - an identity declaration missing either its admission or surface keyword; and
 - conflicting `admit`/`restricted` or `expose`/`opaque` intent;
@@ -1435,7 +1543,9 @@ anonymous final : :: type { }
 MyCount :: identity admit expose type U32
 ```
 
-A formatter may canonicalize `: =` to `:=`. It must preserve the separation
+A formatter may canonicalize `name : =` to `name :=`. It must preserve a
+missing anonymous name versus an explicit `#`, even though those ordinary
+declarations have the same value behavior. It must also preserve the separation
 among binding, value, access, and referent-place qualifiers and must not silently
 resolve contradictory source intent. It may normalize qualifier ordering and
 spacing but must not add or remove explicit qualifiers.
@@ -1457,6 +1567,8 @@ It establishes constraints that later work must preserve:
   executable ordinary self-initialization;
 - function invocation may use declarations as inputs and result destinations
   without changing when a declared binding becomes visible;
+- ordinary anonymous declarations with a missing name or explicit `#` retain
+  equivalent value behavior outside mapping-specific contexts;
 - result slots may delay construction as a specialized output obligation without
   creating an initialize-later form for ordinary local declarations;
 - named non-value definitions may expose incomplete self-names without making
@@ -1469,6 +1581,8 @@ It establishes constraints that later work must preserve:
   names;
 - flow-control design must preserve header-binding scope, nested block scope, and
   the separate flow-label category described here;
+- scoped-resource design must preserve source-ordered header binding visibility
+  and explicit source-result labels for named several-result enrollment;
 - module and name-resolution design must preserve one lexical identifier
   namespace, fixed path roots, and pending suffix resolution; and
 - structural typing must decide explicitly whether member names, qualifiers,

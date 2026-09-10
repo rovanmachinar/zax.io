@@ -49,6 +49,9 @@ producing them.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
   for constructors, construction packets, generated lifecycle operations,
   same-storage replacement, and destruction.
+- Read [Zax `using`](language/using.md) for
+  parenthesized `using` resource lists, structural `dispose`, disposal and
+  destruction order, and explicit disposal bypass.
 - Read [Zax core flow control](language/core-flow-control.md) for exact-`Boolean`
   conditions, `if`/`else`, loops, explicit `scope`, flow labels, and
   `break`/`continue`/`next`/`goto`/`return`.
@@ -104,6 +107,7 @@ producing them.
 - [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
+- [`using`](language/using.md)
 - [Core flow control](language/core-flow-control.md)
 - [Switch, case, and default](language/switch.md)
 - [Iteration](language/iteration.md)
@@ -130,7 +134,7 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Arrays](arrays.md)
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)
-- [Flow control](flow-control.md) — legacy `using` and value-polymorphism input;
+- [Flow control](flow-control.md) — legacy value-polymorphism input;
   current ordinary flow and runtime selection are owned by
   [core flow control](language/core-flow-control.md) and
   [switch, case, and default](language/switch.md)

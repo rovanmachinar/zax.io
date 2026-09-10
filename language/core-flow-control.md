@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
+| Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
 ## Mental model
@@ -561,6 +561,10 @@ redo while retry: condition
 scope process_work: {
   body()
 }
+
+using cleanup: (resource) {
+  body()
+}
 ```
 
 For `redo while` and `redo until`, the two keywords form one introducer, and a
@@ -668,9 +672,17 @@ For a particular transfer keyword:
 | --- | --- | --- | --- | --- |
 | Loop | Yes when nearest and unlabeled | Yes when nearest and unlabeled | Yes | Yes |
 | Explicit `scope` | Yes when nearest and unlabeled | Yes when nearest and unlabeled | Yes | Yes |
+| `using` | No; nearest `using` is a non-acknowledgeable barrier | No | Yes, and explicitly bypasses that target's disposal | No |
 | Labeled `if` | No implicit target | No | Yes | No |
 | Unlabeled `if` | Transparent | Transparent | Not nameable | Not nameable |
 | Ordinary block | Transparent | Transparent | No | No |
+
+`using` is deliberately unlike an ordinary unlabeled target. A bare `break`
+stopped by a nearest `using` is an error rather than permission to bypass
+disposal or search for an outer target. `break cleanup:` may target a labeled
+`using` explicitly; every transfer that merely crosses a `using` performs its
+disposal phase. Complete resource behavior is defined by
+[Zax `using`](using.md#labels-and-exits).
 
 `continue if_label:` and `next if_label:` are errors: re-evaluating an `if` would
 turn selection into iteration, and treating them as exits would make them
@@ -812,6 +824,14 @@ header lifetime ordering is owned by
 Each scope and surviving header region forms a
 [life path](lifetimes-and-references.md#start-with-a-life-path); no contained
 instance or reference target outlives the path a transfer exits.
+
+A transfer crossing `using` performs that construct's body-local destruction,
+reverse disposal, and owned-entry destruction before continuing outward. The
+only ordinary-flow exception is `break label:` targeting that exact `using`,
+which deliberately bypasses its disposal phase but not destruction. `using`
+cannot be re-entered. Complete enrollment, disposal ordering, and bypass
+behavior are owned by
+[`using`](using.md#labels-and-exits).
 
 ### `return` as a flow exit
 
@@ -1043,6 +1063,8 @@ cancellation remain separate future design.
 - `goto` skips post and test/progression cost but pays the target body's work.
 - `break`, `continue`, `next`, `goto`, and `return` pay destruction cost for
   every scope they unwind.
+- A transfer crossing `using` also pays its selected disposal-call costs; an
+  explicit `break` targeting that `using` is the visible bypass.
 - A normal-completion post operation may perform substantial ordinary work and is
   not hidden cleanup.
 - A conditional expression evaluates one arm and directly constructs its result.
@@ -1071,6 +1093,7 @@ Representative semantic errors include:
   `Boolean`;
 - branch-dependent expression paths that fail to converge;
 - a transfer label naming a construct ineligible for that keyword;
+- `next`, `continue`, or `goto` targeting a `using`;
 - bare `goto` with no eligible unlabeled target;
 - `goto` naming an inactive construct, an `if`, or a location other than a
   complete eligible body;
@@ -1082,6 +1105,8 @@ Representative semantic errors include:
 Representative deliberate intent or layout errors include:
 
 - a bare transfer stopped by a labeled eligible target;
+- a bare `break` stopped by a nearest `using`, which may not be acknowledged or
+  retargeted outward;
 - an eligible outer target reached through a nearer same-named label that is
   ineligible for the written keyword and lacks
   `intent<outer-target-through-ineligible-label>{...}`;
@@ -1119,6 +1144,7 @@ The aligned rules deliberately protect against:
 - changing a value's type silently changing condition truthiness;
 - adding or removing `;;` silently turning a body into a post operation;
 - inserting a labeled eligible target silently redirecting a bare transfer;
+- inserting a `using` boundary changing an outward transfer's disposal work;
 - adding a local binding changing label resolution, or vice versa;
 - adding a same-named label changing whether an explicit outer transfer requires
   intent acknowledgement;
@@ -1150,7 +1176,8 @@ The following remain explicit future work and are not established here:
 - generalized patterns, payload binding, guards, and value-producing selection;
   current `switch`, `case`, `default`, and direct case transfer are owned by
   [Zax switch, case, and default](switch.md);
-- complete `using` and resource-management semantics; core `scope` here is an
+- generalized cleanup hooks beyond current
+  [Zax `using`](using.md); core `scope` here remains an
   explicit flow target, not a resource construct;
 - runtime value-polymorphic declarations and stored branch-dependent types;
 - `except`, `catch`, and specialized error-result propagation, which must

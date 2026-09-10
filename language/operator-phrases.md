@@ -7,7 +7,7 @@
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type receivers, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
-| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
+| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); structural recognition of `dispose` by [Zax `using`](using.md); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
 ## Mental model
@@ -304,6 +304,21 @@ Phrase discovery never searches the right operand's type. Adding a public phrase
 to a receiver type remains a source-compatibility event, because it may turn
 previously unique source into a loud ambiguity, but an unrelated import cannot
 quietly contribute a viable natural phrase to somebody else's type.
+
+Some language constructs may look for one exact ordinary receiver-owned phrase
+without protecting that phrase form. In particular, `using` checks whether an
+enrolled receiver has a compatible pre-unary `dispose` operation:
+
+```zax
+operator pre unary 'dispose' final : ()() writable = {
+}
+```
+
+`dispose` remains open, non-protected, and subject to normal visibility,
+qualification, transfer, selection, availability, and result rules. The
+resource construct adds structural recognition, not a second phrase declaration
+or dispatch mechanism. Complete compatibility and invocation timing are owned by
+[Zax `using`](using.md#structural-disposal).
 
 ### Receiver-oriented wording
 
@@ -780,6 +795,11 @@ Adding, removing, lengthening, reserving, or changing the precedence of a phrase
 form is a source-compatibility event. It may make existing source ambiguous or
 invalid, but it must never silently reinterpret one viable tree through source,
 declaration, import, module, or discovery order.
+
+Adding an applicable `dispose` phrase to a receiver type also changes whether
+existing `using` source invokes disposal. That resource-specific compatibility
+effect is defined by
+[Zax `using`](using.md#source-stability).
 
 An ungrouped runtime case test has an explicit construct-specific exception:
 adding an exact-`Boolean` direct phrase may activate the higher-priority

@@ -13,54 +13,13 @@ Current `switch`, `case`, and `default` behavior is owned by
 first-match model, case operators, clause posts, transfers, optional proof, enum
 coverage, and diagnostics supersede the former switch material on this page.
 
+Current `using` resource-list, structural-disposal, ordering, and exit behavior
+is owned by
+[Zax `using`](language/using.md).
+
 The sections below are the **legacy remainder** of this page. They preserve prior
-design evidence for the unresolved `using` resource statement and value
-polymorphism using `if`. This evidence remains non-authoritative until its own
-focused review.
-
-### `using` statement
-
-A `using` statement is akin to a shortened `if` statement where a condition is
-not specified and always assumed to be `true`. This allows a temporary resource
-to be declared and used within a `using` scope. Callable-like restricted capture
-is preserved separately in
-[raw function-composition input](project/raw/function-composition-and-chaining.md).
-If a value is declared in an initialization statement, that value's scope exists
-only within the `using` control flow.
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-MyType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-func final : (myType : MyType)() = {
-    // ...
-    return myType
-}
-
-using value := func()
-    doSomething(value)
-
-using value := func() {
-    print(value.value1)
-    print(value.value2)
-}
-
-using value own := func() {
-    print(value1)
-    print(value2)
-}
-
-using value own := func()
-    doSomething(value);
-    print(value2)
-````
-
+design evidence for value polymorphism using `if`. This evidence remains
+non-authoritative until its own focused review.
 
 ### Value polymorphism using `if`
 

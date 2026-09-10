@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing instance lifetimes, life paths, instance places, references, reference origin, escape, and synchronous borrowing; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
-| Does Not Own | How construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
+| Does Not Own | How construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy pointer, function-capture, scope, construction, and global-lifecycle evidence reconciled with current qualifier, invocation, optional, identity, and transfer design |
 | Supersedes | Reference and lifetime teaching formerly distributed through root legacy pages |
 
@@ -114,6 +114,14 @@ The same model applies across Zax:
 | Managed variant | Exactly one active alternative path is resident; changing alternatives ends one path and begins another |
 | Array or collection | A collection owns one or more element paths whose stability depends on its operation contract |
 | Dynamic allocation | An arena supplies storage for a separately owned path |
+
+`using` applies these ordinary paths to one resource list. Named and unnamed
+by-value entries occupy a header-owned path through the body and disposal phase.
+This includes a result captured with `#`: it has no accessible name and receives
+no disposal call, but its owned path is not shortened. An existing place or
+reference result instead contributes a borrowed path: `using` keeps the
+reference available but neither owns nor extends its target's life path.
+Complete behavior is in [Zax `using`](using.md#resource-entries).
 
 The details of pointer-owned dynamic paths are in
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md).
@@ -408,6 +416,42 @@ through the complete outer call.
 Suspension is not synchronous completion. Reference validity across async
 suspension, cancellation, or executor movement remains future async design.
 
+A `using` resource list supplies another explicit synchronous extension
+boundary:
+
+```zax
+using (makeDocument()) {
+  // The unnamed Document result remains alive through this body and disposal.
+}
+```
+
+A by-value result is owned by the `using` header. A reference result keeps only
+the reference value alive and still requires proof that its target survives
+through disposal. Complete entry and disposal behavior is owned by
+[Zax `using`](using.md#unnamed-value-results).
+
+### Result elision joins life paths
+
+Without elision, a producer result slot and the destination initialized from it
+are distinct lifetimes. The source slot completes at the result-mapping boundary;
+the destination follows the path established by its owner.
+
+Elision may make those two logical positions one value. That value follows the
+destination path and has no separate source-slot destruction. Its destruction
+can therefore move later and change order relative to source slots that remain
+distinct.
+
+Suppose a producer declares results `resultA` and then `resultB`, and `resultB`
+is elided into a longer-lived outer destination. `resultA` is destroyed when the
+inner result mapping completes. The unified `resultB` survives until the outer
+destination ends, so the observable order is `resultA` before `resultB`.
+
+Elision does not reorder visible-prototype pre-body construction or the
+implementation's explicitly sequenced body and return construction. It changes
+which life path owns the unified value. Complete result-slot, destination-order,
+and elision behavior is defined by
+[Zax function invocation](function-invocation.md#result-slots-destinations-and-elision).
+
 ## Returned references
 
 A reference result owns only an access path. Result-slot destruction does not
@@ -572,6 +616,7 @@ Representative errors include:
 - payload reference is used after reset;
 - ordinary access may observe an incomplete resident instance;
 - reference capture may outlive its target;
+- a borrowed `using` entry may not remain valid through its disposal phase;
 - reference cannot be rebound; and
 - lifetime assertion contradicts a known-ended path.
 

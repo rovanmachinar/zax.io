@@ -7,7 +7,7 @@
 | Applies To | Private owned composition, exposed/opaque identity surfaces, signature substitution, projection/admission boundaries, suppression, and reflection |
 | Owns | Preserved `own` and identity-exposure requirements, representative source, activation pressure, and retirement criteria |
 | Does Not Own | Accepted owned-composition semantics or current identity/partial behavior |
-| Source / Provenance | Integer identity work and the language direction favoring composition over inheritance |
+| Source / Provenance | Integer identity work, legacy `using value own` input, and the language direction favoring composition over inheritance |
 
 Current explicit identity, admission, projection, and exposed/opaque behavior is
 owned by [Zax identity types](../../language/identity-types.md). This input
@@ -44,6 +44,34 @@ MyLoggingService :: type {
 ```
 
 Future teaching needs both numeric and nonnumeric examples.
+
+## Legacy local member-exposure evidence
+
+Legacy flow-control input proposed exposing a value's members as unqualified
+names inside one local body:
+
+```zax
+// Legacy illustrative syntax; not accepted resource or composition behavior.
+using value own := makeValue() {
+  print(value1)
+  print(value2)
+}
+```
+
+Scoped resource use does not retain this spelling or give `own` disposal
+meaning. The equivalent resource code uses explicit access:
+
+```zax
+using (value := makeValue()) {
+  print(value.value1)
+  print(value.value2)
+}
+```
+
+This input preserves only the independent question of whether future owned
+composition or another explicit projection facility should provide local
+member exposure. Future work must not reintroduce that behavior implicitly
+through `using`.
 
 ## Signature transformation
 

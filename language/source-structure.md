@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -452,8 +452,8 @@ A comma already recognized as a separator in a comma-list implicitly continues
 that list across the following physical newline:
 
 ```zax
-return first: number:,
-  second: text: = produce()
+return number: first:,
+  text: second: = produce()
 
 switch value {
   case firstCandidate,
@@ -461,6 +461,14 @@ switch value {
     thirdCandidate {
     handleCandidate()
   }
+}
+
+using resources: (
+  resource := acquireResource(),
+  grant := resource.acquireGrant(),
+  sharedService
+) {
+  use(resource, grant, sharedService)
 }
 ```
 
@@ -476,8 +484,8 @@ The continuation line must be hanging-indented beyond the structural indentation
 of the statement:
 
 ```zax
-return first: number:,
-second: text: = produce() // error: continuation is not hanging-indented
+return number: first:,
+text: second: = produce() // error: continuation is not hanging-indented
 ```
 
 A blank or comment-only physical line breaks comma-list continuation. A
@@ -485,9 +493,9 @@ continuation-only `\` line may carry the list across one additional newline:
 
 ```zax
 return \
-  first: number:,
+  number: first:,
   \
-  second: text: = produce()
+  text: second: = produce()
 ```
 
 ### One continuation reason per newline
@@ -507,8 +515,8 @@ newline:
 
 ```zax
 return \
-  first: number:, \ // error: the comma already continues the list
-  second: text: = produce()
+  number: first:, \ // error: the comma already continues the list
+  text: second: = produce()
 ```
 
 ```zax
@@ -531,8 +539,8 @@ bare `return`, the first newline still needs explicit continuation:
 
 ```zax
 return \
-  first: number:,
-  second: text: = produce()
+  number: first:,
+  text: second: = produce()
 ```
 
 Once the list exists, each comma carries its following newline.
@@ -548,8 +556,40 @@ return (produce()) // one expression
 
 Call argument delimiters, construction packets, and naked return-result lists
 are distinct syntactic contexts that may accept their applicable mapping forms.
+When one routing entry names both sides, the source-result selector is written
+before the destination selector:
+
+```zax
+return sourceResult: outerResult: = produce()
+```
+
+Within a function input or output routing entry, a bare destination `:` selects
+the current positional destination, `: Type` introduces an anonymous typed
+destination, and `#` supplies no destination. A `using` list has no predeclared
+parameter or outer-result slots: there, bare `:` introduces an anonymous enrolled
+destination and `#` introduces an anonymous enrolled destination that suppresses
+disposal. Outside result mapping, an ordinary anonymous declaration may use
+either a missing name or `#`; those declaration forms do not acquire routing
+behavior merely because they share these tokens.
+
 Complete expression-versus-result-mapping behavior is defined by
 [Zax function invocation](function-invocation.md#expression-mode-and-result-mapping-mode).
+
+The mandatory parentheses after `using` likewise delimit a mapping-capable
+resource list rather than grouping one expression:
+
+```zax
+using (acquirePair()) {
+  // Every result is enrolled.
+}
+
+using ((acquirePair())) {
+  // The inner parentheses require one expression value.
+}
+```
+
+The first form preserves a bare result sequence. Complete enrollment behavior is
+owned by [Zax `using`](using.md#multiple-results-and-names).
 
 ## Statements, blocks, and bodies
 
@@ -840,6 +880,18 @@ Their flow-control and conditional-expression meaning is owned by
 [core flow control](core-flow-control.md); this document owns only their token
 spacing and their relationship to statement composition.
 
+`using` is deliberately not one of those header schemas. Its mandatory
+parenthesized resource list accepts comma-separated mapping groups and no `;;`
+initializer or post section:
+
+```zax
+using (resource) ;; record(resource) {
+} // error: using has no post section
+```
+
+Complete resource behavior is owned by
+[Zax `using`](using.md#no-initializer-or-post-sections).
+
 `each` uses the same separator and continuation rules around its traversal
 clause:
 
@@ -1052,6 +1104,12 @@ and a multiline body-closing `}` aligns with its flow keyword:
 if condition {
   doA()
   doB()
+}
+
+using cleanup: (
+  resource := acquireResource()
+) {
+  use(resource)
 }
 ```
 
@@ -1573,6 +1631,9 @@ Layout and separator diagnostics additionally distinguish:
 - a body beginning more than one structural level deeper than its header;
 - sibling header operands or sections at conflicting continuation levels;
 - a malformed case-test comma list or clause post separator;
+- missing `using` resource-list parentheses or a malformed resource mapping
+  group;
+- a `using` header containing `;;`;
 - a tested case or default without one effective body;
 - an unlabeled testless case;
 - compact `{}` where a clause's explicit empty body requires `{ }`;
@@ -1634,11 +1695,18 @@ intent<category>{
 
 The category is a lower-case hyphenated identifier registered by
 [Zax intent acknowledgements](intent-acknowledgements.md). Each category defines
-the smallest complete contextual source unit it may enclose. Most payloads form
-one complete expression, effective statement, or declaration. A category can
-instead permit another complete contextual unit, such as one complete
-`case`/`default` clause in a switch region. No payload can borrow a required
-operand, separator, declaration piece, or body from outside the enclosure.
+the smallest complete contextual source unit around one occurrence. Most such
+units are one complete expression, effective statement, or declaration. A
+category can instead identify another complete contextual unit, such as one
+complete `case`/`default` clause in a switch region.
+
+An enclosure may contain one such unit or a larger complete source region with
+several occurrences of the same category. One surrounding
+`intent<category>{...}` acknowledges every matching occurrence in that payload.
+No payload can borrow a required operand, separator, declaration piece, or body
+from outside the enclosure. Complete category matching and the requirement that
+at least one occurrence be present are owned by
+[Zax intent acknowledgements](intent-acknowledgements.md#source-form).
 
 The acknowledgement does not:
 
@@ -1682,6 +1750,10 @@ Each requires whitespace on both sides and is distinct from `;` statement
 composition; neither may be inferred from `;`. Their flow-control and
 conditional-expression meaning is owned by
 [core flow control](core-flow-control.md).
+
+Mandatory `using (...)` delimiters, their mapping-capable comma list, and their
+lack of `;;` sections are current source structure. Their resource and exit
+meaning is owned by [Zax `using`](using.md).
 
 The switch clause region, case-list continuation, and case/default body
 presentation are current source structure. Their runtime meaning is owned by

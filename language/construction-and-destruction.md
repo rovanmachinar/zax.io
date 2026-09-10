@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
 
@@ -1100,6 +1100,12 @@ destructor exit.
 Destruction receives terminal mutable and writable authority. It may dismantle
 resources but cannot create an access path valid beyond the enclosing lifetime.
 
+The ordinary pre-unary `dispose` phrase used by
+[Zax `using`](using.md#structural-disposal) is not
+destruction. It operates on a complete still-live receiver under its declared
+qualifications. The receiver remains alive for later destruction after
+`dispose` completes.
+
 ### Reconstruction during destruction
 
 A destructor may reconstruct a member:
@@ -1166,6 +1172,37 @@ For construction and destruction, the important consequences are:
   jump into a partially constructed scope; and
 - every incoming, repeated, and exiting path must preserve required construction
   and destruction state.
+
+A `using` body adds a disposal phase between its body-local and owned-header
+destruction:
+
+```zax
+using (
+  first := acquireFirst(),
+  second := acquireSecond(first)
+) {
+  temporary := prepare(first, second)
+  use(temporary)
+}
+```
+
+The lifecycle order is:
+
+1. destroy body-local `temporary`;
+2. invoke `dispose second`, then `dispose first`, when those operations are
+   compatible;
+3. destroy `using`-owned `second`, then `first`.
+
+No enrolled receiver is destroyed between disposal calls. Borrowed entries are
+not destroyed by `using`. When result routing introduces owned entries, their
+destruction follows reverse caller-visible entry order even when
+prototype-defined pre-body construction or implementation-defined body and
+return construction followed another order. Elision may unify a source slot
+with one of those destinations, giving the unified value the destination's
+lifetime and destruction position. Complete enrollment, disposal, ordering,
+and bypass behavior are owned by [Zax `using`](using.md#ordering); complete
+result-elision behavior is owned by
+[function invocation](function-invocation.md#result-slots-destinations-and-elision).
 
 Explicit lifecycle calls such as `_.member.+++()` and `_.member.---()`, and
 allocation operations using `@`, remain ordinary ordered body operations. A
@@ -1435,6 +1472,8 @@ Programmers must be able to discover:
 - resources retained or reconstructed by custom replacement;
 - copies or snapshots required to avoid alias hazards;
 - scope-exit destruction of local and header bindings on normal and abrupt exits;
+- body-local destruction followed by complete reverse disposal and then reverse
+  owned-entry destruction for `using`;
 - post operations run on `next` and normal completion but skipped on `break`,
   `continue`, and `return`;
 - allocator retention and deallocation behavior;
@@ -1500,6 +1539,8 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - declaration-order automatic construction and reverse automatic destruction;
 - automatic local and header lifetime ending and destruction order across normal
   and abrupt scope exits;
+- scoped disposal remaining distinct from terminal destruction and completing
+  before destruction of enrolled owned entries;
 - direct body entry preserving active target-header lifetimes while establishing
   a fresh body scope and rerunning ordinary body operations from its beginning;
 - the programmer-visible obligation to prove a live value before access through

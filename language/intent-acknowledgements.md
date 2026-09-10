@@ -7,7 +7,7 @@
 | Applies To | Explicit acknowledgement of defined but suspicious-looking source; not a formal grammar or diagnostic specification |
 | Implementation State | Not established by this repository |
 | Owns | The intent-acknowledgement mental model; acknowledgeable versus non-acknowledgeable intent errors; `intent<category>{...}` use; the current category registry; intent-specific costs, diagnostics, and source-stability requirements |
-| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category; the complete intent/unsafe/lint distinction, unsafe assertions and permissions ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
+| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category, including [Zax `using`](using.md); the complete intent/unsafe/lint distinction, unsafe assertions and permissions ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
 | Source / Provenance | Transfer terminal-use review and prior confusable-form intent input |
 
 ## Defined source can still look mistaken
@@ -54,8 +54,8 @@ intent<category>{
 ```
 
 The category names the exact concern being acknowledged. Each category defines
-the smallest complete contextual source unit it may enclose. The payload remains
-ordinary Zax source:
+the smallest complete contextual source unit that constitutes one occurrence.
+The payload remains ordinary Zax source:
 
 - type and qualifier checking still applies;
 - callable and operator selection still applies;
@@ -67,6 +67,21 @@ Most categories enclose a complete expression, effective statement, or
 declaration. A category may instead permit another complete contextual unit,
 such as one complete switch clause. No acknowledgement can borrow a required
 operand, separator, declaration piece, or body from outside its enclosure.
+
+One enclosure acknowledges every applicable occurrence of its category within
+the complete payload. It may therefore cover one occurrence or intentionally
+group several:
+
+```zax
+intent<category>{
+  firstApplicableOccurrence()
+  secondApplicableOccurrence()
+}
+```
+
+The payload must contain at least one applicable occurrence. The enclosure does
+not acknowledge another category, suppress an unrelated diagnostic, or make a
+non-acknowledgeable error valid.
 
 The acknowledgement adds no required runtime operation or check.
 
@@ -174,6 +189,17 @@ A `default` reachable through no ordered search is also non-acknowledgeable. It
 is not functioning as a fallback and must be rewritten as a transfer-only
 labeled case.
 
+`using` has two further non-acknowledgeable intent errors:
+
+- a present `dispose` operation that cannot satisfy the implicit bare-call
+  contract; and
+- a bare `break` stopped by a nearest `using` boundary, where bypassing disposal
+  requires an explicit target.
+
+An acknowledgement cannot discard a required result, repair operator selection,
+or choose whether disposal runs. Complete behavior and repairs are defined by
+[Zax `using`](using.md#diagnostics).
+
 ## Current category registry
 
 Category names describe the semantic situation being acknowledged rather than
@@ -191,6 +217,8 @@ copying a diagnostic message.
 | `empty-selection` | Deliberately retain a runtime switch containing no clauses | [Switch, case, and default](switch.md#empty-selection) |
 | `outer-target-through-ineligible-label` | Deliberately select an eligible outer target through a nearer same-named label that is ineligible for the written transfer keyword | [Core flow control](core-flow-control.md#label-namespace-and-shadow-permission) |
 | `partial-enum-selection` | Deliberately omit one or more distinct declared enum member values from explicit switch coverage | [Enums](enums.md#selection-with-enum-values) |
+| `duplicate-resource-enrollment` | Deliberately enroll a place already known to be enrolled by an earlier `using` entry | [Zax `using`](using.md#repeated-entries-and-aliases) |
+| `repeated-resource-expression` | Deliberately repeat a resource-producing expression as a later `using` entry while preserving every evaluation | [Zax `using`](using.md#repeated-entries-and-aliases) |
 
 Anchored owning pointers also require intent acknowledgement when replacement
 of their target or an enclosing direct place can renew the resident member
@@ -198,6 +226,56 @@ instance. That behavior is defined by
 [pointers and arenas](pointers-and-arenas.md#replacement-intent). Its exact
 category identifier remains unsettled and examples mark the spelling
 provisional rather than adding it to this accepted registry prematurely.
+
+### Repeated and duplicate resource entries
+
+When required origin analysis establishes that a later `using` entry enrolls a
+place already enrolled by an earlier entry, acknowledge that later entry:
+
+```zax
+using (
+  resource,
+  intent<duplicate-resource-enrollment>{ resource }
+) {
+}
+```
+
+When a later entry repeats the same resource-producing expression but each
+evaluation may produce a distinct resource, use the separate expression
+category:
+
+```zax
+using (
+  grantMeAResource(),
+  intent<repeated-resource-expression>{ grantMeAResource() }
+) {
+}
+```
+
+An individual acknowledgement encloses the later complete resource entry or
+producer group that creates the repetition. When both descriptions could apply,
+known duplicate place enrollment uses `duplicate-resource-enrollment`.
+
+One enclosure may acknowledge several matching later entries:
+
+```zax
+intent<repeated-resource-expression>{
+  using (
+    grantMeAResource(),
+    grantMeAResource(),
+    grantMeAResource()
+  ) {
+  }
+}
+```
+
+The second and third calls are both acknowledged occurrences. Enclosing them
+together does not merge their evaluations or resource entries.
+
+The acknowledgement preserves every evaluation, enrollment, disposal call, and
+destruction consequence. It neither merges entries nor promises that repeated
+disposal is safe. Complete enrollment and ordering are defined by
+[Zax `using`](using.md#repeated-entries-and-aliases).
 
 ### Case-conflicting enum member names
 

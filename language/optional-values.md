@@ -7,7 +7,7 @@
 | Applies To | Optional type formation, absence and presence, boxed construction and lifetime, reset, transfer effects, proven access, nested optionals, qualification, and related diagnostics; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
-| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); [pointer ownership and validity](pointers-and-arenas.md); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
+| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); [pointer ownership and validity](pointers-and-arenas.md); complete `using` enrollment and disposal ([Zax `using`](using.md)); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
 | Source / Provenance | Retired legacy optional design input, refined against current construction, qualifier, operator, invocation, flow, integer, and identity design |
 
 ## Start with absence and presence
@@ -544,6 +544,37 @@ Optional type formation does not generate nested conversion or admission
 operations. If a declared operator returns `MyValue? ?`, that operator owns its
 exact outer and inner state. Type inference receives the declared result without
 changing it.
+
+## Participation in `using`
+
+An optional entered into `using` keeps its ordinary wrapper lifetime while
+making its immediate payload conditionally available for disposal:
+
+```zax
+using (resource := tryObtainResource()) {
+  if ?resource
+    use(resource.)
+}
+```
+
+At the disposal phase:
+
+- an absent `resource` performs no disposal call;
+- a present `resource` offers `resource.` to ordinary `dispose` selection; and
+- the optional wrapper remains alive for its later ordinary destruction.
+
+The possible present path is checked statically. An incompatible `dispose` on
+the immediate payload is therefore an error even when one runtime instance could
+be absent.
+
+Participation crosses exactly one wrapper layer. For `Resource? ?`, `using`
+tests the outer presence and offers its immediate `Resource?` payload; it does
+not recursively flatten to `Resource`. Source that wants the inner resource to
+participate must explicitly prove and select that inner layer.
+
+This rule does not change optional reset, replacement, qualification, or nested
+destruction. Complete resource enrollment and disposal are defined by
+[Zax `using`](using.md#optional-values).
 
 ## Selecting optional states
 

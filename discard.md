@@ -3,11 +3,13 @@
 
 ## Discard Operator
 
-Current function-result acknowledgement, discardable results, omitted inputs,
-result routing, and the position-specific `return #` behavior that preserves or
-default-completes a result slot are defined by
+Current ordinary anonymous declarations, including the equivalent no-mapping
+spellings with a missing name or explicit `#`, are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md#anonymous-declarations-and-discard-names).
+Function-result acknowledgement, discardable results, omitted inputs, result
+routing, and the position-specific `return #` behavior are defined by
 [Zax function invocation](language/function-invocation.md#return-and-completion).
-This page remains legacy input for local and type uses of `#`. The separate
+This page remains legacy input for other local and type uses of `#`. The separate
 **deferred-recovery allocation** concept—prompt instance destruction with
 arena-delayed storage recovery—is defined by
 [Zax pointers and arenas](language/pointers-and-arenas.md#allocation-disposition).
