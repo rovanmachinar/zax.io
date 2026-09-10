@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [019: `using` and scoped resource lifetimes](work/019-using-and-scoped-resource-lifetimes.md) |
-| Next work number | `020` |
+| Active work item | [020: `own` and composition](work/020-own-and-composition.md) |
+| Next work number | `021` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
