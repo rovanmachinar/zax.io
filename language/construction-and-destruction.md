@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
 
@@ -106,6 +106,45 @@ Each member's omitted arena comes from the current thread execution context when
 that member's `@` operation executes. It does not inherit the arena that stores
 the enclosing instance. A constructor that requires a particular child arena
 accepts or otherwise receives it explicitly.
+
+Composition does not flatten construction. A member declared `own` is still one
+complete stored member, and the containing type still constructs it as a whole.
+A construction packet may therefore supply a complete value for that direct
+member:
+
+```zax
+Container :: type {
+  data own : AnimalData
+}
+
+container : Container = [{
+  .data = makeMouseData()
+}]
+```
+
+The shorter names published from `data` become useful only after `data` exists.
+They do not become entries in `Container`'s construction packet:
+
+```zax
+container : Container = [{
+  .animal = "mouse"
+  // error: `animal` is inside `data`, not a direct member of Container
+}]
+```
+
+`AnimalData` must instead be established through one of its own constructors,
+as `makeMouseData()` does in the valid example.
+
+The same whole-member boundary applies to lifecycle behavior. `expose`, `via`,
+and `= existing` cannot turn a member constructor, replacement
+constructor, destructor, generated `copy`, or generated assignment family into
+the corresponding lifecycle operation for the container. Such an operation
+would establish or end only one member, not the container's complete physical
+shape. A container lifecycle body may still invoke member lifecycle explicitly
+when its ordinary lifecycle authority permits.
+
+Complete data publication and the rejected reach-through form are taught by
+[Zax composition](composition.md#construction-remains-whole-member-construction).
 
 Like a direct `_.member.+++()` call, a direct allocation assignment to the
 current instance places that member under explicit constructor control:
@@ -484,6 +523,9 @@ A `.member = expression` entry:
 - initializes the member when the construction plan reaches it; and
 - completes before the enclosing constructor body begins.
 
+This is one construction of the direct member, not default construction followed
+by assignment.
+
 An explicit `_.member.+++()` in the selected constructor body conflicts because
 both operations attempt to construct the same member. The compiler diagnoses
 that conflict.
@@ -511,12 +553,13 @@ initializers.
 
 ## Declared and generated lifecycle operations
 
-Zax distinguishes five declaration states:
+For the lifecycle operations reviewed here, Zax distinguishes five declaration
+states:
 
 | Form | Meaning |
 | --- | --- |
 | Declaration with a body | Use the programmer-defined implementation |
-| Bodyless declaration | Declare an unavailable requirement that blocks weaker selection and that composition or later completion may fulfill |
+| Bodyless declaration | Claim an unavailable shape that blocks weaker selection until later completion supplies an implementation |
 | `= default` | Require the compiler to supply the language-defined default implementation |
 | `= existing` | Explicitly satisfy this shape using a compatible existing operation |
 | `= forbidden` | Permanently prohibit this operation shape |
@@ -536,7 +579,19 @@ unavailable for invocation.
 - If a latent generated candidate would match better, the compiler requires an
   explicit declaration for that better shape rather than generating it
   silently.
-- Composition or later completion may supply the missing implementation.
+- Later completion may supply the missing implementation.
+
+A bodyless declaration and an abstract composition role answer different
+questions. A bodyless lifecycle declaration reserves an unavailable operation
+on this same type until later completion provides it. An `abstract` role asks an
+immediate container to provide a declaration and requires that declaration to
+name the role with `fulfill`. One form never turns into the other implicitly.
+See
+[`abstract` roles and `fulfill`](composition.md#abstract-roles-and-explicit-fulfillment).
+
+Composition also defines `= via member.operation` adapters and
+`= forbidden family` exposure fences. Neither adds another lifecycle
+declaration state to this table.
 
 ### `default`, `existing`, and `forbidden`
 
@@ -589,7 +644,7 @@ compiler does not guess. The programmer resolves the demanded shape by:
 - writing `= existing`;
 - writing `= default`;
 - writing `= forbidden`; or
-- leaving a bodyless requirement for later composition or completion.
+- leaving a bodyless requirement for later completion.
 
 No error is required for an unused latent ambiguity.
 
@@ -1453,7 +1508,7 @@ construction or transfer exists, by-value admission is unavailable.
 
 A same-storage identity reference would instead view existing storage and create
 no independent value lifetime. Its representation-cast, qualification, alias,
-lifetime, and destruction rules remain future identity/owned-composition work.
+lifetime, and destruction rules remain future identity and casting work.
 The compiler does not silently substitute such a view for a requested by-value
 result.
 

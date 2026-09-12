@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -515,6 +515,147 @@ members use their appropriate qualified form.
 Explicit access prevents copied code, a newly added member, or a forgotten local
 declaration from silently changing name resolution.
 
+### Composition-facing member declarations
+
+A stored member may independently publish names, offer an expected-type route,
+or expose behavior through composition:
+
+```zax
+Assembly :: type {
+  publicData own : PublicData
+  engine preferred : Engine
+  controls expose : Controls
+}
+```
+
+The three words answer separate questions:
+
+| Word | Declaration effect |
+| --- | --- |
+| `own` | Publish eligible stored names from the member |
+| `preferred` | Let an expected member type select this member from the containing value |
+| `expose` | Generate mechanically safe forwarding behavior on the containing type |
+
+Each word is legal without either of the others, and any subset may be combined:
+
+```zax
+Car :: type {
+  engine own preferred expose : Engine
+}
+```
+
+When several appear, their canonical relative order is
+`own preferred expose`. A later general grammar and formatting sweep will place
+this modifier group relative to unrelated declaration and qualifier words.
+
+A route declaration names one particular target instead of publishing a whole
+eligible surface:
+
+```zax
+value via primary.value                 // data route to one stored place
+start final : ()() = via engine.start   // callable adapter to one operation
+```
+
+Callable declaration forms distinguish one operation from a whole overload
+family:
+
+```zax
+stop final : ()() = existing
+reset final : ()() = existing family
+restart final : ()() = via family engine.reset
+
+operator binary '+' final :
+  (result : Power)(rhs : Fuel) readonly =
+    via family engine.operator binary '+'
+
+blocked final : ()() = forbidden family
+```
+
+Singular `existing` or `via` selects exactly one operation. `existing family`
+discovers one callable family, while `via family` names one and may give it a new
+outer name. The written prototype is an exact anchor; every eligible family
+member must independently obtain one unambiguous mechanical mapping. An
+unmappable overload added later is an error rather than being silently omitted.
+`forbidden family` fences the complete outer visible callable name, or the
+complete structured operator form, regardless of which source would supply it.
+A later direct declaration in that outer family conflicts with the fence.
+
+An abstract role describes something that an immediate container must declare.
+The container makes that connection explicit with `fulfill`:
+
+```zax
+start abstract : ()()
+
+begin fulfill contract.start final : ()() = {
+}
+```
+
+`start abstract` is requirement metadata, not a bodyless callable and not
+storage. `begin` is an ordinary callable declaration whose `fulfill` clause says
+why it exists and identifies the exact role it satisfies.
+
+A private stored contract can still activate roles through `own` without
+publishing a public data path:
+
+```zax
+ServiceContract :: type {
+  start abstract : ()()
+}
+
+Service :: type {
+  contract own private : ServiceContract
+
+  begin fulfill contract.start final : ()() = {
+  }
+}
+```
+
+The carrier remains private. The directly written fulfilling declaration chooses
+its own visibility independently; explicit fulfillment does not reveal the
+carrier or its stored data.
+
+Ordinary omission in an abstract role resolves qualifier defaults just as it
+does elsewhere. `abstract relaxed` is the narrow opt-in that instead leaves only
+otherwise defaulted outer value axes, or callable receiver axes, open:
+
+```zax
+ObserverContract :: type {
+  observe abstract relaxed : ()()
+}
+
+MyObserver :: type {
+  contract own private : ObserverContract
+
+  observeReadonly fulfill contract.observe final : ()() readonly = {
+  }
+
+  observeWritable fulfill contract.observe final : ()() mutable writable = {
+  }
+}
+```
+
+Each qualification-specialized declaration independently names and satisfies
+the relaxed role. They do not form a dispatch table or merge into one
+implementation. Explicit qualifiers remain required, and relaxation does not
+change parameter or result types, base type, arity, indirection, transfer stance,
+labels, or provenance.
+
+Published member names remain instance-member lookup. They are not injected
+into an instance function's lexical scope. `shadowable` remains a lexical-name
+permission and does not affect composition publication or collision rules.
+
+Because abstract metadata has no declaration place, declaration-side words do
+not apply. `private` is also invalid: the immediate container must be able to
+inspect the role. A qualifier that belongs to the required type remains valid:
+
+```zax
+label abstract final : String // error: declaration-side `final`
+label abstract : String final // valid: `final` qualifies String
+```
+
+The complete publication, projection, routing, fulfillment, and collision rules
+are defined by [Zax composition](composition.md).
+
 ### Type-callable `once` functions
 
 A `once` function declared inside a type has one type-owned implementation
@@ -837,9 +978,18 @@ A use-site `as copy`, `as deep`, `as move`, or `as last` may restate the stance
 for one consumer. Ordinary reference passing aliases a value and is not itself a
 `copy` or `move`.
 
-An owned declaration carries its stance into an unstanced member projection. An
-explicit member declaration stance wins, and a same-place alias has its own
-declaration stance rather than silently inheriting destructive intent:
+When member access starts from a by-value declaration, that declaration's stance
+is the default for a member that has no explicit stance of its own:
+
+```zax
+package : Package move
+
+ship(package.label) // `label` offers `move` unless it declares another stance
+```
+
+A reference declaration is different. It is an alias to an existing place, but
+the alias has its own stance rather than silently inheriting destructive intent
+from the declaration used to initialize it:
 
 ```zax
 owner : Buffer move
@@ -1588,7 +1738,8 @@ It establishes constraints that later work must preserve:
 - structural typing must decide explicitly whether member names, qualifiers,
   defaults, inferred types, and recursive forms participate in identity,
   equivalence, layout, conversion, and reflection; and
-- future generic, composition, and partial work must preserve the explicit
+- future generic and partial work, and current
+  [composition](composition.md), must preserve the explicit
   identity-declaration integration owned here and the behavior owned by
   [Zax identity types](identity-types.md); and
 - future global and `once` lifetime work must preserve type-callable `once`

@@ -7,7 +7,7 @@
 | Applies To | Active-alternative lifetime, conditional access, overlay representation, and manual lifecycle pressure |
 | Owns | Preservation of the managed-variant versus unmanaged-union distinction, lifecycle constraints, reference consequences, activation pressure, and retirement criteria |
 | Does Not Own | Accepted variant/union syntax or current optional/reference behavior |
-| Source / Provenance | Work item `014`; optional, instance-place, replacement, and low-level storage review |
+| Source / Provenance | Work items `014` and `020`; optional, instance-place, replacement, low-level storage, and composition-boundary review |
 
 ## Candidate distinction
 
@@ -79,6 +79,22 @@ Future design must preserve:
 - optional-style conditional paths for managed alternatives;
 - narrow unsafe responsibility rather than broad unsafe mode; and
 - no reference rebinding when the active alternative changes.
+
+### Composition is bounded by semantic indirection
+
+A variant is a semantic wrapper whose payload requires active-alternative
+selection. Composition modifiers on a member whose declared value is a variant
+apply to that variant value; they do not automatically enter whichever payload
+is active. In particular, `own` does not publish payload members, `preferred`
+does not project through the selected alternative, `expose` does not synthesize
+payload forwarding, and an outer cast cannot cross from a payload to the object
+that stores its variant wrapper.
+
+Any future indirect-delegation feature must be distinct and explicit. It must
+preserve visible alternative selection, absence or mismatch behavior, aliasing,
+lifetime, replacement, and cost rather than weakening this boundary. The same
+constraint applies when a variant alternative contains another pointer,
+reference, optional, variant, or comparable semantic wrapper.
 
 ## Activation and retirement
 

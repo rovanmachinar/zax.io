@@ -6,8 +6,8 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, and cursor protocol forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -44,7 +44,7 @@ Zax recognizes:
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
-| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from` |
+| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `unsafe outer cast` |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -386,6 +386,28 @@ Integer-specific behavior belongs to the
 admission/projection belongs to [Zax identity types](identity-types.md).
 
 User-defined words do not independently grant unsafe authority.
+
+### Outer-cast forms
+
+These exact binary phrase forms use ordinary phrase precedence and are protected
+composition operations:
+
+```zax
+checked : Container & ? =
+  memberReference outer cast Container.member
+asserted : Container & =
+  memberReference unsafe outer cast Container.member
+```
+
+The right operand is an exact resident stored-member path, not a type. User code
+cannot overload either form. `outer cast` checks whether the input occupies that
+path and returns an optional reference. When the selected language contract
+mandates static proof that every origin reaching this site is that exact path,
+the checked form needs neither `outer tracked` placement metadata nor a runtime
+check. Otherwise `outer tracked` and runtime checking provide the fallback.
+`unsafe outer cast` trusts the programmer's provenance assertion instead.
+Complete behavior belongs to
+[Zax composition](composition.md#outer-casting-to-an-immediate-container).
 
 ## Transfer-stance forms
 

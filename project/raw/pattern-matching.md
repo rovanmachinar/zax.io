@@ -3,9 +3,9 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work reviewing patterns, destructuring, guards, or selected payload binding |
-| Applies To | Selection shapes that cannot be expressed as current Boolean case tests and ordinary proven access |
-| Owns | Preservation of generalized-pattern pressure, recursive destructuring, variant payload binding, guarded patterns, binding convergence, and interaction with direct body entry |
+| Audience | Future work reviewing patterns, destructuring, scoped projection, guards, or selected payload binding |
+| Applies To | Selection and scoped access shapes that cannot be expressed as current Boolean case tests, ordinary proven access, or type-member composition |
+| Owns | Preservation of generalized-pattern pressure, recursive destructuring, scoped projection, variant payload binding, guarded patterns, binding convergence, and interaction with direct body entry |
 | Does Not Own | Current runtime `switch` behavior, accepted variant syntax, or current optional access |
 | Source / Provenance | Former raw selection input consumed by runtime-selection review; work item `018`; raw variants/unions and optional matching pressure |
 
@@ -169,6 +169,27 @@ not imply one result slot or a value-bearing `break`.
 The current runtime-selection owner retains that boundary. Move it here only if
 future pattern and value-selection work become one cohesive feature.
 
+## Scoped projection pressure
+
+Current [`own`](../../language/composition.md) applies only to stored type
+members. It does not publish names from a local declaration or introduce
+temporary member lookup into a flow scope.
+
+Future destructuring or scoped-projection work may revisit the usability goal:
+make selected parts of one local value conveniently available for one bounded
+region without changing the containing type. It must not reuse type-member
+`own` in a way that:
+
+- injects functions or operators into lexical lookup;
+- hides whether a name is a local binding or a projected member;
+- turns data projection into receiver or operator discovery;
+- changes storage, lifetime, or transfer stance;
+- silently resolves collisions by source order; or
+- reintroduces the retired `using value own` spelling.
+
+This is pressure for a distinct scoped or pattern-binding feature, not deferred
+permission to extend current composition syntax.
+
 ## Activation and retirement
 
 Activate this input when a concrete use case requires:
@@ -177,7 +198,8 @@ Activate this input when a concrete use case requires:
 - a selected payload binding;
 - guarded patterns;
 - recursive shape matching;
-- variant active-alternative binding; or
+- variant active-alternative binding;
+- bounded local member projection or destructuring; or
 - pattern-aware value-producing selection.
 
 Future work must begin with current runtime selection, optional proof, variant

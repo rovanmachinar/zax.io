@@ -729,7 +729,8 @@ a CPU-profile format, or an implementation mapping.
 
 Exact integer-factory syntax, relational-pair declarations, reflection metadata,
 CPU-provider files, literal grammar, pointer validity, partial authority,
-owned-composition transformation, build-option syntax, and foreign
-correspondence remain future work. Those mechanisms and
-[current enum behavior](enums.md) must preserve the concrete types, identities,
-ranges, representation, conversions, and source behavior established here.
+build-option syntax, and foreign correspondence remain future work. Those
+mechanisms must preserve the concrete integer guarantees established here.
+[Current composition](composition.md) and
+[current enum behavior](enums.md) must preserve the same concrete types,
+identities, ranges, representation, conversions, and source behavior.

@@ -6,8 +6,8 @@
 | Audience | Human developers defining, reading, or converting aliases and representation-related types |
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
-| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); complete owned-composition transformation; partial-extension authority; or structural type equivalence |
+| Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
+| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial-extension authority; or structural type equivalence |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
 ## Two ways to build on an existing type
@@ -330,39 +330,71 @@ myIndex : IndexSize = mySize as IndexSize
 ## Exposed and opaque behavior
 
 `expose` makes eligible functions and operators of the underlying type
-available on the identity type. Parameter and result types are changed where
-necessary so the operation uses the new identity.
+available on the identity type. The simplest case is an identity whose complete
+representation is exactly its underlying value:
 
 ```text
 Integer + Integer -> Integer
 ```
 
-becomes conceptually:
+For a representation-trivial `MyInteger`, exposure can adapt that operation
+conceptually to:
 
 ```text
 MyInteger + MyInteger -> MyInteger
 ```
 
-Results belonging to another domain remain in that domain. An integer
-comparison still returns `Boolean`; a shift count still uses the integer's
-associated count type.
+No missing state has to be invented: a complete `MyInteger` consists of the
+underlying integer at offset zero. Mechanically compatible by-copy inputs and a
+copied underlying-self result can therefore substitute the identity type.
 
-Exposure is conceptually related to private owned composition:
+Results belonging to another domain stay in that domain. An integer comparison
+still returns `Boolean`; a shift count still uses the integer's associated count
+type.
+
+Additional resident data changes the answer. Exact identity-body grammar
+remains future source integration, but consider an identity that conceptually
+stores a tag as well:
 
 ```zax
-// Conceptual expansion; exact `own` behavior remains future work.
-MyInteger :: type {
-  boxed own private : Integer
+// Illustrative future identity-body syntax.
+TaggedInteger :: identity admit expose type Integer {
+  tag : Tag
 }
 ```
 
+A copied `Integer` result is not a complete `TaggedInteger`: no mechanical rule
+can choose the missing `tag`. It may nevertheless pass through unchanged as an
+`Integer`; only remapping it to `TaggedInteger` is unavailable:
+
+```text
+TaggedInteger + Integer -> Integer
+```
+
+Exposure may also retain operations whose results already belong to another
+domain, such as a comparison returning `Boolean`, when all inputs map safely.
+Only an offset-zero, representation-trivial identity has the narrower exception
+shown above in which a copied underlying-self result can substitute the complete
+identity type.
+
+Reference and pointer results have a different concern. They can map from the
+underlying receiver back to the identity receiver only when an explicit,
+verified `self` contract proves that the returned reference or pointer is the
+receiver. Exposure never guesses result origin.
+
+These rules use the same
+[mechanical eligibility filter](composition.md#mechanical-eligibility) as
+ordinary composition. An identity with additional data receives only the subset
+that an analogous `expose` member container could safely expose. Exposure checks
+the mechanical mapping; it does not prove user-defined cache or cross-member
+invariants. The identity owner may fence a generated signature or write a
+custom wrapper.
+
+The additional-data rule constrains future identity-body syntax; the
+illustrative body form above is not itself settled.
+
 This is a programmer model, not required compiler lowering and not class
 inheritance.
-
-Constructors, admission, projection, nested self-types, private declarations,
-and operations whose meaning cannot survive type substitution require
-deliberate rules. Complete transformation and filtering remain future
-owned-composition work.
 
 `opaque` performs none of this automatic exposure. The identity may still
 declare its own functions and operators.
@@ -424,8 +456,10 @@ private-eligible for that inner identity or the inner owner deliberately
 publishes another access operation. Wrapping a private identity does not grant
 permission to tunnel through it.
 
-Optional naming of the underlying place and complete owned-component
-qualification/lifetime behavior remain future owned-composition work.
+Optional naming of the underlying place remains future identity design.
+`own`-published member paths preserve the physical place's qualification and
+lifetime under
+[current composition rules](composition.md#publishing-stored-data-with-own).
 
 ## Construction and transfer
 
@@ -458,7 +492,7 @@ requirements. Identity syntax cannot hide replacement, move, or destruction of
 that place.
 
 Exact identity-reference admission, representation-cast, alias, qualifier, and
-type-receiver syntax remain future owned-composition work. Complete reference
+type-receiver syntax remain future identity and casting work. Complete reference
 behavior is defined by
 [lifetimes and references](lifetimes-and-references.md#same-storage-identity-views).
 
@@ -467,10 +501,12 @@ by-value result.
 
 ## Representation and qualifications
 
-An identity begins with its underlying representation and adds no instance
-storage merely because it has another identity. Complete base-address,
-alignment, shape, and same-storage-reference guarantees remain future
-owned-composition/layout work.
+An identity begins with its underlying value at byte offset zero and adds no
+instance storage merely because it has another identity. An identity definition
+may carry additional resident data; that data affects total size, alignment,
+copy behavior, and exposure eligibility. Complete layout, shape, and
+same-storage-reference guarantees beyond the offset-zero relationship remain
+future identity and structural-layout work.
 
 Identity does not weaken qualifications. Projection, admission, construction,
 and transfer use the applicable place, value, access, `copy`, `deep`, `move`, `last`,
@@ -531,8 +567,10 @@ detail available on demand.
   cost without erasing its identity boundary.
 - Changing `admit`/`restricted` or `expose`/`opaque` changes source validity.
 - Adding a direct bridge enables previously invalid identity conversion.
-- Changing underlying behavior may affect an exposed identity under future
-  owned-composition rules.
+- Changing underlying behavior may affect an exposed identity under the current
+  shared [composition exposure filter](composition.md#mechanical-eligibility).
+- Adding resident identity data may make mappings that require a copied
+  identity result ineligible.
 
 These are compatibility events, not invisible implementation choices.
 
@@ -541,8 +579,8 @@ These are compatibility events, not invisible implementation choices.
 This document is current conceptual design, not formal grammar, a complete
 layout/ABI contract, or an implementation mapping.
 
-Future work owns complete `own` transformation, partial authority,
-same-storage identity views, representation casts, generic identity factories,
-reflection shape, and structural type equivalence. Those areas and
+Future work owns partial authority, same-storage identity views, representation
+casts, generic identity factories, reflection shape, and structural type
+equivalence. Those areas, [current composition](composition.md), and
 [current enum behavior](enums.md) must preserve the explicit identity boundary
 and admission/exposure choices defined here.

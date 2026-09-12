@@ -378,6 +378,47 @@ transfers its owned life path because `unique` explicitly says it does. A
 scheduled raw declaration may transfer its separate disposition responsibility
 through an accepted `last` operation.
 
+Auto-allocation does not turn a pointee into a resident member of the
+pointer-containing object:
+
+```zax
+Coordinates :: type {
+  x : Integer
+
+  translate final : ()() writable = {
+  }
+}
+
+Position :: type {
+  coordinates : Coordinates * = @
+}
+
+Sprite :: type {
+  position own : Position
+}
+
+moveSprite final : ()(sprite : Sprite mutable writable &) = {
+  use(sprite.coordinates)                 // published pointer member
+
+  if !sprite.position.coordinates
+    return
+
+  use(sprite.position.coordinates.x)      // explicit checked pointer traversal
+  sprite.position.coordinates.translate() // explicit pointee behavior
+  use(sprite.x)                           // error: pointee field is not published
+  sprite.translate()                      // error: pointee behavior is not exposed
+}
+```
+
+Composition may publish the `coordinates` pointer value, and exposure may apply
+to the declared member value at a composition boundary. Neither operation walks
+through the pointer to its pointee. For the same reason, a `Coordinates`
+reference or pointer cannot `outer cast` to `Sprite` through
+`Sprite.position.coordinates`: the pointee is dynamically allocated, not the
+resident pointer member at that path.
+Complete publication and forwarding eligibility belongs to
+[Zax composition](composition.md#publication-stops-at-semantic-indirection).
+
 ## Pointer ownership roles
 
 ### Raw pointers
@@ -648,8 +689,8 @@ The operation is transactional. On success, `owner` becomes `Nothing` and
 unique owner, and any partial block reservation is released.
 
 The legacy pointer qualifier `own` is superseded by `unique shareable`. Any
-future non-pointer use of `own` for composition is a separate concept and does
-not revive the old pointer family.
+non-pointer use of [`own` for composition](composition.md) is a separate member
+declaration concept and does not revive the old pointer family.
 
 A shareable unique owner may shed its block:
 

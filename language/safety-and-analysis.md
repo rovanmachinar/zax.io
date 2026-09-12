@@ -207,14 +207,22 @@ Examples:
 - [optional values](optional-values.md) defines presence and boxed access;
 - [function invocation](function-invocation.md) defines result and parameter
   completion;
+- [composition](composition.md) defines checked outer casting, the
+  receiver-origin proof required for automatic result remapping, and the narrow
+  `unsafe via` and `unsafe outer cast` provenance assertions;
 - [transfer stances](transfer-stances.md) defines moved-from and terminal source
-  states; and
+  states;
 - integer owners define overflow, narrowing, and required-result behavior; and
 - [enums](enums.md) defines strict and flags admission domains and the values
   produced by enum operations.
 
 An unsafe category does not become a duplicate definition of the domain rule it
 qualifies.
+
+In particular, an intent acknowledgement cannot authorize a composition
+provenance claim. `unsafe via` and `unsafe outer cast` accept responsibility for
+an unproved relationship at the exact forwarding or outer-cast site. A false
+claim has the unsafe consequences defined by the composition operation.
 
 ### Enum raw-admission permission
 
@@ -351,22 +359,51 @@ past or future contract.
 
 The selected contract defines portable required analysis.
 
+The source-validity outcomes are:
+
+| Proof status | Portable source consequence |
+| --- | --- |
+| Selected-contract-required proof succeeds | Use the safe unmarked form; a redundant `unsafe` assertion is an error, and every conforming compiler must recognize the proof |
+| Selected contract does not require the proof | An unchecked operation still needs its narrow `unsafe` assertion; one compiler's stronger private proof may optimize or advise, but cannot make omission portable or reject the retained assertion |
+| Explicitly selected stronger extension proof succeeds | That proof may become canonical, making the unmarked form required and redundant `unsafe` an error for that source |
+| The asserted fact is proved false | Reject the operation even when it is marked `unsafe` |
+
+Composition provenance is a concrete example:
+
+```zax
+checked : Container & ? =
+  memberReference outer cast Container.member
+asserted : Container & =
+  memberReference unsafe outer cast Container.member
+```
+
+If the selected contract requires exact-origin proof at this site, `checked`
+needs neither tracking metadata nor a runtime check, while retaining an
+`unsafe` provenance assertion is an error. Without contract-required proof, the
+checked form may use its defined tracked runtime fallback; choosing an unchecked
+non-optional result still requires `unsafe`, even if one compiler privately
+proves the origin. An explicitly selected stronger extension may change that
+canonical spelling. A compiler-proved impossible origin is always rejected.
+The composition owner defines the exact origin proof class and applies the same
+contract-relative rule to result provenance in `unsafe via`.
+
 ### A compiler may prove more
 
 Suppose source contains an unsafe assertion because an older compiler cannot
 prove a valid member-lifetime relationship.
 
-A newer compiler may prove it under the same language contract. The assertion is
-then redundant for that implementation, but it is at most advisory when the
-contract did not require every compiler to recognize the case.
+A newer compiler may prove it under the same language contract. The assertion
+may then be unnecessary for that implementation's generated code, but it is at
+most advisory when the contract did not require every compiler to recognize the
+case.
 
 Removing it may make the source depend on the newer compiler's stronger
 analysis.
 
-### A later contract may require more
+### A later or extension contract may require more
 
-A later language contract may require conforming compilers to recognize that
-case as safe.
+A later mainline contract, or an explicitly selected extension contract, may
+require conforming compilers for that contract to recognize the case as safe.
 
 Under that explicitly selected contract:
 

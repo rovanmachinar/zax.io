@@ -5,9 +5,9 @@
 | Status | Raw candidate / non-authoritative |
 | Audience | A future numbered work item defining structural type identity and compatibility |
 | Applies To | Preserved agent-authored proposal and unresolved structural-typing questions |
-| Owns | Provenance, candidate input, and preserved storage/shape compatibility questions |
+| Owns | Provenance, candidate input, and preserved storage/shape, composition-surface, and whole-type contract compatibility questions |
 | Does Not Own | Accepted structural semantics or current identity/layout owners |
-| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions; endian storage/shape compatibility pressure |
+| Source / Provenance | Former draft RFC `2026-02-16-structural-typing-equivalence`; work items `005` and `006` construction-packet and multiple-result distinctions; endian storage/shape compatibility pressure; work item `020` composition constraints |
 
 ## Provenance and reading posture
 
@@ -260,9 +260,45 @@ must also account for declared identity relationship, admission policy,
 qualifications, aliasing, lifetime, lifecycle functions, and optimizer type
 assumptions.
 
-The primary operation pressure remains in
-[owned-composition input](owned-composition.md). This section owns only the
-structural compatibility constraint.
+Current [composition](../../language/composition.md) defines published member
+paths, preferred projection, outer casting, and the offset-zero underlying
+identity relationship. None establishes structural equivalence. This section
+retains the unresolved shape, layout, and same-storage identity-view
+constraints.
+
+Future structural matching must preserve these distinct categories:
+
+- a physical stored declaration contributes a resident member to storage and
+  layout;
+- an `own`-published path is another access path to an existing resident place,
+  not another declaration or stored member;
+- a data `via` is a named, no-storage route to an existing resident place;
+- a `preferred` relationship is an expected-type selection route, not a member
+  or permission to invent a structural target; and
+- generated, adopted, and explicitly fulfilling declarations remain distinct
+  from each other and from automatic publication.
+
+Future work must decide which categories contribute to required shape,
+equivalence, conversion, and reflection without collapsing them merely because
+some source expressions reach the same place or callable.
+
+Hidden `outer tracked` metadata is a programmer-visible representation and
+lifecycle pressure that may matter to storage/layout compatibility. A static
+exact-origin proof is instead a site-specific flow fact. Tracking and proof
+metadata neither establishes nor defeats structural equivalence by itself.
+
+### Whole-type abstract-contract pressure
+
+Composition's member-level `abstract` roles are not a whole-type structural
+contract. Generic and structural work may need a no-storage required shape that
+a type can satisfy without acquiring an inheritance identity.
+
+No source form is established. A future review must decide whether such a
+contract is nominally adopted, structurally matched, explicitly fulfilled, or
+some combination; which stored, routed, generated, and fulfilled categories can
+satisfy it; and how exact versus `abstract relaxed` qualifier requirements are
+represented. It must not imply runtime interface storage, a vtable, layout
+equivalence, or implicit dynamic dispatch.
 
 ### Prefix projection and truncating transfer are separate
 

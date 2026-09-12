@@ -7,7 +7,7 @@
 | Applies To | Ownership, coherence, import, layout, intrinsic, identity, phrase-extension, and mixfix-extension pressure |
 | Owns | Preserved partial-type risks and possible owner-authorized intrinsic, identity, phrase, and mixfix routes |
 | Does Not Own | Accepted partial semantics or current type/operator ownership |
-| Source / Provenance | Legacy `partial.md` evidence, operator/operator-phrase review, and work item `015` execution-context shape pressure |
+| Source / Provenance | Legacy `partial.md` evidence, operator/operator-phrase review, work item `015` execution-context shape pressure, and work item `020` composition constraints |
 
 ## Mixfix ownership pressure
 
@@ -147,8 +147,38 @@ Integer review adds these pressures:
 `partial` remains add-only. If stored members are ever permitted, all pieces
 must be known before layout and representation-compatible casts are validated.
 
-Identity-aware `own` exposure and suppression belong to
-[owned-composition input](owned-composition.md), not to `partial`.
+Current composition publication and exposure, exact fences, and family fences
+belong to [Zax composition](../../language/composition.md), not to `partial`.
+An authorized partial remains add-only: it cannot retroactively suppress an
+original owner's exposed signature or adopted family.
+
+### Composition-aware merge conflicts
+
+If partial types are adopted, all authorized pieces must form one complete,
+order-independent type surface before composition conflicts are resolved. The
+merge must preserve these constraints:
+
+- a direct outer declaration owns its name over an `own`-published short path,
+  while several otherwise surviving published paths remain ambiguous rather
+  than becoming first-wins;
+- added independent `preferred` routes participate in the complete candidate
+  set, including declaration-time rejection of indistinguishable normalized
+  routes and use-site ambiguity among distinct viable targets;
+- `existing family` and `via family` adoption still require each eligible
+  source-family member to obtain one unique mechanical mapping, so an added
+  overload may invalidate the adoption and is never silently omitted;
+- `forbidden family` fences the complete outer visible callable name or
+  structured operator form regardless of which original or partial declaration
+  would supply it, and a later direct declaration in that family conflicts;
+  and
+- fulfillment remains direct and explicit after the merge: a published path
+  does not fulfill a role, every active role must be named by its fulfilling
+  declaration, and multiple qualification-specialized fulfillments are valid
+  only for the applicable relaxed role.
+
+Future work must define diagnostics and source-compatibility rules for these
+merge effects without using partial, import, build, or declaration order as a
+tiebreaker.
 
 ## Candidate relatching is a compatibility effect
 

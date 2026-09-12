@@ -386,6 +386,41 @@ explicit choice in selected contexts.
 A possible future mode with no fallback for an axis is deferred. Baseline Zax
 provides sensible defaults.
 
+### Relaxed abstract-role matching
+
+Ordinary abstract composition roles use the same omission rule: an omitted
+qualifier axis resolves to its applicable default. `abstract relaxed` is the
+narrow exception for role matching:
+
+```zax
+ObserverContract :: type {
+  exactObserve abstract : ()()
+  observe abstract relaxed : ()()
+}
+
+Observer :: type {
+  contract own private : ObserverContract
+
+  exactObserve fulfill contract.exactObserve final : ()() = {
+  }
+
+  observeReadonly fulfill contract.observe final : ()() readonly = {
+  }
+
+  observeWritable fulfill contract.observe final : ()() mutable writable = {
+  }
+}
+```
+
+The exact role's omissions choose defaults. The relaxed role leaves only those
+otherwise defaulted receiver axes open, allowing the two explicitly
+qualification-specialized fulfillments shown above. It does not create a
+general “no defaults” mode: qualifiers written on the role remain required, and
+parameter, result, base-type, arity, indirection, transfer, label, and provenance
+requirements remain exact. Value roles similarly relax only omitted axes on the
+outer required value layer. Complete role and fulfillment behavior belongs to
+[Zax composition](composition.md#abstract-roles-and-explicit-fulfillment).
+
 ## Restatement, duplication, and conflict
 
 Compatible qualification may reach one entity from distinct sources:

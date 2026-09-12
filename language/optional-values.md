@@ -450,6 +450,42 @@ Semantic tooling can identify optional and pointer dereference nodes without
 requiring textual grep for a word. A future explicitly panicking
 `expect`-like operation would be a separate contract.
 
+### Composition stops at the wrapper
+
+Composition modifiers apply to the declared optional member value; they do not
+silently enter a present payload:
+
+```zax
+Details :: type {
+  label : String
+}
+
+Slot :: type {
+  details : Details?
+}
+
+Panel :: type {
+  slot own : Slot
+}
+
+inspectPanel final : ()(panel : Panel readonly &) = {
+  inspect(panel.details) // published path to the optional wrapper
+
+  if ?panel.slot.details {
+    details : Details readonly & = panel.slot.details.
+    inspect(details.label) // explicit presence proof and postfix payload access
+  }
+
+  inspect(panel.label) // error: `own` does not enter the optional payload
+}
+```
+
+Likewise, `expose` on an optional-valued member can expose only eligible behavior
+of that optional wrapper. It does not delegate the boxed value's operations.
+This preserves the wrapper's distinct presence, lifetime, and qualification
+boundary. Complete composition eligibility belongs to
+[Zax composition](composition.md#publication-stops-at-semantic-indirection).
+
 ## Nested optionals
 
 Optional wrappers compose:

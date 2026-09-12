@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining reflection, type metadata, declaration metadata, or source reflection |
-| Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, and source-presentation review |
-| Owns | Preserved reflection, integer metadata, representative-source, activation-pressure, and retirement questions |
+| Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, composition-surface, and source-presentation review |
+| Owns | Preserved reflection, composition-category, integer metadata, representative-source, activation-pressure, and retirement questions |
 | Does Not Own | Accepted reflection semantics or the current domain facts reflected |
-| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, work item `012` optional-layer metadata pressure, and work item `015` allocation metadata pressure |
+| Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, work item `012` optional-layer metadata pressure, work item `015` allocation metadata pressure, and work item `020` composition constraints |
 
 ## Why this input exists
 
@@ -107,14 +107,43 @@ Future work must decide:
   implementation it reuses without implying body reprocessing;
 - how internal implementation-prototype facts differ from outward alias labels,
   defaults, stance, presence, and scheduled/open presentation;
-- whether a declaration is programmer-defined, generated, explicitly defaulted,
-  delegated with `existing`, bodyless, or forbidden; and
-- how one compiler-owned generated family exposes its exact qualifier-complete
-  declarations.
+- and whether a declaration is programmer-defined, generated, explicitly
+  defaulted, delegated, bodyless, or forbidden.
 
-That last question is a live consequence: `is final` deliberately reports the
-resolved type-use or referent-place truth, so a program currently has no way to
-ask whether *this* declaration may exercise replacement.
+### Composition metadata categories
+
+Future reflection must not flatten these composition facts into one apparent
+member or callable category:
+
+- a physical stored-member declaration;
+- an `own`-published access path to that declaration;
+- a no-storage data `via` route;
+- an independent `preferred` route and its qualification-complete target;
+- an independent `expose` relationship and each exact generated wrapper;
+- a singular `via` route or `existing` definition, versus `via family` or
+  `existing family` adoption and each adopted family member;
+- an exact fence, versus a non-executable `forbidden family` fence over the
+  complete outer visible callable name or structured operator form, independent
+  of source provenance;
+- an exact or `abstract relaxed` role, including which qualifier axes the latter
+  leaves open; and
+- each direct, explicitly named fulfillment, including several independent
+  qualification-specialized fulfillments of one relaxed role.
+
+Future work must decide the metadata identities, enumeration rules, visibility,
+source presentation, and links among these categories. In particular, several
+relaxed-role fulfillments are not one merged implementation or a dispatch table,
+and family adoption is not singular adoption with an unrecorded wildcard.
+
+Reflection must also keep selected-contract static origin proof distinct from
+the `outer tracked` type capability and runtime placement state. No general
+reflection syntax, metadata schema, or compile-time/runtime availability for
+these composition facts is accepted by this raw input.
+
+The replacement-permission question above is a live consequence: `is final`
+deliberately reports the resolved type-use or referent-place truth, so a program
+currently has no way to ask whether *this* declaration may exercise
+replacement.
 
 ## Allocation reflection
 

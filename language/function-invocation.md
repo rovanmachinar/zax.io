@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding; evaluation and binding order; result slots, stance, completion, destination ordering, and elision; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -327,6 +327,51 @@ call is ambiguous rather than silently choosing one ownership effect.
 
 Complete stance meaning, fallback, projection, and source post-state are defined
 by [Zax transfer stances](transfer-stances.md).
+
+### Preferred composition projection
+
+Preferred projection begins only after normal callable discovery has found a
+candidate and that candidate supplies an expected input type:
+
+```zax
+tune final : ()(target : Engine readonly &) = {
+}
+
+Car :: type {
+  engine preferred : Engine
+}
+
+car : Car
+tune(car) // projects the preferred Engine member
+```
+
+The call first finds `tune`; it does not search through `car`. The selected
+prototype then says that this input needs an `Engine readonly &`. Because `car`
+does not match directly, its `preferred` member may supply `car.engine`.
+
+An exact input match always beats preferred projection. If several projected
+routes remain equally viable, the call is ambiguous rather than choosing by
+declaration order. Projection also does not invent a target for generic
+deduction or structural matching.
+
+This is an input-mapping step, not callable or operator discovery. Complete
+route declaration, qualification, nesting, and ambiguity behavior belongs to
+[Zax composition](composition.md#expected-type-projection-with-preferred).
+
+An explicit composition adapter uses the same projection rule when its visible
+outer parameter must map to a contained input:
+
+```zax
+Tank :: type {
+  fuel preferred : Fuel
+
+  refill final : ()(source : Tank) = via fuel.refill
+}
+```
+
+The adapter may map `source` to `source.fuel` automatically because `fuel` is
+`preferred`; `own` alone would not authorize that mapping. A written body may
+always pass `source.fuel` explicitly without declaring a preferred route.
 
 ## Positional and named inputs
 
@@ -744,6 +789,26 @@ makeByte final : (result : Byte)() = {
 
 Here `55` is checked against `Byte`, and the caller receives a `Byte`. See
 [Zax integer literals and realization](integer-literals.md#concrete-results-and-compile-time-execution).
+
+### Receiver-origin `self` results
+
+`self` on a reference or pointer result is an explicit callable-boundary
+contract that every returning path returns exactly the invocation receiver `_`:
+
+```zax
+tune final : (
+  result self : Engine &
+)(profile : Profile readonly &) = {
+  apply(_, profile)
+  return _
+}
+```
+
+The compiler verifies the claim. It is not inferred into a public prototype and
+does not apply to copied results. The contract lets composition forwarding
+preserve receiver provenance without performing a runtime outer cast. Complete
+origin, escape, and lifetime meaning belongs to
+[lifetimes and references](lifetimes-and-references.md#receiver-origin-self).
 
 ### Result mapping and terminal opportunity
 
@@ -2117,6 +2182,80 @@ borrowed uses unless a caller restates `last` or proves another owner.
 
 If entering the original body requires executable adaptation, write a wrapper or
 lambda.
+
+Composition `via` is different from an ordinary compatible-prototype alias. The
+declaration explicitly names a contained target, so its thin adapter may adjust
+the receiver to that member and perform the narrowly permitted input mapping:
+
+```zax
+start final : ()() = via engine.start
+```
+
+Singular `via` must select one source operation and one complete mechanical
+mapping. If permitted adaptation leaves several overloads viable, the
+declaration is ambiguous rather than choosing by source order or implementation
+preference. An exact private helper can make that choice explicit:
+
+```zax
+startExact private final : ()(fuel : Fuel readonly &) =
+  via engine.start
+
+start final : ()(tank : Tank readonly &) =
+  via startExact
+```
+
+The helper's visible prototype anchors one overload, then the public declaration
+targets that exact helper. This is legal for the same reason a public body may
+call an accessible private helper: `start` is an explicit new API declaration,
+not publication of `startExact`. It does not let data `via`, automatic `expose`,
+or `own` publish a private stored path.
+
+Family forms make a stronger declaration. Here `Engine` supplies two `reset`
+overloads:
+
+```zax
+Engine :: type {
+  reset final : ()() = {
+  }
+
+  reset final : ()(profile : Profile readonly &) = {
+  }
+}
+
+SingleControls :: type {
+  engine expose : Engine
+
+  reset final : ()() = existing
+}
+
+Controls :: type {
+  engine expose : Engine
+
+  reset final : ()() = existing family
+}
+
+RenamedControls :: type {
+  engine : Engine
+
+  restart final : ()() = via family engine.reset
+}
+```
+
+`= existing` adopts one uniquely discovered operation. `= existing family`
+discovers one whole callable family, while `= via family` explicitly names and
+may rename one. The written prototype is an exact family anchor, not a wildcard
+or a conversion policy. Every eligible overload must independently obtain one
+mechanical outer mapping. Adding an overload that has no unique mapping makes
+the outer family declaration fail; the new overload is never silently omitted.
+
+`= forbidden family` is an outer-name fence. It blocks the complete visible
+callable name regardless of whether a signature would be direct, exposed, or
+adopted from another source family. A later direct declaration with that name
+conflicts rather than bypassing the fence.
+
+An ordinary `= implementation` alias does not silently gain those composition
+steps. Complete `via` eligibility is defined by
+[Zax composition](composition.md#via-selects-one-target).
 
 When the implementation is statically known and the new contract adds no runtime
 state, a compiler may direct-call without materializing another function-value

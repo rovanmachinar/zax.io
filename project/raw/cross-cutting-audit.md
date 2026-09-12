@@ -288,6 +288,35 @@ Each entry preserves:
   programmer-visible guarantee is only availability and semantics.
 - **Disposition.** Open.
 
+### Distinguishing the `own` keyword from ownership terminology
+
+- **Concern.** Current documentation uses *owned* for by-value storage,
+  life-path responsibility, `using` entries, resource ownership, and pointer
+  control, while [composition](../../language/composition.md) uses `own` as a
+  stored-member publication keyword. A reader must not infer that every owned
+  value publishes members or that `own` establishes pointer ownership.
+- **Representative example.** The transfer-stance phrase “an owned declaration
+  carries its stance into unstanced members” describes a declaration that owns
+  its value; it does not mean a member declared with the `own` keyword.
+- **Why local review misses it.** Each usage is coherent within its own owner,
+  but the collision appears only when composition, transfer, lifetime, pointer,
+  and `using` documentation are read together.
+- **Likely owners.** [Language-design terms](../../language/terms.md),
+  [composition](../../language/composition.md),
+  [transfer stances](../../language/transfer-stances.md),
+  [lifetimes and references](../../language/lifetimes-and-references.md),
+  [pointers and arenas](../../language/pointers-and-arenas.md), and
+  [Zax `using`](../../language/using.md).
+- **Resolution.** Each owner qualifies storage, path, resource, or pointer
+  ownership where the bare word could be mistaken for the `own` keyword, and
+  terms documentation keeps the concepts distinct without renaming accepted
+  source.
+- **Activation pressure.** Promotion or revision of any owner using the word
+  *owned*, or a reported reader misunderstanding.
+- **Current constraints.** `own` remains the composition member keyword. This
+  audit may clarify prose but cannot merge or rename the separate concepts.
+- **Disposition.** Open.
+
 ### Legacy continuation examples after symbolic-infix refinement
 
 - **Concern.** Current source structure now treats a recognized spaced symbolic

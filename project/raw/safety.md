@@ -7,7 +7,7 @@
 | Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
 | Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
 | Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, `006`, `012`, and `015`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, and general panic-contract pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, and `020`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
 
 Current general behavior has moved to
 [Zax safety and analysis](../../language/safety-and-analysis.md). This file
@@ -112,6 +112,47 @@ incomplete destination state, or a source left unsafe to destroy. Failure to
 visibly take a resource is not itself a violation; `copy`, `move`, and `last`
 implementations may legally preserve more source state than their maximum
 authority permits.
+
+## Composition-derived diagnostic pressure
+
+Current [composition](../../language/composition.md) uses `unsafe via` for an
+unproved non-optional outer result mapping and `unsafe outer cast` for
+programmer-asserted immediate outer provenance. An `intent` acknowledgement
+cannot grant either authority.
+
+Future safety work must formalize the initial site-specific exact-origin proof
+candidate. At one cast site, every origin that can reach the operand must be the
+exact resident member path named by the target. Same-typed sibling members,
+arbitrary parameters, callbacks, raw-pointer or opaque ingress, and exported
+standalone-member acceptance can prevent that proof. Unrelated external values
+that cannot reach the site do not.
+
+When the selected contract requires that proof, checked `outer cast` needs
+neither `outer tracked` placement metadata nor a runtime check. The result type
+may remain optional while flow analysis proves presence at that site. The exact
+mandatory proof classes and algorithms remain future specification and
+implementation work.
+
+Required source spelling must remain portable under the selected contract:
+
+- a mainline contract-required proof requires the safe unmarked form and makes a
+  redundant `unsafe` a hard error;
+- without contract-required proof, the unchecked form still requires `unsafe`
+  even when one compiler privately proves the claim;
+- a stronger compiler or shared extension may make that proof canonical only
+  when source explicitly selects the extension contract; and
+- a proved-false assertion is always invalid.
+
+Private stronger analysis may optimize or advise, but cannot silently change
+mainline source validity. The same matrix applies to non-optional outer-result
+provenance in `unsafe via`.
+
+Future safety and diagnostic work may decide whether deliberately choosing an
+unsafe form when an available checked outer cast could express the same
+operation should require a dedicated intent acknowledgement or advisory
+diagnostic. That future policy must not make intent authorize provenance,
+change the checked form's optional result, or turn a known-false relationship
+into a valid unsafe claim.
 
 Future callable preconditions and postconditions add proof pressure:
 

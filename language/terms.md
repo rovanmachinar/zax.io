@@ -617,6 +617,38 @@ access and need not create an access path. Documentation uses the qualified term
 when that distinction matters; see
 [Zax identity types](identity-types.md#identity-projection).
 
+A **preferred projection** lets a container stand in for one of its
+stored members when the surrounding expression already expects that member's
+type. The member is declared `preferred`; data publication through `own` is an
+independent choice:
+
+```zax
+Car :: type {
+  engine preferred : Engine
+}
+
+tune(car) // `tune` expects Engine, so `car.engine` may be selected
+```
+
+This projection travels from container to member. It helps bind an already
+known destination; it does not search the member for functions or operators.
+See [Zax composition](composition.md#expected-type-projection-with-preferred).
+
+## Published member path
+
+A **published member path** is a shortened access path that `own` makes
+available for a contained stored instance member. It is not another declaration
+or another storage location:
+
+```zax
+car.rpm        // published path
+car.engine.rpm // physical path to the same Integer
+```
+
+Both paths reach the same place and therefore the same resident instance,
+lifetime, and qualifications. See
+[Zax composition](composition.md#publishing-stored-data-with-own).
+
 ## Ownership anchor
 
 An **ownership anchor** is the allocation root and control block that an
@@ -625,6 +657,29 @@ direct contained-member place.
 
 The target place and ownership anchor are intentionally different. See
 [Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
+
+## Outer cast
+
+An **outer cast** starts with a reference or pointer to a stored member and
+casts outward to the immediate container that holds the member at a named
+physical path:
+
+```zax
+car : Car & ? = engine outer cast Car.engine
+```
+
+The checked `outer cast` returns an optional reference. A proof mandated by the
+selected language contract may establish the exact origin statically and avoid
+runtime work; otherwise an `outer tracked` member type supplies placement
+metadata for a runtime check. `unsafe outer cast` instead asserts that the
+placement is correct. The exact path matters when a container stores several
+members of the same type.
+
+The word `outer` has a separate contextual type use inside an abstract
+composition role, where it denotes the immediate container that activates the
+role. See [abstract roles and explicit fulfillment](composition.md#abstract-roles-and-explicit-fulfillment)
+and
+[Zax composition](composition.md#outer-casting-to-an-immediate-container).
 
 ## Protected intrinsic signature
 
@@ -922,9 +977,11 @@ representation begins. The **underlying value** is the value used to create the
 identity or returned by identity projection. See
 [Zax identity types](identity-types.md#identity-boundary-and-underlying-type).
 
-The **underlying place** is the immediate storage place beneath an identity or
-owned-composition boundary. Access to it is authority- and qualification-bound
-and does not by itself promise a first-class reference or escaping alias. See
+The **underlying place** is the immediate storage place beneath an identity
+boundary. Access to it is authority- and qualification-bound and does not by
+itself promise a first-class reference or escaping alias. A composed stored
+member instead has an ordinary physical member path and may also have a
+published path. See
 [Zax identity types](identity-types.md#immediate-underlying-operations-do-not-forward).
 
 ## Uncommitted integer

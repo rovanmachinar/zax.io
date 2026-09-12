@@ -91,6 +91,9 @@ object identity.
 It favors explicit composition over inheritance. Constructors, functions
 associated with types, polymorphism, and other useful techniques may still
 exist, but they do not require a traditional object-oriented model.
+Current named containment, data publication, expected-type projection, behavior
+exposure, abstract fulfillment, and outer casting are described by
+[Zax composition](composition.md).
 
 Structural typing is an intended direction for reducing rigid nominal
 relationships. Its exact equivalence, layout, conversion, and subtyping rules

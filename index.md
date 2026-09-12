@@ -21,6 +21,9 @@ producing them.
 - Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
   declaration, initialization, binding visibility, qualifiers, and assignment
   boundaries.
+- Read [Zax composition](language/composition.md) for named containment, data
+  publication through `own`, expected-type projection through `preferred`,
+  behavior exposure, abstract fulfillment, and outer casting.
 - Read [Zax identity types](language/identity-types.md) for transparent aliases,
   distinct identities, admission, projection, exposed and opaque surfaces, and
   declared identity bridges.
@@ -95,6 +98,7 @@ producing them.
 - [Language principles](language/principles.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
+- [Composition](language/composition.md)
 - [Identity types](language/identity-types.md)
 - [Enums](language/enums.md)
 - [Qualifiers](language/qualifiers.md)
@@ -144,7 +148,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Alias](alias.md) — legacy alias input; current transparent aliases and
   explicit identities are owned by
   [Zax identity types](language/identity-types.md)
-- [Composition](composition.md)
 - [Optional values](language/optional-values.md) — current optional wrapper,
   construction, transfer, qualification, and proven-access design
 - [Nothing type instances](nothing.md)

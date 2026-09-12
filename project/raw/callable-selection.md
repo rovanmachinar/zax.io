@@ -7,7 +7,7 @@
 | Applies To | Callable candidate comparison beyond the currently accepted fixed-arity partial-order baseline |
 | Owns | Naturally unselectable declaration pressure, cross-axis comparison, exact-prototype resolution, generic-specialization comparison, generated-versus-declared ambiguity, source compatibility, activation pressure, and retirement criteria |
 | Does Not Own | Accepted current invocation behavior; `switch`/`case` or pattern-like selection; generic syntax; or runtime dispatch implementation |
-| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection; work item `015` minted-implementation refinement |
+| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection; work item `015` minted-implementation refinement; work item `020` composition constraints |
 
 ## Why this input exists
 
@@ -100,8 +100,40 @@ This input retains only the contract pressure that appears when the body is
 opaque or separately represented; it does not establish programmer-written
 lifetime parameters.
 
-Future `own` work has a complete prototype when deciding which callable surface
-is promoted and should use the same exact-signature discipline.
+Composition adds selection constraints without changing the partial-order
+baseline. `expose` and `preferred` are independent of `own`. Exposure produces a
+finite set of exact outer prototypes; it does not create a qualification-erased
+operation or an open-ended generic surface.
+
+Singular `= via` and `= existing` select one source operation and one complete
+mechanical mapping. Ambiguity after permitted adaptation remains an error. An
+exact private helper may give a public singular route an unambiguous target, but
+does not add a preference rule or make the helper visible.
+
+Whole-family adoption is a separate operation:
+
+- `= existing family` must discover one unique source callable family;
+- `= via family` names one source family explicitly and may rename it on the
+  outer surface;
+- the written prototype is an exact selection anchor, not a wildcard;
+- every eligible family member must independently obtain one unique mechanical
+  outer mapping; and
+- an adaptation that works only for the anchor does not become a family-wide
+  conversion rule.
+
+Adding a source-family overload may therefore invalidate the adoption. The new
+member must not be silently omitted or selected by source order.
+
+An exact `= forbidden` fence identifies one signature. `= forbidden family`
+uses its exact anchor to identify an outer callable name or structured operator
+form, then fences that complete outer family regardless of source provenance. A
+later direct declaration in the fenced outer family conflicts; it does not
+bypass the fence.
+
+Preferred projection joins input mapping only after a candidate has provided an
+expected type. Future generic work must decide whether projection can
+participate after deduction without allowing it to invent a deduction target,
+widen callable or operator discovery, or outrank an exact direct match.
 
 ## Callable precondition and postcondition pressure
 

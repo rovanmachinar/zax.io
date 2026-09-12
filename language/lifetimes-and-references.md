@@ -6,8 +6,8 @@
 | Audience | Human developers reasoning about where Zax instances live and when non-owning access remains valid |
 | Applies To | Programmer-facing instance lifetimes, life paths, instance places, references, reference origin, escape, and synchronous borrowing; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
-| Does Not Own | How construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
+| Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references, including receiver-origin `self`; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
+| Does Not Own | How construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy pointer, function-capture, scope, construction, and global-lifecycle evidence reconciled with current qualifier, invocation, optional, identity, and transfer design |
 | Supersedes | Reference and lifetime teaching formerly distributed through root legacy pages |
 
@@ -291,6 +291,91 @@ Complete replacement and member renewal are defined by
 Reference validity follows the exact target place, not merely its containing
 allocation.
 
+### Published paths and outer casts
+
+An `own`-published path or place-preserving data `via` route names the same
+stored member place as its physical path. It creates no additional resident
+instance and no independent lifetime. Mutation, replacement, renewal, and
+destruction through either path therefore affect the same target.
+
+Publication stops at semantic indirection. A stored reference or pointer member
+itself may receive a published short path, but the referenced or pointed-to
+value does not:
+
+```zax
+Link :: type {
+  target : Node &
+}
+
+Graph :: type {
+  link own : Link
+}
+
+inspectGraph final : ()(graph : Graph readonly &) = {
+  inspect(graph.target)            // published path to the reference member
+  inspect(graph.link.target.value) // explicit traversal to the referent
+  inspect(graph.value)             // error: publication stops before the referent
+}
+```
+
+The reference member and referent keep their distinct places and lifetimes.
+Complete publication and forwarding eligibility belongs to
+[Zax composition](composition.md#publication-stops-at-semantic-indirection).
+
+An outer cast travels in the opposite direction. It starts with a reference or
+pointer to a stored member and names the exact physical path through which an
+immediate container would hold that member:
+
+```zax
+Engine :: type outer tracked {
+}
+
+Car :: type {
+  engine : Engine
+}
+
+recover final : (car : Car & ?)(engine : Engine &) = {
+  return engine outer cast Car.engine
+}
+```
+
+The checked form returns an optional reference because an `Engine &` might name
+a standalone engine or an engine stored somewhere other than `Car.engine`. It
+uses `outer tracked` placement metadata and a runtime check when the selected
+language contract supplies no sufficient static proof. `unsafe outer cast`
+skips that check and makes the programmer responsible for the provenance claim.
+Neither form can use an expired origin or revive an ended resident.
+
+A selected contract may instead require a site-specific exact-origin proof:
+
+```zax
+LocalEngine :: type {
+}
+
+LocalCar :: type {
+  engine : LocalEngine
+}
+
+inspectCar final : ()(car : LocalCar &) = {
+  engine : LocalEngine & = car.engine
+  sameCar : LocalCar & ? = engine outer cast LocalCar.engine
+
+  if ?sameCar
+    inspect(sameCar.) // optional result; exact-origin analysis may already know present
+}
+```
+
+When every value reaching the cast operand is proved to come from exactly
+`LocalCar.engine`, the contract-required proof permits this checked cast without
+`outer tracked` or runtime work. Same-typed sibling members, arbitrary
+parameters, callbacks, raw-pointer or opaque ingress, and exported acceptance of
+standalone members can defeat that proof when they can reach this site. Unrelated
+external construction does not defeat a closed internal flow merely because it
+creates another `LocalEngine`.
+
+Complete forms and costs belong to
+[Zax composition](composition.md#outer-casting-to-an-immediate-container).
+
 ### Optional payloads
 
 ```zax
@@ -477,6 +562,29 @@ Commonly provable origins include:
 - an input parameter's referent;
 - a direct projection from one of those places; and
 - a global place.
+
+### Receiver-origin `self`
+
+A reference or pointer result declared `self` promises that every returning path
+returns exactly the invocation receiver `_`:
+
+```zax
+tune final : (
+  result self : Engine &
+)(profile : Profile readonly &) = {
+  apply(_, profile)
+  return _
+}
+```
+
+The compiler verifies the receiver origin. It does not infer `self` into an
+undeclared public contract, and `self` never describes a copied result.
+
+Composition may use this proof to map a contained receiver reference back to an
+outer receiver whose relationship is already known. An arbitrary non-receiver
+reference does not gain that mapping. General contracts stating that a result
+originates from one particular input remain future callable-contract work. See
+[Zax composition](composition.md#the-self-result-contract).
 
 A local cannot escape its invocation path:
 

@@ -7,7 +7,7 @@
 | Applies To | Preserved legacy motivation and a candidate framing for distinct mutable and immutable implementations under one named family |
 | Owns | Provenance, use cases, current constraints, unresolved questions, activation pressure, and retirement criteria |
 | Does Not Own | Accepted indexed-family behavior or current qualifier/structural semantics |
-| Source / Provenance | Distinct mutable/immutable implementation proposals formerly in `mutable.md`, recovered during work item `004` promotion review and reframed through language-maintainer discussion |
+| Source / Provenance | Distinct mutable/immutable implementation proposals formerly in `mutable.md`, recovered during work item `004` promotion review and reframed through language-maintainer discussion; work item `020` composition constraints |
 
 ## Reading posture
 
@@ -132,27 +132,39 @@ The language may ultimately use one, two, or all three mechanisms.
 
 ## Composition alternative
 
-Legacy composition material proposes that `own` can express separately named
-types sharing an interface-like component:
+Current composition can express separately named types that explicitly fulfill
+one shared role:
 
 ```zax
-ReadableType :: type {
-    count : Integer
-    read override : (result : Value)(index : Integer)
+ReadableContract :: type {
+  count abstract : Integer
+  read abstract : (result : Value)(index : Integer)
 }
 
 MyImmutableType :: type {
-    readable own : ReadableType
+  readable own : ReadableContract
+
+  count fulfill readable.count : Integer
+  read fulfill readable.read final :
+    (result : Value)(index : Integer) = {
+  }
 }
 
 MyMutableType :: type {
-    readable own : ReadableType
-    capacity : Integer
+  readable own : ReadableContract
+
+  count fulfill readable.count : Integer
+  capacity : Integer
+  read fulfill readable.read final :
+    (result : Value)(index : Integer) = {
+  }
 }
 ```
 
-This remains a viable fallback and may be simpler than introducing type-family
-semantics.
+This remains a viable alternative and may be simpler than introducing
+type-family semantics. The current
+[`abstract` and `fulfill` model](../../language/composition.md#abstract-roles-and-explicit-fulfillment)
+is compile-time role metadata, not virtual dispatch or a generic family.
 
 It does not necessarily provide:
 
@@ -163,6 +175,39 @@ It does not necessarily provide:
 - a natural location for declared cross-variant construction.
 
 Whether those advantages justify a type-family feature remains open.
+
+### Qualifier-complete exposure pressure
+
+Current composition does not assume one prototype per operation. An
+[`expose`](../../language/composition.md#exposing-behavior) relationship,
+independently of `own`, or identity `expose` may encounter a callable family
+whose exact prototypes differ by receiver, input, result, or type-use
+qualifications. Every mechanically eligible qualifier-complete prototype remains
+a distinct generated surface.
+
+Future qualifier-indexed family work must decide how such prototypes relate to
+one source family without collapsing them into one qualification-erased
+operation. It must preserve current exact-signature ambiguity and fence
+behavior, and must not make an ineligible qualification combination available
+merely because another member of the family can be exposed.
+
+### Qualifier-specialized relaxed-role pressure
+
+Composition's `abstract relaxed` leaves only otherwise defaulted qualifier axes
+on the role's outer value layer or callable receiver open. Explicit qualifiers,
+parameter and result types, base type, arity, indirection, transfer stance,
+labels, and provenance remain exact.
+
+A relaxed role may have several direct, explicitly named
+qualification-specialized fulfillments. Each fulfills the role independently;
+the set does not create a qualification-erased declaration, a merged
+implementation, a dispatch table, or implicit overload selection.
+
+Future mutability-indexed family work must decide how those fulfilled surfaces
+relate to concrete mutable and immutable family variants and to generated
+specializations. It must not treat repeated fulfillment as evidence that one
+runtime operation covers every family member, or make an unavailable qualifier
+combination exist because another specialization fulfills the role.
 
 ## Constraints from current qualifier design
 

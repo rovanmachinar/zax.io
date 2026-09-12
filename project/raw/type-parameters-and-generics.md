@@ -5,9 +5,9 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining generics, type parameters, constraints, or computed type results |
 | Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, and integer-family review |
-| Owns | Preserved type-parameter, generic, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
+| Owns | Preserved type-parameter, generic, whole-type contract, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
 | Does Not Own | Accepted generic semantics or current declaration/type behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers, work item `012` optional-depth substitution pressure, and work item `015` allocation-policy pressure |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, and work item `020` composition constraints |
 
 ## Why this input exists
 
@@ -88,6 +88,28 @@ Future work must decide:
 - whether a type argument may be inferred from value arguments;
 - default type arguments; and
 - diagnostics when several instantiations are equally viable.
+
+### Whole-type abstract-contract pressure
+
+Member-level composition roles do not yet provide a whole-type generic
+constraint. Future work may need a no-storage contract that describes the
+required shape of a type and can be used by generic constraints, structural
+matching, or composition.
+
+No source form for that whole-type contract is established, so this input does
+not invent a representative declaration. Future work must decide:
+
+- how the required value, callable, and operator shapes are written;
+- whether matching is nominal, structural, explicitly fulfilled, or a
+  combination;
+- which names, qualifications, transfer stances, labels, and result-origin
+  guarantees participate;
+- how a generic body is checked against the contract; and
+- how contract evolution affects existing specializations and fulfillments.
+
+The facility must not turn member-level `abstract` metadata into inheritance,
+runtime interface storage, a vtable, or implicit dynamic dispatch. A preferred
+route also cannot manufacture a whole-type contract or cause one to be inferred.
 
 ## Dependent value result types
 
@@ -227,9 +249,17 @@ Future work must define which facts are generic inputs, when reprocessing occurs
 and how diagnostics distinguish the generic source from one minted concrete
 implementation.
 
-Runtime surfaces are different. Future `own`, function-value, and dispatch work
-must select a finite exact set rather than reserve space for every theoretical
-specialization of an open generic family.
+Runtime surfaces are different. Composition `expose`, independently of `own`,
+future function-value work, and any future dispatch work must select a finite
+exact set rather than reserve space for every theoretical specialization of an
+open generic family.
+
+Future generic deduction must decide whether and when an independent
+`preferred` route can participate after deduction. Composition currently
+permits projection only after a concrete expected type or complete shape exists.
+It must not invent a deduction target, widen member, callable, or operator
+discovery, or outrank an exact direct match. Generic work must preserve that
+boundary unless a later design explicitly replaces it.
 
 ## Generated type families
 
@@ -444,9 +474,9 @@ specialization. They must not infer a guarantee from hidden allocation history.
 
 ## Activation and retirement
 
-Activate this input when generics, type parameters, constraints, computed type
-results, type-receiver identity, integer factories, relational type pairs,
-associated types, cursor-protocol constraints, or generated type families are
-reviewed. Move accepted behavior into generic, declaration, invocation, type,
-numeric, iteration, and reflection owners, then retire this file after every
-preserved question is dispositioned.
+Activate this input when generics, type parameters, constraints, whole-type
+abstract contracts, computed type results, type-receiver identity, integer
+factories, relational type pairs, associated types, cursor-protocol constraints,
+or generated type families are reviewed. Move accepted behavior into generic,
+declaration, invocation, type, numeric, iteration, and reflection owners, then
+retire this file after every preserved question is dispositioned.

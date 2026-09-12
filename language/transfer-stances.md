@@ -7,7 +7,7 @@
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The transfer-stance mental model; declaration and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
-| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
+| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
 ## Why transfer stance exists
@@ -677,7 +677,8 @@ declaration design.
 
 ## Projection and aliases
 
-An owned declaration carries its stance into unstanced members:
+When member access starts from a by-value declaration, the declaration's stance
+becomes the default for any member that has no explicit stance:
 
 ```zax
 package : Package move
@@ -706,11 +707,12 @@ The precedence is:
 
 1. use-site restatement;
 2. explicit member declaration stance;
-3. stance inherited from owned containing storage;
+3. stance inherited from the containing by-value declaration;
 4. implicit `copy`.
 
-A same-place alias has its own declaration stance and does not silently inherit
-destructive intent:
+A reference is not another by-value declaration. It aliases the same place but
+has its own declaration stance, so creating a reference does not silently carry
+destructive intent from the declaration used to initialize it:
 
 ```zax
 owner : Buffer move
@@ -722,6 +724,54 @@ consume(view as move)
 
 The alias must still preserve the referent's actual mutability, place, and access
 qualifications.
+
+### Explicit composition wrappers
+
+A composition `via` or `= existing` declaration may accept a complete outer
+value and pass one contained member to the selected operation:
+
+```zax
+Tank :: type {
+  fuel preferred : Fuel
+
+  refill final : ()(source : Tank) = via fuel.refill
+}
+```
+
+The wrapper first establishes its by-value `source` parameter under the visible
+outer stance. Automatic mapping to `source.fuel` is available because `fuel` is
+`preferred`; `own` alone would not create an expected-input route. A written
+body may always pass `source.fuel` explicitly. The selected member is then
+offered according to the outer input shape:
+
+| Outer input | Offer made for the selected member |
+| --- | --- |
+| By-value `copy`, `move`, or `last` | `last` |
+| By-value `deep` | `deep` |
+| Reference-shaped input | The caller's exact authorization |
+
+Offering the member as `last` tells the contained operation that this is its
+final opportunity to reuse resources from the wrapper's temporary outer value.
+Normal fallback still applies:
+
+```text
+last -> move -> copy
+```
+
+The operation need not accept that opportunity. A `copy` wrapper can therefore
+perform one copy to establish the outer parameter and another copy when the
+contained operation consumes the member.
+
+An outer `deep` parameter remains `deep`; it is never changed to `last`. A
+reference-shaped `move` likewise remains `move` rather than gaining stronger
+authority.
+
+The wrapper destroys the remaining outer value in a valid terminal-member state.
+Complete route eligibility and the contained-operation result rules belong to
+[Zax composition](composition.md#forwarding-values-stances-and-results).
+A custom destructor that cannot accept that terminal-member state makes the
+mechanical mapping unavailable; the container must use a written wrapper that
+performs the required policy explicitly.
 
 ## Receiver stance
 
