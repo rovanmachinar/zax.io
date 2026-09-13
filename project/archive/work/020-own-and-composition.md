@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative |
+| Status | Historical working material / non-normative / audit-only |
 | Work Item | `020` |
 | Created | 2026-09-10 |
+| Completed | 2026-09-12 |
 | Owns | The bounded review defined by the fixed initiating input |
 | Does Not Own | Class inheritance, a complete interface or trait system, generalized structural subtyping, complete generic or partial-type behavior, reflection, callable capture, or compiler lowering |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is the historical record of completed work item `020`. It is
+non-normative and audit-only. Current language owners, not this record, define
+the promoted conceptual design.
 
 ## Fixed initiating input
 
@@ -2451,3 +2451,17 @@ result. Closure, archival, and successor work remain separate.
   combined whitespace checks pass.
 - The agent did not alter the maintainer's staged boundary while preparing this
   eight-file correction.
+
+### Closure result
+
+Work item `020` is complete. Its aligned composition model, optional-role
+cardinality, explicit outer-provenance forms, and redundant-tracking intent
+category are promoted into their current owners. Deferred structural, generic,
+partial-type, reflection, callable-contract, indirect-delegation, and formal
+proof questions have live current or indexed raw destinations.
+
+The two composition-specific raw inputs that initiated this work were fully
+consumed and retired during closure. This record moved to the archive, and the
+project router no longer identifies `020` as active. Work item `021` remains
+uncreated pending separate alignment on its fixed initiating input and reading
+scope.

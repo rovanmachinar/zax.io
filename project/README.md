@@ -20,7 +20,7 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [020: `own` and composition](work/020-own-and-composition.md) |
+| Active work item | None; work item `021` is awaiting maintainer alignment |
 | Next work number | `021` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
@@ -29,7 +29,9 @@ when the language maintainer explicitly asks for their maintenance.
 
 Before pasting an operating block, the language maintainer replaces its generic
 `project/work/00n-<concept>.md` placeholder with the active path listed above.
-The committed prompt sources remain generic across numbered work items.
+When no work item is active, align and create the next item before starting a new
+concept session. The committed prompt sources remain generic across numbered
+work items.
 
 Teaching-debt guidance and the log are task-specific routes. Agents do not read
 the log during ordinary concept work or use it to search for expected problems.
