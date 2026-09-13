@@ -335,16 +335,16 @@ Car :: type {
 }
 
 recover final : (car : Car & ?)(engine : Engine &) = {
-  return engine outer cast Car.engine
+  return engine tracked outer cast Car.engine
 }
 ```
 
-The checked form returns an optional reference because an `Engine &` might name
-a standalone engine or an engine stored somewhere other than `Car.engine`. It
-uses `outer tracked` placement metadata and a runtime check when the selected
-language contract supplies no sufficient static proof. `unsafe outer cast`
-skips that check and makes the programmer responsible for the provenance claim.
-Neither form can use an expired origin or revive an ended resident.
+A `tracked outer cast` returns an optional reference because an `Engine &` might
+name a standalone engine or an engine stored somewhere other than `Car.engine`.
+It explicitly uses the `outer tracked` placement capability to perform that
+checked operation. `unsafe outer cast` skips the check and makes the programmer
+responsible for the provenance claim. No outer-cast form can use an expired
+origin or revive an ended resident.
 
 A selected contract may instead require a site-specific exact-origin proof:
 
@@ -358,20 +358,20 @@ LocalCar :: type {
 
 inspectCar final : ()(car : LocalCar &) = {
   engine : LocalEngine & = car.engine
-  sameCar : LocalCar & ? = engine outer cast LocalCar.engine
-
-  if ?sameCar
-    inspect(sameCar.) // optional result; exact-origin analysis may already know present
+  sameCar : LocalCar & = engine outer cast LocalCar.engine
+  inspect(sameCar)
 }
 ```
 
 When every value reaching the cast operand is proved to come from exactly
-`LocalCar.engine`, the contract-required proof permits this checked cast without
-`outer tracked` or runtime work. Same-typed sibling members, arbitrary
-parameters, callbacks, raw-pointer or opaque ingress, and exported acceptance of
-standalone members can defeat that proof when they can reach this site. Unrelated
-external construction does not defeat a closed internal flow merely because it
-creates another `LocalEngine`.
+`LocalCar.engine`, plain `outer cast` produces a non-optional result without
+`outer tracked` or runtime work. If the selected contract does not establish
+that proof, plain `outer cast` is rejected rather than silently becoming a
+tracked optional operation. Same-typed sibling members, arbitrary parameters,
+callbacks, raw-pointer or opaque ingress, and exported acceptance of standalone
+members can defeat the proof when they can reach this site. Unrelated external
+construction does not defeat a closed internal flow merely because it creates
+another `LocalEngine`.
 
 Complete forms and costs belong to
 [Zax composition](composition.md#outer-casting-to-an-immediate-container).

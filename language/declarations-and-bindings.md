@@ -554,7 +554,13 @@ eligible surface:
 ```zax
 value via primary.value                 // data route to one stored place
 start final : ()() = via engine.start   // callable adapter to one operation
+owner final : (result : Car & ?)() =    // checked outer-result mapping
+  tracked via engine.selectedPeer
 ```
+
+`tracked via` is not a general alternate routing mode. It is the explicit
+callable form for a route whose result uses tracked immediate outer casting and
+therefore remains optional.
 
 Callable declaration forms distinguish one operation from a whole overload
 family:
@@ -580,8 +586,9 @@ unmappable overload added later is an error rather than being silently omitted.
 complete structured operator form, regardless of which source would supply it.
 A later direct declaration in that outer family conflicts with the fence.
 
-An abstract role describes something that an immediate container must declare.
-The container makes that connection explicit with `fulfill`:
+An abstract role describes something that an immediate container must declare,
+or may elect to declare when the role is optional. The container makes that
+connection explicit with `fulfill`:
 
 ```zax
 start abstract : ()()
@@ -614,6 +621,28 @@ The carrier remains private. The directly written fulfilling declaration chooses
 its own visibility independently; explicit fulfillment does not reveal the
 carrier or its stored data.
 
+An optional role remains available for signature checking but does not make its
+fulfillment mandatory:
+
+```zax
+TelemetryContract :: type {
+  report abstract optional : ()(event : Event readonly &)
+}
+
+Service :: type {
+  contract own private : TelemetryContract
+
+  report fulfill contract.report final : (
+    event : Event readonly &
+  )() = {
+  }
+}
+```
+
+Omitting `report` from `Service` would also be valid. If it is present, the
+`fulfill` path remains explicit and all normal compatibility checks apply.
+`abstract optional` supplies no default body or runtime hook.
+
 Ordinary omission in an abstract role resolves qualifier defaults just as it
 does elsewhere. `abstract relaxed` is the narrow opt-in that instead leaves only
 otherwise defaulted outer value axes, or callable receiver axes, open:
@@ -639,6 +668,11 @@ the relaxed role. They do not form a dispatch table or merge into one
 implementation. Explicit qualifiers remain required, and relaxation does not
 change parameter or result types, base type, arity, indirection, transfer stance,
 labels, or provenance.
+
+Optionality and relaxation are independent. `abstract optional relaxed` permits
+zero or more distinct qualification-specialized fulfillments. Without
+`optional`, a relaxed role still requires at least one fulfillment. The
+canonical relative order is `abstract optional relaxed`.
 
 Published member names remain instance-member lookup. They are not injected
 into an instance function's lexical scope. `shadowable` remains a lexical-name

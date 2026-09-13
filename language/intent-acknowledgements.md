@@ -211,6 +211,7 @@ copying a diagnostic message.
 | `terminal-source-reuse` | Perform a defined operation after accepted `last` transfer | [Transfer stances](transfer-stances.md#last) |
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
+| `redundant-outer-tracking` | Deliberately retain optional tracked outer-provenance semantics when the selected contract proves the exact origin | [Zax composition](composition.md#deliberately-retaining-redundant-tracking) |
 | `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer at `Nothing` | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
 | `case-conflicting-enum-member-names` | Declare ASCII case-equivalent enum member names with different enum values | [Enums](enums.md#ascii-case-insensitive-lookup) |
 | `unreachable-selection-clause` | Deliberately retain one semantically proven unreachable complete `case` or `default` clause | [Switch, case, and default](switch.md#ordering-effects-and-overlap) |
@@ -226,6 +227,54 @@ instance. That behavior is defined by
 [pointers and arenas](pointers-and-arenas.md#replacement-intent). Its exact
 category identifier remains unsettled and examples mark the spelling
 provisional rather than adding it to this accepted registry prematurely.
+
+### Redundant outer tracking
+
+Selected-contract exact-origin proof makes plain `outer cast` or ordinary
+outer-result `via` safe and non-optional. Writing the corresponding tracked
+operation is still defined, but it strongly suggests that the programmer
+believes runtime tracking is necessary. The ordinary form states the proved
+result directly. Here the member type permits outer tracking and the selected
+contract proves that `engine` came from exactly `Car.engine`:
+
+```zax
+knownCar : Car & = engine outer cast Car.engine
+```
+
+If the programmer deliberately wants the optional tracked contract instead,
+the complete expression is acknowledged:
+
+```zax
+possibleCar : Car & ? =
+  intent<redundant-outer-tracking>{
+    engine tracked outer cast Car.engine
+  }
+```
+
+For `tracked via`, the acknowledgement encloses the complete routed
+declaration:
+
+```zax
+intent<redundant-outer-tracking>{
+  possibleOwner final : (result : Car & ?)() =
+    tracked via engine.selectedPeer
+}
+```
+
+The category preserves the optional result and accepts the applicable
+`outer tracked` representation and lifecycle costs. It does not force a
+physical metadata read when ordinary as-if optimization can remove one.
+
+This intent error exists only when the selected mainline or explicitly selected
+extension contract establishes the proof. A compiler's stronger private
+analysis cannot require the acknowledgement. Conversely, when the selected
+contract does not establish exact origin, tracking is necessary and the
+category is inapplicable.
+
+This category cannot preserve redundant `unsafe`; selected-contract proof makes
+that assertion a non-acknowledgeable error that must be removed. Complete
+outer-provenance behavior belongs to
+[Zax composition](composition.md#proved-tracked-and-unsafe-outer-casting).
 
 ### Repeated and duplicate resource entries
 

@@ -207,9 +207,10 @@ Examples:
 - [optional values](optional-values.md) defines presence and boxed access;
 - [function invocation](function-invocation.md) defines result and parameter
   completion;
-- [composition](composition.md) defines checked outer casting, the
-  receiver-origin proof required for automatic result remapping, and the narrow
-  `unsafe via` and `unsafe outer cast` provenance assertions;
+- [composition](composition.md) distinguishes proof-required and tracked checked
+  outer casting, defines the receiver-origin proof required for non-optional
+  outer result remapping, and owns `tracked via`, `unsafe via`, and
+  `unsafe outer cast`;
 - [transfer stances](transfer-stances.md) defines moved-from and terminal source
   states;
 - integer owners define overflow, narrowing, and required-result behavior; and
@@ -363,7 +364,7 @@ The source-validity outcomes are:
 
 | Proof status | Portable source consequence |
 | --- | --- |
-| Selected-contract-required proof succeeds | Use the safe unmarked form; a redundant `unsafe` assertion is an error, and every conforming compiler must recognize the proof |
+| Selected-contract-required proof succeeds | Use the safe unmarked form; a redundant `unsafe` assertion is an error, while a defined but suspicious alternate safe mode may require intent acknowledgement; every conforming compiler must recognize the proof |
 | Selected contract does not require the proof | An unchecked operation still needs its narrow `unsafe` assertion; one compiler's stronger private proof may optimize or advise, but cannot make omission portable or reject the retained assertion |
 | Explicitly selected stronger extension proof succeeds | That proof may become canonical, making the unmarked form required and redundant `unsafe` an error for that source |
 | The asserted fact is proved false | Reject the operation even when it is marked `unsafe` |
@@ -371,21 +372,36 @@ The source-validity outcomes are:
 Composition provenance is a concrete example:
 
 ```zax
-checked : Container & ? =
+proved : Container & =
   memberReference outer cast Container.member
-asserted : Container & =
-  memberReference unsafe outer cast Container.member
+
+deliberatelyTracked : Container & ? =
+  intent<redundant-outer-tracking>{
+    memberReference tracked outer cast Container.member
+  }
 ```
 
-If the selected contract requires exact-origin proof at this site, `checked`
-needs neither tracking metadata nor a runtime check, while retaining an
-`unsafe` provenance assertion is an error. Without contract-required proof, the
-checked form may use its defined tracked runtime fallback; choosing an unchecked
-non-optional result still requires `unsafe`, even if one compiler privately
-proves the origin. An explicitly selected stronger extension may change that
-canonical spelling. A compiler-proved impossible origin is always rejected.
+If the selected contract requires and establishes exact-origin proof at this
+site, plain `outer cast` produces the non-optional result without tracking, while
+retaining an `unsafe` provenance assertion is an error. A deliberately retained
+tracked operation requires `intent<redundant-outer-tracking>`, preserving its
+optional result and potential tracking costs without forcing a physical metadata
+read.
+
+Without contract-required proof, plain `outer cast` is rejected. The programmer
+may write the optional `tracked outer cast` directly or retain an `unsafe`
+assertion for an unchecked non-optional result, even if one compiler privately
+proves the origin. That private proof cannot require the intent category, change
+the tracked result shape, or reject the portable unsafe assertion. An explicitly
+selected stronger extension may make plain `outer cast` canonical and make
+tracked use acknowledgement-required. A compiler-proved impossible origin
+rejects the plain and unsafe forms; the tracked checked form instead produces
+absence.
+
 The composition owner defines the exact origin proof class and applies the same
-contract-relative rule to result provenance in `unsafe via`.
+distinction to callable result mapping: plain `via` for a proved non-optional
+outer result, `tracked via` for a checked optional result, and `unsafe via` for
+an unproved non-optional assertion.
 
 ### A compiler may prove more
 
@@ -409,6 +425,8 @@ Under that explicitly selected contract:
 
 - the obsolete assertion may be a hard error;
 - every conforming compiler must accept the unmarked valid operation; and
+- a defined alternate safe mode may become acknowledgement-required when the
+  contract proves it redundant; and
 - a compiler that still demands the assertion is nonconforming.
 
 This rule applies to every mandatory analysis, not only lifetime or optional

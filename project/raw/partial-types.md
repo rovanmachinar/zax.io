@@ -172,9 +172,10 @@ merge must preserve these constraints:
   would supply it, and a later direct declaration in that family conflicts;
   and
 - fulfillment remains direct and explicit after the merge: a published path
-  does not fulfill a role, every active role must be named by its fulfilling
-  declaration, and multiple qualification-specialized fulfillments are valid
-  only for the applicable relaxed role.
+  does not fulfill a role, every active required role must have a declaration
+  that names it, an optional role may remain unfulfilled, and multiple
+  qualification-specialized fulfillments are valid only for the applicable
+  relaxed role.
 
 Future work must define diagnostics and source-compatibility rules for these
 merge effects without using partial, import, build, or declaration order as a

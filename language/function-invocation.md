@@ -2210,6 +2210,43 @@ call an accessible private helper: `start` is an explicit new API declaration,
 not publication of `startExact`. It does not let data `via`, automatic `expose`,
 or `own` publish a private stored path.
 
+A route that maps a contained reference or pointer result outward must also make
+its provenance mechanism explicit:
+
+```zax
+// The selected contract proves this result origin.
+knownOwner final : (result : Car &)() =
+  via engine.selectedPeer
+
+intent<redundant-outer-tracking>{
+  possibleOwner final : (result : Car & ?)() =
+    tracked via engine.selectedPeer
+}
+```
+
+Ordinary `via` uses selected-contract proof for the non-optional outer result.
+If the programmer deliberately preserves the optional tracked contract despite
+that proof, the complete declaration requires
+`intent<redundant-outer-tracking>`.
+
+Without selected-contract proof, the checked and asserted forms instead remain:
+
+```zax
+possibleOwner final : (result : Car & ?)() =
+  tracked via engine.selectedPeer
+
+assertedOwner final : (result : Car &)() =
+  unsafe via engine.selectedPeer
+```
+
+`tracked via` selects the checked optional mapping and requires the applicable
+`outer tracked` capability. `unsafe via` is the programmer's unchecked
+non-optional provenance assertion. Compiler-private proof cannot require the
+intent acknowledgement or change either portable form. `= existing` cannot
+silently discover a mapping that needs tracked outer-result work. Complete
+redundancy and cost behavior belongs to
+[Zax composition](composition.md#deliberately-retaining-redundant-tracking).
+
 Family forms make a stronger declaration. Here `Engine` supplies two `reset`
 overloads:
 

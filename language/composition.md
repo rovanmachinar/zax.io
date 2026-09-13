@@ -6,7 +6,7 @@
 | Audience | Human developers building types from stored components and choosing which component surfaces the container presents |
 | Applies To | Named containment; independent `own`, `preferred`, and `expose`; semantic-indirection boundaries; published data paths; singular and family composition routing and filtering; abstract roles and fulfillment; outer casting and exact-origin proof; costs, diagnostics, formatting, and source stability; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; singular and family `via` and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `unsafe outer cast`, and composition-specific exact-origin proof |
+| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast`, and composition-specific exact-origin proof |
 | Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy composition intent, reconciled with current declaration, invocation, operator, transfer, lifetime, construction, identity, and safety design |
 | Supersedes | Legacy composition design formerly published at the repository root |
@@ -950,7 +950,10 @@ For results:
 - a copied contained result cannot become a complete outer value;
 - an explicit `via` may retain the contained result type when its visible
   prototype declares that type;
-- an explicit optional outer result may use checked outer casting; and
+- `tracked via` may explicitly produce an optional outer result through checked
+  outer casting;
+- ordinary `via` may produce a non-optional outer result when the selected
+  contract proves its origin; and
 - an unproved non-optional outer remapping requires localized `unsafe via`.
 
 The last form is a provenance assertion, not an intent acknowledgement.
@@ -969,21 +972,27 @@ Car :: type {
   engine own : Engine
 
   checkedPeerOwner final : (result : Car & ?)() =
-    via engine.selectedPeer
+    tracked via engine.selectedPeer
 
   assertedPeerOwner final : (result : Car &)() =
     unsafe via engine.selectedPeer
 }
 ```
 
-The optional declaration visibly permits checked immediate outer casting. The
-non-optional declaration instead asserts that the returned engine really
-resides at `Car.engine`; a false claim has unsafe consequences.
+The `tracked via` declaration visibly selects checked immediate outer casting
+and therefore keeps an optional result. The non-optional `unsafe via`
+declaration instead asserts that the returned engine really resides at
+`Car.engine`; a false claim has unsafe consequences. When the selected language
+contract proves that result origin, ordinary unmarked `via` supplies the
+non-optional form without tracking or unsafe responsibility. Deliberately
+retaining `tracked via` under that proof requires
+`intent<redundant-outer-tracking>`.
 
 ## Abstract roles and explicit fulfillment
 
 A component type used by an `own` member may describe declarations that its
-immediate container must supply.
+immediate container must supply, or optional roles whose signatures the
+container may choose to verify.
 
 Inside an abstract required type or prototype, `outer` means the immediate
 containing type whose `own` activates the requirement. It is a bounded
@@ -1021,10 +1030,10 @@ An `abstract` declaration is compile-time role metadata. It creates:
 - no hidden reference to the container; and
 - no ability for inner code to call outward.
 
-The immediate `own` activates the role. The immediate container must write a
-compatible declaration that explicitly names the role with `fulfill`. A name
-published from another member declared `own` does not satisfy anything
-accidentally.
+The immediate `own` activates the role. Unless the role is explicitly optional,
+the immediate container must write a compatible declaration that names the role
+with `fulfill`. A name published from another member declared `own` does not
+satisfy anything accidentally.
 After fulfillment, the requirement does not propagate through another outer
 composition boundary.
 
@@ -1043,6 +1052,38 @@ start fulfill primaryContract.start, backupContract.start final : ()() = {
 Every named path must be an active compatible role. Naming no real role is an
 error. Identical requirements do not merge silently; both paths must appear in
 the `fulfill` list. Incompatible requirements cannot share one declaration.
+
+### Optional roles verify without requiring
+
+An optional abstract role offers a named conformance target without requiring
+every activating container to implement it:
+
+```zax
+TelemetryContract :: type {
+  report abstract optional : ()(event : Event readonly &)
+}
+
+SilentService :: type {
+  contract own private : TelemetryContract
+  // No report implementation is required.
+}
+
+ObservedService :: type {
+  contract own private : TelemetryContract
+
+  report fulfill contract.report final : (
+    event : Event readonly &
+  )() = {
+  }
+}
+```
+
+`abstract optional` supplies no default body, storage, callable hook, dispatch,
+or runtime presence query. It changes only whether zero fulfillments are valid.
+If a declaration names the role with `fulfill`, all ordinary path, category,
+type, qualification, access, and provenance checks still apply. A compatible
+declaration that does not name the role is not silently treated as its
+fulfillment.
 
 The stored carrier may be private even though its roles must be visible to the
 immediate container:
@@ -1124,6 +1165,18 @@ Duplicate normalized fulfillment signatures remain errors. An ordinary exact
 role cannot acquire several implementations merely because qualification could
 distinguish them.
 
+Optionality and relaxation are independent:
+
+| Role form | Valid fulfillment count |
+| --- | --- |
+| `abstract` | Exactly one |
+| `abstract relaxed` | One or more distinct qualification-specialized fulfillments |
+| `abstract optional` | Zero or one |
+| `abstract optional relaxed` | Zero or more distinct qualification-specialized fulfillments |
+
+The canonical order is `abstract optional relaxed`. `optional` does not produce
+an optional value and does not relax any part of the role signature.
+
 ### Compatibility and routed value fulfillment
 
 Fulfillment uses ordinary safe same-place or compatible-prototype rules.
@@ -1134,7 +1187,7 @@ authority. Fulfillment cannot manufacture compatibility through:
 - conversion;
 - preferred projection;
 - capability strengthening;
-- a runtime outer cast; or
+- a `tracked outer cast`; or
 - a computed temporary.
 
 A direct data `via` declaration may fulfill a value role with resident storage
@@ -1213,7 +1266,7 @@ container.
 
 ### Exact stored-member targets
 
-Both outer-cast forms name an exact resident stored-member path:
+All outer-cast forms name an exact resident stored-member path:
 
 ```zax
 Engine :: type outer tracked {
@@ -1228,7 +1281,7 @@ Car :: type {
 inspectContainer final : ()(input : Engine &) = {
   asserted : Car & = input unsafe outer cast Car.engine
 
-  checked : Car & ? = input outer cast Car.engine
+  checked : Car & ? = input tracked outer cast Car.engine
   if ?checked
     use(checked.)
 
@@ -1251,18 +1304,26 @@ The operations are protected language forms, not overloadable operators.
 Their exact recognition and precedence are recorded by the
 [operator catalog](operator-catalog.md#outer-cast-forms).
 
-### Checked and unsafe outer casting
+### Proved, tracked, and unsafe outer casting
 
 `unsafe outer cast` uses the named member offset under programmer-asserted
 provenance. A false claim has undefined behavior.
 
-`outer cast` is the safe optional-result form. When the selected language
-contract cannot prove the exact origin statically, it checks one immediate
-relationship at runtime. That runtime fallback requires the member type to be
-declared `outer tracked` so the relationship can be validated.
+Plain `outer cast` is the proof-required safe form. It returns a non-optional
+container reference only when the selected language contract proves that every
+origin reaching the operand is the exact named member path. It requires neither
+tracking metadata nor a runtime relationship check. If that contract does not
+establish the proof at this site, the declaration is rejected rather than
+silently changing result type or runtime mechanism.
 
-Temporaries and references whose origin has expired are ineligible for both
-forms. Neither operation revives an ended resident instance.
+`tracked outer cast` is the checked runtime form. It requires the member type to
+be declared `outer tracked`, validates one immediate relationship through that
+placement capability, and returns an optional result. It remains an optional
+tracked operation even when static analysis happens to know that the result is
+present.
+
+Temporaries and references whose origin has expired are ineligible for all
+forms. No outer cast revives an ended resident instance.
 
 These operations apply the reusable unsafe and proof model in
 [safety and analysis](safety-and-analysis.md). Their reference origins and
@@ -1291,18 +1352,15 @@ Car :: type {
 
 inspectKnownCar final : ()(car : Car readonly &) = {
   engine : Engine readonly & = car.engine
-  sameCar : Car readonly & ? = engine outer cast Car.engine
-
-  if ?sameCar
-    use(sameCar.)
+  sameCar : Car readonly & = engine outer cast Car.engine
+  use(sameCar)
 }
 ```
 
 At this site, `engine` can only have come from `car.engine`. Under a selected
-contract that requires this analysis, the safe unmarked cast is accepted without
-`Engine outer tracked` or a runtime relationship check. Its declared result is
-still optional; flow analysis may additionally know that this particular result
-is present.
+contract that requires this analysis, the safe unmarked cast produces a
+non-optional result without `Engine outer tracked` or a runtime relationship
+check.
 
 Proof is about origins that can reach the cast site, not every value of the
 member type in the universe. An importer constructing an unrelated standalone
@@ -1315,26 +1373,89 @@ can reach the cast.
 This initial site-specific analysis is a conceptual proof model rather than a
 finished formal algorithm. Source validity follows the selected contract:
 
-| Situation | Required source behavior |
-| --- | --- |
-| Selected contract mandates the exact-origin proof and it succeeds | Safe unmarked `outer cast` is required; redundant `unsafe` is an error |
-| Selected contract does not mandate that proof | Safe `outer cast` uses the tracked fallback; an unchecked assertion still requires `unsafe`, even if one compiler privately proves it |
-| Source explicitly selects a stronger compiler or shared extension contract | That contract may make the stronger proof and safe spelling canonical |
-| The asserted relationship is proved false | The source is an error under every contract |
+| Situation | `outer cast` | `tracked outer cast` | `unsafe outer cast` |
+| --- | --- | --- | --- |
+| Selected-contract exact-origin proof succeeds | Produces the non-optional container reference | Requires `intent<redundant-outer-tracking>` to retain the optional tracked operation | Redundant assertion is an error |
+| Selected contract does not mandate or establish that proof | Error | Performs the checked optional operation | Retains the required programmer assertion |
+| Source selects a stronger extension contract whose proof succeeds | Produces the non-optional result under that selected contract | Requires the same intent acknowledgement | Redundant assertion is an error under that contract |
+| The exact relationship is proved false | Error | Produces absence under its checked semantics | Error; unsafe cannot contradict a known fact |
 
 A compiler may use extra private analysis to optimize or advise. Without a
 selected contract that makes the proof part of source semantics, it cannot make
-one program reject `unsafe` while another conforming compiler still requires
-that word.
+plain `outer cast` portable or make one program reject `unsafe` while another
+conforming compiler still requires that word. For the same reason, private
+proof cannot require an intent acknowledgement around `tracked outer cast`.
 
-The matrix applies to result provenance in `via` as well:
+### Deliberately retaining redundant tracking
 
-- when the selected contract mandates and proves the outer result origin,
-  ordinary safe `via` is required and `unsafe via` is redundant;
-- when that proof is not in the selected contract, an unchecked non-optional
-  outer result still requires `unsafe via`, even if this compiler can prove it;
+When selected-contract proof makes the plain operation available, `tracked`
+strongly resembles a mistaken request for runtime work and an optional result.
+The ordinary repair is to use the proved non-optional operation:
+
+```zax
+TrackedEngine :: type outer tracked {
+}
+
+TrackedCar :: type {
+  engine : TrackedEngine
+}
+
+inspectKnownTrackedCar final : ()(car : TrackedCar &) = {
+  engine : TrackedEngine & = car.engine
+  knownCar : TrackedCar & = engine outer cast TrackedCar.engine
+  use(knownCar)
+}
+```
+
+A programmer may instead deliberately preserve the tracked optional contract:
+
+```zax
+inspectPossiblyKnownCar final : ()(car : TrackedCar &) = {
+  engine : TrackedEngine & = car.engine
+
+  possibleCar : TrackedCar & ? =
+    intent<redundant-outer-tracking>{
+      engine tracked outer cast TrackedCar.engine
+    }
+}
+```
+
+Without that acknowledgement, the redundant tracked expression is an intent
+error. The acknowledgement preserves the optional result and accepts the
+`outer tracked` representation and lifecycle costs. Like every intent
+acknowledgement, it does not force a physical metadata read; ordinary as-if
+optimization remains available.
+
+If the selected contract does not establish exact origin, tracking is not
+redundant: write `tracked outer cast` directly, and the acknowledgement is
+inapplicable. A compiler's stronger private proof may optimize or advise, but
+cannot make otherwise portable tracked source require intent.
+
+The same three-way distinction applies to outer result provenance in `via`:
+
+- when the selected contract proves the outer result origin, ordinary unmarked
+  `via` produces the non-optional outer result;
+- `tracked via` explicitly selects tracked checking and an optional outer result;
+- without contract-required proof, an unchecked non-optional outer result
+  requires `unsafe via`, even if this compiler privately proves the origin;
 - an explicitly selected extension may make its stronger proof canonical; and
 - a `via` provenance assertion that is proved false is always an error.
+
+When selected-contract proof makes ordinary `via` available, deliberately
+retaining the optional tracked route uses the same category around the complete
+declaration:
+
+```zax
+intent<redundant-outer-tracking>{
+  possibleOwner final : (result : Car & ?)() =
+    tracked via engine.selectedPeer
+}
+```
+
+`tracked via` applies only to a route whose result mapping performs this checked
+immediate outer cast. It is not a general alternate routing mode. `= existing`
+and automatic `expose` do not silently discover or generate tracked outer-result
+work; a programmer who wants it must name the route explicitly.
 
 ### `outer tracked` costs and lifecycle
 
@@ -1357,10 +1478,15 @@ retain the source relationship. Replacement ends the old resident relationship
 and establishes the successor's relationship; references to the old resident
 remain invalid.
 
-A checked outer cast that uses the tracked fallback performs runtime work. A
-contract-proved cast does not. The design does not promise a single stored
-pointer, a particular metadata block, or any other backend representation. Raw
-byte relocation cannot be assumed to preserve a valid tracked relationship.
+A `tracked outer cast` or `tracked via` route has checked optional semantics and
+may perform runtime work. A contract-proved cast or route does not require
+tracking when written in its ordinary plain form. An intent-acknowledged tracked
+operation retains the optional contract and permission for tracking costs. The
+design does not promise a single stored pointer, a particular metadata block, or
+any other backend representation. Ordinary as-if optimization may remove a
+redundant metadata read only when doing so cannot change the optional result or
+other observable behavior. Raw byte relocation cannot be assumed to preserve a
+valid tracked relationship.
 
 ## Costs
 
@@ -1374,7 +1500,7 @@ Programmers must be able to discover:
 - by-value member extraction performed by preferred projection;
 - outer and member copies performed by explicit wrappers;
 - especially expensive `deep` member mapping;
-- fallback runtime work and hidden state permitted by `outer tracked`;
+- tracked runtime work and hidden state permitted by `outer tracked`;
 - additional callable surface generated by `expose`; and
 - source compatibility deliberately coupled through family adoption; and
 - source compatibility risk introduced by published names and preferred routes.
@@ -1409,16 +1535,21 @@ Required composition diagnostics include:
 - an exact or family fence without one exact anchor;
 - a `fulfill` target that is absent, inactive, incompatible, or already
   fulfilled inconsistently;
-- an activated abstract role left unfulfilled by its immediate container;
-- several fulfillments of an exact role or duplicate normalized fulfillments of
-  a relaxed role;
+- an activated required abstract role left unfulfilled by its immediate
+  container;
+- several fulfillments of an exact role, including an optional exact role, or
+  duplicate normalized fulfillments of a relaxed role;
 - declaration-side or private words on abstract metadata;
 - reach-through construction of a member declared `own`;
 - an outer-wrapper mapping whose remaining container cannot be destroyed in a
   valid terminal-member state;
 - an outer cast whose target is not an exact resident stored-member path;
-- a checked outer cast for which the selected contract supplies neither static
-  exact-origin proof nor an `outer tracked` runtime fallback;
+- a plain `outer cast` for which the selected contract does not establish
+  exact-origin proof;
+- `tracked outer cast` or `tracked via` without the required `outer tracked`
+  capability or optional result shape;
+- selected-contract proof making `tracked outer cast` or `tracked via`
+  redundant without `intent<redundant-outer-tracking>`;
 - redundant `unsafe` when selected-contract proof requires the safe form;
 - omitted `unsafe` when the selected contract does not authorize the asserted
   provenance;
@@ -1437,10 +1568,12 @@ Canonical formatting:
 - preserves every role path in a `fulfill` list;
 - presents callable `via` targets as ordinary member paths and operator targets
   with their structured operator names;
+- writes checked outer-result routing as `tracked via`;
 - keeps `existing family`, `via family`, and `forbidden family` together as
   declaration states; and
-- writes the outer-casting forms as `outer tracked`, `outer cast`,
-  and `unsafe outer cast`.
+- writes the type capability as `outer tracked` and the operation forms as
+  `outer cast`, `tracked outer cast`, and `unsafe outer cast`;
+- writes optional relaxed roles as `abstract optional relaxed`.
 
 The wider declaration grammar and formatter own placement of the complete
 composition-modifier group relative to unrelated declaration and qualifier
@@ -1456,7 +1589,7 @@ The following changes are source- or behavior-visible:
 - adding or changing contained behavior may change an exposed surface;
 - adding a preferred route may introduce a new use-site ambiguity;
 - changing qualification may alter preferred-route viability;
-- adding an abstract role may break immediate containers;
+- adding a required abstract role may break immediate containers;
 - changing a role may invalidate an existing fulfillment;
 - adding a qualification-specialized fulfillment may conflict with an existing
   relaxed-role fulfillment;
@@ -1466,8 +1599,12 @@ The following changes are source- or behavior-visible:
 - adding an outer family fence conflicts with every declaration in that visible
   family, regardless of source provenance;
 - changing a physical path may break `via`, `fulfill`, and outer-cast targets;
-- adding identity data may make some exposure mappings ineligible; and
-- adding or removing `outer tracked` changes representation and lifecycle cost.
+- adding identity data may make some exposure mappings ineligible;
+- adding or removing `outer tracked` changes representation and lifecycle cost;
+  and
+- selecting a contract that newly requires exact-origin proof may require a
+  tracked operation to become plain or gain
+  `intent<redundant-outer-tracking>`.
 
 None of these changes is resolved by declaration or source order.
 

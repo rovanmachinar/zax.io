@@ -421,6 +421,11 @@ requirements remain exact. Value roles similarly relax only omitted axes on the
 outer required value layer. Complete role and fulfillment behavior belongs to
 [Zax composition](composition.md#abstract-roles-and-explicit-fulfillment).
 
+Role optionality is independent of qualifier relaxation. An
+`abstract optional relaxed` role may have zero or more distinct
+qualification-specialized fulfillments; `optional` does not open another
+qualifier axis or weaken any explicitly written requirement.
+
 ## Restatement, duplication, and conflict
 
 Compatible qualification may reach one entity from distinct sources:

@@ -283,9 +283,12 @@ equivalence, conversion, and reflection without collapsing them merely because
 some source expressions reach the same place or callable.
 
 Hidden `outer tracked` metadata is a programmer-visible representation and
-lifecycle pressure that may matter to storage/layout compatibility. A static
-exact-origin proof is instead a site-specific flow fact. Tracking and proof
-metadata neither establishes nor defeats structural equivalence by itself.
+lifecycle pressure that may matter to storage/layout compatibility. A plain
+`outer cast` or non-optional outer-result `via` instead relies on a
+selected-contract site-specific flow proof; `tracked outer cast` and
+`tracked via` explicitly consume the tracked capability while preserving an
+optional result. Tracking and proof metadata neither establishes nor defeats
+structural equivalence by itself.
 
 ### Whole-type abstract-contract pressure
 
@@ -296,7 +299,8 @@ a type can satisfy without acquiring an inheritance identity.
 No source form is established. A future review must decide whether such a
 contract is nominally adopted, structurally matched, explicitly fulfilled, or
 some combination; which stored, routed, generated, and fulfilled categories can
-satisfy it; and how exact versus `abstract relaxed` qualifier requirements are
+satisfy it; how required versus `abstract optional` roles contribute to a
+shape; and how exact versus `abstract relaxed` qualifier requirements are
 represented. It must not imply runtime interface storage, a vtable, layout
 equivalence, or implicit dynamic dispatch.
 

@@ -300,8 +300,9 @@ myDrive final : ()() = {
 
 Two further mechanisms serve composition without publishing anything:
 `abstract` roles fulfilled by `fulfill` declarations let a contained type
-require declarations from its immediate container, and `outer cast` /
-`unsafe outer cast` cast outward to a container from one of its member places.
+require or optionally verify declarations from its immediate container, and
+`outer cast` / `tracked outer cast` / `unsafe outer cast` cast outward to a
+container from one of its member places.
 
 Nothing published is new storage. Every published name is an access path to the
 same stored place, with the same identity, lifetime, qualification, and cost as
@@ -311,15 +312,11 @@ hidden object hierarchy.
 ### Status of this record
 
 The findings below are **aligned** for the current review scope and are not
-implemented. An earlier revision was promoted as recorded below. The later
-post-promotion boundary review is aligned only in this working record and has
-not yet been promoted into current language owners. This file remains
-non-authoritative working material; alignment here does not itself establish
-accepted language design.
-
-The post-boundary-review documentation-fit dry run now records a PASS below.
-That result establishes readiness and an exact proposed change set; it does not
-authorize promotion.
+implemented. Their promotion and subsequent post-promotion corrections are
+recorded below. Current conceptual owners now incorporate the complete model,
+including optional roles and explicit proof, tracked, and unsafe
+outer-provenance operations. This file remains non-authoritative working
+material.
 
 Superseded alternatives from earlier passes have been removed rather than kept
 as history; see *Corrections to earlier entries in this record* for the ones a
@@ -334,10 +331,12 @@ Provenance markers: **[refreshed]** for
 owners carry their own authority.
 
 The selected source spellings for this work are `own`, `preferred`, `expose`,
-`via`, `via family`, `abstract`, `abstract relaxed`, `fulfill`, `= existing`,
-`= existing family`, `= forbidden`, `= forbidden family`, `outer`,
-`outer tracked`, `outer cast`, and `unsafe outer cast`. They are settled for
-`020` and are not marked unresolved merely because they are unpromoted.
+`via`, `tracked via`, `unsafe via`, `via family`, `abstract`,
+`abstract optional`, `abstract relaxed`, `abstract optional relaxed`, `fulfill`,
+`= existing`, `= existing family`, `= forbidden`, `= forbidden family`,
+`outer`, `outer tracked`, `outer cast`, `tracked outer cast`, and
+`unsafe outer cast`, plus `intent<redundant-outer-tracking>` for deliberately
+retaining tracked semantics under selected-contract proof.
 
 ### Aligned: `own` and the published data surface
 
@@ -1080,6 +1079,25 @@ independently; duplicate normalized signatures remain an error. Multiple
 fulfillments do not create runtime dispatch or merge several callables into one
 implementation.
 
+**`abstract optional` changes only the minimum fulfillment count.** An optional
+role remains a named signature-verification target, but its activating
+container may leave it unfulfilled. If a declaration uses `fulfill`, the normal
+path, category, type, qualification, access, and provenance checks all apply.
+The role supplies no default body, storage, hook, dispatch, or runtime presence
+query, and a compatible declaration without `fulfill` does not satisfy it
+accidentally.
+
+Optionality and relaxation are independent:
+
+- `abstract` requires exactly one fulfillment;
+- `abstract relaxed` requires one or more distinct
+  qualification-specialized fulfillments;
+- `abstract optional` permits zero or one; and
+- `abstract optional relaxed` permits zero or more distinct
+  qualification-specialized fulfillments.
+
+The canonical combined order is `abstract optional relaxed`.
+
 **Requirements never merge silently.** One declaration may satisfy two
 identical roles only when both paths appear in its `fulfill` list. Conversely,
 no declaration satisfies an unlisted role merely because its shape matches.
@@ -1111,8 +1129,9 @@ use.
 
 ### Aligned: outer casting and `outer tracked`
 
-**Spelling family.** Contextual `outer`; `outer cast`; `unsafe outer cast`; and
-the type capability `outer tracked` in that natural word order:
+**Spelling family.** Contextual `outer`; the operations `outer cast`,
+`tracked outer cast`, and `unsafe outer cast`; and the type capability
+`outer tracked`:
 
 ```zax
 MyEngine :: type outer tracked {
@@ -1140,7 +1159,7 @@ MyCar :: type {
 myOuterCast final : ()(input : MyEngine &) = {
   myFast : MyCar & = input unsafe outer cast MyCar.engine
 
-  myChecked : MyCar & ? = input outer cast MyCar.engine
+  myChecked : MyCar & ? = input tracked outer cast MyCar.engine
   if ?myChecked
     use(myChecked.)
 
@@ -1149,20 +1168,22 @@ myOuterCast final : ()(input : MyEngine &) = {
 }
 ```
 
-**Two operations, two contracts.** `unsafe outer cast` uses the fixed member
-offset under programmer-asserted provenance; a false claim is undefined
-behavior. `outer cast` crosses one immediate boundary and returns an optional
-reference. When static proof is unavailable, checked casting requires the
-contained type to be `outer tracked` and performs the corresponding runtime
-check. Temporaries and expired origins are ineligible for either.
+**Three operations, three contracts.** Plain `outer cast` crosses one immediate
+boundary and returns a non-optional reference only when the selected language
+contract proves the exact named origin at that site. `tracked outer cast`
+explicitly uses the contained type's `outer tracked` placement capability and
+returns an optional result. `unsafe outer cast` uses the fixed member offset
+under programmer-asserted provenance; a false claim is undefined behavior.
+Temporaries and expired origins are ineligible for all three.
 
 **Contract-required static proof may remove tracking.** A selected language
 contract must define which proof classes every conforming compiler recognizes.
 The initial composition proof candidate is site-specific: every origin that can
 reach the cast operand is proven to be the exact resident member path named by
-the target. When the selected contract requires that proof, `outer cast` needs
-neither placement metadata nor a runtime check. Its result may remain optional
-in the source type while flow analysis proves presence at that site.
+the target. When the selected contract requires and establishes that proof,
+plain `outer cast` produces a non-optional result and needs neither placement
+metadata nor a runtime check. Without that proof, it is rejected rather than
+silently becoming a tracked optional operation.
 
 Whole-program proof that a type is instantiated only as one particular member
 is sufficient, but not necessary. Two same-typed members, arbitrary external
@@ -1181,13 +1202,17 @@ complete analysis algorithm.
 cleverness alone cannot change source validity:
 
 - if the selected mainline language contract classifies this case as proved,
-  every conforming compiler must accept the unmarked operation, and `unsafe` is
-  a redundant hard error that must be removed;
+  every conforming compiler must accept the non-optional unmarked operation,
+  `unsafe` is a redundant hard error that must be removed, and deliberately
+  retaining the optional tracked operation requires
+  `intent<redundant-outer-tracking>`;
 - if that contract does not classify the case as proved, the unchecked
-  operation still requires `unsafe` for mainline validity even when one compiler
-  independently proves the claim true; that compiler may optimize or issue an
-  advisory, but it may neither reject the retained assertion merely as
-  redundant nor accept its omission as mainline source; and
+  non-optional operation still requires `unsafe` for mainline validity even when
+  one compiler independently proves the claim true; the checked optional
+  operation is instead written `tracked outer cast`; that compiler may optimize
+  or issue an advisory, but it may neither reject the retained assertion merely
+  as redundant, accept its omission as mainline source, nor require intent
+  around the tracked operation; and
 - a compiler may offer a stronger private or shared extension contract, but it
   may make the additional proof canonical and reject `unsafe` only when source
   explicitly selects that extension contract.
@@ -1198,14 +1223,14 @@ removal because of an unselected stronger analysis would likewise create an
 unportable dialect. These limits do not protect a false assertion: an
 implementation that proves the asserted provenance impossible must still reject
 known-invalid source. The same contract-relative rule applies to statically
-proven result provenance in `unsafe via`.
+proven result provenance through ordinary, `tracked`, and `unsafe via`.
 
 **One boundary at a time.** An outer cast crosses a single immediate boundary.
 Nested outer casting repeats the cast. Possible full-path sugar remains future
 work and must never imply arbitrary ancestor discovery.
 
-**Outer tracking is compiler-owned placement state.** Where runtime checking is
-needed, the metadata records
+**Outer tracking is compiler-owned placement state.** Where
+`tracked outer cast` or `tracked via` is selected, the metadata records
 resident placement; it is not user payload copied unchanged. A standalone
 instance and a `Container.member` instance have different placements.
 Copying or moving into a destination establishes the destination's placement;
@@ -1215,23 +1240,31 @@ to the old resident remain invalid. This entails representation plus
 construction, copy, move, replacement, and destruction bookkeeping rather than
 a single stored pointer. The implementation representation is deliberately
 unspecified here. `outer tracked` explicitly permits those hidden storage and
-lifecycle costs. A checked `outer cast` that relies on tracking is runtime work
-rather than a zero-cost promise; a contract-required static proof may eliminate
-both the tracking requirement and runtime check. Unsafe raw byte relocation
-cannot be assumed to preserve a valid tracked relationship; ordinary lifecycle
-rules must establish the destination placement. No additional
-composition-specific lifecycle restriction is presently required.
+lifecycle costs. A tracked operation has checked optional semantics and may
+perform runtime work; ordinary as-if optimization may remove a redundant
+metadata read only when no observable behavior changes. A contract-proved plain
+operation requires neither tracking nor runtime checking. Retaining the tracked
+operation under selected-contract proof requires
+`intent<redundant-outer-tracking>`, which preserves its optional contract but
+does not force a physical metadata read. Unsafe raw byte relocation cannot be
+assumed to preserve a valid tracked relationship; ordinary lifecycle rules must
+establish the destination placement. No additional composition-specific
+lifecycle restriction is presently required.
 
-**Provenance in forwarding.** Proven `self` forwarding needs no cast at all. An
-explicit optional-result `via` may generate a checked outer cast and visibly
-accepts its cost and failure mode. Automatic exposure never generates an outer
-cast. An arbitrary non-self reference to a non-optional outer result requires a
-localized `unsafe via` unless the selected language or extension contract
-requires a sufficient origin proof. A merely smarter compiler may advise that
-the assertion is redundant but cannot change the portable spelling under the
-selected contract. An intent acknowledgement cannot authorize provenance. A
-future intent diagnostic for deliberately choosing the unsafe form when a
-checked alternative exists is safety policy, not composition semantics.
+**Provenance in forwarding.** Proven `self` forwarding needs no cast at all.
+Ordinary `via` may produce a non-optional outer result when the selected
+language or extension contract proves its origin. `tracked via` explicitly
+generates checked outer casting, retains an optional outer result, and accepts
+the tracked cost and failure mode. When selected-contract proof makes ordinary
+`via` available, the tracked form requires
+`intent<redundant-outer-tracking>`. Automatic exposure and `= existing` never
+generate tracked outer casting. An arbitrary non-self reference to an unproved
+non-optional outer result requires localized `unsafe via`. A merely smarter
+compiler may advise that the assertion is redundant but cannot change the
+portable spelling or require the intent category. Intent acknowledges the
+defined tracked choice but cannot authorize provenance. A future intent
+diagnostic for deliberately choosing the unsafe form when a tracked alternative
+exists is safety policy, not composition semantics.
 
 ### Aligned: shared lifecycle, evolution, and principles
 
@@ -1246,9 +1279,10 @@ construction above.
 member can create a published-name collision. Adding behavior changes the
 exposed set. Adding a preferred route can create a use-site ambiguity. Adding
 an overload to a family adopted by `existing family` or `via family` is an
-outer-surface compatibility event. Changing or adding a requirement can break
-existing fulfillments. None of these is ever resolved by source order; each
-surfaces as a diagnostic.
+outer-surface compatibility event. Changing a role can invalidate existing
+fulfillments. Adding a required role can break a container that does not fulfill
+it. None of these is ever resolved by source order; each surfaces as a
+diagnostic.
 
 **Broader principles this work confirms**, recorded without inventing umbrella
 doctrine:
@@ -1289,9 +1323,11 @@ established:
    name-wide outer-surface fence, not an originating-source-family filter.
 8. Direct, explicit, place-preserving data `via` may fulfill abstract value
    roles; automatic publication cannot fulfill anything.
-9. Ordinary abstract roles resolve omitted qualifier axes normally and have
-   one fulfillment. `abstract relaxed` leaves only otherwise defaulted outer
-   value or receiver qualifier axes open and may have distinct
+9. Ordinary abstract roles resolve omitted qualifier axes normally and require
+   one fulfillment. `abstract optional` permits that role to remain unfulfilled
+   while retaining explicit signature verification when used.
+   `abstract relaxed` independently leaves only otherwise defaulted outer value
+   or receiver qualifier axes open and may have distinct
    qualification-specialized fulfillments.
 10. A private `own` carrier may activate roles that public direct declarations
     fulfill, without publishing the carrier or making private abstract metadata
@@ -1305,13 +1341,17 @@ established:
 13. Generalized parameter-origin result contracts remain future lifetime and
     callable-contract work rather than a prerequisite for receiver-specific
     `self`.
-14. Checked outer casting remains one boundary at a time. Runtime checking uses
-    the programmer-visible `outer tracked` capability, while a proof required by
-    the selected source contract may remove both tracking and runtime work.
+14. Outer casting remains one boundary at a time. Plain `outer cast` requires
+    selected-contract exact-origin proof and returns a non-optional result.
+    `tracked outer cast` explicitly uses the programmer-visible `outer tracked`
+    capability and returns an optional result; under selected-contract proof it
+    requires `intent<redundant-outer-tracking>`. `unsafe outer cast` remains the
+    unchecked provenance assertion; `via` uses the same three-way distinction
+    for outer-result mapping.
 15. Portable `unsafe` classification belongs to the explicitly selected
     language or extension contract, not to incidental compiler cleverness.
     Stronger unselected proof may optimize or advise but cannot make portable
-    source ill-formed.
+    source ill-formed or require an intent acknowledgement.
 
 ### Deferred adjacent concerns
 
@@ -1405,8 +1445,8 @@ on `020`.
   [current composition](../../language/composition.md).
   *Activation:* repeated immediate `outer cast` operations become a material
   usability problem.
-  *Constraint:* checked outer casting remains one immediate boundary at a time, and
-  any sugar must not imply arbitrary ancestor discovery.
+  *Constraint:* outer casting remains one immediate boundary at a time, and any
+  sugar must not imply arbitrary ancestor discovery.
 
 - **Indirect delegation through pointers or other wrappers.**
   *Destination:* a future composition and pointer/optional integration review.
@@ -2268,3 +2308,146 @@ nested outer-cast sugar remain explicitly deferred.
   staged, unstaged, and combined whitespace checks pass.
 - The maintainer's staged comparison boundary remains unchanged. Every promotion
   edit and this result remain unstaged.
+
+### Post-promotion optional-role and tracked-provenance correction
+
+After the post-boundary promotion, maintainer review identified and aligned two
+remaining gaps:
+
+- **Optional abstract roles.** `abstract optional` retains an explicitly named
+  signature-verification target while permitting zero fulfillments.
+  `abstract optional relaxed` independently combines that minimum count with
+  qualification-specialized fulfillment.
+- **Explicit outer-provenance operations.** Plain `outer cast` and ordinary
+  outer-result `via` require selected-contract proof and produce non-optional
+  results. `tracked outer cast` and `tracked via` explicitly select checked
+  optional behavior through `outer tracked`. The existing unsafe forms remain
+  unchecked non-optional assertions.
+
+The second correction prevents compiler-private analysis from silently changing
+an operation's result shape or runtime mechanism. A tracked operation keeps its
+optional source type even when ordinary as-if optimization can remove a
+redundant metadata read. When selected-contract proof makes that tracked choice
+unnecessary, the later `intent<redundant-outer-tracking>` finding below requires
+the programmer to confirm it. Automatic `expose` and `= existing` do not
+manufacture tracked outer-result work.
+
+These findings refine the existing composition owner rather than requiring a
+new owner, router, or directory. Their current integrations are:
+
+- `language/composition.md`, `language/declarations-and-bindings.md`,
+  `language/function-invocation.md`, `language/lifetimes-and-references.md`,
+  `language/operator-catalog.md`, `language/qualifiers.md`,
+  `language/safety-and-analysis.md`, and `language/terms.md`; and
+- raw future-pressure updates in `project/raw/callable-selection.md`,
+  `project/raw/mutability-indexed-type-families.md`,
+  `project/raw/partial-types.md`, `project/raw/reflection.md`,
+  `project/raw/safety.md`, and `project/raw/structural-typing.md`.
+
+Recovery found that the interrupted editing harness had applied those fourteen
+owner and raw-file corrections but had not applied its claimed update to this
+working record. The reviewed earlier promotion was committed first, those
+fourteen corrections were then staged as the preserved comparison boundary, and
+the missing record plus targeted consistency repairs were left unstaged for
+maintainer review.
+
+Earlier dry-run and promotion passages above remain chronological records of the
+model they evaluated. Where they describe plain `outer cast` as an optional
+operation with an implicit tracked fallback, or imply that every abstract role
+requires fulfillment, this correction supersedes them. The current programmer
+model near the start of this record and the current conceptual owners carry the
+corrected result.
+
+#### Recovery validation
+
+**Result: PASS.**
+
+- Current owners consistently distinguish proof-required, tracked, and unsafe
+  outer casting and the corresponding three `via` result mappings.
+- Current role teaching records exact and relaxed required cardinalities,
+  optional exact and relaxed cardinalities, explicit fulfillment checks, and no
+  default implementation or runtime-presence meaning.
+- Relevant raw owners preserve reflection, partial-type, qualifier-family,
+  structural, callable-selection, and future safety pressure.
+- Local live Markdown link targets and heading anchors resolve, code fences
+  balance, and staged, unstaged, and combined whitespace checks pass.
+- The fourteen-file interrupted-harness correction remained staged while
+  recovery completion edits remained unstaged. No push, closure, archival, or
+  successor work was performed.
+
+### Post-recovery redundant outer-tracking intent
+
+Maintainer review aligned one further source-safety refinement. When the
+selected language contract, including an explicitly selected extension
+contract, establishes exact outer origin, a written `tracked outer cast` or
+`tracked via` is defined but suspicious: it requests an optional tracked
+operation where the ordinary proved form is available.
+
+The unacknowledged tracked operation is therefore an intent error. The ordinary
+repair is plain `outer cast` or ordinary `via` with its non-optional result. A
+programmer who deliberately wants the optional tracked contract instead writes:
+
+```zax
+possibleCar : Car & ? =
+  intent<redundant-outer-tracking>{
+    engine tracked outer cast Car.engine
+  }
+```
+
+For `tracked via`, the intent payload encloses the complete routed declaration.
+The category confirms the redundant tracked choice, retains its optional result,
+and accepts the applicable representation and lifecycle costs. It grants no
+provenance and, like every intent acknowledgement, does not force a physical
+metadata read when ordinary as-if optimization can remove one.
+
+The trigger belongs exclusively to selected-contract proof. Stronger private
+compiler analysis may optimize or advise, but cannot require the intent
+acknowledgement, change source validity, or change the tracked result shape. If
+the selected contract does not establish exact origin, tracking is necessary
+and `intent<redundant-outer-tracking>` is inapplicable. Selected-contract proof
+continues to make redundant `unsafe` non-acknowledgeable; this new category
+cannot preserve it.
+
+#### Documentation fit and promotion
+
+**Result: PASS.**
+
+No new owner, router, or directory is needed. Teachability requires each local
+path to present the proved plain form first, the acknowledged optional tracked
+choice second, and the no-proof direct tracked form separately so readers do not
+mistake intent for provenance authority or a mandatory runtime instruction.
+
+The correction is promoted through:
+
+- `language/composition.md` as the complete outer-provenance behavior and cost
+  owner;
+- `language/intent-acknowledgements.md` as the category registry and
+  acknowledgement-semantics owner;
+- `language/safety-and-analysis.md` for the reusable selected-contract versus
+  private-analysis boundary;
+- `language/function-invocation.md` and `language/operator-catalog.md` for
+  focused direct-entry teaching; and
+- `project/raw/callable-selection.md` and `project/raw/safety.md` for future
+  callable and proof-formalization pressure.
+
+This working record receives the corresponding aligned finding and promotion
+result. Closure, archival, and successor work remain separate.
+
+#### Promotion validation
+
+**Result: PASS.**
+
+- The composition owner leads with the proved plain operation, then shows the
+  acknowledged tracked choice and the no-proof direct tracked form separately.
+- The intent owner registers `redundant-outer-tracking`, defines its complete
+  expression and declaration payloads, and distinguishes it from provenance
+  authority and forced instrumentation.
+- Current safety and invocation teaching makes selected-contract proof the only
+  intent trigger; compiler-private proof can only optimize or advise.
+- Relevant current and raw text contains no surviving rule that permits
+  unacknowledged redundant tracking under selected-contract proof.
+- Live Markdown links and heading anchors resolve, code fences balance, current
+  owners do not cite numbered work or raw input, and staged, unstaged, and
+  combined whitespace checks pass.
+- The agent did not alter the maintainer's staged boundary while preparing this
+  eight-file correction.

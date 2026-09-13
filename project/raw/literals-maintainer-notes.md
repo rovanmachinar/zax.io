@@ -102,7 +102,13 @@ The intent is that normally a number, character, String, array, or another custo
 
 ## outstanding concern related to scalars
 
-One outstanding concern is compatibility. For example, if an `Integer` is returned, can it be used to satisfy a `U8` so long as the value is within range? Can the function return a `U8` directly and not allow it to be reinterpreted. I don't think it would be good policy to say `Integer` is special and flexible but `U8` or any other number is not. Plus this would prevent really big number encoding greater than an Integer being used. We might need a keyword, or some other kind of "signal" to tell the compiler "this is flexible" vs "this is strict". We might be able to repurpose something like `relaxed` for this case...
+Every literal operator function returns a concrete type. For creating number values, being able to define a number and have that assigned to any type is important, just like any other constant number can be assigned to a number type. The trouble is sometimes literary operators want to intentionally return a type that is only compatible with an expression that takes exactly that type.
+
+Other times the programmer might want to return an `Integer` but then allow that to be used in any number where the value is "compatible". In C++ you can use `explicit` to indicate if compatible conversion happens for an expression, or not.
+
+Zax will need something similar. I think the idea should be that return types can be coerced. Scalars should allow automatic coercing when declared they allow it. Maybe a keyword on the return value declaration could be `implicit` or `coercion` or `conversion`. I'm not sure `coercion` is a bit awkward to spell, but it's highly accurate.
+
+I would look for your input here...
 
 ## auto-merging of strings / arrays
 
@@ -114,7 +120,8 @@ String literals are defined within a namespace, or within a type. They can be de
 
 ## build-in literal operators
 
-Numerical literal operators:
+### Coerced numerical literal operators
+
 ```
 myBinary : U8 = b'11111111'         // `b` or `b2`; binary number; 01
 myOctal : U8 = o'377'               // `o` or `b8`; octal number; 01234567
@@ -131,6 +138,31 @@ myBase64 : U32 : b64'9+/'           // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmno
 myBase20 : U32 : b20'4D'            // 0123456789ABCDEFGHIJ / 0123456789abcdefghij
 myBase60 : U32 : b60'k9'            // 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
 ```
+
+### Non-coerced numerical literal operators
+
+I'm not sure we need this... The only reason I can see these being valuable would be if we wanted a constant decimal value to be declared as a fixed type. As literals do not contain expressions (at least without writing a literal operator that parsed expressions), this mean that a value could be fixed to a type and most likely a decimal number in base-10 otherwise the combinations get a bit crazy.
+
+```
+myBinary : U8 = u8'255'             // forced U8 type, expressed as decimal
+myBinary : U16 = u16'1024'          // forced U16 type, expressed as decimal
+myBinary : U32 = u16'991024'        // forced U32 type, expressed as decimal
+myBinary : U64 = u64'99102499'      // forced U64 type, expressed as decimal
+// ... other types we'd want...
+```
+
+But you could just as easily do:
+```
+myBinary : U64 = (991024 as U64)    // force the type at compile time, not as elegant as a fenced number
+                                    // also makes the value seem as if it wasn't a U64 and now it is...
+```
+
+There's only slight elegance to using u64'<constant-number>`, and those numbers must convert first before being able to be used in a calculation.
+
+I guess my question is, would the elegance be worth it? It might be, and if it is, what other literal operators might we want to have for the inventory of numbers we have?
+
+
+### Non-coerced strings and characters
 
 | character identity | string | internal | char encodings | string encodings |
 | --- | --- | --- | --- | --- |

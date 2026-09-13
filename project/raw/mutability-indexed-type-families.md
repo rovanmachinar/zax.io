@@ -203,6 +203,11 @@ qualification-specialized fulfillments. Each fulfills the role independently;
 the set does not create a qualification-erased declaration, a merged
 implementation, a dispatch table, or implicit overload selection.
 
+`abstract optional relaxed` changes the minimum fulfillment count from one to
+zero without changing those qualifier boundaries. If fulfillments are supplied,
+each remains an independently checked specialization; optionality does not
+manufacture a family-wide implementation.
+
 Future mutability-indexed family work must decide how those fulfilled surfaces
 relate to concrete mutable and immutable family variants and to generated
 specializations. It must not treat repeated fulfillment as evidence that one

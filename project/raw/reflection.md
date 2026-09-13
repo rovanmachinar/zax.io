@@ -125,8 +125,9 @@ member or callable category:
 - an exact fence, versus a non-executable `forbidden family` fence over the
   complete outer visible callable name or structured operator form, independent
   of source provenance;
-- an exact or `abstract relaxed` role, including which qualifier axes the latter
-  leaves open; and
+- a required or `abstract optional` role, independently of whether it is exact
+  or `abstract relaxed`, including which qualifier axes relaxation leaves open;
+  and
 - each direct, explicitly named fulfillment, including several independent
   qualification-specialized fulfillments of one relaxed role.
 
@@ -135,10 +136,12 @@ source presentation, and links among these categories. In particular, several
 relaxed-role fulfillments are not one merged implementation or a dispatch table,
 and family adoption is not singular adoption with an unrecorded wildcard.
 
-Reflection must also keep selected-contract static origin proof distinct from
-the `outer tracked` type capability and runtime placement state. No general
-reflection syntax, metadata schema, or compile-time/runtime availability for
-these composition facts is accepted by this raw input.
+Reflection must also keep selected-contract static origin proof, the plain
+proof-required `outer cast` or `via` operation, the `outer tracked` type
+capability and runtime placement state, and an explicitly checked
+`tracked outer cast` or `tracked via` operation distinct. No general reflection
+syntax, metadata schema, or compile-time/runtime availability for these
+composition facts is accepted by this raw input.
 
 The replacement-permission question above is a live consequence: `is final`
 deliberately reports the resolved type-use or referent-place truth, so a program

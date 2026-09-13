@@ -115,10 +115,13 @@ authority permits.
 
 ## Composition-derived diagnostic pressure
 
-Current [composition](../../language/composition.md) uses `unsafe via` for an
-unproved non-optional outer result mapping and `unsafe outer cast` for
-programmer-asserted immediate outer provenance. An `intent` acknowledgement
-cannot grant either authority.
+Current [composition](../../language/composition.md) distinguishes three
+immediate outer-provenance operations. Plain `outer cast` or outer-result `via`
+requires selected-contract proof and produces a non-optional result.
+`tracked outer cast` or `tracked via` performs the checked optional operation
+through the `outer tracked` capability. `unsafe outer cast` or `unsafe via`
+asserts unproved non-optional provenance. An `intent` acknowledgement cannot
+grant unsafe authority.
 
 Future safety work must formalize the initial site-specific exact-origin proof
 candidate. At one cast site, every origin that can reach the operand must be the
@@ -127,31 +130,43 @@ arbitrary parameters, callbacks, raw-pointer or opaque ingress, and exported
 standalone-member acceptance can prevent that proof. Unrelated external values
 that cannot reach the site do not.
 
-When the selected contract requires that proof, checked `outer cast` needs
-neither `outer tracked` placement metadata nor a runtime check. The result type
-may remain optional while flow analysis proves presence at that site. The exact
-mandatory proof classes and algorithms remain future specification and
-implementation work.
+When the selected contract requires and establishes that proof, plain
+`outer cast` needs neither `outer tracked` placement metadata nor a runtime
+check and produces a non-optional result. Without that proof, it is rejected
+rather than silently changing result shape or mechanism. The exact mandatory
+proof classes and algorithms remain future specification and implementation
+work.
 
 Required source spelling must remain portable under the selected contract:
 
 - a mainline contract-required proof requires the safe unmarked form and makes a
-  redundant `unsafe` a hard error;
-- without contract-required proof, the unchecked form still requires `unsafe`
-  even when one compiler privately proves the claim;
+  redundant `unsafe` a hard error; deliberately retaining tracked optional
+  semantics requires `intent<redundant-outer-tracking>`;
+- without contract-required proof, plain `outer cast` is unavailable; checked
+  optional behavior requires `tracked outer cast`, while the unchecked
+  non-optional form still requires `unsafe` even when one compiler privately
+  proves the claim;
 - a stronger compiler or shared extension may make that proof canonical only
   when source explicitly selects the extension contract; and
-- a proved-false assertion is always invalid.
+- a proved-false plain or unsafe claim is invalid, while the checked tracked
+  operation produces absence.
 
 Private stronger analysis may optimize or advise, but cannot silently change
-mainline source validity. The same matrix applies to non-optional outer-result
-provenance in `unsafe via`.
+mainline source validity, require a redundant-tracking intent acknowledgement,
+or change the optional result shape of a tracked operation. The same matrix
+applies to outer-result provenance through ordinary, `tracked`, and
+`unsafe via`.
+
+The intent category acknowledges the selected-contract-proved redundancy and
+the optional tracked contract; it grants no provenance and does not force a
+physical metadata read. Future proof formalization must apply it at the portable
+source contract boundary rather than making it compiler-cleverness-dependent.
 
 Future safety and diagnostic work may decide whether deliberately choosing an
-unsafe form when an available checked outer cast could express the same
+unsafe form when an available `tracked outer cast` could express the same
 operation should require a dedicated intent acknowledgement or advisory
 diagnostic. That future policy must not make intent authorize provenance,
-change the checked form's optional result, or turn a known-false relationship
+change the tracked form's optional result, or turn a known-false relationship
 into a valid unsafe claim.
 
 Future callable preconditions and postconditions add proof pressure:

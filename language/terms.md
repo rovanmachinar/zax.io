@@ -665,15 +665,16 @@ casts outward to the immediate container that holds the member at a named
 physical path:
 
 ```zax
-car : Car & ? = engine outer cast Car.engine
+car : Car & = engine outer cast Car.engine
+possibleCar : Car & ? = engine tracked outer cast Car.engine
 ```
 
-The checked `outer cast` returns an optional reference. A proof mandated by the
-selected language contract may establish the exact origin statically and avoid
-runtime work; otherwise an `outer tracked` member type supplies placement
-metadata for a runtime check. `unsafe outer cast` instead asserts that the
-placement is correct. The exact path matters when a container stores several
-members of the same type.
+Plain `outer cast` requires a proof mandated by the selected language contract
+and returns a non-optional reference without runtime tracking.
+`tracked outer cast` explicitly uses an `outer tracked` member type's placement
+capability and returns an optional reference. `unsafe outer cast` instead
+asserts that the placement is correct. The exact path matters when a container
+stores several members of the same type.
 
 The word `outer` has a separate contextual type use inside an abstract
 composition role, where it denotes the immediate container that activates the

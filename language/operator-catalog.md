@@ -44,7 +44,7 @@ Zax recognizes:
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
-| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `unsafe outer cast` |
+| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -393,18 +393,21 @@ These exact binary phrase forms use ordinary phrase precedence and are protected
 composition operations:
 
 ```zax
+proved : Container & =
+  knownMemberReference outer cast Container.member
 checked : Container & ? =
-  memberReference outer cast Container.member
+  uncertainMemberReference tracked outer cast Container.member
 asserted : Container & =
-  memberReference unsafe outer cast Container.member
+  assertedMemberReference unsafe outer cast Container.member
 ```
 
 The right operand is an exact resident stored-member path, not a type. User code
-cannot overload either form. `outer cast` checks whether the input occupies that
-path and returns an optional reference. When the selected language contract
-mandates static proof that every origin reaching this site is that exact path,
-the checked form needs neither `outer tracked` placement metadata nor a runtime
-check. Otherwise `outer tracked` and runtime checking provide the fallback.
+cannot overload any form. Plain `outer cast` requires selected-contract static
+proof that every origin reaching this site is the exact path and produces a
+non-optional result without tracking. `tracked outer cast` explicitly uses the
+`outer tracked` placement capability and returns an optional result. If the
+selected contract also proves that tracked operation's exact origin, retaining
+it requires `intent<redundant-outer-tracking>`; compiler-private proof does not.
 `unsafe outer cast` trusts the programmer's provenance assertion instead.
 Complete behavior belongs to
 [Zax composition](composition.md#outer-casting-to-an-immediate-container).
