@@ -460,6 +460,12 @@ Resolution does not:
 - continue after incomplete destruction; or
 - expose partial lifecycle state to ordinary code.
 
+This exact boundary applies the reusable
+[Panic is not alternate control flow](principles.md#panic-is-not-alternate-control-flow)
+principle. A concept owner links here when lack of unwinding changes local
+construction, mapping, disposal, or replacement behavior rather than redefining
+panic independently.
+
 Panic categories can be enabled or disabled independently. A future narrow
 contract may promise that one selected panic condition cannot occur and permit
 the compiler to omit its check. If the condition occurs anyway, behavior is

@@ -146,6 +146,10 @@ Integer review adds these pressures:
 
 `partial` remains add-only. If stored members are ever permitted, all pieces
 must be known before layout and representation-compatible casts are validated.
+The completed type must then be re-evaluated under
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md);
+partial/import order cannot select shape, posture, anchor validity, or reshape
+mapping.
 
 Current composition publication and exposure, exact fences, and family fences
 belong to [Zax composition](../../language/composition.md), not to `partial`.

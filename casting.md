@@ -6,7 +6,7 @@
 Current qualifier-preservation, ordinary promise-strengthening, and explicit
 unsafe-weakening constraints are defined by
 [Zax qualifiers](language/qualifiers.md). The complete cast catalog and the
-structural compatibility proposals on this page remain legacy input.
+remaining nonstructural conversion proposals on this page remain legacy input.
 
 > **Disposition.** `as` and `unsafe as` are now current open language-defined
 > [operator phrases](language/operator-phrases.md) whose exact forms are in the
@@ -15,10 +15,12 @@ structural compatibility proposals on this page remain legacy input.
 > [type argument](language/function-invocation.md#type-parameter-slots) rather
 > than a discarded value parameter.
 >
-> Complete cast semantics — the conversion lattice, overflow and panic behavior,
-> structural compatibility, and disabling generated conversions — remain legacy
-> and future casting work. Nothing on this page is current design except where a
-> current owner is linked.
+> Safe structural recasting, compatibility postures, source anchors, coercive
+> layout conversion, and view-shaped `unsafe cast` are now current in
+> [Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md).
+> The remaining conversion lattice, string behavior, and disabling generated
+> conversions remain legacy/future casting work. Nothing else on this page is
+> current design except where a current owner is linked.
 >
 > Current `as copy`, `as deep`, `as move`, and `as last` source restatement is
 > defined by [Zax transfer stances](language/transfer-stances.md). Those forms do
@@ -390,120 +392,24 @@ funcByRef(myTypePointerToNothing.)                  // PANIC AT RUNTIME
 ````
 
 
-### `type` casting using `as`
+### Structural shape and layout conversion
 
-The legacy material below explores layout-based conversion between structurally
-compatible types. Structural identity, name relevance, layout equivalence,
-qualifier-aware and qualifier-erased compatibility, and anonymization remain
-future design. The details in this section are therefore candidate input rather
-than current compatibility rules.
+The former structural `as` and `unsafe as` proposal on this page has been
+consumed and superseded.
 
-Current qualifier constraints still apply:
+Current programmer-facing behavior is defined by
+[Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md):
 
-- ordinary conversions may strengthen promises but may not increase authority;
-- `writable` may become `readonly`;
-- ordinary pointer/reference conversion may not change `readonly` to `writable`,
-  the final/varying stance of the same referent place, or `immutable` to
-  `mutable`;
-- explicit unsafe conversion may weaken those qualifications;
-- a mutable alias does not safely become immutable while mutable aliases may
-  remain; and
-- a new by-value result may use different mutability only when construction,
-  copying, or a consuming transition establishes the required guarantee.
+- distinct identity remains separate from direct and flattened shape;
+- safe low-overhead recasting uses explicit compatibility postures, optional
+  source anchors, and protected `as shape`/`as layout` forms;
+- noncontiguous mapping and reordering use `-<>-` and `reshape`;
+- checked-layout semantic coercion uses local coercive `unsafe as`; and
+- unchecked reinterpretation uses view-shaped `unsafe cast`.
 
-A newly constructed by-value destination has its own independently resolved
-final/varying stance. That is not a conversion of the source place.
-
-Legacy structural considerations:
-* types declared as `once` are ignored
-* functions declared as `final` do not need to match in declaration with the exception of that captured data must also match
-    * captured data types must be identical and in the same type order (otherwise value copy of the captured data cannot work)
-* pointers and references must be of equivalent types
-* reference can become pointers of the same `type` but pointers cannot become references (due to the assumption that pointers might point to `Nothing` whereas references always point to a valid instance)
-* whether non-storage qualifications participate in structural compatibility remains unresolved
-* the source `type` can have more contained values than the `destination` type and still match
-* type [slicing](https://en.wikipedia.org/wiki/Object_slicing) can occur if a by-value copy casting is done (which may be desirable in some circumstances to extract the data out of a container safely)
-* casting `as` a by-value type will treat the source `type` as a `type` of `destination` and will use the copy constructor of the destination type to fulfill the request
-* casting `as` a by-value `type` will not be allowed if the destination `type` has disabled copy construction
-* a variable's `private` keyword is ignored and a `private` value can be accessed as non-`private` values in the destination (if the destination does not declare the new variable for the `type` as `private`)
-    * `private` is used to hide variables from view and should never be used as a method to keep data secret
-* the memory layout and alignment of a `type` up to the final type of the destination must be identical
-* narrowing or broadening of intrinsic types during a conversion is not allowed on contained types as the conversion would not be legal (since the types do not share a common memory layout)
-
-````zax
-MyType :: type {
-    category final once : String
-
-    age : Integer
-    name : String
-    height : Float
-}
-
-CompatibleType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-IncompatibleType :: type {
-    name : String
-    height : Float
-}
-
-myType : MyType
-
-compatibleType := myType as CompatibleType     // allowed
-
-// ERROR: the destination type is not compatible with the source type
-incompatibleType := myType as IncompatibleType
-
-byRefValue1 := myType as CompatibleType &    // allowed
-
-// ERROR: not all of the values in `MyType` are available in `CompatibleType`
-byRefValue2 := compatibleType as MyType &
-````
-
-
-### `type` casting using `unsafe as`
-
-A `type` can be force casted from one `type` to another using the `unsafe as` operator. A compiler will not make any validation that a source and destination type is compatible and using the `unsafe as` operator to convert one `type` to another can lead to undefined behavior.
-
-If an `unsafe as` operator is performing a by-value cast, a source type will be treated as a destination reference type and given as an argument to a copy constructor of the destination type.
-
-Warning: extreme caution must be used with the `unsafe as` operator as it is considered unsafe (which is implied in the name of the operator); the `unsafe as` operator is provided as a tool for programmers who understand the implications of treating raw memory of one type as raw memory of an entirely different type;
-
-The example below performs unsafe `unsafe as` conversions which will likely result in undefined behaviors.
-
-````zax
-MyType :: type {
-    category final once : String
-
-    age : Integer
-    name : String
-    height : Float
-}
-
-CompatibleType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-IncompatibleType :: type {
-    name : String
-    height : Float
-}
-
-myType : MyType
-
-compatibleType := myType unsafe as CompatibleType        // safe but discouraged
-
-// WARNING: undefined behaviors will occur during copy construction
-incompatibleType := myType unsafe as IncompatibleType    // unsafe
-
-byRefValue1 := myType unsafe as CompatibleType &         // safe but discouraged
-
-// WARNING: undefined behaviors will occur if `byRefValue2` is accessed
-byRefValue2 := compatibleType unsafe as MyType &         // unsafe
-````
+The old positional-prefix matching, private-member bypass, broad structural
+`unsafe as`, and unqualified by-value raw cast rules no longer remain as
+candidate alternatives here.
 
 
 ### `as` operator overloading

@@ -634,6 +634,37 @@ diagnostics.
 
 Exact option/directive syntax remains future analysis-control work.
 
+## Structural scalar compatibility
+
+An integer scalar's safe structural format includes:
+
+- logical bit width;
+- signedness;
+- two's-complement signed encoding;
+- zero fractional-bit position for the current integer family;
+- endianness role; and
+- storage-envelope, alignment, non-value-bit, and normalization rules.
+
+Every applicable property must match for safe scalar shape or layout
+compatibility. Distinct public or programmer identities may retain equal format
+without becoming interchangeable; compatibility posture or an explicit
+operation supplies any permitted crossing.
+
+Integer coercion deliberately uses a reduced relationship. Equal logical bit
+width and sufficient compatible target storage permit local coercive
+reinterpretation even when signedness, future fixed fractional position, or
+endian meaning differs:
+
+```zax
+signed unsafe as coercive layout U32
+```
+
+Coercion is unsafe, target-sensitive, and never a declared posture. Enum
+directions and semantic endian operations remain controlled by their own type
+families. Future fixed-point and binary floating-point work will finalize their
+property lists and recheck this integer list. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#scalar-compatibility).
+
 ## Enum and endian boundaries
 
 An exact integer such as `I57` or a language-provided integer role such as

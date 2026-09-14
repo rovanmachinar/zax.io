@@ -49,7 +49,8 @@ Examples include:
 - complete result declarations selecting a result family;
 - explicit `copy`, `deep`, `move`, reference, or `last` intent;
 - selectable memory and lifetime policies; and
-- future structural, generic, and metaprogramming relationships.
+- structural compatibility postures and transformations; and
+- future generic and metaprogramming relationships.
 
 [Function invocation](function-invocation.md) applies this principle by
 diagnosing incomparable call candidates and accepting explicit labels,
@@ -214,11 +215,32 @@ Examples include:
 - multiple function results not becoming an implicit tuple;
 - forwarding results to constructor parameters not populating stored members by
   result label; and
-- future promotion into an anonymous structural value requiring an explicit
-  operation.
+- structural recomposition using `-<` when several results should become one
+  value; and
+- structural transformation using `-<>-` when one value must change shape.
 
 Convenient transformations may exist, but shape changes affect types, names,
 layout, construction, and lifetime. Source should reveal that boundary.
+See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#opening-and-packing-structural-values).
+
+## Panic is not alternate control flow
+
+> Panic blocks the operation that encountered its condition. A matching helper
+> may repair the condition and let that same operation resume; otherwise the
+> process crashes gracefully.
+
+Panic never skips the failed operation, returns a substitute, unwinds scopes or
+completed members, rolls work back, or returns partial lifecycle state to
+ordinary execution.
+
+This keeps APIs from treating panic as a hidden exception channel and prevents
+cleanup, replacement, result, and structural-transformation rules from relying
+on unwinding that Zax does not perform. Operations that need recoverable absence
+or failure expose an ordinary result such as an optional or report instead.
+
+Exact proof, unsafe-control, category, and helper behavior belongs to
+[Zax safety and analysis](safety-and-analysis.md#panic-boundary).
 
 ## High-level expression does not hide fundamentals
 

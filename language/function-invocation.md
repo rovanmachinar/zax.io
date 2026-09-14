@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, and type-default inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -358,6 +358,19 @@ This is an input-mapping step, not callable or operator discovery. Complete
 route declaration, qualification, nesting, and ambiguity behavior belongs to
 [Zax composition](composition.md#expected-type-projection-with-preferred).
 
+### Structural compatibility posture
+
+After discovery supplies one concrete parameter type, an argument's
+compatibility posture may make a safe binary-compatible recast viable. Exact
+identity remains better than posture-based adaptation. Posture never widens
+callable or operator discovery, invents an expected type, or ranks several
+non-identity conversions by apparent closeness.
+
+A local parameter receives the posture written on its own declaration after
+binding; it does not inherit the caller's posture automatically. Complete
+posture and anchor behavior belongs to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#compatibility-posture).
+
 An explicit composition adapter uses the same projection rule when its visible
 outer parameter must map to a contained input:
 
@@ -506,6 +519,44 @@ send((temporary : Buffer), inspect(temporary))
 
 Ordinary declaration and visibility behavior is defined by
 [Zax declarations and bindings](declarations-and-bindings.md).
+
+### Construction packets as arguments
+
+A bare construction packet has no independent expression type. Once callable
+mapping identifies one concrete expected parameter type, however, that parameter
+supplies the packet's destination:
+
+```zax
+draw final : ()(point : Point &) = {
+}
+
+draw(point: [{ .x = 4, .y = 5 }])
+draw([{ .x = 4, .y = 5 }]) // positional form
+```
+
+This constructs an actual `Point` temporary and binds it through the selected
+parameter. It is not an anonymous structural value or a posture-based
+conversion.
+
+Candidate selection tests packet viability independently for each already
+discovered parameter type. If several callable candidates remain equally viable,
+the call is ambiguous rather than letting the packet invent a destination.
+Nested packets receive their destinations recursively from the selected
+construction plan.
+
+The explicit typed forms remain available:
+
+```zax
+draw((: Point = [{ .x = 4, .y = 5 }]))
+draw(point: (: Point = [{ .x = 4, .y = 5 }]))
+```
+
+`(: Point = ...)` is an anonymous typed declaration expression. The
+`point:` in the final call is the named parameter mapping; the two roles are
+independent.
+
+Complete packet behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construction-packets).
 
 ## Evaluation and immediate binding
 
@@ -1378,8 +1429,11 @@ text: existingText = produce()
 labeled source result and routes it into `existingText` through ordinary
 assignment.
 
-These operations are not atomic. If an earlier destination completes and a later
-one panics, the earlier effect remains observable.
+These mappings execute in their defined order and are not transactional. A
+panic does not roll an earlier effect back or unwind to the caller: a matching
+helper repairs the blocked operation and lets it resume, otherwise the process
+crashes gracefully. See
+[Zax safety and analysis](safety-and-analysis.md#panic-boundary).
 
 ### Typed destinations
 
@@ -1457,18 +1511,17 @@ inner : Item?
 
 consumeOptional(inner) // ordinary same-type Item? argument
 consumeNested((: Item? ? = [{ inner }]))
+consumeNested([{ inner }])
 ```
 
-A bare packet cannot fill the argument:
+The final two calls perform the same deliberate outer wrapping. The explicit
+declaration spells `Item? ?`; the short form receives that destination from the
+selected `consumeNested` parameter. If callable selection cannot establish one
+unambiguous expected type, the bare packet remains invalid.
 
-```zax
-consumeNested([{ inner }]) // error: the packet has no destination
-```
-
-The extra declaration is required only because the second call adds optional
-depth. "Anonymous" describes the declaration's missing binding name before
-`: Item? ?`; it does not mean that `Item? ?` is an anonymous structural type or
-that the named source `inner` lacks a name.
+In the explicit form, "anonymous" describes the declaration's missing binding
+name before `: Item? ?`; it does not mean that `Item? ?` is an anonymous
+structural type or that the named source `inner` lacks a name.
 
 The packet supplies constructor inputs rather than producing an anonymous
 value. Optional depth intent is defined by
@@ -1582,6 +1635,126 @@ first result from the second producer maps to destination four. Its remaining
 result must permit omission. Mapping does not backtrack and discard an earlier
 optional result to make room.
 
+### Structural result mapping
+
+Compatibility posture belongs to each producer result declaration. It may make
+that result viable for an already known compatible destination at its immediate
+mapping boundary. Exact identity remains better; posture does not make result
+labels or later uses invent a destination.
+
+A source-result selector may anchor within one result:
+
+```zax
+consume(
+  packet anchor .payload.point: point:,
+  status: = produce()
+)
+```
+
+The general form is:
+
+```text
+<source-result label> anchor <source-path>: <destination>:
+```
+
+The path belongs to the selected source result. A declared default result anchor
+may supply it. One result slot remains consumable only once, and an anchored
+reference cannot escape a by-value result temporary.
+
+`-<` explicitly recomposes remaining result slots into one named or anonymous
+value. It is not ordinary grouping and does not change the producer's original
+slot identities before the operation.
+
+Transformation belongs to one selected result, never to the complete producer
+sequence. A transformed entry preserves ordinary source-to-destination routing
+order:
+
+```text
+<source-result label>: -<>- [<reshape> -<>-] <destination>
+```
+
+For example:
+
+```zax
+Point :: type {
+  x : I32
+  y : I32
+}
+
+DevicePoint :: type {
+  deviceX : I32
+  deviceY : I32
+}
+
+PointMapping :: reshape {
+  deviceX: x:
+  deviceY: y:
+}
+
+Size :: type {
+  width : I32
+  height : I32
+}
+
+DeviceSize :: type {
+  deviceWidth : I32
+  deviceHeight : I32
+}
+
+SizeMapping :: reshape {
+  deviceWidth: width:
+  deviceHeight: height:
+}
+
+consumeParts final : ()(
+  point : Point,
+  size : Size,
+  status : Boolean
+) = {
+}
+
+produceParts final : (
+  oldPoint : DevicePoint,
+  oldSize : DeviceSize,
+  status : Boolean
+)() = {
+}
+
+consumeParts(
+  oldPoint: -<>- PointMapping -<>- point:,
+  oldSize: -<>- SizeMapping -<>- size:,
+  status: = produceParts()
+)
+```
+
+The final `= produceParts()` remains the ordinary one-producer routing boundary.
+`status` maps directly; only the two entries containing `-<>-` transform.
+
+An explicit leading bare `:` selects the current positional source-result cursor
+before the destination declaration:
+
+```zax
+: -<>- PointMapping -<>- myPoint : Point,
+: -<>- SizeMapping -<>- mySize : Size,
+status: = produceParts()
+```
+
+A one-result invocation is an ordinary expression source:
+
+```zax
+producePoint final : (
+  oldPoint : DevicePoint
+)() = {
+}
+
+myPoint : Point =
+  -<>- PointMapping -<>- producePoint()
+```
+
+Complete shape, posture, anchor, decomposition, recomposition, transformation,
+and reshape semantics are defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+
 ## Forwarding results
 
 ### Forwarding into another call
@@ -1655,7 +1828,9 @@ pair : Pair = [{
 This selects a compatible `Pair` constructor. It does not implicitly pack result
 labels into stored members or create one anonymous structural value.
 
-An explicit structural-promotion operation remains future structural-type work.
+Use explicit `-<` recomposition when the remaining results should become one
+structural value; see
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#recompose-several-results-with).
 
 ## Narrow expected-result selection
 

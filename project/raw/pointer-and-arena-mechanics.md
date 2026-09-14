@@ -281,6 +281,37 @@ Array operation contracts and element-place stability are retained by
 work must consume those guarantees rather than inventing a hidden stability
 promise.
 
+## Structural slicing and copied pointers
+
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md)
+treats a pointer as one atomic leaf and leaves pointer-copy validity to the
+pointer and lifetime contract.
+
+Structural slicing can separate a copied pointer from storage it references:
+
+```zax
+Packet :: type {
+  payload : Buffer
+  cursor : Byte *
+}
+
+CursorOnly :: type {
+  cursor : Byte *
+}
+```
+
+Future pointer work must decide whether copying `cursor` while excluding
+`payload` is:
+
+- safe because another proved owner preserves the target;
+- valid through a managed or anchored relationship;
+- unavailable because lifetime cannot be proved; or
+- permitted only through local unsafe responsibility.
+
+Destination copy behavior may repair, retain, or reject the relationship.
+Structural conversion does not prohibit pointer-bearing slices and does not
+invent another pointer model.
+
 ## Activation and retirement
 
 Activate this input when arena interfaces, control-block customization, unsafe

@@ -100,21 +100,22 @@ For operands of one integer identity `T`:
 
 Subtraction and multiplication use the corresponding forms and behavior.
 
-The specialized report contains:
+Each concrete integer identity receives compiler-hidden report identities shared
+across operations with the same report policy and schema. The wrapped and
+saturated specialized policies each use:
 
 ```zax
-// Conceptual anonymous result shape.
-<anonymous> :: type {
+// Conceptual compiler-hidden identity for one policy and T.
+<hidden report type> :: type {
   value : T
   overflowed : Boolean
 }
 ```
 
-The combined report contains:
+The combined policy uses:
 
 ```zax
-// Conceptual anonymous result shape.
-<anonymous> :: type {
+<hidden combined report type> :: type {
   wrapped : T
   saturated : T
   overflowed : Boolean
@@ -128,7 +129,15 @@ Through the protected presence/status behavior:
 - `?report` means no overflow; and
 - `!report` means overflow.
 
-Exact anonymous structural identity remains future structural-type work.
+The report type is anonymous on the caller-facing source surface but has one
+stable compiler-owned identity. Addition, subtraction, and multiplication may
+return the same hidden identity when their concrete `T`, policy, and schema
+match. Another integer identity receives another report type. A caller may use
+`type of` to create a visible alias.
+
+Every generated report defaults to `compatible strict`. A coincidentally shaped
+programmer type does not acquire the report's protected `?`/`!` behavior. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#shared-hidden-arithmetic-reports).
 
 ## Signedness counterpart
 
@@ -643,6 +652,5 @@ contract, or an implementation mapping.
 
 Exact forms and precedence remain in the
 [general operator catalog](operator-catalog.md). Multiword operations,
-reversal, masked extraction/deposit, pointer difference validity, recoverable
-panic, build-option syntax, and exact anonymous report identity remain future
-work.
+reversal, masked extraction/deposit, pointer difference validity, panic-helper
+and category syntax, and build-option syntax remain future work.

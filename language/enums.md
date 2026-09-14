@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing strict, relaxed, flags, and language-supplied semantic enum behavior; not a formal grammar, ABI contract, or specification |
 | Implementation State | Not established by this repository |
 | Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; enum-domain selection and coverage facts; enum costs, diagnostics, and source stability |
-| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
+| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
 | Source / Provenance | Current identity, integer, declaration, operator, endianness, safety, and intent designs, incorporating reviewed legacy enum intent |
 
 ## Start with known values
@@ -452,6 +452,30 @@ second nested identity boundary.
 The owner may use this place to establish a validated or intentionally
 reachable unnamed value without routing its own implementation through public
 `unsafe from`.
+
+### Structural compatibility remains directional
+
+An enum may serve as a structural compatibility source only for its exact
+immediate underlying scalar type. That direction exposes the represented
+underlying relationship without granting reverse admission:
+
+- the underlying scalar does not automatically become the enum;
+- one enum does not safely become another enum merely because their backing
+  formats match; and
+- coercive enum-to-enum conversion is available only when the destination
+  ordinarily admits every value of its compatible backing representation.
+
+The coercive rule is directional. A relaxed or other fully open-admission
+destination may accept a source enum after their backing scalars satisfy the
+applicable coercion requirements. A strict, flags, or otherwise restricted
+destination does not become coercion-compatible merely because `unsafe from`
+could bypass its ordinary admission policy.
+
+Semantic enums retain their specialized projection meaning. In particular, an
+endian enum's `as BackingType` decodes its number while `underlying value`
+extracts raw storage; structural recasting does not replace either operation.
+Complete posture, shape, layout, and coercion behavior is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#enums-are-directional).
 
 ## Comparisons and operation selection
 

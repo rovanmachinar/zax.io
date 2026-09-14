@@ -456,6 +456,20 @@ Ordinary source does not require a programmer-supplied proof for every
 calculation. A lint cannot change arithmetic semantics. Checks may always be
 optimized away when the compiler proves the selected operation is preserved.
 
+## Structural transform non-overlap pressure
+
+[Zax structural transformation](../../language/structural-shapes-and-compatibility.md#overlap-is-handled-statically)
+uses conservative intermediate capture when source and destination may overlap.
+It emits no runtime range check merely to choose a cheaper transform.
+
+Future analysis-control work may define an explicit non-overlap contract for a
+transform whose source cannot be copied, moved, or otherwise captured. That
+contract would assert a semantic alias fact, affect generated operations, and
+produce undefined behavior when false. It is not a lint suppression or general
+optimizer hint.
+
+No exact category name or syntax is established here.
+
 ## What this input does not decide
 
 This file does not establish:

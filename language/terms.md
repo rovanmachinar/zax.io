@@ -113,6 +113,27 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
+## Compatibility anchor
+
+A **compatibility anchor** is a source-relative resident-storage path that
+selects where one contiguous compatible region begins. The expected destination
+supplies the region's required extent and resulting type.
+
+It is distinct from a mixfix receiver anchor, numeric type anchor, and pointer
+ownership anchor. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#select-one-contiguous-region-with-anchor).
+
+## Compatibility posture
+
+A **compatibility posture** is declaration metadata stating which safe
+binary-compatible structural relationship a source may offer when another
+concrete type is already expected. Omission resolves to
+`compatible strict`.
+
+Compatibility posture is not type identity and is distinct from transfer
+stance. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#compatibility-posture).
+
 ## Commitment boundary
 
 A **commitment boundary** selects one concrete integer type for an uncommitted
@@ -448,6 +469,17 @@ obligations. See
 [Zax function invocation](function-invocation.md), and
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
 
+## Panic
+
+A **panic** blocks the operation that encountered its condition. A matching
+helper may repair the condition and let that same operation resume and complete;
+otherwise the process crashes gracefully.
+
+Panic never skips the operation, returns a substitute, unwinds scopes or
+completed members, rolls work back, or returns partial lifecycle state to
+ordinary execution. See
+[Zax safety and analysis](safety-and-analysis.md#panic-boundary).
+
 ## Open-ended raw allocation
 
 An **open-ended raw allocation** has no declaration-attached or managed
@@ -759,6 +791,15 @@ every normal exit. A result initializer may opt into construction before body
 entry; that constructed/unconstructed entry state participates in compatible
 prototype behavior. See
 [Zax function invocation](function-invocation.md#result-slots).
+
+## Reshape
+
+A **reshape** is a no-storage, directional declaration mapping source member
+paths to destination member paths for `-<>-` transformation.
+
+It has no runtime instance or anchor. Explicit entries use source-to-destination
+order, and reversing a map requires another declaration. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#reusable-mapping-with-reshape).
 
 ## Reconstructive replacement
 

@@ -305,6 +305,13 @@ Questions include:
 12. What source and binary stability expectations apply when one variant changes
     layout?
 
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md)
+now supplies the baseline for these questions: concrete identity remains outside
+shape; every safe participating leaf preserves complete type-side
+qualifications; differently represented variants cannot be same-storage views;
+and construction is distinct from compatibility recasting. Future family work
+must refine participation without replacing those rules.
+
 ## Default-selection questions
 
 The legacy material proposed selecting one variant as the family default.

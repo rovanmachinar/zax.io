@@ -725,6 +725,56 @@ consume(view as move)
 The alias must still preserve the referent's actual mutability, place, and access
 qualifications.
 
+### Compatible whole values and anchored regions
+
+A whole-source structural recast preserves its offered transfer stance.
+
+An anchor can select one interior region while excluding surrounding state:
+
+```zax
+PayloadSummary :: type {
+  payloadSize : U32
+  payloadChecksum : U32
+}
+
+Packet :: type {
+  header : Integer
+  payloadSize : U32
+  payloadChecksum : U32
+  trailer : Integer
+}
+
+consumePayloadSummary final : ()(
+  payload : PayloadSummary readonly & copy
+) = {
+}
+
+packet : Packet last compatible shape
+consumePayloadSummary(packet) // error: complete Packet is not PayloadSummary
+consumePayloadSummary(packet.payloadSize) // error: payloadSize is only U32
+consumePayloadSummary(packet anchor .payloadSize)
+```
+
+The anchor starts at `payloadSize` and spans the sibling
+`payloadChecksum` member because the consumer already requires one complete
+`PayloadSummary`. No `PayloadSummary` member exists inside `Packet`;
+`packet.payloadSize` alone cannot supply it.
+
+The anchored view excludes `header` and `trailer`. It therefore receives
+ordinary `copy` rather than inheriting the complete `Packet`'s `last`:
+terminally consuming the middle region alone might leave excluded state unable
+to complete `Packet` destruction.
+
+An explicit `(packet anchor .payloadSize) as last` request is viable only when the
+applicable source contract establishes that complete-source terminal guarantee.
+A result declaration may combine `last` with one default anchor to publish that
+contract. A caller-selected different anchor does not inherit it.
+
+If conversion selects `copy`, the region remains `copy` even when the outer
+declaration ordinarily offers `last`. Complete compatibility and anchor behavior
+is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#transfer-stance-and-anchored-regions).
+
 ### Explicit composition wrappers
 
 A composition `via` or `= existing` declaration may accept a complete outer

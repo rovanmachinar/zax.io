@@ -206,7 +206,24 @@ of `Integer` identity.
 
 Several distinct result slots each have a type but do not collectively form one
 expression type. A future explicit combiner would itself return one typed
-structure; see [structural typing](structural-typing.md).
+structure; see
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md#recompose-several-results-with).
+
+Future reflection must report structural facts without merging their authority:
+
+- canonical type identity separately from direct and flattened shape;
+- scalar semantic format separately from byte layout;
+- effective compatibility posture, including default `compatible strict`;
+- a result's default source anchor and an explicit use-site anchor;
+- physical resident places separately from `own` and data-`via` paths;
+- no-storage `reshape` declarations and each directional path mapping;
+- hidden `outer tracked` components without promising one backend
+  representation; and
+- shared compiler-hidden arithmetic-report identity separately from the
+  caller-facing lack of a source name.
+
+Posture and anchor belong to declaration or use metadata rather than canonical
+type identity.
 
 ## Source reflection of fences and transparent enclosures
 

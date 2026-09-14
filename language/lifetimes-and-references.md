@@ -451,6 +451,37 @@ schedules no separate destruction. It forwards the underlying target place,
 origin, and permitted access while applying the identity's nominal rules. See
 [Zax identity types](identity-types.md#construction-and-transfer).
 
+### Structurally compatible views and anchors
+
+A structurally compatible reference likewise creates no independent destination
+lifetime. It remains tied to the source place, origin, and permissions:
+
+```zax
+view : Destination & =
+  source as layout Destination &
+```
+
+An unanchored whole-root view can retain varying replacement authority only when
+the complete source and destination lifetime partitions, qualifications,
+tracking, construction, replacement, and destruction obligations match.
+
+An anchored interior region is different:
+
+```zax
+view final : Destination final & =
+  source as layout Destination & anchor .member
+```
+
+It is a final subplace of the current containing resident instance. Complete
+replacement of the container invalidates the view rather than making it observe
+a successor region. A zero-size anchor remains tied to its selected conceptual
+place even when another place shares the same numeric address.
+
+Anchoring a by-value result temporary remains valid only through its complete
+synchronous consumer. An anchored reference may not escape that temporary.
+Complete structural conditions and conversion forms belong to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#same-storage-compatible-references).
+
 ## Function parameters and temporaries
 
 A reference parameter constructs a local reference bound to caller-owned

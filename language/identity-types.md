@@ -7,7 +7,7 @@
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
-| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial-extension authority; or structural type equivalence |
+| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial-extension authority; or general [structural shape and compatibility](structural-shapes-and-compatibility.md) |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
 ## Two ways to build on an existing type
@@ -505,8 +505,20 @@ An identity begins with its underlying value at byte offset zero and adds no
 instance storage merely because it has another identity. An identity definition
 may carry additional resident data; that data affects total size, alignment,
 copy behavior, and exposure eligibility. Complete layout, shape, and
-same-storage-reference guarantees beyond the offset-zero relationship remain
-future identity and structural-layout work.
+same-storage-reference behavior follows
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+
+A representation-trivial identity retains the scalar format or aggregate shape
+of its immediate underlying value while adding a distinct outer identity.
+Equal shape never creates implicit admission or projection. A compatibility
+posture or explicit structural operation may authorize a recast independently
+from the identity's `admit`/`restricted` and `expose`/`opaque` policies.
+
+A whole-root same-storage compatible reference can retain varying replacement
+authority only when complete resident-lifetime, qualification, tracking,
+construction, replacement, and destruction obligations match. Additional
+resident identity data or incompatible custom lifecycle behavior prevents that
+relationship.
 
 Identity does not weaken qualifications. Projection, admission, construction,
 and transfer use the applicable place, value, access, `copy`, `deep`, `move`, `last`,
@@ -579,8 +591,8 @@ These are compatibility events, not invisible implementation choices.
 This document is current conceptual design, not formal grammar, a complete
 layout/ABI contract, or an implementation mapping.
 
-Future work owns partial authority, same-storage identity views, representation
-casts, generic identity factories, reflection shape, and structural type
-equivalence. Those areas, [current composition](composition.md), and
-[current enum behavior](enums.md) must preserve the explicit identity boundary
-and admission/exposure choices defined here.
+Future work owns partial authority, generic identity factories, and reflection
+APIs. [Structural shapes and compatibility](structural-shapes-and-compatibility.md),
+[current composition](composition.md), and
+[current enum behavior](enums.md) preserve the explicit identity boundary and
+admission/exposure choices defined here.

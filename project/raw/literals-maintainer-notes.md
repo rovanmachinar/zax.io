@@ -106,7 +106,7 @@ Every literal operator function returns a concrete type. For creating number val
 
 Other times the programmer might want to return an `Integer` but then allow that to be used in any number where the value is "compatible". In C++ you can use `explicit` to indicate if compatible conversion happens for an expression, or not.
 
-Zax will need something similar. I think the idea should be that return types can be coerced. Scalars should allow automatic coercing when declared they allow it. Maybe a keyword on the return value declaration could be `implicit` or `coercion` or `conversion`. I'm not sure `coercion` is a bit awkward to spell, but it's highly accurate.
+Zax will need something similar. I think the idea should be that return types can be coerced. Scalars should allow automatic coercing when declared they allow it. Maybe a keyword on the return value declaration could be `implicit` or `coercion` or `conversion` or `compatible`, or maybe reuse `relaxed` (normally used with `abstract`). The keyword `coercion` has an `unsafe` implication for compatibility posture and thus might not be the best fit.
 
 I would look for your input here...
 

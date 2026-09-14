@@ -460,6 +460,29 @@ by itself prove a live pointee, valid provenance, alignment, or permitted
 access. When origin and lifetime analysis already proves those facts, the
 presence test may complete the safe proof.
 
+#### Structural copies and raw pointer casting
+
+A pointer remains one atomic structural leaf. Compatibility and transformation
+do not flatten through it or infer anything about its pointee.
+
+Structural slicing may copy a pointer while excluding storage that pointer
+targets. The destination pointer/copy contract and ordinary lifetime analysis
+decide whether another owner preserves the target, the operation is unavailable,
+or local unsafe responsibility is required. Slicing itself does not create a
+second pointer model.
+
+View-shaped raw casting uses protected `unsafe cast`:
+
+```zax
+otherPointer := pointer unsafe cast OtherType *
+```
+
+It preserves the address while providing no pointee identity, provenance,
+alignment, lifetime, or qualification guarantee. Complete source forms and the
+distinction from checked-layout coercion belong to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#view-shaped-unsafe-cast).
+Deeper pointer-copy and provenance policy remains indexed future pointer work.
+
 #### Scheduled raw allocations
 
 For a raw destination, `@` or `@!` attaches successful allocation disposition to

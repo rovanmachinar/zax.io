@@ -291,10 +291,13 @@ initializer-free optional construction is absent.
 `[{ }]` is a confusable-form intent error because its blank body looks like the
 programmer opened a nonempty packet but forgot its arguments. Contiguous `[{}]`
 acknowledges intentionally zero inputs. A packet is also not independently an
-expression value; anonymous typed construction supplies a destination where an
-expression hole needs one. Complete optional and source-structure consequences
-are defined by [Zax optional values](optional-values.md#empty-construction-packets)
-and [Zax source structure](source-structure.md#optional-layers-and-empty-construction-packets).
+expression value. An already selected concrete call parameter may supply its
+destination in argument position; otherwise anonymous typed construction
+supplies a destination where an expression hole needs one. Complete call,
+optional, and source-structure consequences are defined by
+[Zax function invocation](function-invocation.md#construction-packets-as-arguments),
+[Zax optional values](optional-values.md#empty-construction-packets), and
+[Zax source structure](source-structure.md#optional-layers-and-empty-construction-packets).
 
 ### Declaration expressions as inputs
 
@@ -533,6 +536,27 @@ that conflict.
 Low-level code may eventually use a narrow unsafe lifecycle assertion when
 opaque control flow makes the apparent conflict valid. The syntax and formal
 guarantees for such assertions remain future safety and analysis-control work.
+
+### Structural construction and transformation
+
+Safe compatible by-value conversion runs applicable destination construction
+using a verified compatible source view. `-<` recomposition and `-<>-`
+transformation likewise establish one complete destination under ordinary
+member and enclosing-lifetime rules.
+
+An `own`-published or data-`via` destination name used by transformation is
+only a designator for its physical place. Construction must establish the
+complete containing member; it never default-constructs that member and then
+assigns through the route silently.
+
+A type with custom copy or lifecycle behavior remains an atomic structural leaf
+unless a future type-owned bridge permits flattening through it. A same-storage
+compatible reference begins no destination lifetime, so direct destination
+construction or destruction through that view is unavailable.
+
+Complete shape, posture, anchor, recomposition, transformation, and reshape
+behavior belongs to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
 ### Anonymous structural values are distinct
 

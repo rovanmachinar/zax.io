@@ -54,6 +54,13 @@ Representation coincidence on one target does not make two semantic states or
 type layers equivalent. Manual ABI use remains an explicit low-level boundary
 until a named contract accepts an exact optional representation.
 
+Current
+[Zax structural shape and compatibility](../../language/structural-shapes-and-compatibility.md)
+defines Zax-internal shape, layout, posture, anchor, and coercive relationships.
+None is an ABI or calling-convention promise. Future interop work must name the
+additional foreign contract rather than treating safe Zax recasting as foreign
+conformance.
+
 ## Enum representation and admission pressure
 
 Current [enum behavior](../../language/enums.md) fixes an immediate integer

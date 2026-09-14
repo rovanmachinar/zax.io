@@ -7,7 +7,7 @@
 | Applies To | Named containment; independent `own`, `preferred`, and `expose`; semantic-indirection boundaries; published data paths; singular and family composition routing and filtering; abstract roles and fulfillment; outer casting and exact-origin proof; costs, diagnostics, formatting, and source stability; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast`, and composition-specific exact-origin proof |
-| Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
+| Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy composition intent, reconciled with current declaration, invocation, operator, transfer, lifetime, construction, identity, and safety design |
 | Supersedes | Legacy composition design formerly published at the repository root |
 
@@ -366,6 +366,34 @@ Container :: type {
 Construction packets, constructors, replacement, and destruction continue to
 target the physical stored shape described by
 [construction and destruction](construction-and-destruction.md).
+
+### Structural mapping may use place-preserving paths
+
+Publication and routing do not change stored shape, but explicit structural
+mapping may use their accessible data paths.
+
+An `own`-published path or place-preserving data `via` route may be:
+
+- a source for decomposition, reshape, transformation, or a compatibility
+  anchor;
+- a destination for explicit reshape or existing-value transformation; or
+- a new-value transformation designator when construction can establish the
+  complete underlying physical member and every enclosing lifetime.
+
+Every alternate path canonicalizes to its resident physical place before
+one-to-one consumption is tracked. Two names for one place do not create two
+source values. Ordinary direct-name precedence, route precedence, ambiguity,
+privacy, and complete-path visibility continue to apply.
+
+Named recomposition and ordinary construction packets remain narrower: they
+target physical construction shape and do not flatten through an `own` or
+data-`via` path. `preferred`, callable `via`, `expose`, abstract metadata, and
+generated behavior are not resident data paths.
+
+Name-aware compatibility still compares physical declaration names. A renamed
+route can aid transformation but cannot manufacture equal shape. Complete
+behavior is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#composition-paths-can-map-without-becoming-shape).
 
 ## Expected-type projection with `preferred`
 
@@ -1471,6 +1499,20 @@ The metadata describes the current resident instance's placement. It is not
 ordinary user state copied unchanged from a source value. A standalone `Engine`
 and an engine resident at `Car.engine` have different placement relationships.
 
+For structural reasoning, `outer tracked` contributes one hidden component at
+the tracked value's relative root. The component is atomic: flattening never
+enters its implementation. Aligned components with the same placement-metadata
+contract may participate in safe compatibility even when the outer nominal
+identities differ. A missing, misaligned, or semantically different component
+prevents safe shape/layout compatibility.
+
+An anchor may begin after an outer tracking component when the destination is
+untracked. If an anchored region contains a nested tracking component, the
+destination must expect a compatible component at that same relative position.
+A same-storage compatible reference shares the resident tracking state; a
+by-value destination establishes corrected state for its new placement. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#outer-tracked-participates-in-structure).
+
 Ordinary construction, copy, move, and replacement establish the destination's
 current metadata. Moving a complete container preserves its internal immediate
 relationships in the destination. Removing a member from a container does not
@@ -1614,13 +1656,16 @@ This document describes current conceptual design, not a formal grammar,
 specification, ABI, compiler lowering, reflection contract, or implementation
 guarantee.
 
+General structural equivalence, layout compatibility, postures, anchors, and
+transformation are defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+
 It does not establish:
 
 - class inheritance or virtual dispatch;
 - a general interface, trait, concept, or structural-subtyping facility;
 - a whole-type `abstract` contract or required structural shape;
 - generic deduction through preferred projection;
-- structural equivalence or layout substitutability;
 - partial or external authority to change an owner's exposure fences;
 - generalized parameter-origin result contracts beyond receiver `self`;
 - local or flow-scope `own`;

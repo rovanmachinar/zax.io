@@ -340,27 +340,25 @@ are design pressures, not automatic reasons to include or exclude an operation.
 
 ## Compatibility is not conversion
 
-An endian enum and its backing fundamental type are storage- and
-shape-compatible while remaining independent types.
+An endian enum and its backing fundamental type can have the same storage
+envelope while retaining different scalar formats and independent identities.
+Endianness role is a meaning-bearing scalar property: native `U32` and
+`BigEndianU32` do not become safely shape-compatible merely because their bytes
+occupy the same extent or one target's native order happens to be big-endian.
 
-- **Exact storage compatibility** requires the complete instance storage to agree
-  in size, alignment, stored-member offsets and extents, required padding, and
-  representation boundaries from the base address.
-- **Shape compatibility** additionally requires corresponding storage-bearing
-  members to use the same names and recursively compatible storage.
-  Zero-instance-storage declarations such as `final` functions do not change
-  instance shape.
-
-Compatibility describes structural facts. A conversion rule grants transfer.
-Neither form of compatibility permits:
+Storage coincidence describes representation. A conversion rule grants
+transfer and preserves or changes numeric meaning. Neither representation
+coincidence nor structural shape permits:
 
 ```zax
 nativeValue : U32 = big
 // error: structural compatibility is not a conversion rule
 ```
 
-Complete type-compatibility terminology, directional projection, and truncating
-transfer remain future type-compatibility work.
+Use `as U32` to decode semantic value, `underlying value` to extract raw storage,
+`from` to encode or transcode, and `unsafe from` to adopt raw storage. General
+shape, layout, scalar-format, posture, and coercion terminology is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#scalar-compatibility).
 
 ## Costs
 

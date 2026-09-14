@@ -479,166 +479,19 @@ myType.func2(42)
 ````
 
 
-### Split and combine argument operators
+### Structural decomposition, recomposition, and transformation
 
-#### Splitting type into a function call
+The legacy `<-` split and `->` combine proposal has been consumed and
+superseded. Current structural behavior is taught by
+[Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md):
 
-The split operator (`<-') can take a type and create an argument list for a function to satisfy the functions argument list. For any type variable names matching input argument names (which are not previously matched input arguments) will be automatically filled as arguments to a function. Any additional type values unmatched will be ignored. Any unfulfilled arguments will need to be filled as per standard input argument passing rules.
+- `>-` opens one value into named mapping sources;
+- `-<` closes several remaining results into one named or anonymous value;
+- `-<>-` performs explicit transformation and can mark a transforming
+  result-routing boundary; and
+- `reshape` provides reusable no-storage source-to-destination path mapping.
 
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-func final : ()(
-    age : Integer,
-    name : String,
-    weight : Float,
-    defaultSmiley : Rune
-) = {
-    // ...
-}
-
-MyType :: type {
-    name : String
-    famousQuote : String
-    age : Integer
-    weight : Float
-}
-
-myType : MyType
-
-func(42, <- myType, r'😀')
-
-// print the first result
-print(value)
-
-print(myType.name)
-print(myType.famousQuote)
-print(myType.age)
-print(myType.weight)
-````
-
-#### Splitting type into a function call
-
-The argument split (`<-`) operator with multi-value operator and named declarations `[{` `}]` can be used to fill input arguments passed into a function with a newly declared anonymous type. Each argument is matched with an input argument. All input arguments considered satisfied by the split (`<-`) operator are no longer needing to be passed values and standard rules for remaining input arguments apply.
-
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-func final : ()(
-    age : Integer,
-    name : String,
-    weight : Float,
-    defaultSmiley : Rune
-) = {
-    // ...
-}
-
-func(42, <- [{ .name = "Boothby", .age = 61, .weight = 120 }], r'😀')
-````
-
-
-#### Multiple argument operator combining into an argument type
-
-Using the multiple argument operator `[{` `}]` with named declaration can cause multiple arguments to become initialized into a type's values without using the split (`->`) or combined (`<-`) operators.
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-MyType : type {
-    age : Integer,
-    name : String,
-    weight : Float,
-    defaultSmiley : Rune
-}
-
-func final : ()(
-    value : MyType
-) = {
-    // ...
-}
-
-func([{ .name = "Boothby", .age = 61, .weight = 120 }])
-````
-
-
-#### Combining argument results into an anonymous type
-
-The argument combine operator (`->`) can be used to define and declare a new anonymous type whose values contain results from remaining output arguments returned from a function.
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-func final : (
-    output1 : Integer,
-    output2 : String,
-    output3 : Float,
-    output4 : Rune
-)() = {
-    // ...
-    return output1, output2, output3, output4
-}
-
-// creates a new anonymous type and fills the results with the remaining
-// arguments in the function's return arguments
-value1 :, remaining : -> = func()
-
-// print the first result
-print(value1)
-
-// print the other resulting values
-print(remaining.output2)
-print(remaining.output3)
-print(remaining.output4)
-
-// ERROR: the `output1` was already extracted as an output argument thus will
-// not be present as a result of using the combine operator (`->`)
-print(remaining.output1)
-````
-
-
-#### Combining argument results into an existing type
-
-The argument combine operator (`->`) can be used to assign values returned from function directly into an existing type. For the names of return arguments unfulfilled in existing return results, the return argument names are matched to the names in the type declared and any matching names are treated as if they were removed from the return result list as they are fulfilled. Any non matching names can be declared as additional arguments need to be captured as per standard argument returning rules. If none of the names match when using the combine operator (`->`), an attempt is made to apply an automatic `as` operator from the remaining returned types (as if they were a combined type) up to the final value present in the destination type. If the types are deemed compatible (as per `as` casting rules) those arguments are considered fulfilled and treated as if they were removed from the returned argument list. If neither method results in any matches then the compiler will issue an error. Any unmatched values present in the result results will need to be fulfilled as per standard argument returning rules.
-
-````zax
-print final : ()(...) = {
-    // ...
-}
-
-func final : (
-    age : Integer,
-    name : String,
-    weight : Float,
-    defaultSmiley : Rune
-)() = {
-    // ...
-}
-
-MyType :: type {
-    name : String
-    famousQuote : String
-    age : Integer
-    weight : Float
-}
-
-// uses existing `MyType` type and fills the results with the arguments
-// as returned from the function
-value1 :, myType : MyType ->, defaultSmiley: = func()
-
-// print the first result
-print(value)
-
-print(myType.name)
-print(myType.famousQuote)
-print(myType.age)
-print(myType.weight)
-````
+Current call/result cursor behavior, labels, discard, defaults, and producer
+evaluation belong to
+[Zax function invocation](language/function-invocation.md). Construction packets
+remain constructor inputs rather than anonymous structural values.

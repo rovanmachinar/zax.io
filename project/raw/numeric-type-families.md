@@ -315,6 +315,14 @@ unsafe raw access, NaN payloads, canonicalization, byte order, and target
 representation. Ordinary float bitwise operators remain reserved and unavailable
 until that review.
 
+That review must also consume the provisional scalar safe/coercive compatibility
+property lists in
+[floating-point maintainer notes](floating-point-maintainer-notes.md).
+Equal total storage does not make different exponent/mantissa partitions
+coercion-compatible. The float owner will finalize its list and recheck the
+current integer list against
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md#scalar-compatibility).
+
 ## Activation and retirement
 
 Activate this input for numeric types, generic numeric contracts, signedness,

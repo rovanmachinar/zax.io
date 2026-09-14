@@ -145,6 +145,20 @@ expected type. Future generic work must decide whether projection can
 participate after deduction without allowing it to invent a deduction target,
 widen callable or operator discovery, or outrank an exact direct match.
 
+Compatibility posture follows the same discovery boundary under
+[current structural design](../../language/structural-shapes-and-compatibility.md#compatibility-posture):
+
+- it may make a source viable only after one concrete expected type exists;
+- exact identity remains better than posture-based adaptation;
+- posture never widens discovery or invents a generic target;
+- an anchor selects one source place but does not rank destinations; and
+- several remaining non-identity adaptations are ambiguous rather than scored
+  by shape kind, offset, or apparent cost.
+
+Future cross-axis work must integrate that accepted baseline with value/reference,
+qualification, transfer, result, generated, and generic-specialization
+comparison.
+
 ## Callable precondition and postcondition pressure
 
 Current result initializers can guarantee pointer presence by allocating before

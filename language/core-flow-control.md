@@ -438,9 +438,10 @@ Execution is:
 
 A post operation runs after the selected body completes normally. It also runs
 when the condition is false and no `else` body exists. It does not run when
-`break`, `continue`, `next`, `goto`, `return`, or a panic leaves the complete
-`if`; a targeted `break bad_stuff:` above deliberately skips it. Panic is fatal
-rather than an ordinary alternative flow path.
+`break`, `continue`, `next`, `goto`, or `return` leaves the complete `if`; a
+targeted `break bad_stuff:` above deliberately skips it. An unresolved panic is
+not another exit path: the operation remains blocked until repaired or the
+process crashes gracefully, with no scope unwinding or post execution.
 
 An `if` post operation is ordinary normal-completion work, not a destructor,
 `finally`, `defer`, or guaranteed cleanup hook. Deliberately bypassing it is

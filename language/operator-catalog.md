@@ -7,7 +7,7 @@
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
 | Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -45,6 +45,8 @@ Zax recognizes:
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
+| Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, `anchor`, coercive `unsafe as`, `unsafe cast` |
+| Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -387,6 +389,80 @@ admission/projection belongs to [Zax identity types](identity-types.md).
 
 User-defined words do not independently grant unsafe authority.
 
+### Structural compatibility forms
+
+These exact safe forms are protected:
+
+| Relationship | Exact source pattern | Deciding distinction |
+| --- | --- | --- |
+| Direct shape | `<source> as shape <DestinationType>` | Names and direct boundaries participate |
+| Flattened shape | `<source> as flattened shape <DestinationType>` | Eligible containment flattens; leaf names participate |
+| Direct layout | `<source> as layout <DestinationType>` | Names do not participate; direct boundaries remain |
+| Flattened layout | `<source> as flattened layout <DestinationType>` | Eligible boundaries and names do not participate |
+
+Posture restatement supplies the destination from context:
+
+| Offered posture | Exact source pattern |
+| --- | --- |
+| Direct shape | `<source> as compatible shape` |
+| Flattened shape | `<source> as compatible flattened shape` |
+| Direct layout | `<source> as compatible layout` |
+| Flattened layout | `<source> as compatible flattened layout` |
+
+Every safe form preserves complete qualifications.
+
+An optional trailing source anchor selects where one contiguous resident region
+begins:
+
+| Context | Exact source pattern |
+| --- | --- |
+| Written destination | `<source> as layout <DestinationType> anchor <source-path>` |
+| Destination supplied by context | `<source> anchor <source-path>` |
+
+`anchor` is not the numeric contextual type anchor, mixfix receiver anchor, or
+pointer ownership anchor.
+
+Coercive forms remain local and unsafe:
+
+| Relationship | Exact source pattern |
+| --- | --- |
+| Direct layout coercion | `<source> unsafe as coercive layout <DestinationType>` |
+| Flattened layout coercion | `<source> unsafe as coercive flattened layout <DestinationType>` |
+| Anchored coercion | `<source> unsafe as coercive layout <DestinationType> anchor <source-path>` |
+
+View-shaped raw casting is separate:
+
+| Source role | Exact source pattern |
+| --- | --- |
+| Pointer | `<pointer> unsafe cast <DestinationType> *` |
+| Value place | `<value> unsafe cast <DestinationType> &` |
+| Reference | `<reference> unsafe cast <DestinationType> &` |
+
+There is no bare by-value `<value> unsafe cast <DestinationType>` form.
+
+The mapping-bound protected forms are:
+
+| Operation | Exact source pattern |
+| --- | --- |
+| Decompose one source | `<destination mappings> >- <source>` |
+| Recompose results | `<destination> -< <producer>` |
+| Update an existing destination | `<destination> -<>- <source>` |
+| Update through a reshape | `<destination> -<>- <reshape> -<>- <source>` |
+| Construct through automatic transformation | `<destination context> = -<>- <source>` |
+| Construct through a reshape | `<destination context> = -<>- <reshape> -<>- <source>` |
+| Transform one named result | `<source-result label>: -<>- [<reshape> -<>-] <destination>` |
+| Transform one positional result | `: -<>- [<reshape> -<>-] <destination declaration>` |
+
+Multiple-result routing keeps its ordinary final
+`= <producer>` boundary. Transformation belongs only to entries that contain
+`-<>-`; it is never enabled for the complete result sequence.
+
+These forms receive their grouping from declaration, call, and result-mapping
+grammar rather than inventing ordinary arithmetic-expression precedence.
+
+Complete semantics, visual mnemonic, costs, and failures belong to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+
 ### Outer-cast forms
 
 These exact binary phrase forms use ordinary phrase precedence and are protected
@@ -701,7 +777,8 @@ Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
 - Legacy `@@` parallel-allocation meaning is superseded. Arena capabilities
   express concurrency requirements.
 - `|>` remains function-chaining evidence.
-- `->` and `<-` remain result-shape transformation evidence.
+- Legacy result split/combine `<-` and `->` are superseded by the protected
+  `>-`, `-<`, and `-<>-` structural mapping family.
 - Literal prefixes/quote behavior remain literal work.
 - Exact multiword, reversal, and masked extraction/deposit words remain numeric
   work.

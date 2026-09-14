@@ -627,12 +627,13 @@ This document owns why reconstructive replacement is required by the qualifier
 model and its qualification boundary. Complete fallback, member transition,
 resource retention, result, destruction, and alias behavior is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
-Complete `move`/`copy`/`last` per-slot preference, recoverable panic, callbacks,
-reentrancy, async, and concurrency remain future focused work.
+Complete `move`/`copy`/`last` per-slot preference, callbacks, reentrancy, async,
+and concurrency remain future focused work.
 
-If panic is terminal, partially transitioned storage does not return to ordinary
-execution. Any future recoverable panic model must define separate partial
-cleanup behavior.
+Panic does not produce a recoverable partial-replacement path. A matching helper
+repairs the blocked condition and lets the same operation complete; otherwise
+the process crashes gracefully without unwinding. See
+[Zax safety and analysis](safety-and-analysis.md#panic-boundary).
 
 ## Type-family boundary
 
@@ -1102,23 +1103,24 @@ reference to it. Mutable shared state requires synchronization. An
 `unsafe pliable` path can additionally invalidate assumptions made by other
 aliases and requires particular caution across threads.
 
-## Structural-typing boundary
+## Structural compatibility
 
 Qualifier-preserving conversion and structural identity are different
-questions. Conversion may not increase ordinary authority. Future
-structural-typing work must decide separately whether qualifiers participate in:
+questions. Every direct or flattened leaf participating in safe structural
+compatibility preserves its complete type-side qualifications. Ordinary
+conversion may narrow path authority but never present immutable state as
+mutable, readonly access as writable, or a final place as varying.
 
-- nominal identity;
-- name-and-type shape compatibility;
-- qualifier-aware layout compatibility;
-- qualifier-erased layout compatibility;
-- reflection; and
-- safe substitutability at a particular use site.
+An anchored compatible region is a final subplace of the current containing
+instance. It does not inherit the outer declaration's complete replacement
+authority. A whole-root compatible reference may retain varying authority only
+when complete lifetime partitions, qualifications, tracking, construction,
+replacement, and destruction obligations match.
 
-Zax should eventually provide an explicit anonymization operation for
-intentional use of compatible differently named structures. Anonymization may
-not become a qualifier-elevation mechanism. Exact syntax and equivalence rules
-remain deferred.
+Coercive `unsafe as` and view-shaped `unsafe cast` may weaken qualification only
+under their explicit local unsafe responsibility. Complete posture, anchor,
+shape/layout, and conversion behavior is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#same-storage-compatible-references).
 
 ## Diagnostics and formatting
 

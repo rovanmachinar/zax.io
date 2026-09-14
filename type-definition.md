@@ -16,9 +16,15 @@ A named type resolves its own incomplete name inside its body. Direct recursive
 storage remains a layout error. Anonymous recursive type syntax is not
 established by current design.
 
+Current identity-versus-shape, anonymous structural identity, compatibility,
+layout, and shape-changing operations are defined by
+[Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md).
+Equal-looking storage never authorizes a raw memory clone by itself.
+
 ### Trivial type definitions
 
-Trivial types contain basic types such as booleans, integers, and floats, raw pointers and other trivial types. Trivial types can be cloned with a memory copy of a `type`'s instance.
+The examples below preserve legacy evidence for types composed from scalar
+members. They do not establish a general memory-copy or compatibility rule.
 
 ````zax
 :: import Module.System.Types
@@ -136,6 +142,11 @@ func final : ()() = {
 ### Local variable type declarations and definition
 
 Types can be declared globally, inside other types, inside functions, inside locally defined types within functions, or even as part of a temporary anonymous value. The type system is flexible to allow types to exist where needed.
+
+Current anonymous identity and compatibility behavior belongs to
+[Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md);
+current declaration syntax belongs to
+[Zax declarations and bindings](language/declarations-and-bindings.md).
 
 ````zax
 func final : ()() = {

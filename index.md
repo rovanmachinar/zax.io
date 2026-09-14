@@ -27,6 +27,9 @@ producing them.
 - Read [Zax identity types](language/identity-types.md) for transparent aliases,
   distinct identities, admission, projection, exposed and opaque surfaces, and
   declared identity bridges.
+- Read [Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
+  for identity-versus-shape, compatibility postures, anchored recasting,
+  same-storage views, decomposition, recomposition, and transformation.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
@@ -100,6 +103,7 @@ producing them.
 - [Declarations and bindings](language/declarations-and-bindings.md)
 - [Composition](language/composition.md)
 - [Identity types](language/identity-types.md)
+- [Structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
 - [Enums](language/enums.md)
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
 | Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -59,6 +59,25 @@ declarations provide no explicit type, Zax uses the ordinary default
 `Integer`. Writing `x := +0` instead selects the unsigned default `UInteger`.
 The complete rules are in
 [Zax integer literals and realization](integer-literals.md).
+
+Compatibility posture does not propagate through ordinary inference. A
+producer result may offer contextual compatibility at its immediate mapping
+boundary, but:
+
+```zax
+captured := makeCompatibleResult()
+// captured has the inferred concrete identity and compatible strict.
+```
+
+An explicit partial type declaration may retain posture while inferring the
+base type:
+
+```zax
+captured : compatible shape = makeCompatibleResult()
+```
+
+Complete posture behavior is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#posture-does-not-propagate-accidentally).
 
 The compiler may optimize storage reservation and initialization when doing so
 preserves behavior. That does not collapse the programmer-visible distinction
@@ -1311,6 +1330,9 @@ Fruit :: enum { }
 FriendlyName :: alias type ExistingType
 MyCount :: identity admit expose type U32
 MyHandle :: identity restricted opaque type Integer
+MyMapping :: reshape {
+  sourceName: destinationName:
+}
 ModuleName :: import Module.Definition
 TypeName :: forward type
 ```
@@ -1349,6 +1371,11 @@ write one admission keyword (`admit` or `restricted`) and one surface keyword
 Complete projection, admission, identity bridges, representation relationships,
 and exposed/opaque behavior are defined by
 [Zax identity types](identity-types.md).
+
+`reshape` introduces a no-storage directional source-path-to-destination-path
+map for explicit structural transformation. It has no runtime instance or
+anchor. Complete behavior belongs to
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#reusable-mapping-with-reshape).
 
 `enum`, `enum relaxed`, and `enum flags` introduce specialized integer-backed
 identities. Their member prologue, backing eligibility, defaults, admission, and
@@ -1643,8 +1670,9 @@ number:, existingText = produce()
 ```
 
 The first result initializes a new binding. The next result performs ordinary
-assignment into `existingText`. Earlier effects remain observable if a later
-destination panics.
+assignment into `existingText`. Mapping is ordered and nontransactional. A
+later panic does not roll earlier work back or unwind to the caller; the blocked
+operation resumes after a matching repair or the process crashes gracefully.
 
 Duplicate introduced names remain errors. Ordinary declaration visibility,
 same-scope redeclaration, and declaration-versus-assignment rules continue to
@@ -1769,9 +1797,12 @@ It establishes constraints that later work must preserve:
   and explicit source-result labels for named several-result enrollment;
 - module and name-resolution design must preserve one lexical identifier
   namespace, fixed path roots, and pending suffix resolution; and
-- structural typing must decide explicitly whether member names, qualifiers,
-  defaults, inferred types, and recursive forms participate in identity,
-  equivalence, layout, conversion, and reflection; and
+- structural shape and compatibility preserve direct resident-member names,
+  declaration order, nested identity, type-side qualifications, and physical
+  versus alternate access-path distinctions as defined by
+  [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md);
+  defaults and initializers affect construction rather than completed stored
+  shape, while future reflection reports the resolved distinction; and
 - future generic and partial work, and current
   [composition](composition.md), must preserve the explicit
   identity-declaration integration owned here and the behavior owned by

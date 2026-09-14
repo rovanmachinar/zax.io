@@ -96,8 +96,11 @@ exposure, abstract fulfillment, and outer casting are described by
 [Zax composition](composition.md).
 
 Structural typing is an intended direction for reducing rigid nominal
-relationships. Its exact equivalence, layout, conversion, and subtyping rules
-remain future design work.
+relationships. [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md)
+defines the current identity-versus-shape model, safe binary-compatible
+postures, anchored views, and explicit shape-changing operations. Whole-type
+contracts, generic structural constraints, and runtime dispatch remain separate
+future work.
 
 ### Language-integrated build-time execution
 
@@ -377,6 +380,10 @@ and exposure boundaries are owned by
 representations, conversions, and arithmetic contracts are owned by
 [Zax integers](integers.md), with complete protected operation behavior in the
 [integer operator catalog](integer-operator-catalog.md).
+Accepted structural identity separation, direct and flattened shape,
+compatibility postures, anchored recasting, and explicit structural
+transformation are owned by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
 Exact behavior outside the accepted concept owners, along with formal
 guarantees, diagnostic contracts, and implementation contracts, remains later

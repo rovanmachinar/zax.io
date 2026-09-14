@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | None; work item `021` is awaiting maintainer alignment |
-| Next work number | `021` |
+| Active work item | [021: Structural shapes and compatibility](work/021-structural-shapes-and-compatibility.md) |
+| Next work number | `022` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
@@ -29,9 +29,7 @@ when the language maintainer explicitly asks for their maintenance.
 
 Before pasting an operating block, the language maintainer replaces its generic
 `project/work/00n-<concept>.md` placeholder with the active path listed above.
-When no work item is active, align and create the next item before starting a new
-concept session. The committed prompt sources remain generic across numbered
-work items.
+The committed prompt sources remain generic across numbered work items.
 
 Teaching-debt guidance and the log are task-specific routes. Agents do not read
 the log during ordinary concept work or use it to search for expected problems.

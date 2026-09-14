@@ -111,6 +111,13 @@ The facility must not turn member-level `abstract` metadata into inheritance,
 runtime interface storage, a vtable, or implicit dynamic dispatch. A preferred
 route also cannot manufacture a whole-type contract or cause one to be inferred.
 
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md)
+now supplies the accepted distinction among identity, direct and flattened
+shape, layout, operation permission, and whole-type conformance. Future generic
+constraints must use those meanings without treating a compatibility posture as
+a generic contract, making an anchor invent a deduction target, or turning
+shape equality into implicit admission.
+
 ## Dependent value result types
 
 `as` already demonstrates a result type determined by a type argument:

@@ -189,6 +189,43 @@ Scalars.Floating.Binary.CompilerHost
 
 Extraction of binary floating points into Integers must be possible if the floating point is supported.
 
+## Structural safe and coercive compatibility pressure
+
+Current
+[structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md)
+requires every scalar family to supply two property lists:
+
+1. properties that must all match for safe scalar shape/layout compatibility;
+2. a reduced set that must match for local coercive `unsafe as`.
+
+The provisional safe integer/fixed-point list is:
+
+- logical bit width;
+- signedness;
+- value encoding, including two's-complement representation;
+- fixed fractional-bit position;
+- endianness role; and
+- storage extent, alignment, non-value bits, and normalization.
+
+Integer/fixed-point coercion provisionally requires equal logical bit width and a
+sufficient compatible target storage envelope. It may reinterpret sign,
+fractional position, or endian meaning.
+
+Floating-point coercion must remain stricter. The future review must finalize at
+least:
+
+- total format width;
+- exponent width;
+- fraction or mantissa width;
+- explicit versus implicit integer bit;
+- endianness; and
+- every representation rule affecting special values or normalization.
+
+Different exponent partitioning is not another compatible viewpoint on the same
+number and remains incompatible even under coercion. Floating-point work must
+finalize both lists and recheck the integer list rather than treating the
+provisional structural summary as its lasting numeric-format owner.
+
 ## declared compile time support
 
 I suggest we have some kind of structure in Zax based on the type that indicate each of these at compile time for the definition. Some will be directly derived from the generic inputs, and others will be consequences of the platform (for example, a 6502 cpu floating might not have full representation of NaN, Inf, etc):
@@ -250,7 +287,8 @@ E5M2
 
 ## big vs little
 
-The Integer should indicate if it's "little endian" or "big endian" or "agnostic" meaning it can change at runtime, and the platform will define what each type is for that platform. There will still be "big endian" and "little endian" fixtures. On "agnostic" platformed, they will need to runtime check the mode they are running in (assuming they can, and if they can't the platform should likely choose an endianness in the platform choice).
+The Integer should indicate if it's "little endian" or "big endian" or "agnostic" meaning it can change at runtime, and the platform will define what each type is for that platform. To be clear, a type is never "agnostic" when a concrete form is made. Every instance must have an endianness so an agnostic really means the current compile target has specified it's default endianness and thus "agnostic" becomes settled to that endianness. There will still be "big endian" and "little endian" fixtures. On "agnostic" platformed, if the endianness of the CPU can change on the fly there's no flag within an instance of a type that indicates the current endianness of the state. Thus the type has to have a concrete settled endianness. If the math routines entered from that type can swap behavior at runtime (and that is allowed within the compilation target) then the math library will have to perform runtime checks to select the correct runtime routines for the type. The math operations must always match the concrete endianness of a type and not switch merely because a CPU decided to behave otherwise. Ideally, the CPU endianness would be marked as fixed for a compilation target to ensure the correct endianness routines are selected without extra runtime check overhead.
+
 
 ## compile time indication of supported
 
