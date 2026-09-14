@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative / corrective promotion applied / validation PASS / awaiting maintainer review |
+| Status | Historical / non-normative / audit-only / closed |
 | Work Item | `021` |
 | Created | 2026-09-12 |
 | Owns | The bounded review defined by the fixed initiating input |
@@ -2785,3 +2785,19 @@ PASS:
 - no current owner cites numbered work or raw input; and
 - the pre-existing staged review boundary remains unchanged while these
   corrective edits remain unstaged.
+
+### Closure
+
+Work item `021` closed after maintainer review, promotion, corrective teaching
+review, and validation PASS.
+
+The promoted structural model is owned by
+`language/structural-shapes-and-compatibility.md` and its bounded current-owner
+integrations. Every future consequence has an indexed raw destination.
+
+Promotion was preserved in commit `68c2e0c` before closure so the original
+maintainer notes and supplemental raw proposal remain recoverable from Git
+history. Both inputs are fully consumed and retire with this work item.
+
+Work item `022` begins the separately bounded review of floating and fixed-point
+scalar families. This record contains no analysis of that next concern.
