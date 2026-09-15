@@ -79,6 +79,12 @@ producing them.
 - Read [Zax integers](language/integers.md) for exact and target-selected integer
   types, representation, conversion, arithmetic policy, counts, sizes, and
   portability.
+- Read [Zax fixed-point scalars](language/fixed-point-scalars.md) for bounded
+  coefficient scales, `I<W>F<F>` and Q names, arithmetic, full-precision
+  products, conversion, representation, and costs.
+- Read [Zax binary floating-point scalars](language/floating-point-scalars.md)
+  for exact and profile-selected formats, rounding, special values, support,
+  conversion, representation, Extended80, and MBF40.
 - Read [Zax integer literals and realization](language/integer-literals.md) for
   how number literals get a type, how pre-unary `+` states signedness intent,
   how typed operands affect them, and when a value does not fit.
@@ -88,9 +94,10 @@ producing them.
 - Read [Zax mixfix operators](language/mixfix-operators.md) for direct
   multi-component tree operations, holes, receiver anchors, matching,
   decomposition, and protected barriers.
-- Read [Zax endianness](language/endianness.md) for endian semantic enum types,
-  receiver-correct encoding, decoding, raw adoption, the supported endian
-  operation surface, and native versus compiler-host and target byte order.
+- Read [Zax endianness](language/endianness.md) for intrinsic little/big scalar
+  specialization, absolute and environment-selected names, numeric conversion,
+  byte-preserving coercion, and native versus compiler-host and target byte
+  order.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -123,6 +130,8 @@ producing them.
 - [Operator phrases](language/operator-phrases.md)
 - [Operator catalog](language/operator-catalog.md)
 - [Integers](language/integers.md)
+- [Fixed-point scalars](language/fixed-point-scalars.md)
+- [Binary floating-point scalars](language/floating-point-scalars.md)
 - [Integer literals and realization](language/integer-literals.md)
 - [Integer operator catalog](language/integer-operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)

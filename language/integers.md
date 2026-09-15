@@ -6,8 +6,8 @@
 | Audience | Human developers choosing, storing, converting, or calculating with Zax integers |
 | Applies To | Fundamental finite integer types and their programmer-visible behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Integer choice and mental model; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; endian eligibility; costs, diagnostics, portability, and source stability |
-| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); enum members, admission, and operation policy ([enums](enums.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
+| Owns | Integer choice and mental model; the `F = 0` intrinsic-family branch; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, concrete endianness, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; costs, diagnostics, portability, and source stability |
+| Does Not Own | Fixed-point `F > 0` behavior ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian operations ([endianness](endianness.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); enum members, admission, and operation policy ([enums](enums.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
 | Source / Provenance | Legacy [basics](../basics.md) and [casting](../casting.md) integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
 
 ## Choosing an integer says what the value is for
@@ -40,9 +40,10 @@ mySum := myLeft + myRight       // both operands have one integer identity
 myShifted := myValue << myCount // count uses the associated bit-count type
 ```
 
-Associated counts, declared identity bridges, conversion/admission, mixed
-endian right operands, and future multiword operations are explicit exceptions.
-They do not create general promotion.
+Associated counts, declared identity bridges, conversion/admission, and future
+multiword operations are explicit exceptions. Mixed-endian values have distinct
+concrete identities and require explicit numeric conversion. None creates
+general promotion.
 
 ## Logical width
 
@@ -95,7 +96,12 @@ specialization is **sealed** against ordinary extension.
 
 ```zax
 // Generic syntax remains future work.
-MyI57 :: alias type Integer$(57, Sign.Signed)
+MyI57 :: alias type Integer$(
+  LogicalBits = 57,
+  Signedness = Sign.Signed,
+  FractionalBits = 0,
+  Endianness = Endian.Little
+)
 ```
 
 `MyI57` is another name for a concrete 57-bit intrinsic specialization. It is
@@ -181,15 +187,26 @@ such as `I57`.
 
 ## Canonical namespace and short names
 
-The canonical catalog is anchored under:
+The family root is the canonical current-execution-environment catalog:
 
 ```zax
 Scalars.Integers.I32
-Scalars.Integers.Target.Integer
-Scalars.Integers.CompilerHost.Integer
+Scalars.Integers.Integer
+Scalars.Integers.Near.TypeSize
 ```
 
-Short source names are transparent aliases of the canonical declarations:
+Explicit environment and absolute-endian paths include:
+
+```zax
+Scalars.Integers.Target.I32
+Scalars.Integers.CompilerHost.I32
+Scalars.Integers.Target.Integer
+Scalars.Integers.CompilerHost.Integer
+Scalars.Integers.Little.I32
+Scalars.Integers.Big.I32
+```
+
+Short source names are transparent aliases of the current-environment paths:
 
 ```zax
 I32
@@ -200,6 +217,11 @@ CompilerHost.Integer
 
 How those aliases become visible remains future module/import work.
 
+`I32` always fixes 32 logical value bits but resolves the active environment's
+concrete endianness. Use `Scalars.Integers.Little.I32` or
+`Scalars.Integers.Big.I32` when stored byte order must be part of a
+target-independent type name.
+
 Memory-domain paths follow the environment:
 
 ```zax
@@ -208,8 +230,9 @@ Scalars.Integers.Target.Near.TypeSize
 Scalars.Integers.CompilerHost.Far.UPointer
 ```
 
-The canonical order is scalar family, integer family, explicit environment,
-explicit memory domain, then role.
+The canonical order is scalar family, integer family, optional explicit
+environment or absolute endianness, explicit memory domain where applicable,
+then role.
 
 ## Native representation and software emulation
 
@@ -636,14 +659,24 @@ Exact option/directive syntax remains future analysis-control work.
 
 ## Structural scalar compatibility
 
+An integer is the intrinsic family's zero-fractional-bit specialization:
+
+```text
+I<W> = Integer$(W, Signed, FractionalBits = 0, concrete endianness)
+U<W> = Integer$(W, Unsigned, FractionalBits = 0, concrete endianness)
+```
+
+The [fixed-point owner](fixed-point-scalars.md) defines `F > 0`.
+
 An integer scalar's safe structural format includes:
 
 - logical bit width;
 - signedness;
 - two's-complement signed encoding;
-- zero fractional-bit position for the current integer family;
-- endianness role; and
-- storage-envelope, alignment, non-value-bit, and normalization rules.
+- zero fractional-bit position;
+- concrete endianness and logical-bit placement; and
+- storage-envelope extent, alignment, non-value-bit, valid-pattern, and
+  normalization rules.
 
 Every applicable property must match for safe scalar shape or layout
 compatibility. Distinct public or programmer identities may retain equal format
@@ -651,21 +684,27 @@ without becoming interchangeable; compatibility posture or an explicit
 operation supplies any permitted crossing.
 
 Integer coercion deliberately uses a reduced relationship. Equal logical bit
-width and sufficient compatible target storage permit local coercive
-reinterpretation even when signedness, future fixed fractional position, or
-endian meaning differs:
+width, equal selected storage extent, compatible alignment and logical-bit
+placement, and destination-valid padding behavior permit local coercive
+reinterpretation even when signedness, fixed fractional position, or endian
+meaning differs:
 
 ```zax
-signed unsafe as coercive layout U32
+mySigned : I32 = -1
+myUnsignedView :=
+  mySigned as coercive layout U32 &
 ```
 
-Coercion is unsafe, target-sensitive, and never a declared posture. Enum
-directions and semantic endian operations remain controlled by their own type
-families. Future fixed-point and binary floating-point work will finalize their
-property lists and recheck this integer list. See
+Every integer bit pattern is valid, so this integer relation is safely
+coercible when the requested view preserves available access authority.
+Coercion is target-sensitive, local, reference-shaped, and never a declared
+posture. Cross-endian coercion likewise preserves valid integer bits while
+changing their interpreted value; numeric endian conversion instead preserves
+value. Fixed-point and binary floating-point owners supply their own scalar leaf
+relationships. See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#scalar-compatibility).
 
-## Enum and endian boundaries
+## Enum boundaries
 
 An exact integer such as `I57` or a language-provided integer role such as
 `Integer`, `Long`, or `IndexSize` may back an enum. An arbitrary user identity
@@ -679,28 +718,34 @@ exact intrinsic lies across a second identity boundary.
 Flags require an unsigned eligible backing type. Their default backing is
 `UInteger`; strict and relaxed enums default to `Integer`.
 
-Endian families require:
-
-- exact finite logical width;
-- whole-byte width;
-- no non-value bits in the integer's own storage envelope; and
-- specified representation.
-
-Therefore:
-
-```text
-I24 -> endian eligible
-U40 -> endian eligible
-I57 -> not endian eligible
-```
-
-Eligibility is not limited to predefined names. Complete endian behavior is in
-[Zax endianness](endianness.md).
-
 Integer backing does not grant ordinary enum arithmetic. Strict enums select
 operations explicitly, relaxed enums request the eligible exposed-identity
 surface, and flags receive their mask-preserving bitwise surface. Complete enum
 behavior is defined by [Zax enums](enums.md).
+
+## Intrinsic endianness
+
+Every concrete integer specialization is little- or big-endian, including an
+unusual width:
+
+```zax
+myLittle : Scalars.Integers.Little.U32
+myBig : Scalars.Integers.Big.U32
+```
+
+Unqualified `U32` resolves the active environment's endianness. A selector
+described as native or "agnostic" is resolved before the concrete type exists; it is not
+per-value runtime state.
+
+Endian specializations receive the complete applicable integer operation
+surface. Like-identity operations preserve their declared interpretation even
+when the CPU uses another byte order. Mixed-endian operands require explicit
+conversion.
+
+For non-byte-multiple widths, logical bits occupy the low-order portion of the
+highest participating byte and unused high bits remain non-value storage.
+Complete conversion, raw-representation, and environment behavior is defined by
+[Zax endianness](endianness.md).
 
 ## Costs and diagnostics
 
@@ -712,13 +757,14 @@ Programmers and tooling need to expose:
 - container padding as a separate layout fact;
 - native representation versus software emulation;
 - selected CPU profile and environment;
+- concrete or active-selected endianness;
 - exact, optional, narrowing, unchecked, or unsafe conversion;
 - runtime checks and optional/reporting paths;
 - arithmetic build contracts;
 - associated result types;
 - exposed identity and declared bridges;
 - unavailable maximum-width delta; and
-- endian eligibility.
+- endian conversion versus byte-preserving coercion.
 
 Ordinary diagnostics lead with readable public names:
 
@@ -739,7 +785,10 @@ vocabulary.
 
 ## Portability and source stability
 
-- Exact-width integer behavior is portable across environments.
+- Exact-width integer range and numeric behavior are portable across
+  environments.
+- An unqualified exact-width name resolves active-environment endianness; use an
+  absolute-endian path when raw stored byte order must be portable.
 - Profile-selected roles vary only according to their documented contracts.
 - Distinct roles never become implicitly compatible because representations
   coincide.
@@ -758,10 +807,11 @@ constants, and code whose precise overflow boundary is part of its meaning.
 This document is current conceptual design, not formal grammar, an ABI contract,
 a CPU-profile format, or an implementation mapping.
 
-Exact integer-factory syntax, relational-pair declarations, reflection metadata,
-CPU-provider files, literal grammar, pointer validity, partial authority,
-build-option syntax, and foreign correspondence remain future work. Those
-mechanisms must preserve the concrete integer guarantees established here.
+Exact integer-factory syntax, intrinsic-endian generic syntax, relational-pair
+declarations, reflection metadata, CPU-provider files, literal grammar, pointer
+validity, partial authority, build-option syntax, and foreign correspondence
+remain future work. Those mechanisms must preserve the concrete integer
+guarantees established here.
 [Current composition](composition.md) and
 [current enum behavior](enums.md) must preserve the same concrete types,
 identities, ranges, representation, conversions, and source behavior.

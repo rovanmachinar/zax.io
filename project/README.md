@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [022: Floating and fixed-point scalars](work/022-floating-and-fixed-point-scalars.md) |
-| Next work number | `023` |
+| Active work item | [023: Literal source and literal operators](work/023-literal-source-and-literal-operators.md) |
+| Next work number | `024` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

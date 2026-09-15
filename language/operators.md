@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); composition exposure and projection eligibility ([Zax composition](composition.md)); complete [structural shapes and compatibility](structural-shapes-and-compatibility.md); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); composition exposure and projection eligibility ([Zax composition](composition.md)); complete [structural shapes and compatibility](structural-shapes-and-compatibility.md); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); fixed-point behavior ([fixed-point scalars](fixed-point-scalars.md)); floating-point behavior ([floating-point scalars](floating-point-scalars.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
 ## Mental model
@@ -605,12 +605,14 @@ operator binary '+' final :
 }
 ```
 
-This reserves fundamental Boolean, integer, pointer-sized numeric, floating, and
-other closed domains for coherent language evolution. Exposed integer identities
-receive the identity-adjusted protected surface defined by
+This reserves fundamental Boolean, integer, pointer-sized numeric, fixed-point,
+floating, and other closed domains for coherent language evolution. Exposed
+integer identities receive the identity-adjusted protected surface defined by
 [Zax integers](integers.md) and [Zax identity types](identity-types.md).
-Extensible library types such as `String` may expose ordinary library-owned
-overloads.
+Fixed-point and floating availability is defined by
+[fixed-point scalars](fixed-point-scalars.md) and
+[floating-point scalars](floating-point-scalars.md). Extensible library types
+such as `String` may expose ordinary library-owned overloads.
 
 Signature protection differs from a
 [mixfix-consumption barrier](terms.md#mixfix-consumption-barrier). A barrier is a
@@ -627,10 +629,12 @@ Exact Boolean XOR illustrates the distinction:
 
 Mixed custom logical shapes are eager and may participate in a mixfix key.
 
-Missing required protected support indicates an incomplete toolchain rather than
-an optional library the program forgot to link. The implementation may use
-instructions, constant folding, emitted code, intrinsics, or automatically linked
-helpers; operator semantics promise no lowering.
+Protection does not by itself promise that every exact scalar format has every
+operation on every target. Missing support for a language-required operation
+indicates an incomplete toolchain; a format operation explicitly classified as
+target-optional instead produces an availability diagnostic. Implementations may
+use instructions, constant folding, emitted code, intrinsics, or automatically
+linked helpers; operator semantics promise no lowering.
 
 Exact family availability is listed in the
 [operator catalog](operator-catalog.md#protected-domains). Complete protected
@@ -799,7 +803,7 @@ receiver behavior, and source state are defined by
 ### Protected structural forms
 
 Compatibility posture restatement, source-relative `anchor`, safe structural
-`as`, coercive `unsafe as`, and view-shaped `unsafe cast` are protected
+`as`, safe and unsafe coercive `as`, and view-shaped `unsafe cast` are protected
 language forms. User declarations cannot replace them.
 
 `>-`, `-<`, and `-<>-` are mapping-bound structural operators rather than
@@ -808,9 +812,10 @@ a packed source, closes open values into a packed destination, or performs both.
 Each source expression or producer evaluates once.
 
 Structural posture and safe conversion preserve complete qualifications.
-Coercive conversion and raw casting remain explicitly unsafe. Exact source
-forms are listed by the [operator catalog](operator-catalog.md), and complete
-programmer behavior belongs to
+Coercive conversion may be safe when its representation relation is total and
+uses `unsafe` only for validity or writable-restoration responsibility. Raw
+casting remains explicitly unsafe. Exact source forms are listed by the
+[operator catalog](operator-catalog.md), and complete programmer behavior belongs to
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
 ### Optional and pointer reset
@@ -1014,9 +1019,12 @@ contract, or an implementation mapping.
 See the [operator catalog](operator-catalog.md) for exact forms,
 [operator phrases](operator-phrases.md) for word-spelled operations, and
 [mixfix operators](mixfix-operators.md) for tree-pattern operations. Literal
-operators, floating/fixed-point/unbounded numeric families, call/index edge
-cases, allocation, pointers, generics, reflection, build-contract syntax, and
-panic recovery remain future focused work.
+operators, unbounded/custom numeric families, exhaustive fixed/floating forms,
+call/index edge cases, allocation, pointers, generics, reflection,
+build-contract syntax, and panic recovery remain future focused work. Current
+fixed-point and floating semantics are owned by
+[fixed-point scalars](fixed-point-scalars.md) and
+[floating-point scalars](floating-point-scalars.md).
 
 Runtime `switch` uses the shared operator model after its construct-specific
 case interpretation; complete behavior is defined by

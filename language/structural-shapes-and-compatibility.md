@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, and `reshape`; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
-| Does Not Own | Complete generic constraints, reflection APIs, pointer provenance, floating-point formats, partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
+| Does Not Own | Complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
 
 ## Start with distinct identities
 
@@ -677,11 +677,17 @@ operations still test their requested physical placement normally.
 
 ## Coercive conversion and raw casting
 
-### Coercive `unsafe as`
+### Coercive reference views
 
-Coercive conversion verifies contiguous target representation while accepting
-unsafe semantic reinterpretation. Its purpose becomes clearer for a complete
-aggregate than for one scalar that could be converted independently:
+Coercion gives the same stored bits another recognized lens when that lens
+provides more insight than raw byte access. For example, viewing a Binary32
+value through same-endian U32 exposes known sign, exponent, and fraction
+positions instead of only an unexplained byte sequence.
+
+Precisely, coercion verifies a contiguous target representation and performs
+zero translation while accepting a reviewed semantic reinterpretation. Changing
+numeric value is not inherently unsafe. Its purpose becomes clearer for a
+complete aggregate than for one scalar that could be viewed independently:
 
 ```zax
 SignedRegisterBlock :: type {
@@ -711,7 +717,7 @@ writeRawRegisters(
 ) // error: safe compatibility requires matching scalar formats
 
 writeRawRegisters(
-  signedRegisters unsafe as coercive layout RawRegisterBlock &
+  signedRegisters as coercive layout RawRegisterBlock &
 )
 // succeeds: reinterpret both equal-width words without numeric conversion
 ```
@@ -733,14 +739,41 @@ WideRegisterBlock :: type {
 wide : WideRegisterBlock
 
 writeRawRegisters(
-  wide unsafe as coercive layout RawRegisterBlock &
+  wide as coercive layout RawRegisterBlock &
 ) // error: corresponding integer leaves have unequal logical widths
 ```
 
-The selected region must still have sufficient size and alignment on the
-selected target. Coercion may ignore semantic scalar differences and may weaken
-qualifications. It is target-dependent and always local; no declaration or
-result can carry a coercive posture.
+Coercion produces only a reference view:
+
+```text
+<source> as coercive layout <DestinationType> &
+<source> unsafe as coercive layout <DestinationType> &
+```
+
+There is no bare by-value coercive result. Representation extraction/adoption or
+explicit destination construction owns any independent copy.
+
+Safe coercion requires:
+
+- a reviewed scalar or aggregate relationship that provides the useful second
+  interpretation;
+- every valid source representation to be valid in the destination;
+- any requested writable access to preserve validity of the original
+  representation;
+- sufficient extent and alignment; and
+- preserved qualification and lifetime authority.
+
+`unsafe as coercive` is required when initial destination validity is asserted
+rather than proved or when writes through the view can make the original scalar
+representation invalid. The programmer must restore that original validity
+before using the original type again.
+
+Both forms are target-dependent and always local; no declaration or result can
+carry a coercive posture. Neither grants access authority. Existing mutable,
+writable, or varying authority may be preserved when ordinary lifetime and
+whole-root conditions permit it; immutable, readonly, or final input cannot
+become stronger. Coercion cannot bypass bounds, lifetime, resource,
+construction, replacement, or destruction invariants.
 
 ### View-shaped `unsafe cast`
 
@@ -779,27 +812,68 @@ resources, tracking repair, and the new value lifetime.
 Every scalar family supplies semantic format properties used by safe
 compatibility and a separately reviewed reduced list used by coercion.
 
-### Integer and fixed-point pressure
+### Integer and fixed-point scalars
 
-The safe integer/fixed-point format includes:
+The complete safe integer/fixed-point format includes:
 
-- logical bit width;
-- signedness;
-- value encoding, including two's-complement representation;
-- fixed fractional-bit position;
-- endianness role; and
-- storage extent, alignment, non-value bits, and normalization rules.
+- coefficient logical width;
+- signedness and value encoding, including two's-complement representation;
+- fixed fractional-bit position, including integer `F = 0`;
+- concrete endianness and logical-bit placement; and
+- storage extent, alignment, non-value bits, valid patterns, and normalization
+  rules.
 
-Every applicable property must match safely.
+Every applicable property must match safely. The complete family facts belong
+to [integers](integers.md#structural-scalar-compatibility) and
+[fixed-point scalars](fixed-point-scalars.md#representation-and-coercion).
 
-Integer/fixed-point coercion provisionally requires equal logical bit width and
-a sufficient compatible target storage envelope. It may reinterpret sign,
-fractional position, or endian meaning under local unsafe responsibility.
+Integer/fixed-point coercion requires:
 
-Final fixed-point and binary floating-point property lists remain future numeric
-work. In particular, floating coercion must preserve enough format to keep
-exponent and mantissa partitioning meaningful; equal total byte size is not
-sufficient.
+- equal logical coefficient width;
+- equal selected storage extent;
+- source placement satisfying destination alignment;
+- logical-bit placement appropriate to the declared relation; and
+- destination-compatible padding and validity.
+
+It may reinterpret signedness or `F`. Cross-endian coercion may expose the
+precisely known byte-order reinterpretation. Numeric conversion remains
+separate.
+
+### Floating-point scalars
+
+Safe floating compatibility requires the same complete format: logical width,
+sign encoding, exponent allocation and bias, fraction/significand
+interpretation, implicit/explicit integer-bit mode, value classes,
+payload/canonicalization rules, endianness, field placement, extent, alignment,
+and non-value-bit behavior.
+
+Two different floating formats do not become coercion-compatible merely because
+their extent matches. Repartitioning exponent and fraction fields provides no
+reviewed representation lens.
+
+A float may instead coerce directionally to an equal-width, same-endian unsigned
+integer when its logical fields, extent, alignment, and padding correspond. The
+integer may safely coerce back when every source pattern is a valid destination
+encoding. Thus Binary32 and matching U32 are safely bidirectional, including
+writable views.
+
+X87Extended80 can safely produce a readonly U80 view. A writable U80 view is
+unsafe because a write may invalidate the original Extended80 value. U80 to
+X87Extended80 requires validation or an unsafe validity assertion because some
+U80 patterns are not Extended80 values.
+
+Complete format and representation-adoption behavior belongs to
+[floating-point scalars](floating-point-scalars.md#structural-compatibility-and-coercion).
+
+### Coercion is more than raw bits
+
+The selected coercive relation identifies how destination fields or coefficient
+positions correspond to the same stored bits. Numeric value may change, but the
+programmer gains a type-aware interpretation rather than losing all meaning.
+
+When no family-reviewed relation supplies that additional information, use
+view-shaped `unsafe cast`. Equal byte count alone is never sufficient for
+coercion.
 
 ### Enums are directional
 
@@ -814,9 +888,10 @@ representation. A strict, flags, or otherwise restricted destination remains
 ineligible; the fact that `unsafe from` could bypass admission does not make its
 ordinary domain open.
 
-Semantic endian enums demonstrate why equal storage is not equal scalar format.
-Encoding, decoding, transcoding, raw extraction, and raw adoption remain the
-explicit endian-owned operations.
+Concrete endian specializations are intrinsic scalars rather than semantic
+enums. Numeric endian conversion, representation extraction/adoption, and
+byte-preserving coercion remain explicit operations owned by
+[endianness](endianness.md).
 
 ## Packets construct; they are not anonymous values
 
@@ -1293,7 +1368,7 @@ These changes can alter source validity or behavior:
 - adding a source-family result or changing a result label used by
   recomposition;
 - changing a hidden report schema; and
-- changing a target so an unsafe coercive layout no longer matches.
+- changing a target so a safe or unsafe coercive layout no longer matches.
 
 No ambiguity is resolved by declaration, import, source, or physical offset
 order.
@@ -1309,7 +1384,7 @@ Future focused work owns:
 - whole-type no-storage contracts and generic structural constraints;
 - reflection of posture, anchors, shape, physical/alternate paths, tracking,
   scalar formats, reshape declarations, and hidden report identities;
-- final fixed-point and binary floating-point safe/coercive property lists;
+- future scalar families supplying their own safe/coercive leaf relationships;
 - pointer-copy provenance when slicing separates a pointer from referenced
   storage;
 - partial/open type authority and compatibility invalidation;

@@ -4,11 +4,11 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers declaring, reading, converting, or operating on enum values |
-| Applies To | Programmer-facing strict, relaxed, flags, and language-supplied semantic enum behavior; not a formal grammar, ABI contract, or specification |
+| Applies To | Programmer-facing strict, relaxed, and flags enum behavior; not a formal grammar, ABI contract, or specification |
 | Implementation State | Not established by this repository |
 | Owns | The enum mental model; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; enum-domain selection and coverage facts; enum costs, diagnostics, and source stability |
-| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI; or endian-specific semantics ([endianness](endianness.md)) |
-| Source / Provenance | Current identity, integer, declaration, operator, endianness, safety, and intent designs, incorporating reviewed legacy enum intent |
+| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI |
+| Source / Provenance | Current identity, integer, declaration, operator, safety, and intent designs, incorporating reviewed legacy enum intent |
 
 ## Start with known values
 
@@ -289,7 +289,7 @@ Eligible backing types are:
 
 An arbitrary user identity does not become eligible merely because it
 ultimately uses integer storage. A future identity may become eligible through
-an explicit capability. An endian semantic enum cannot back another enum.
+an explicit capability.
 
 Flags require an unsigned eligible backing type. Signed flags backing and
 negative flag members are errors.
@@ -399,13 +399,9 @@ unchanged.
 
 ### `as BackingType`
 
-`enumValue as BackingType` projects the enum's represented semantic value into
-the exact immediate backing type. For ordinary strict, relaxed, and flags enums,
-it produces the same integer as raw extraction.
-
-Semantic enums may define a meaningful difference. In particular, an endian
-enum's projection decodes its represented number while `underlying value`
-returns its stored byte arrangement.
+`enumValue as BackingType` projects the enum's represented value into the exact
+immediate backing type. For strict, relaxed, and flags enums, it produces the
+same integer as raw extraction.
 
 Direct conversion to another integer type is unavailable:
 
@@ -471,9 +467,6 @@ applicable coercion requirements. A strict, flags, or otherwise restricted
 destination does not become coercion-compatible merely because `unsafe from`
 could bypass its ordinary admission policy.
 
-Semantic enums retain their specialized projection meaning. In particular, an
-endian enum's `as BackingType` decodes its number while `underlying value`
-extracts raw storage; structural recasting does not replace either operation.
 Complete posture, shape, layout, and coercion behavior is defined by
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#enums-are-directional).
 
@@ -857,29 +850,6 @@ not count for a search that can never reach its test.
 Complete case ordering, test interpretation, transfers, and diagnostics are
 defined by [Zax switch, case, and default](switch.md).
 
-## Endian semantic enums
-
-A programmer-defined enum cannot use an endian semantic enum as its backing:
-
-```zax
-MyEnum :: enum BigEndianU32 { } // error: ineligible backing type
-```
-
-Language-supplied endian types remain semantic enums backed directly by eligible
-exact intrinsic integers. Every backing value is admitted. Their conversion and
-operation behavior belongs to [Zax endianness](endianness.md).
-
-Endian values demonstrate why the shared enum model distinguishes semantic
-projection from raw extraction:
-
-```zax
-nativeValue := big as U32
-rawStorage := big underlying value
-```
-
-The first decodes the represented number. The second returns the stored byte
-arrangement.
-
 ## Costs
 
 - An enum adds identity but no per-value storage beyond its backing integer.
@@ -891,7 +861,6 @@ arrangement.
 - Relaxed admission requires no membership check.
 - String conversion may require generated name data and lookup work when used.
 - Multi-string flags admission performs lookup and OR work and fails atomically.
-- Endian semantic conversion may require byte rearrangement.
 - No general reflection or runtime metadata table is implied merely by declaring
   an enum.
 

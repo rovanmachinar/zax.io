@@ -102,6 +102,13 @@ postures, anchored views, and explicit shape-changing operations. Whole-type
 contracts, generic structural constraints, and runtime dispatch remain separate
 future work.
 
+Current scalar design keeps representation explicit:
+[integers](integers.md) define finite `F = 0` coefficients,
+[fixed-point scalars](fixed-point-scalars.md) define bounded coefficient scales,
+[binary floating-point scalars](floating-point-scalars.md) define ordinary and
+legacy exponent formats, and [endianness](endianness.md) defines concrete byte
+order across those families.
+
 ### Language-integrated build-time execution
 
 Zax code can execute as part of the build to:
@@ -380,6 +387,13 @@ and exposure boundaries are owned by
 representations, conversions, and arithmetic contracts are owned by
 [Zax integers](integers.md), with complete protected operation behavior in the
 [integer operator catalog](integer-operator-catalog.md).
+Accepted bounded fixed-point coefficient/scale formats are owned by
+[Zax fixed-point scalars](fixed-point-scalars.md). Accepted ordinary,
+profile-selected, and named legacy binary floating formats are owned by
+[Zax binary floating-point scalars](floating-point-scalars.md).
+Accepted intrinsic little/big scalar specialization,
+active/target/compiler-host selection, and numeric-versus-representation endian
+behavior are owned by [Zax endianness](endianness.md).
 Accepted structural identity separation, direct and flattened shape,
 compatibility postures, anchored recasting, and explicit structural
 transformation are owned by

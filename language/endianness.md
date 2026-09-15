@@ -3,207 +3,123 @@
 | Field | Value |
 | --- | --- |
 | Status | Current conceptual design |
-| Audience | Human developers reading, writing, or evaluating Zax code that stores, transmits, or interprets byte-ordered integers |
-| Applies To | Programmer-facing endian semantic enum behavior; not a formal grammar, layout contract, or specification |
+| Audience | Human developers reading, writing, or evaluating Zax code that stores, transmits, or calculates with byte-ordered scalars |
+| Applies To | Intrinsic integer, fixed-point, and floating-point endianness; not a formal grammar, ABI, wire contract, or specification |
 | Implementation State | Not established by this repository |
-| Owns | The endian mental model; absolute, native, compiler-host, and target endianness; how the four generated enum operations behave for endian values; receiver-correct encode, transcode, decode, adoption, and raw extraction; backing-value validity for endian enums; the focused endian operation surface; native right-operand as-if semantics; unavailable and deferred endian operations; storage/shape compatibility without implicit transfer; endian costs, diagnostics, and examples |
-| Does Not Own | General enum members, admission, strings, and generated behavior ([enums](enums.md)); integer families and backing eligibility ([integers](integers.md)); exact forms and shared selection ([operator catalog](operator-catalog.md), [operators](operators.md)); or general type compatibility/layout rules |
-| Source / Provenance | Legacy [basics](../basics.md) endian conversion evidence, refined against current enum, operator, and integer behavior |
+| Owns | The endian mental model; concrete little/big specialization; active, compiler-host, and target selection; absolute names; numeric endian conversion; byte-preserving representation reinterpretation; cross-family operation behavior; storage rules; costs, diagnostics, and portability |
+| Does Not Own | Integer semantics ([integers](integers.md)); fixed-point semantics ([fixed-point scalars](fixed-point-scalars.md)); floating formats ([floating-point scalars](floating-point-scalars.md)); exact forms and shared selection ([operator catalog](operator-catalog.md), [operators](operators.md)); aggregate compatibility ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); or ABI/serialization contracts |
+| Source / Provenance | Legacy [basics](../basics.md) endian conversion evidence, reconstructed against current scalar, operator, qualifier, and structural design |
 
 ## Mental model
 
 > For every operation that an endian type supports, behave as though the value
 > were being operated on natively by an environment with that byte order.
 
-That single sentence is the whole model. An endian value is not a byte-swapping
-gadget bolted onto an integer; it is a distinct type whose supported operations
-mean what they would mean inside a machine that natively uses its byte order.
+Endianness is an intrinsic property of each concrete integer, fixed-point, and
+floating-point specialization. It is not a wrapper enum or per-value runtime
+flag.
 
 ```zax
-headerBits : U32 = 4660       // hexadecimal 00001234
-flagMask : U32 = 2147483648   // hexadecimal 80000000
+myBig : Scalars.Integers.Big.U32 = 4660
+myFlag : Scalars.Integers.Big.U32 = 2147483648
 
-header := BigEndianU32 from headerBits
-flagged := header | flagMask
-// `flagged` means "the big-endian value 0x80001234",
-// not "the native value whose bytes happen to look shuffled".
+myFlagged := myBig | myFlag
+// Numeric result 0x80001234 in the same big-endian U32 identity.
 ```
 
-Zax deliberately supports only operations whose meaning is unambiguous under that
-sentence. Everything else is unavailable rather than approximate.
+The scalar family supplies the same applicable operation surface regardless of
+whether the declared byte order matches the CPU. A mismatch can add conversion
+or software cost but does not change numeric meaning.
 
-## Endian semantic enum families
+## Concrete endian specializations
 
-For every applicable exact fundamental integer type, Zax conceptually supplies a
-big-endian and a little-endian enum version backed by that same fundamental type.
-An applicable backing type has a whole-byte logical width, no non-value storage
-bits, and the representation guarantees defined by
-[Zax integers](integers.md#enum-and-endian-boundaries).
+Every intrinsic scalar specialization resolves one concrete endianness:
 
 ```zax
-big : BigEndianU32
-little : LittleEndianU32
+myLittleInteger : Scalars.Integers.Little.U32
+myBigInteger : Scalars.Integers.Big.U32
+
+myLittleFixed : Scalars.Fixed.Little.I16F8
+myBigFloat : Scalars.Floating.Big.Binary32
 ```
 
-The names `BigEndianU32` and `LittleEndianU32` are explicitly illustrative. They
-are written here as though ordinary named enum types exist so that examples stay
-readable; exact generated names and the generic mechanism producing the family
-remain future enum and numeric work.
+The endianness dimension participates in intrinsic type identity. Equal value
+width and equal numeric format do not make little- and big-endian
+specializations interchangeable.
 
-Every value of the backing integer type represents an endian value. That is why
-the language-provided closed bitwise operations below cannot create an invalid
-enum representation.
+A selector described as native or "agnostic" can appear while a profile or generic
+factory is choosing a type. It resolves to `Little` or `Big` before the concrete
+specialization exists. No instance changes endianness at runtime.
 
-Endian enums:
+## Active and absolute names
 
-- are independent nominal enum types rather than proxies or aliases;
-- share the fundamental backing type, instance size, alignment, and
-  representation extent of the corresponding basic type;
-- cannot add stored instance members or hidden per-value storage;
-- require explicit conversion despite that compatible storage and shape; and
-- add a focused operation surface beyond the four operations every enum receives.
-
-A **semantic** enum is one whose stored bits and its represented numeric meaning
-may differ. Endian enums are the current example: the meaning of an endian value
-is a number, while its storage is that number arranged in a particular byte
-order.
-
-## The four generated enum operations
-
-Every enum receives four protected language-provided
-[boundary operations](enums.md#generated-boundary-operations). For an endian
-enum they read as follows.
-
-### `underlying type`
+The scalar-family root is the canonical current-execution-environment route:
 
 ```zax
-BackingType :: alias type BigEndianU32 underlying type // U32
+Scalars.Integers.U32
+Scalars.Fixed.I16F8
+Scalars.Floating.Binary32
+
+myInteger : U32
+myFixed : I16F8
+myFloat : Binary32
 ```
 
-A post-unary type-receiver operation returning the exact fundamental intrinsic
-type backing the enum, without use-site qualifiers and in its default-qualified
-form. It requires no instance.
-
-### `underlying value`
+Explicit environment paths select compiler-host or target behavior:
 
 ```zax
-rawBigStorage := big underlying value
+myTarget : Scalars.Integers.Target.U32
+myCompilerHost : Scalars.Integers.CompilerHost.U32
 ```
 
-A post-unary instance operation returning one value of the exact underlying
-fundamental type containing the stored backing value **unchanged**. It performs
-no semantic conversion and no validation. For an endian value this is the raw
-byte arrangement, not the represented number.
-
-### `as UnderlyingType`
+Use absolute paths when stored byte order must remain fixed independently of
+the active environment:
 
 ```zax
-nativeValue := big as U32
+myWireValue : Scalars.Integers.Big.U32
+myFileValue : Scalars.Floating.Little.Binary32
 ```
 
-The enum value supplies receiver discovery and the right operand is the exact
-underlying type argument. For an endian enum, `as` **decodes represented numeric
-meaning**.
+Short absolute aliases may be supplied by later import/module work. The
+canonical paths above do not depend on generated enum families.
 
-For an ordinary strict enum, semantic projection and raw extraction commonly
-produce the same value. Endian enums are exactly where they differ:
+## Numeric conversion and raw representation
 
-| Operation | Question it answers |
-| --- | --- |
-| `big as U32` | What number does this big-endian value represent? |
-| `big underlying value` | What bit pattern is actually stored? |
-
-When the active execution byte order matches the enum's absolute order, the two
-agree. When it does not, they do not, and the difference is the entire point.
-
-### `EnumType unsafe from rawValue`
+Numeric conversion between endian specializations preserves represented value
+and may rearrange bytes:
 
 ```zax
-big := BigEndianU32 unsafe from rawBigStorage
+myLittle : Scalars.Integers.Little.U32 = 4660
+myBig := myLittle as Scalars.Integers.Big.U32
+// Both values mean 4660; their stored byte order differs.
 ```
 
-A binary type-receiver operation that accepts a value of the enum's exact
-underlying fundamental type, preserves that backing value unchanged, performs no
-membership, range, or semantic validation, and establishes the independent enum
-type. It is a defined unsafe permission through which the programmer states that
-the raw storage is to carry the claimed endian meaning.
+Equal-format endian conversion is exact for every source value and therefore
+does not panic, overflow, or underflow.
 
-`unsafe from` belongs to the baseline enum model rather than being an
-endian-specific operation, so no endian-specific raw-adoption phrase exists.
-
-## Receiver-correct conversion
-
-Entry into an endian domain is owned by the **destination** enum type receiver:
+There is no implicit transfer:
 
 ```zax
-big := BigEndianU32 from nativeValue
-little := LittleEndianU32 from nativeValue
-
-little := LittleEndianU32 from big
-big := BigEndianU32 from little
+myBig = myLittle // error: distinct endian identities
 ```
 
-The destination-owned operation also gives a number literal the exact backing
-integer type it needs:
+Representation extraction instead preserves logical encoding or storage bytes,
+depending on the selected representation operation. Exact source words for
+general scalar representation extraction and adoption remain future operator
+work.
+
+Coercive conversion is a local zero-translation view. Cross-endian coercion
+preserves bytes and deliberately changes their interpreted value:
 
 ```zax
-smallBigEndian := BigEndianU32 from 5
+myReinterpreted :=
+  myLittle as coercive layout
+    Scalars.Integers.Big.U32 &
 ```
 
-Here the selected `from` input is `U32`, so argument binding has the same typed
-value as `(: U32 = 5)` before the endian value is created. This direct source
-capability must survive future refinement of generated endian names and family
-syntax. Number-literal input selection is defined by
-[Zax integer literals and realization](integer-literals.md#number-literals-filling-typed-inputs).
-
-The additional safe type-receiver `from` operation:
-
-- **encodes** native numeric meaning when the source is the exact fundamental
-  basic type;
-- **transcodes** numeric meaning when the source is another endian enum in the
-  same backing family;
-- returns the destination endian enum type; and
-- performs no widening or narrowing.
-
-Exit is owned by the enum value receiver:
-
-```zax
-nativeValue := big as U32              // decode numeric meaning
-rawBigStorage := big underlying value  // exact stored backing value
-BackingType :: alias type BigEndianU32 underlying type
-```
-
-Putting the four directions together:
-
-| Direction | Operation | Meaning |
-| --- | --- | --- |
-| Native number in | `BigEndianU32 from nativeValue` | Safe encode |
-| Other endian in | `LittleEndianU32 from big` | Safe transcode |
-| Raw storage in | `BigEndianU32 unsafe from rawStorage` | Unchecked adoption |
-| Number out | `big as U32` | Safe decode |
-| Raw storage out | `big underlying value` | Exact extraction |
-
-There is no implicit transfer in any direction:
-
-```zax
-nativeValue : U32 = big
-// error: compatible storage does not grant implicit conversion
-```
-
-### Receiver ownership
-
-The destination enum type owns entry into its domain:
-
-```zax
-BigEndianU32 from nativeValue
-LittleEndianU32 from nativeValue
-MyEnum unsafe from rawValue
-```
-
-This keeps fundamental types independent of enums that happen to use them as
-backing storage. The uniform target-oriented `from` operation owns encoding and
-transcoding, while the enum-owned `as UnderlyingType` operation owns semantic
-exit.
+Complete conversion, representation-adoption, coercion, and `unsafe cast`
+boundaries are defined by the applicable scalar owner and
+[structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
 ## Native, compiler-host, and target endianness
 
@@ -221,229 +137,134 @@ At ordinary target runtime, native endianness is the target execution
 environment's byte order. During compile-time execution, native endianness is the
 byte order of the environment whose execution semantics are currently active.
 
-Do not use `host`, `target`, and `native` interchangeably. A native-endian alias
-is useful for generic source but is context-relative by construction, so exact
-`native`, `host`, and `target` enum names remain future naming and
-compile-time-context work.
+Do not use `host`, `target`, and `native` interchangeably. An active-endian alias
+is context-relative by construction.
 
-## Mixed native operands
+## Operations use one endian identity
 
-When an available operation on an endian receiver accepts a native operand of the
-exact underlying fundamental type, its observable result is the same as if the
-native operand had first been converted through `EndianType from nativeValue`:
+Endian specializations receive the complete applicable operation surface of
+their scalar family:
 
-```zax
-masked := bigValue & nativeMask
-// same observable result as:
-masked := bigValue & (BigEndianU32 from nativeMask)
-```
-
-This is an as-if semantic rule, not a required implementation sequence. An
-implementation may fuse, elide, or replace those conceptual steps with any
-equivalent behavior while preserving result type, observable value, failures, and
-documented costs.
-
-The endian value must supply receiver discovery:
-
-```zax
-nativeMask & bigValue
-// unavailable by design: a fundamental left operand owns no enum-aware signature
-```
-
-A raw mask that already carries big-endian representation is *not* a native
-number and must use raw adoption instead:
-
-```zax
-masked := bigValue & (BigEndianU32 unsafe from rawBigMask)
-```
-
-Two different endian enum operands require explicit target-oriented transcoding.
-Mixed native participation is operation-local mapping, never implicit assignment
-or general transfer.
-
-## Supported operation surface
-
-Endian enum families add a deliberately limited set of operations whose meaning
-is unambiguous under the mental model:
-
-- same-type construction, copy, move, assignment, destruction, and swap;
-- equality and inequality with the same endian enum type, or with the exact
-  backing fundamental type on the right;
-- complement on one endian enum value;
-- AND, OR, XOR, and AND-NOT with the same endian enum type, or with the exact
-  backing fundamental type on the right;
-- the language-defined `bitwise nand`, `bitwise nor`, `bitwise xnor`, and
-  `bitwise or not` phrase forms;
-- the corresponding direct mutation forms;
-- population count, returning the backing integer's associated bit-count type;
+- integers use the [integer operation catalog](integer-operator-catalog.md);
+- fixed-point values use [fixed-point scalar operations](fixed-point-scalars.md);
   and
-- reduction AND, OR, XOR/parity, NAND, NOR, and XNOR.
+- floating values use [floating-point scalar operations](floating-point-scalars.md).
 
-The language-provided endian family replaces or forbids the ordinary enum
-comparison and exposure defaults as needed. In particular, ordering remains
-unavailable even though ordinary enums have a default backing-value order.
+Operands normally share one exact identity:
 
 ```zax
-aBits : U32 = 305419896 // hexadecimal 12345678
-bBits : U32 = 252645135 // hexadecimal 0F0F0F0F
+myLittle : Scalars.Integers.Little.U32 = 1
+myBig : Scalars.Integers.Big.U32 = 2
 
-a := BigEndianU32 from aBits
-b := BigEndianU32 from bBits
+myInvalid := myLittle + myBig
+// error: convert one operand to the intended endian identity
 
-same := a == b
-inverted := ~a
-combined := a | b
-cleared := a &~ b
-neither := a bitwise nor b
-
-a |= b
-a bitwise nand assign b
-
-setBits := #a
-anySet := #|a
+mySum := (myLittle as Scalars.Integers.Big.U32) + myBig
 ```
 
-Boolean bitwise operations commute with the fixed endian representation
-permutation, so operating on matching encoded backing values produces the same
-encoded result as operating natively in that endian environment. Population count
-and reductions do not depend on bit position. These basic endian signatures are
-language-provided and protected.
-
-## Unavailable and deferred operations
-
-The initial endian surface does not include:
-
-- numeric arithmetic or magnitude;
-- ordering comparisons;
-- increment or decrement;
-- shifts, rotates, or multiword shift operations;
-- leading/trailing counts, set-bit masks, or set-bit positions;
-- bit or byte reversal; or
-- masked extraction and deposit.
+An uncommitted integer filling an operand of a selected endian identity receives
+that same concrete endianness:
 
 ```zax
-shifted := bigValue << 2
-// error: shifting is not part of the initial endian operation surface
+myBits : Scalars.Integers.Big.U32 = 1
+myResult := myBits ^ 1024
+// `1024` is realized directly as Scalars.Integers.Big.U32.
+// The result retains that same type.
 ```
 
-Decode first when a numeric operation is what the program actually means:
-
-```zax
-shifted := BigEndianU32 from ((big as U32) << 2)
-```
-
-If future enum and endian work adds a direct operation, the mental model already
-fixes its meaning: a numeric shift as if executed natively in the enum's endian
-environment, never an accidental shift of how backing bytes appear in the active
-machine. Hidden conversion cost and the absence of a direct target instruction
-are design pressures, not automatic reasons to include or exclude an operation.
+The compiler may calculate in a CPU-native register, swap around an operation,
+select an endian-aware instruction, or call software. It must preserve the
+declared logical width, numeric format, endian storage, operation result, and
+failure behavior.
 
 ## Compatibility is not conversion
 
-An endian enum and its backing fundamental type can have the same storage
-envelope while retaining different scalar formats and independent identities.
-Endianness role is a meaning-bearing scalar property: native `U32` and
-`BigEndianU32` do not become safely shape-compatible merely because their bytes
-occupy the same extent or one target's native order happens to be big-endian.
+Two endian specializations can have the same storage extent while retaining
+different scalar formats and identities. Concrete endianness is meaning-bearing:
+active `U32` and `Scalars.Integers.Big.U32` do not become safely
+shape-compatible merely because one target happens to be big-endian.
 
 Storage coincidence describes representation. A conversion rule grants
 transfer and preserves or changes numeric meaning. Neither representation
 coincidence nor structural shape permits:
 
 ```zax
-nativeValue : U32 = big
+myBig : Scalars.Integers.Big.U32 = 1
+myLittle : Scalars.Integers.Little.U32 = myBig
 // error: structural compatibility is not a conversion rule
 ```
 
-Use `as U32` to decode semantic value, `underlying value` to extract raw storage,
-`from` to encode or transcode, and `unsafe from` to adopt raw storage. General
-shape, layout, scalar-format, posture, and coercion terminology is defined by
+An assignment to unqualified `U32` succeeds when active `U32` resolves to the
+same big-endian specialization and fails when it resolves to little-endian.
+
+Use numeric `as` conversion to preserve value, a representation operation to
+extract or adopt encoding, and local coercion to preserve bytes while changing
+their interpretation. General shape, layout, scalar-format, posture, and
+coercion terminology is defined by
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#scalar-compatibility).
 
 ## Costs
 
-- `from` may cost nothing when the enum's absolute order matches native order,
-  and a byte permutation when it does not. The language promises the result, not
-  the instruction.
-- `unsafe from` and `underlying value` are representation-preserving and carry no
-  conversion cost, but `unsafe from` carries the programmer's unchecked
-  assertion instead.
-- `as UnderlyingType` costs whatever decoding the active environment requires.
-- Boolean bitwise operations, population count, and reductions need no
-  conversion, which is exactly why they are in the supported surface.
-- A mixed native right operand conceptually converts that operand. Writing the
-  conversion once and reusing the endian value avoids repeating it.
+- Numeric conversion may cost nothing when orders match and a byte permutation
+  or wider operation when they differ.
+- Same-identity arithmetic may need swaps around a CPU-native operation.
+- Raw representation extraction/adoption avoids numeric conversion but carries
+  format and portability constraints.
+- Coercion can be runtime-free; its unsafe form adds validity or restoration
+  responsibility.
+- Profile-selected active, target, and compiler-host types can differ and may
+  require separate specialization.
 
 ## Worked example
 
 Reading a big-endian length field out of a buffer and using it natively:
 
 ```zax
-rawStorage := readU32(buffer, offset)
+BigU32 :: alias type Scalars.Integers.Big.U32
 
-// The buffer already holds big-endian bytes, so adopt rather than encode.
-length := BigEndianU32 unsafe from rawStorage
-
-// Decode to work with the number.
-count := length as U32
-
-// Mask a flag while staying in the endian domain.
-flagMask : U32 = 2147483648 // hexadecimal 80000000
+length : BigU32 = readBigU32(buffer, offset)
+flagMask : BigU32 = 2147483648 // hexadecimal 80000000
 withoutFlag := length &~ flagMask
 
-// Write it back out as raw storage.
-writeU32(buffer, offset, withoutFlag underlying value)
+count : U32 = length as U32
+writeBigU32(buffer, offset, withoutFlag)
 ```
 
-Contrast the two extraction operations on a machine whose native order is little
-endian:
+On a little-endian active environment, numeric conversion and coercive
+reinterpretation intentionally differ:
 
 ```zax
-value := BigEndianU32 from 1
+myBig : Scalars.Integers.Big.U32 = 1
 
-numeric := value as U32              // 1
-raw := value underlying value        // 0x01000000
-```
+myNumeric : U32 = myBig as U32
+// numeric value 1
 
-Encoding a native number for transmission:
-
-```zax
-encoded := BigEndianU32 from hostCount
-writeU32(packet, position, encoded underlying value)
-```
-
-Transcoding between two absolute orders without ever naming a native number:
-
-```zax
-little := LittleEndianU32 from big
+myStorageView :=
+  myBig as coercive layout
+    Scalars.Integers.Little.U32 &
+// zero translation; the same bytes have another integer interpretation
 ```
 
 ## Diagnostics
 
 Diagnostics should distinguish:
 
-- an unavailable endian operation from an unsupported operand shape;
-- an attempted implicit conversion between an endian enum and its backing type;
-- a native operand in receiver position where no enum-aware signature exists;
-- mixed endian operands requiring explicit transcoding;
-- an invalid source or backing-type shape supplied to semantic conversion or raw
-  adoption; and
-- an attempt to declare or replace one of the protected endian or generated enum
-  signatures.
-
-`unsafe from` cannot diagnose that the programmer meant semantic encoding rather
-than raw adoption. Its purpose is to grant the defined permission to preserve
-the supplied representation as an endian value.
+- mixed-endian operands requiring explicit conversion;
+- numeric conversion from byte-preserving reinterpretation;
+- active, target, compiler-host, and absolute endianness;
+- unsupported arithmetic versus an endian adaptation cost;
+- incompatible width, field placement, padding, or alignment for coercion;
+- invalid representation adoption; and
+- a runtime CPU mode that does not satisfy the selected target contract.
 
 ## Boundaries and maturity
 
 This document is current conceptual design, not a formal specification, layout or
 ABI contract, serialization framework, or implementation mapping.
 
-Exact generated endian type names, the generic mechanism producing the family,
-identity-family integration, ABI, and complete compile-time-context naming
-remain focused future work. General enum behavior is defined by
-[Zax enums](enums.md).
+Exact intrinsic generic syntax, profile files, representation-operation words,
+ABI correspondence, serialization, and complete compile-time-context selection
+remain focused future work.
 
 Exact operator forms, fixity, and precedence are in the
 [operator catalog](operator-catalog.md#endianness-reference). The shared operator

@@ -24,8 +24,17 @@ affects programming behavior.
 The **active execution environment** is the environment whose execution
 semantics currently govern an operation. It may be the generated target or the
 compiler host during applicable build-time execution. An unqualified
-environment-relative scalar name selects against this environment. See
+environment-relative scalar name, including its concrete endianness, selects
+against this environment. See [Zax endianness](endianness.md) and
 [Zax integers](integers.md#native-representation-and-software-emulation).
+
+The scalar-family root is the canonical current-environment namespace:
+
+```zax
+Scalars.Integers.I32
+Scalars.Fixed.I16F8
+Scalars.Floating.Binary32
+```
 
 ## Access path
 
@@ -133,6 +142,20 @@ concrete type is already expected. Omission resolves to
 Compatibility posture is not type identity and is distinct from transfer
 stance. See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#compatibility-posture).
+
+## Coercive view
+
+A **coercive view** gives one stored region another reviewed typed lens without
+translating its bytes. It is available only when the destination interpretation
+provides useful structure beyond arbitrary raw-byte access.
+
+Changing numeric value is not inherently unsafe. Safe coercion proves
+destination validity and, for writable access, preservation of source validity.
+`unsafe as coercive` instead accepts an unproved validity precondition or a
+restoration obligation after a write. Both forms are local reference views,
+preserve available qualification authority, and remain distinct from unchecked
+`unsafe cast`. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-reference-views).
 
 ## Commitment boundary
 
@@ -448,12 +471,17 @@ environment running the compiler, from **target endianness**, the byte order
 selected for generated target behavior, and from the absolute orders **big
 endian** and **little endian**. See [Zax endianness](endianness.md).
 
+Every concrete intrinsic scalar specialization has absolute little or big
+endianness. Native or "agnostic" describes a selector resolved before a concrete
+type exists, not accepted source syntax or per-value runtime state.
+
 ## Native representation
 
 A scalar type has a **native representation** when the applicable CPU provider
-classifies that width as a native scalar representation. This does not promise
+classifies its format as directly represented by the CPU. This does not promise
 that every operation has a direct instruction or one uniform cost. See
-[Zax integers](integers.md#native-representation-and-software-emulation).
+[Zax integers](integers.md#native-representation-and-software-emulation) and
+[binary floating-point support](floating-point-scalars.md#environment-support).
 
 ## Normal completion
 
@@ -864,6 +892,19 @@ It is distinct from ordinary syntax rejection and from a deliberate intent or
 layout error. The violated rule and its behavior remain with the applicable
 concept owner.
 
+## Scalar format
+
+A **scalar format** is the complete type-level interpretation of one scalar's
+logical bits and storage envelope. Applicable properties include width,
+signedness, coefficient scale, exponent/fraction partition, value encoding,
+endianness, valid patterns, non-value bits, and normalization.
+
+Scalar format is distinct from public type identity, target support, operation
+cost, and ABI compatibility. See
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#scalar-compatibility),
+[fixed-point scalars](fixed-point-scalars.md), and
+[floating-point scalars](floating-point-scalars.md).
+
 ## Sealed type
 
 A **sealed type** cannot receive ordinary externally added members or
@@ -889,7 +930,8 @@ natively represent or directly operate on the requested width.
 
 A **software fallback** is a type-selection result that uses software emulation
 because no native candidate satisfies the request. See
-[Zax integers](integers.md#native-representation-and-software-emulation).
+[Zax integers](integers.md#native-representation-and-software-emulation) and
+[floating-point environment support](floating-point-scalars.md#environment-support).
 
 ## Shareable unique pointer
 

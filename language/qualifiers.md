@@ -1117,10 +1117,22 @@ authority. A whole-root compatible reference may retain varying authority only
 when complete lifetime partitions, qualifications, tracking, construction,
 replacement, and destruction obligations match.
 
-Coercive `unsafe as` and view-shaped `unsafe cast` may weaken qualification only
-under their explicit local unsafe responsibility. Complete posture, anchor,
-shape/layout, and conversion behavior is defined by
-[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#same-storage-compatible-references).
+Safe and unsafe coercion never grant access authority. They may preserve
+existing mutable, writable, or varying authority when the structural and
+lifetime conditions permit it, but immutable, readonly, or final input cannot
+become stronger.
+
+Safe writable coercion proves that every destination write preserves a valid
+source representation. `unsafe as coercive` is required when a permitted write
+may invalidate the original scalar; the programmer must restore that invariant
+before using the original type again. The `unsafe` marker accepts representation
+risk rather than qualification weakening.
+
+View-shaped `unsafe cast` and `unsafe pliable` remain the separate local
+mechanisms that can bypass qualification promises under their stated unsafe
+responsibility. Complete posture, anchor, shape/layout, coercion, and raw-cast
+behavior is defined by
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-conversion-and-raw-casting).
 
 ## Diagnostics and formatting
 

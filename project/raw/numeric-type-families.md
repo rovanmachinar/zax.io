@@ -3,25 +3,31 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining intrinsic, custom, generic, fixed-point, arbitrary-width, or floating numeric families |
-| Applies To | Numeric type relationships and operator availability deferred by operator review |
-| Owns | Signedness-counterpart, finite-bit-extent, count-tier, conversion, delta/distance, storage, type-family, alias, float-representation, and policy applicability questions |
-| Does Not Own | Current finite-integer behavior or [enum behavior](../../language/enums.md) |
+| Audience | Future work defining custom, unbounded, unusual-width, generic, or advanced numeric families and operations |
+| Applies To | Numeric type relationships and operator mechanics still deferred after integer, fixed-point, and floating scalar review |
+| Owns | Custom-family participation, signedness-counterpart mechanics, finite-bit-extent constraints, count-tier implementation, delta/distance mechanics, multiword operations, reversal, extraction/deposit, representation-operation words, and remaining policy applicability questions |
+| Does Not Own | Current [finite integers](../../language/integers.md), [fixed-point scalars](../../language/fixed-point-scalars.md), [binary floating-point scalars](../../language/floating-point-scalars.md), or [enum behavior](../../language/enums.md) |
 | Source / Provenance | Legacy intrinsic-type, casting, and operator evidence; work item `012` nested optional conversion pressure |
 
 ## Current finite-integer disposition
 
 Current exact and role-selected finite integers, ranges, storage, conversion,
-count tiers, signedness pairs, `delta`, `distance`, and endian eligibility are
+count tiers, signedness pairs, `delta`, `distance`, and concrete endianness are
 owned by [Zax integers](../../language/integers.md). Complete protected integer
 operation behavior is owned by the
 [integer operator catalog](../../language/integer-operator-catalog.md); exact
 forms and precedence remain in the
 [general operator catalog](../../language/operator-catalog.md).
 
-This raw input retains the generic mechanism, associated-type implementation,
-custom/extreme numeric families, multiword arrangement, fixed-point, unbounded,
-and floating questions. It is not a competing definition of current integers.
+Current fixed-point formats, names, arithmetic, conversion, and representation
+are owned by [Zax fixed-point scalars](../../language/fixed-point-scalars.md).
+Current ordinary and legacy binary floating formats are owned by
+[Zax binary floating-point scalars](../../language/floating-point-scalars.md).
+
+This raw input retains generic/associated-type mechanics, custom and unbounded
+numeric families, multiword arrangement, advanced bit operations, and exact
+representation-operation wording. It is not a competing definition of current
+scalar semantics.
 
 ## Custom integer-family participation
 
@@ -220,9 +226,11 @@ It names capacity, not a safe raw conversion. A non-byte-multiple integer has
 unspecified non-value storage bits that cannot affect defined numeric behavior.
 Widening uses the logical sign or zero extension; narrowing uses logical bits.
 
-An arbitrary exact width may back an ordinary enum. Endian families are limited
-to whole-byte exact widths with no non-value storage bits. No language-provided
-raw storage extraction exists for an unusual padded width such as `I57`.
+An arbitrary exact width may back an ordinary enum. Every intrinsic scalar has
+concrete endianness, including unusual widths; used logical bits occupy the
+low-order portion of the highest participating byte and padding remains
+non-value storage. No language-provided operation exposes that padding as
+stable value data for an unusual width such as `I57`.
 
 ## Identity and counterpart relationships
 
@@ -301,34 +309,31 @@ This file retains numeric-family questions only. Future custom numeric types do
 not become enum-eligible merely because they use integer storage; eligibility
 requires an explicit, separately reviewed capability.
 
-## Floating representation
+## Remaining representation-operation syntax
 
-Floating numeric operations and raw representation access are separate:
+Current floating design distinguishes numeric conversion, logical
+representation access, validated/unsafe adoption, canonicalization, coercive
+views, and raw casting. Complete semantics belong to
+[Zax binary floating-point scalars](../../language/floating-point-scalars.md#representation-extraction-and-adoption).
+
+Exact source words remain unsettled:
 
 ```zax
 // Illustrative future concept.
 bits of floatValue
 ```
 
-Future work must distinguish numeric conversion, bit-preserving reinterpretation,
-unsafe raw access, NaN payloads, canonicalization, byte order, and target
-representation. Ordinary float bitwise operators remain reserved and unavailable
-until that review.
-
-That review must also consume the provisional scalar safe/coercive compatibility
-property lists in
-[floating-point maintainer notes](floating-point-maintainer-notes.md).
-Equal total storage does not make different exponent/mantissa partitions
-coercion-compatible. The float owner will finalize its list and recheck the
-current integer list against
-[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md#scalar-compatibility).
+Future operator/reflection work must choose forms for representation extraction,
+validation, optional and unsafe adoption, and canonicalization without
+reopening those semantic distinctions. Ordinary floating bitwise operators
+remain unavailable.
 
 ## Activation and retirement
 
-Activate this input for numeric types, generic numeric contracts, signedness,
-fixed-point, arbitrary-width, count and associated types, conversion,
-delta/distance, multiword operations, reversal, masked extraction/deposit,
-alias, float, or representation work. Move accepted behavior into numeric,
-type, cast, generic, or operator owners and retire this file after every item is
-dispositioned. Current enum-specific behavior remains with
-[Zax enums](../../language/enums.md).
+Activate this input for custom/unbounded numeric types, generic numeric
+contracts, signedness mechanics, unusual width, count and associated-type
+implementation, delta/distance mechanics, multiword operations, reversal,
+masked extraction/deposit, or representation-operation wording. Move accepted
+behavior into numeric, type, cast, generic, reflection, or operator owners and
+retire this file after every remaining item is dispositioned. Current enum
+behavior remains with [Zax enums](../../language/enums.md).

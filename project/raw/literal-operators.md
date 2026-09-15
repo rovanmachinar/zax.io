@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining prefixed/custom literals, payloads, literal declarations, or literal-only type sugar |
-| Applies To | Preserved prefixed literal syntax and behavior pressure after unprefixed integer realization was promoted |
-| Owns | Prefix/result questions, payload and merged-literal evidence, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Current unprefixed integer realization ([integer literals and realization](../../language/integer-literals.md)) or accepted source attachment behavior ([source structure](../../language/source-structure.md)) |
+| Audience | Future work defining ordinary-real or prefixed/custom literals, payloads, literal declarations, or literal-only type sugar |
+| Applies To | Preserved literal syntax and behavior pressure after integer and scalar realization semantics were promoted |
+| Owns | Real token/exponent/radix/suffix questions, exact-source requests, prefix/result questions, payload and merged-literal evidence, representative source, activation pressure, and retirement criteria |
+| Does Not Own | Current unprefixed integer realization ([integer literals and realization](../../language/integer-literals.md)); typed [fixed-point](../../language/fixed-point-scalars.md#initialization-and-real-number-source) or [floating-point](../../language/floating-point-scalars.md#initialization-and-real-number-source) value semantics; or accepted source attachment behavior ([source structure](../../language/source-structure.md)) |
 | Source / Provenance | Legacy `basics.md`, `casting.md`, and `operator.md` literal evidence together with integer-literal review |
 
 ## Current boundary inherited by future literal work
@@ -31,8 +31,9 @@ Future prefixed/custom literal work inherits these constraints:
 - a resolved prefixed literal has one concrete result type;
 - its result does not remain an uncommitted integer for later
   destination-driven reinterpretation;
-- a function used to implement a literal also has its declared concrete result
-  type;
+- a baseline function used to implement a literal has its declared concrete
+  result type, while future generic work may compute that one concrete type from
+  the payload before resolution completes;
 - an attached single quote introduces the payload;
 - backticks are not literal delimiters; and
 - a prefix cannot cause expression-result lookahead or speculative receiver
@@ -41,6 +42,31 @@ Future prefixed/custom literal work inherits these constraints:
 The prefix may identify a type-owned literal declaration, but exact declaration
 syntax, namespaces, imports, ownership, shadowing, and ambiguity remain future
 work.
+
+## Ordinary real-number source boundary
+
+Current scalar owners establish that a typed real source is parsed
+mathematically and realized directly in its selected fixed-point or floating
+destination. Precision rounding, range failure, and host-independent evaluation
+are current scalar semantics. Current
+[integer-literal documentation](../../language/integer-literals.md#real-number-source-and-decimal-exponents)
+also establishes decimal `e`/`E` with an optionally signed power-of-ten
+exponent; `1e100` is real-number source and bare `e100` is not a number literal.
+
+This input retains the source questions:
+
+- remaining fractional-point token boundaries;
+- future binary/hexadecimal exponent spellings;
+- separators, grouping, digit alphabets, and malformed forms;
+- suffixes or literal-only type selection;
+- default commitment when no destination type is already selected;
+- compiler magnitude/resource limits; and
+- syntax for requesting exact realization rather than ordinary destination
+  rounding.
+
+Those decisions must not reinterpret a resolved prefixed literal as an
+uncommitted real or make compiler-host floating arithmetic determine target
+bits.
 
 ## Preserved prefix and payload evidence
 
@@ -73,6 +99,30 @@ Future work must decide whether a form denotes a mathematical radix, a concrete
 numeric type, a bit pattern, or another result family. In particular,
 interpreting a width-specific signed payload as a positive magnitude differs
 from interpreting it as a complete signed bit pattern.
+
+### Payload-dependent concrete result pressure
+
+Compare:
+
+```zax
+mySmall := h'FF'
+myLarge := h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+```
+
+A numeric literal declaration may need to select a wider exact integer after
+parsing the second payload. Returning one maximum-width integer wastes
+compile-time/storage capacity, while selecting one ordinary concrete return
+type before parsing can reject an otherwise meaningful payload.
+
+Future literal/generic work should test whether a compile-time literal
+declaration can derive its one final concrete result identity from parsed
+magnitude through a bounded type factory. The result must be concrete before it
+participates in surrounding selection. Range failure must not retry unrelated
+literal overloads, and the result must not remain an uncommitted integer.
+
+The baseline facility may begin with concrete declared results. This pressure
+ensures that later generic design does not make payload-dependent numeric sizing
+impossible.
 
 Legacy merged-literal evidence also combines numeric payloads with character
 sequences:
@@ -193,6 +243,8 @@ distinction.
 
 - concrete result types for language-provided prefixes such as `b`, `b8`, `o`,
   `d`, and `h`;
+- whether and how one numeric literal declaration computes a bounded concrete
+  result type from its payload;
 - whether every custom literal must carry a prefix, since an unprefixed single
   quote is unavailable;
 - how a literal prefix is recognized and whether the catalog is closed, bounded,
@@ -227,9 +279,10 @@ rather than phrase extent.
 
 ## Activation and retirement
 
-Activate this input for prefixed/custom literal parsing, literal declarations,
-payloads, compile-time literal execution, typed/bit-pattern literal behavior,
-the literal-only type suffix, or future juxtaposition and concatenation syntax.
+Activate this input for ordinary-real or prefixed/custom literal parsing,
+literal declarations, payloads, compile-time literal execution,
+typed/bit-pattern literal behavior, exact-source requests, the literal-only type
+suffix, or future juxtaposition and concatenation syntax.
 Move accepted behavior into literal, source, numeric, compile-time, or
 applicable result-type owners and retire this file when every preserved form is
 promoted, rejected, or moved.

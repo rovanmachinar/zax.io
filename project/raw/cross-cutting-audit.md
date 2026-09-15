@@ -341,6 +341,33 @@ Each entry preserves:
   phrase operators do not continue.
 - **Disposition.** Open.
 
+### `Does Not Own` metadata scope
+
+- **Concern.** Current language-owner metadata can accumulate exhaustive
+  `Does Not Own` lists that obscure the few adjacent concerns a direct-entry
+  reader might plausibly mistake for this document's authority.
+- **Representative example.** A scalar owner benefits from handing complete
+  endianness and aggregate coercion to their real owners, but does not need to
+  enumerate every future grammar, compiler, ABI, vector, reflection, and
+  implementation concern merely because each is outside its scope.
+- **Why local review misses it.** Each additional exclusion looks defensible in
+  isolation; the reader friction appears across many independently promoted
+  metadata blocks and grows incrementally.
+- **Likely owners.** Every current concept owner under `language/`, with the
+  governing rule in
+  [documentation architecture](../documentation.md#authority-and-maturity).
+- **Resolution.** Review current-owner metadata and retain only plausible
+  competing ownership or direct handoffs. Move detailed interactions and future
+  boundaries into the body, and remove exclusions that merely state the
+  obvious.
+- **Activation pressure.** The later documentation cleanup after numbered
+  concept work, or a focused review that already materially rewrites an owner's
+  metadata.
+- **Current constraints.** `Does Not Own` is not an exhaustive exclusion list.
+  A focused concept promotion should trim the owners it materially changes but
+  must not expand into an unauthorized repository-wide cleanup.
+- **Disposition.** Open.
+
 ## Activation and retirement
 
 Add an entry when a concrete concern crosses several owners, local review cannot

@@ -428,8 +428,20 @@ MyType :: type {
 > [Zax identity types](language/identity-types.md).
 >
 > The promoted integer catalog has been removed from this legacy page rather
-> than retained as duplicate teaching. The remaining block preserves unresolved
-> non-integer intrinsic input.
+> than retained as duplicate teaching.
+>
+> **Fixed and floating disposition.** Current fixed-point types, names,
+> arithmetic, conversion, and representation are owned by
+> [Zax fixed-point scalars](language/fixed-point-scalars.md). Current exact,
+> profile-selected, OFP8, and legacy binary floating formats are owned by
+> [Zax binary floating-point scalars](language/floating-point-scalars.md).
+> Intrinsic byte order is owned by
+> [Zax endianness](language/endianness.md). The superseded `F16`/`F32` catalog,
+> minimum-width `Half`/`Single` interpretation, and width-only `Float` generic
+> have been consumed rather than retained as duplicate teaching.
+>
+> The remaining block preserves unresolved non-numeric intrinsic and string
+> input.
 
 ````zax
 // import the module system types into the global `Module` namespace
@@ -439,23 +451,6 @@ unknown : Unknown   // used as a generic pointer type to an `Unknown` type
 nothing : Nothing   // used as a generic type of `Nothing`
 void : Void         // an alias of the `Unknown` type
 boolean : Boolean   // A value representing `true` or `false` literals
-
-// aliased or meta-types floats mapping to fixed size type equivalents
-float : Float           // fastest precision float
-                        // (minimum 16 bits, 32/64 is typical)
-half : Half             // half precision float (minimum 16 bit)
-single : Single         // single precision float (minimum 32 bit)
-double : Double         // double precision float (minimum 64 bit)
-quadruple : Quadruple   // quadruple precision float (minimum 128 bit)
-
-// fixed size floats
-f16 : F16
-f32 : F32
-f64 : F64
-f128 : F128
-
-// advanced legacy float-family input
-Float $(BitCount = Cpu.Integer.Optimal) :: type { /*... */ }
 
 // strings have a built-in `length` `mutator` and are extended ASCII by default
 stringA : String = "hello"

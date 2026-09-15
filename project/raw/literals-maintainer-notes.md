@@ -11,15 +11,16 @@ c : U8 = 1 << 6
 
 There are al kinds of math rules associated with literals.
 
-The fixed floating points and binary values will extend the values:
-```
-a : MicroFixed16 = 4.5
-b : PrecisionFixed64 = 7.25
-c : Single = -17.44
-d : Half = 1.5 + 1.5
-```
-
-Math rules will apply to floating points and then similar to integers the value is expressed into the floating point.
+Current typed real-number realization has moved to
+[fixed-point scalars](../../language/fixed-point-scalars.md#initialization-and-real-number-source)
+and
+[binary floating-point scalars](../../language/floating-point-scalars.md#initialization-and-real-number-source).
+This file no longer owns fixed/floating value semantics, aliases, range, or
+rounding. Decimal `e`/`E` power-of-ten exponent source is current in
+[integer literals and realization](../../language/integer-literals.md#real-number-source-and-decimal-exponents).
+This file retains remaining real tokenization, binary/hexadecimal exponent and
+radix spelling, suffixes, default type selection, and custom/prefixed literal
+questions.
 
 Finally basic ASCII strings exist:
 ```
@@ -100,15 +101,40 @@ The return from a literal function can be any constant value, including from con
 The intent is that normally a number, character, String, array, or another custom type would be returned.
 
 
-## outstanding concern related to scalars
+## Numeric literal result-type pressure
 
-Every literal operator function returns a concrete type. For creating number values, being able to define a number and have that assigned to any type is important, just like any other constant number can be assigned to a number type. The trouble is sometimes literary operators want to intentionally return a type that is only compatible with an expression that takes exactly that type.
+Current prefixed-literal design starts with one declared concrete result type and
+does not let surrounding range failure retry another overload. A numeric payload
+still creates future generic pressure:
 
-Other times the programmer might want to return an `Integer` but then allow that to be used in any number where the value is "compatible". In C++ you can use `explicit` to indicate if compatible conversion happens for an expression, or not.
+```zax
+mySmall := h'FF'
+myLarge := h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+```
 
-Zax will need something similar. I think the idea should be that return types can be coerced. Scalars should allow automatic coercing when declared they allow it. Maybe a keyword on the return value declaration could be `implicit` or `coercion` or `conversion` or `compatible`, or maybe reuse `relaxed` (normally used with `abstract`). The keyword `coercion` has an `unsafe` implication for compatibility posture and thus might not be the best fit.
+If `h` parses its attached payload as one mathematical integer, the second value
+may need a much wider exact result than the first. A function taking only the
+payload `String` cannot first promise one ordinary concrete return type and then
+change it after parsing.
 
-I would look for your input here...
+The baseline literal facility may require a concrete declared result initially.
+Future literal/generic work should nevertheless preserve a way for a
+compile-time literal declaration or associated type factory to derive one
+concrete result identity from the payload's parsed magnitude.
+
+That future mechanism must:
+
+- choose the result during compile-time literal evaluation before the literal
+  enters its surrounding expression;
+- expose the selected type and any language/profile maximum;
+- avoid constructing one extreme maximum-width value merely to discover the
+  needed size;
+- avoid range-failure fallback through unrelated overloads; and
+- avoid turning every resolved prefixed literal into an uncommitted integer.
+
+This input establishes design pressure only. It does not decide whether the
+mechanism is a generic literal declaration, a type-returning factory, an
+associated result type, or another bounded compile-time facility.
 
 ## auto-merging of strings / arrays
 

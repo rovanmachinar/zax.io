@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers reading, writing, or evaluating integer source and compile-time integer expressions |
-| Applies To | Programmer-visible unprefixed integer source, uncommitted integer evaluation, commitment, realization, and interaction with typed operations |
+| Applies To | Programmer-visible unprefixed integer source, the shared decimal `e`/`E` real-token boundary, uncommitted integer evaluation, commitment, realization, and interaction with typed operations |
 | Implementation State | Not established by this repository |
-| Owns | Uncommitted integers; sign intent; width-invariant operations; default and direct realization; candidate holes; contextual completion of numeric operands; commitment and stopping boundaries; conditional convergence; interaction with conversion and optional construction; costs, failures, diagnostics, and source stability |
-| Does Not Own | Concrete integer types and ranges ([integers](integers.md)); concrete protected operation policies ([integer operator catalog](integer-operator-catalog.md)); general callable and operator discovery ([function invocation](function-invocation.md), [operators](operators.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or unresolved prefixed/custom literal syntax and behavior |
+| Owns | Uncommitted integers; the shared decimal `e`/`E` real-token boundary; sign intent; width-invariant operations; default and direct realization; candidate holes; contextual completion of numeric operands; commitment and stopping boundaries; conditional convergence; interaction with conversion and optional construction; costs, failures, diagnostics, and source stability |
+| Does Not Own | Concrete integer types and ranges ([integers](integers.md)); fixed-point and floating real-number realization ([fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)); concrete protected operation policies ([integer operator catalog](integer-operator-catalog.md)); general callable and operator discovery ([function invocation](function-invocation.md), [operators](operators.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or unresolved prefixed/custom literal syntax and behavior |
 | Source / Provenance | Legacy integer and literal design corpus, refined against current integer, declaration, invocation, flow, and operator design |
 
 ## Start with ordinary integer source
@@ -500,6 +500,24 @@ The right operand visibly establishes `U8`. Zax can therefore check `0` against
 myValue := (: U8 = 0) + (: U8 = 5)
 ```
 
+The visible peer supplies its complete scalar type, including concrete
+endianness and fixed-point `F`:
+
+```zax
+myBig : Scalars.Integers.Big.U32 = 1
+myResult := myBig ^ 1024
+// `1024` realizes directly as Scalars.Integers.Big.U32.
+
+myFixed : U32F8 = 3.0
+myFixedBits := myFixed ^ 1
+// `1` realizes as U32F8 value 1.0, coefficient 256.
+```
+
+The second literal does not become a raw `U32F0` mask. These are the same
+bounded peer-completion rules applied to the complete numeric identity.
+Fixed-point behavior is defined by
+[fixed-point scalars](fixed-point-scalars.md#bitwise-operations-inspect-the-coefficient).
+
 The same idea can be useful for a programmer-defined numeric identity:
 
 ```zax
@@ -768,6 +786,32 @@ catalog, ownership, payload behavior, and result types remain future literal
 work. Attached prefixed payloads use single quotes; backticks are not literal
 delimiters.
 
+## Real-number source and decimal exponents
+
+Source containing a fractional or floating exponent form does not become an
+uncommitted integer. Typed fixed-point and floating destinations realize that
+mathematical source according to their own range and rounding rules:
+
+```zax
+myFixed : I16F8 = 1.5
+myFloat : Binary32 = 0.1
+myExponent : Binary64 = 1.5e-14
+```
+
+Decimal `e` or `E`, followed by an optionally signed decimal exponent, applies
+a power of ten to the exact mathematical source. It makes `1e100` real-number
+source even without a fractional point. Bare `e100` is not a number literal.
+
+This section owns that shared token boundary. The destination scalar owners
+define value realization.
+
+The programmer-facing behavior is defined by
+[fixed-point scalars](fixed-point-scalars.md#initialization-and-real-number-source)
+and
+[floating-point scalars](floating-point-scalars.md#initialization-and-real-number-source).
+Binary/hexadecimal exponent forms, other exact token details, suffixes, and
+default type selection remain future literal work.
+
 ## Conversion and admission
 
 Plain `as` may use contextual completion because its written type supplies one
@@ -859,18 +903,20 @@ The destination's concrete identity must be known before fit is checked:
 myActive : Integer = 42
 myTarget : Target.Integer = 42
 myCompilerHost : CompilerHost.Integer = 42
-myPortable : I32 = 42
+myAbsolute : Scalars.Integers.Little.I32 = 42
 ```
 
 - `Integer` and `UInteger` use the active execution environment.
 - `Target.Integer` and `Target.UInteger` use the target profile.
 - `CompilerHost.Integer` and `CompilerHost.UInteger` use the compiler-host
   profile.
-- Exact-width identities use fixed language ranges.
+- Exact-width identities use fixed language ranges. Their unqualified names
+  resolve active-environment endianness; an absolute-endian path fixes stored
+  byte order.
 
 Performing realization in the compiler does not make the active environment
-mean compiler host. Programmers use an exact type or explicit environment path
-when representation or range must agree across environments.
+mean compiler host. Programmers use an absolute-endian exact type or explicit
+environment path when representation must agree across environments.
 
 ## Costs and failures
 
@@ -936,7 +982,8 @@ operation.
   `Integer`/`UInteger` preference; partial provenance does not alter ranking.
 - Contextual construction never repairs a direct ambiguity, selected range
   failure, or unavailable-best operation.
-- Exact-width destinations retain their range across environments.
+- Exact-width destinations retain their range across environments; their
+  unqualified endianness follows the active environment.
 - Profile-selected destinations follow their documented environment contract.
 - A concrete result never reopens because an optimizer proves it constant.
 - An unrelated type or import cannot become a speculative receiver for numeric
@@ -970,7 +1017,7 @@ Still future:
 - future callable categories that may opt into contextual completion;
 - generic and computed destination-type syntax;
 - reflection of literal spelling or realization provenance; and
-- floating-point and other numeric intent.
+- exact real-number token grammar, suffixes, and default type selection.
 
 Those future concerns do not change the current rule that an uncommitted integer
 never becomes a runtime value and that every selected expression result

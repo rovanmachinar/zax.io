@@ -3,10 +3,10 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining compile-time execution, execution context, or constant availability |
-| Applies To | Directed and inferred compile-time execution and the host/target context questions it raises |
-| Owns | Preserved compile-time execution questions, representative source, activation pressure, and retirement criteria |
-| Does Not Own | Accepted compile-time semantics or current integer/literal/reflection behavior |
+| Audience | Future work defining compile-time execution, execution context, constant availability, or capability-dependent static selection |
+| Applies To | Directed/inferred compile-time execution, host/target context, target-format realization, and static support questions |
+| Owns | Preserved compile-time execution, target-format realization, capability-dependent static selection, representative source, activation pressure, and retirement questions |
+| Does Not Own | Accepted compile-time semantics or current integer/fixed/floating/literal/reflection behavior |
 | Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type receivers, `is constant`, and native execution context |
 
 ## Why this input exists
@@ -162,6 +162,54 @@ They do not by themselves mandate it. Future work must distinguish required,
 permitted, inferred, preferred, and optimization-only execution without
 changing candidate selection or reopening concrete results.
 
+## Target-format real realization
+
+Current [fixed-point](../../language/fixed-point-scalars.md) and
+[floating-point](../../language/floating-point-scalars.md) design parses typed
+real source mathematically and realizes it according to the selected
+destination. Compile-time execution must:
+
+- use target format, endianness, rounding, range, and validity when the
+  destination is target-selected;
+- use compiler-host semantics only for an explicitly compiler-host-selected
+  destination;
+- avoid using host hardware arithmetic as an accidental oracle for target bits;
+- preserve MBF40's historical rounding when that exact destination is selected;
+  and
+- respect provider-relative X87 behavior only in the environment whose profile
+  declares it.
+
+A compile-time-known real result remains its selected concrete scalar type. It
+does not reopen as a typeless mathematical value at a later assignment.
+
+## Capability-dependent static selection
+
+An exact scalar type may exist while one environment lacks its numeric
+operations. Future compile-time and generic work must let source inspect:
+
+- complete core support;
+- one exact operation's availability;
+- software, guaranteed hardware, runtime-optional hardware, or trap-emulated
+  classification;
+- selected exact format and endianness; and
+- language/profile size limits.
+
+A statically discarded branch may name an unsupported operation without
+demanding executable support. A selected branch that uses it receives an
+availability diagnostic.
+
+Maintainer input also requires bounded type probing. In particular, a
+compile-time numeric literal declaration may parse `h'FF'` and a much longer
+payload into different exact magnitudes that need different concrete result
+widths. Future generic/type-factory work may let the literal compute one result
+identity from that payload before surrounding selection completes.
+
+More generally, generic code may begin with an ordinary size and deliberately
+test larger candidates until a supported conversion/type or declared limit is
+reached. This must not become runtime exception fallback, source-order overload
+search, reopening of a resolved prefixed literal, or mandatory construction of
+one extreme maximum-width value.
+
 ## Compile-time availability and failure
 
 Accepted today: a language-level panic during compile-time execution becomes a
@@ -186,6 +234,10 @@ Future work must decide:
   rather than completed here; and
 - compile-time evaluation of an already concrete value must not silently change
   its type, conversion, identity, or operator-selection rules; and
+- target-format real evaluation must not silently use compiler-host floating
+  semantics; and
+- unsupported scalar branches require a defined static-selection boundary
+  rather than being accepted or rejected according to optimizer accident; and
 - uncommitted integer realization must complete before an integer value crosses
   into runtime execution.
 
@@ -198,7 +250,8 @@ compile-time diagnostics.
 ## Activation and retirement
 
 Activate this input when compile-time execution, execution context, host/target
-distinction, or constant availability is reviewed. Move accepted behavior into
-compile-time, invocation, diagnostics, and the applicable domain owners, then
-retire this file once every preserved question has an accepted owner or explicit
-deferral.
+distinction, constant availability, target-format real realization,
+capability-dependent static selection, or bounded type probing is reviewed.
+Move accepted behavior into compile-time, invocation, diagnostics, generic, and
+the applicable domain owners, then retire this file once every preserved
+question has an accepted owner or explicit deferral.

@@ -7,7 +7,7 @@
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
 | Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -39,13 +39,13 @@ Zax recognizes:
 
 | Family | Representative forms |
 | --- | --- |
-| Arithmetic | `+`, `+?`, `+%`, `+\|`, `+!`, `delta`, `distance` |
+| Arithmetic | `+`, `+?`, `+%`, `+\|`, `+!`, `delta`, `distance`, `full precision product` |
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
-| Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, `anchor`, coercive `unsafe as`, `unsafe cast` |
+| Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
@@ -65,7 +65,7 @@ Higher levels bind first:
 | Enclosed/grouped | Parentheses and recognized circumfix forms | Delimiter-owned |
 | Postfix/delimited | Call, index, member/dereference, post `++`/`--` families | Left-to-right chaining |
 | Prefix | `?`, `!`, `~`, `~=`, `#...`, pre `++`/`--`, unary arithmetic policies | Separate applications require grouping |
-| Multiplicative | `*`, `/`, `%` and accepted policy variants | Left |
+| Multiplicative | `*`, `/`, `%`, `full precision product`, and accepted policy variants | Left |
 | Additive | `+`, `-`, accepted policy variants, `delta`, `distance` | Left |
 | Shift/rotate/composition | `<<`, `>>`, `>>>`, `<<<`, `<<%`, `>>%`, modulo-count phrases, multiword operations | Left |
 | Ordinary phrase | Conversion/admission forms, reserved language phrases, newly declared phrases | Left |
@@ -155,8 +155,9 @@ intrinsic family, whether or not Zax currently supplies that exact operation.
 | Exact integers | Protected availability and results are in the [integer operator catalog](integer-operator-catalog.md) |
 | Exposed integer identities | Receive the applicable identity-adjusted protected integer surface |
 | Pointer-representation integers | Follow the applicable integer identity; pointer objects remain separate |
-| Floating point | Domain reserved pending focused float review |
-| Fixed-point and unbounded numeric types | Domain reserved pending focused numeric review |
+| Floating point | Protected format-specific behavior is owned by [floating-point scalars](floating-point-scalars.md) |
+| Fixed-point | Protected coefficient/scale behavior is owned by [fixed-point scalars](fixed-point-scalars.md) |
+| Unbounded numeric types | Domain reserved pending focused numeric review |
 | Other closed intrinsic families | Reserved where focused type work has not established behavior |
 | Extensible library families | Library-owned; recognition does not by itself close a type such as `String` |
 
@@ -280,6 +281,25 @@ sign intent before realization; policy variants require commitment.
 
 `delta` and `distance` are exact language-defined binary phrases at additive
 precedence.
+
+### Fixed-point full-precision product
+
+`full precision product` is an exact language-defined binary phrase at
+multiplicative precedence:
+
+```zax
+myFull := myLeft full precision product myRight
+```
+
+It applies to like fixed-point identities and returns the associated widened
+type able to represent the complete coefficient product and doubled fractional
+precision. Complete result and arithmetic behavior is defined by
+[fixed-point scalars](fixed-point-scalars.md#full-precision-product).
+
+Fixed-point `%` uses the ordinary multiplicative remainder form with like
+fixed-point operands. Its quotient truncates toward zero, its result retains the
+operand identity, and a zero divisor fails. Complete behavior is defined by
+[fixed-point scalars](fixed-point-scalars.md#remainder).
 
 ### Bitwise forms
 
@@ -422,13 +442,23 @@ begins:
 `anchor` is not the numeric contextual type anchor, mixfix receiver anchor, or
 pointer ownership anchor.
 
-Coercive forms remain local and unsafe:
+Coercive forms remain local and produce reference views:
 
 | Relationship | Exact source pattern |
 | --- | --- |
-| Direct layout coercion | `<source> unsafe as coercive layout <DestinationType>` |
-| Flattened layout coercion | `<source> unsafe as coercive flattened layout <DestinationType>` |
-| Anchored coercion | `<source> unsafe as coercive layout <DestinationType> anchor <source-path>` |
+| Safe direct layout coercion | `<source> as coercive layout <DestinationType> &` |
+| Safe flattened layout coercion | `<source> as coercive flattened layout <DestinationType> &` |
+| Unsafe direct layout coercion | `<source> unsafe as coercive layout <DestinationType> &` |
+| Unsafe flattened layout coercion | `<source> unsafe as coercive flattened layout <DestinationType> &` |
+| Safe anchored coercion | `<source> as coercive layout <DestinationType> & anchor <source-path>` |
+| Unsafe anchored coercion | `<source> unsafe as coercive layout <DestinationType> & anchor <source-path>` |
+
+Safe coercion proves source-to-destination validity and, for writable views,
+that destination writes preserve source validity. `unsafe` accepts an unproved
+validity precondition or a restoration obligation after writes. Neither form is
+a declarable posture or grants qualification authority. Complete behavior
+belongs to
+[structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-reference-views).
 
 View-shaped raw casting is separate:
 
@@ -589,18 +619,17 @@ Every enum additionally receives:
 
 | Operation | Exact form | Behavior owner |
 | --- | --- | --- |
-| Semantic decode | `myEnum as UnderlyingType` | Enum and applicable semantic owner |
+| Backing projection | `myEnum as UnderlyingType` | Enum owner |
 | Raw adoption | `MyEnum unsafe from myRaw` | Enum and safety model |
 
-The exact underlying type argument is required for semantic decode. Raw adoption
+The exact underlying type argument is required for backing projection. Raw adoption
 is a defined unsafe permission that bypasses the enum's ordinary admission
 policy and preserves the exact backing representation.
 
 Every enum also receives overridable comparison defaults using the comparison
 forms cataloged above. A `flags` enum receives overridable defaults for `|`,
 `&`, `^`, `&~`, and their direct mutation forms. Exact availability and
-type-specific behavior are defined by [Zax enums](enums.md); language-supplied
-semantic families may replace or forbid those defaults under their own owner.
+type-specific behavior are defined by [Zax enums](enums.md).
 
 ## Iteration protocol phrases
 
@@ -622,20 +651,20 @@ result-shape, progression, erasure, and availability behavior is owned by
 
 ## Endianness reference
 
-Endian type teaching belongs to [Zax endianness](endianness.md). Its compact
-form surface is:
+Endian type teaching belongs to [Zax endianness](endianness.md). Endianness is
+an intrinsic scalar property rather than an enum boundary. Its compact
+conversion surface is:
 
 | Concern | Form |
 | --- | --- |
-| Native value in | `BigEndianU32 from myNative` |
-| Other endian in | `LittleEndianU32 from myBig` |
-| Raw storage in | `BigEndianU32 unsafe from myRaw` |
-| Semantic value out | `myBig as U32` |
-| Raw storage out | `myBig underlying value` |
+| Numeric conversion | `myLittle as Scalars.Integers.Big.U32` |
+| Active-environment conversion | `myBig as U32` |
+| Byte-preserving local view | `myLittle as coercive layout Scalars.Integers.Big.U32 &` |
+| Representation extraction/adoption | Concept accepted; exact words remain unsettled |
 
-Available protected forms include same-type lifecycle/swap, equality,
-complement, Boolean bitwise forms and mutations, population count, and
-reductions. Complete availability/results remain with the endian owner.
+Each concrete-endian specialization receives its scalar family's complete
+applicable protected surface. Mixed-endian operands require explicit numeric
+conversion.
 
 ## Circumfix forms
 
@@ -786,7 +815,8 @@ Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
   concept owners' work.
 - `<=>` remains recognized for custom types; protected integer behavior awaits
   an ordering result type.
-- Floating bitwise/integer-policy operations remain unavailable.
+- Ordinary floating bitwise operations remain unavailable; use the
+  representation/coercion surface defined by the floating owner.
 - `~&`, `~|`, `~^`, `|~`, and logical punctuation such as `!&&` are not
   aliases for the exact phrase forms.
 - `()` and `[]` are call/index forms.
@@ -839,6 +869,9 @@ This catalog is current conceptual design, not formal grammar, a type-specific
 numeric reference, a conformance contract, or an implementation mapping.
 
 Complete integer behavior is in the
-[integer operator catalog](integer-operator-catalog.md). Complete literal,
-floating/fixed-point/unbounded numeric, enum, pointer, indexing, allocation,
-reflection, panic-recovery, and build-option syntax remain focused future work.
+[integer operator catalog](integer-operator-catalog.md). Fixed and floating
+semantics are current in [fixed-point scalars](fixed-point-scalars.md) and
+[floating-point scalars](floating-point-scalars.md); exact wording for several
+advanced operations remains future catalog work. Complete literal, unbounded
+numeric, enum, pointer, indexing, allocation, reflection, panic-recovery, and
+build-option syntax remain focused future work.

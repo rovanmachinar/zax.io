@@ -18,7 +18,7 @@ remaining nonstructural conversion proposals on this page remain legacy input.
 > Safe structural recasting, compatibility postures, source anchors, coercive
 > layout conversion, and view-shaped `unsafe cast` are now current in
 > [Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md).
-> The remaining conversion lattice, string behavior, and disabling generated
+> The remaining string/general conversion lattice and disabling generated
 > conversions remain legacy/future casting work. Nothing else on this page is
 > current design except where a current owner is linked.
 >
@@ -32,7 +32,14 @@ remaining nonstructural conversion proposals on this page remain legacy input.
 > Guaranteed `as`, optional `as Destination?`, `narrowing as`, identity
 > admission, and projection replace the legacy claim that ordinary `as` performs
 > every potentially panicking intrinsic conversion and `unsafe as` performs
-> ordinary truncation. General non-integer casting remains future work.
+> ordinary truncation.
+>
+> **Fixed and floating conversion disposition.** Current exact, optional,
+> rounded, representation, and coercive boundaries are owned by
+> [fixed-point scalars](language/fixed-point-scalars.md),
+> [binary floating-point scalars](language/floating-point-scalars.md), and
+> [endianness](language/endianness.md). General non-numeric casting remains
+> future work.
 >
 > Custom `as` declarations use a type parameter slot directly. Unprefixed
 > literals use double quotes, and every single-quoted literal payload carries its
@@ -49,8 +56,9 @@ remaining nonstructural conversion proposals on this page remain legacy input.
 ### Remaining intrinsic string-conversion input
 
 The former integer conversion material has been consumed by
-[Zax integers](language/integers.md#conversion-to-exact-intrinsic-integers). The remaining
-non-integer conversion evidence below stays legacy casting input.
+[Zax integers](language/integers.md#conversion-to-exact-intrinsic-integers).
+Fixed and floating numeric behavior has likewise moved to its current owners.
+The remaining string conversion evidence below stays legacy casting input.
 
 The superseded integer conversion prose and examples have been removed. The
 remaining examples preserve unresolved string encoding, validation, lossy
@@ -404,7 +412,8 @@ Current programmer-facing behavior is defined by
 - safe low-overhead recasting uses explicit compatibility postures, optional
   source anchors, and protected `as shape`/`as layout` forms;
 - noncontiguous mapping and reordering use `-<>-` and `reshape`;
-- checked-layout semantic coercion uses local coercive `unsafe as`; and
+- checked-layout semantic coercion uses local safe or unsafe coercive `as`
+  according to representation validity and writable-invariant risk; and
 - unchecked reinterpretation uses view-shaped `unsafe cast`.
 
 The old positional-prefix matching, private-member bypass, broad structural

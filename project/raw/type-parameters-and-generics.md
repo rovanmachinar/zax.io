@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining generics, type parameters, constraints, or computed type results |
-| Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, and integer-family review |
-| Owns | Preserved type-parameter, generic, whole-type contract, integer-factory, relational-pair, associated-type, representative-source, activation, and retirement questions |
-| Does Not Own | Accepted generic semantics or current declaration/type behavior |
+| Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, scalar-family, and composition review |
+| Owns | Preserved type-parameter, generic, whole-type contract, intrinsic endian/fixed/floating specialization, numeric factory, bounded probing, language-limit, relational-pair, associated-type, representative-source, activation, and retirement questions |
+| Does Not Own | Accepted generic semantics or current declaration/scalar/type behavior |
 | Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, and work item `020` composition constraints |
 
 ## Why this input exists
@@ -268,24 +268,26 @@ It must not invent a deduction target, widen member, callable, or operator
 discovery, or outrank an exact direct match. Generic work must preserve that
 boundary unless a later design explicitly replaces it.
 
-## Generated type families
+## Intrinsic endian and numeric families
 
-Endian enums are described as conceptually generated families with explicitly
-illustrative names such as `BigEndianU32`. See
-[Zax endianness](../../language/endianness.md) and
-[Zax enums](../../language/enums.md).
+Endianness is now an intrinsic scalar specialization dimension rather than a
+generated enum family. See [Zax endianness](../../language/endianness.md).
 
 Future generic work must decide:
 
-- how a language-provided family is generated and named;
-- whether user code may declare a similar family;
-- whether family members are ordinary named types or a distinct kind;
-- how a family member's identity, reflection, and documentation appear; and
-- whether a family may be parameterized over more than the backing type.
+- how `Little`, `Big`, active, target, and compiler-host selectors appear as
+  type arguments or factory inputs;
+- when an environment selector resolves to one concrete endian identity;
+- how absolute-endian, active, and public role aliases are generated;
+- how fixed-point width, signedness, and bounded `F` are validated;
+- how ordinary floating exponent/fraction dimensions select a closed encoding
+  policy;
+- how closed legacy formats avoid incoherent free parameter combinations; and
+- how concrete specializations and aliases appear in reflection and
+  diagnostics.
 
-Every generated result must obey the ordinary enum policy, member, admission,
-operation, and backing rules. Generic generation does not create a second enum
-semantic model.
+Every selected result is one exact closed specialization. Generic generation
+does not create a second scalar semantic model.
 
 ## Integer specializations and factory selection
 
@@ -297,7 +299,12 @@ Future integer work assumes a built-in generic family conceptually like:
 
 ```zax
 // Illustrative only.
-MyI57 :: alias type Integer$(57, Sign.Signed)
+MyI57 :: alias type Integer$(
+  LogicalBits = 57,
+  Signedness = Sign.Signed,
+  FractionalBits = 0,
+  Endianness = Endian.Little
+)
 ```
 
 Each realized combination is a concrete, closed intrinsic type. It is not still
@@ -308,6 +315,7 @@ such as:
 
 - minimum and maximum logical width;
 - signedness;
+- concrete or environment-selected endianness;
 - fastest or smallest preference;
 - active, target, or compiler-host environment;
 - native-representation requirement; and
@@ -335,7 +343,7 @@ specialization.
 The exact intrinsic family derives its counterpart by changing only signedness:
 
 ```text
-Integer$(W, Signed) <-> Integer$(W, Unsigned)
+Integer$(W, Signed, F, Endian) <-> Integer$(W, Unsigned, F, Endian)
 ```
 
 Named role identities require an explicit relational pair:
@@ -386,6 +394,72 @@ or a combination.
 The relationships must remain usable in result declarations and constraints
 without forcing generic code to branch manually between ordinary and large
 count tiers.
+
+## Fixed-point specializations and full products
+
+Current format and arithmetic semantics are defined by
+[Zax fixed-point scalars](../../language/fixed-point-scalars.md). Generic work
+retains:
+
+- declaration syntax for `Integer$(W, Signedness, F, Endianness)`;
+- validation of `0 <= F <= W - 1` for signed and `0 <= F <= W` for unsigned;
+- normalization of `F = 0` to the existing integer specialization;
+- generation of `I<W>F<F>`/`U<W>F<F>` and Q aliases;
+- constraints requiring one exact fixed-point identity;
+- associated full-precision-product result selection; and
+- exposure of coefficient, quantum, range, and endian facts to generic code.
+
+For two like `W`, `F` operands, `full precision product` needs an associated
+type sufficient for the complete coefficient product and `2F` fractional bits.
+Exact result-type query syntax remains unsettled.
+
+## Floating specializations and language limits
+
+Current ordinary, profile-selected, and legacy format semantics are defined by
+[Zax binary floating-point scalars](../../language/floating-point-scalars.md).
+Generic work retains:
+
+- ordinary IEEE-style exponent/fraction parameter syntax;
+- selection among closed encoding policies;
+- prevention of freely combined explicit-integer-bit modes until another
+  format requires one;
+- `Float`, `FastF<N>`, `LeastF<N>`, and maximum-role factories;
+- support-class and operation constraints;
+- exact environment and endianness selection; and
+- immutable type-owned `Scalars.Floating.LanguageLimits` values.
+
+The numeric value of `LanguageLimits.maximumWidth`, and any separate exponent,
+fraction, storage, or alignment limits, remain future language-version
+decisions. A limit must be available while concrete types are formed; a
+type-receiver or `once` declaration is not inherently compile-time merely
+because it belongs to a type.
+
+### Bounded size probing
+
+Maintainer literal input preserves a concrete generic compile-time selection
+need:
+
+```zax
+mySmall := h'FF'
+myLarge := h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
+```
+
+A numeric literal implementation receives a payload `String`, but the parsed
+magnitude may determine whether its final result is an ordinary or much wider
+exact integer. The baseline literal facility may require one declared concrete
+result. Future generic work should still permit a literal declaration or
+associated type factory to compute one concrete result identity from its
+compile-time payload before the literal enters its surrounding expression.
+
+More generally, compile-time code should be able to begin with an ordinary
+numeric size, test bounded conversion/support requirements, and deliberately
+advance through larger candidates until a language/profile maximum is reached.
+It should not be forced to instantiate one extreme maximum-width integer or
+floating value merely to discover a workable type.
+
+Future generic and compile-time work must define this as bounded static
+selection rather than exception-driven runtime fallback, source-order overload
+search, or reopening the selected literal as an uncommitted integer.
 
 ## Constraints this input places on current work
 
@@ -476,14 +550,18 @@ specialization. They must not infer a guarantee from hidden allocation history.
   exists;
 - integer-factory and associated-type examples remain illustrative until
   computed type results are designed; and
+- fixed/floating factory, full-product, and `LanguageLimits` examples remain
+  illustrative until the same mechanism is designed; and
 - public signedness pairs are declared relationally rather than inferred from
   names.
 
 ## Activation and retirement
 
 Activate this input when generics, type parameters, constraints, whole-type
-abstract contracts, computed type results, type-receiver identity, integer
-factories, relational type pairs, associated types, cursor-protocol constraints,
-or generated type families are reviewed. Move accepted behavior into generic,
-declaration, invocation, type, numeric, iteration, and reflection owners, then
-retire this file after every preserved question is dispositioned.
+abstract contracts, computed type results, type-receiver identity, intrinsic
+integer/fixed/floating families, endian selection, numeric factories,
+language-limit values, bounded size probing, relational type pairs, associated
+types, cursor-protocol constraints, or generated type families are reviewed.
+Move accepted behavior into generic, declaration, invocation, type, numeric,
+iteration, and reflection owners, then retire this file after every preserved
+question is dispositioned.

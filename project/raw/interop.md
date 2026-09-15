@@ -75,8 +75,34 @@ Interop work must decide:
 - whether persistent or foreign formats require explicit member values and
   fixed exact backing.
 
+## Scalar format and ABI pressure
+
+Current [endianness](../../language/endianness.md),
+[fixed-point scalars](../../language/fixed-point-scalars.md), and
+[binary floating-point scalars](../../language/floating-point-scalars.md) fix
+Zax scalar meaning without promising one foreign ABI.
+
+Future interop work must distinguish:
+
+- intrinsic logical format width from ABI argument/result slots;
+- scalar storage-envelope padding from foreign container or stack padding;
+- active-environment aliases from absolute-endian formats;
+- numeric conversion from byte-preserving exchange;
+- profile-selected `Float` identity from one foreign `float`/`double` ABI type;
+- X87Extended80's ten-byte intrinsic encoding from twelve- or sixteen-byte ABI
+  placement;
+- MBF40 numeric conversion from preservation of its historical five-byte file
+  form;
+- OFP8/BF16 hardware support from calling-convention support; and
+- ordinary target layout from a stable serialization or wire contract.
+
+Equal Zax scalar format and structural compatibility do not establish foreign
+calling convention, register class, stack alignment, NaN payload transport, or
+padding guarantees. A named foreign contract or adapter remains required.
+
 ## Activation and retirement
 
-Activate this input before defining assembly integration, FFI, ABI controls, or
-binding behavior. Consume its findings through that work and retire or archive
+Activate this input before defining assembly integration, FFI, ABI controls,
+binding behavior, X87 correspondence, MBF file exchange, or stable scalar
+serialization. Consume its findings through that work and retire or archive
 this placeholder afterward.

@@ -4,8 +4,8 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining reflection, type metadata, declaration metadata, or source reflection |
-| Applies To | Reflection pressure exposed by operator-phrase, type-identity, integer-family, composition-surface, and source-presentation review |
-| Owns | Preserved reflection, composition-category, integer metadata, representative-source, activation-pressure, and retirement questions |
+| Applies To | Reflection pressure exposed by operator-phrase, type-identity, scalar-family, composition-surface, and source-presentation review |
+| Owns | Preserved reflection, composition-category, scalar metadata, support/operation availability, validity/canonicalization, representative-source, activation-pressure, and retirement questions |
 | Does Not Own | Accepted reflection semantics or the current domain facts reflected |
 | Source / Provenance | Legacy `meta-types.md`, `meta-functions.md`, and `enums.md` metadata evidence together with operator-phrase review of `type of`, qualifier predicates, phrase fences, work item `012` optional-layer metadata pressure, work item `015` allocation metadata pressure, and work item `020` composition constraints |
 
@@ -307,7 +307,7 @@ Future reflection must let integer tooling and generic code discover:
 - optimized-maximum selection and software-emulation classification;
 - applicable protected operation and conversion families;
 - declared range-containment and identity-bridge relationships;
-- endian eligibility; and
+- concrete endianness and active/target/compiler-host selection; and
 - normalization requirements for representation-dependent exchange.
 
 Native representation says only that the CPU provider classifies the width as a
@@ -323,6 +323,48 @@ Future work must decide whether these facts form an integer-specific metadata
 section, general associated-type relationships, convenient phrase operations,
 or several layers. This input does not reserve exact reflection phrases.
 
+## Fixed-point and floating metadata
+
+The domain facts are current in
+[fixed-point scalars](../../language/fixed-point-scalars.md) and
+[binary floating-point scalars](../../language/floating-point-scalars.md).
+Reflection must eventually expose them without redefining their meaning.
+
+Fixed-point metadata includes:
+
+- coefficient width, signedness, `F`, quantum, range, and concrete endianness;
+- canonical and transparent Q names;
+- storage extent, alignment, non-value bits, and normalization;
+- associated full-precision-product type;
+- exact/optional/rounded conversion relationships; and
+- native/software/optional/trap operation support and broad costs.
+
+Floating metadata includes:
+
+- exact format identity and public/profile aliases;
+- sign, exponent, bias, fraction, significand precision, and endianness;
+- normal, subnormal, zero, infinity, NaN, payload, invalid, and noncanonical
+  policies;
+- representation and canonicalization relationships;
+- active/target/compiler-host selection;
+- core support and the extensible support classification;
+- exact operation availability and broad cost;
+- X87 provider-relative behavior; and
+- MBF40's historical operation policy.
+
+`Scalars.Floating.LanguageLimits` values must be discoverable during type
+formation. Reflection syntax must not imply that a runtime metadata value can
+serve as a compile-time type limit.
+
+Operation reflection should ask about one concrete signature or capability
+without requiring one permanently exhaustive bitmap. It must distinguish:
+
+- format semantics from provider support;
+- native representation from direct instruction availability;
+- guaranteed from runtime-optional hardware;
+- an individually available operation from the complete core bundle; and
+- canonical/noncanonical validity from one value's runtime classification.
+
 ## Constraints this input places on current work
 
 - current documentation must not present illustrative reflection wording as an
@@ -331,11 +373,12 @@ or several layers. This input does not reserve exact reflection phrases.
 - the direct predicate family must not expand to cover declaration properties;
 - public aliases remain useful diagnostic vocabulary even when reflection exposes
   canonical identity; and
-- integer-specific facts need not become universal fields on every type.
+- scalar-family-specific facts need not become universal fields on every type.
 
 ## Activation and retirement
 
-Activate this input when reflection, type or declaration metadata, integer-family
-metadata, source reflection, or reflection-dependent tooling is reviewed. Move
+Activate this input when reflection, type or declaration metadata, scalar-family
+metadata, `LanguageLimits`, support/operation availability,
+validity/canonicalization, source reflection, or reflection-dependent tooling is reviewed. Move
 accepted behavior into a reflection owner and the domain owners whose facts it
 exposes, then retire this file after every preserved question is dispositioned.

@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers looking up protected behavior for Zax integer operations |
-| Applies To | Built-in finite integer operations; not custom overload behavior, formal grammar, or a specification |
+| Applies To | Built-in finite `F = 0` integer operations for concrete-endian exact and role-selected identities; not fixed-point arithmetic, custom overload behavior, formal grammar, or a specification |
 | Implementation State | Not established by this repository |
 | Owns | Protected integer operand domains, availability, result identities, policy behavior, failure, mutation, conversion/admission, count/mask/shift behavior, `delta`, `distance`, and unchecked arithmetic contracts |
-| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); integer type choice and representation ([integers](integers.md)); exact forms/fixity/precedence ([operator catalog](operator-catalog.md)); shared discovery/selection ([operators](operators.md)); or general identity behavior ([identity types](identity-types.md)) |
+| Does Not Own | Uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); integer type choice and representation ([integers](integers.md)); fixed-point `F > 0` operations ([fixed-point scalars](fixed-point-scalars.md)); exact forms/fixity/precedence ([operator catalog](operator-catalog.md)); shared discovery/selection ([operators](operators.md)); or general identity behavior ([identity types](identity-types.md)) |
 | Source / Provenance | Integer behavior formerly embedded in the general operator catalog, reorganized after fundamental-integer review |
 
 ## How to use this catalog
@@ -16,7 +16,10 @@
 range, representation, identity, and storage behave.
 
 This catalog answers what a protected operation does after its integer operands
-and result domain are known.
+and result domain are known. Operands normally share one concrete-endian
+identity. Mixed-endian values require explicit numeric conversion before the
+operation; the implementation may then use CPU-native registers while
+preserving the selected type's byte order.
 
 The [general operator catalog](operator-catalog.md) remains authoritative for:
 
@@ -636,6 +639,7 @@ Tooling should expose:
 - destination mutation and unchanged-on-failure behavior;
 - copies, writable references, previous-value snapshots, and reports;
 - native versus software-emulated operation;
+- concrete endianness and any adaptation cost;
 - invalid count type;
 - unavailable signed/unsigned form;
 - unavailable maximum-width `delta`;
@@ -653,4 +657,6 @@ contract, or an implementation mapping.
 Exact forms and precedence remain in the
 [general operator catalog](operator-catalog.md). Multiword operations,
 reversal, masked extraction/deposit, pointer difference validity, panic-helper
-and category syntax, and build-option syntax remain future work.
+and category syntax, and build-option syntax remain future work. Fixed-point
+operations, including `full precision product`, are defined separately by
+[fixed-point scalars](fixed-point-scalars.md).
