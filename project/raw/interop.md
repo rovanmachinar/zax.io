@@ -5,7 +5,7 @@
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item defining assembly, FFI, ABI, or binding behavior |
 | Applies To | Direct assembly and selected C/C++ interoperability |
-| Owns | Preservation of aligned requirements and boundaries |
+| Owns | Preservation of aligned assembly/FFI requirements, scalar ABI boundaries, and legacy native/code-page string view pressure |
 | Does Not Own | Accepted foreign layouts, calling conventions, or binding contracts |
 | Source / Provenance | Work items `001` and `012`, Zax purpose/design principles, and optional layout/ABI pressure |
 
@@ -99,6 +99,40 @@ Future interop work must distinguish:
 Equal Zax scalar format and structural compatibility do not establish foreign
 calling convention, register class, stack alignment, NaN payload transport, or
 padding guarantees. A named foreign contract or adapter remains required.
+
+## Legacy string and character pressure
+
+Current [strings and characters](../../language/strings-and-characters.md)
+defines:
+
+- always-defined profile-selected `Legacy.Char` and optional
+  `Legacy.WChar` identities, each with profile-selected signedness;
+- length-tracked `Legacy.CharString`, optional `Legacy.WideString`, and MBCS
+  strings with no implied sentinel;
+- policy-specialized terminated char/wide strings;
+- policy-owned terminator, in-band, contiguity, suffix, and admission rules; and
+- conceptual `.c_str()`-style access only for applicable NUL policies.
+
+Those language-level value guarantees do not establish a foreign ABI. Future
+interop work must decide:
+
+- exact pointer/reference shape and const/writable authority;
+- contiguous layout and element ABI;
+- lifetime, pinning, and invalidation;
+- target versus compiler-host native character profiles;
+- encoding and code-page identity at the call boundary;
+- ownership and deallocation of returned foreign strings;
+- validation after writable or unsafe foreign calls;
+- adapter behavior for foreign inputs containing embedded NUL; and
+- whether code-page conversion occurs before, during, or outside the call.
+
+A trailing NUL policy prevents missing-terminator access but does not grant
+calling convention, symbol, allocator, or lifetime compatibility.
+
+MBCS encoding identity is independent of C-string termination. A C-facing MBCS
+boundary needs an explicit adapter or terminated policy specialization; an
+ordinary `MbcsString<Encoding>` may contain embedded NUL and cannot expose
+`.c_str()`.
 
 ## Activation and retirement
 

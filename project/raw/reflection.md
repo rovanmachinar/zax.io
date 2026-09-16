@@ -243,6 +243,67 @@ reproduce both. Future work must decide:
 - whether source reflection is a separate facility from type and declaration
   reflection.
 
+### Literal source and specialization
+
+Current [literal source](../../language/literal-source-and-operators.md) adds
+facts that may disappear from the final value tree:
+
+- the written qualified or unqualified literal prefix;
+- the selected literal declaration and exact-alias relationship;
+- quote delimiter kind;
+- physical payload segments and source spans;
+- `<|>` source merge boundaries;
+- payload spelling before parser interpretation;
+- explicit `<+>` joins;
+- `intent<same-prefix-literal-join>` acknowledgement;
+- generic `uncommitted` result declaration;
+- suggested commitment and the one selected concrete specialization; and
+- raw-pattern versus mathematical source.
+
+The literal operator receives only the merged payload `String`; source
+reflection must preserve omitted presentation facts separately. Ordinary
+`type of` reports the final concrete specialization rather than an
+`uncommitted` meta-type. Future reflection must decide which facts are available
+to compiler code, runtime code, formatters, documentation tools, and
+diagnostics.
+
+### Optional declarations and type-owned constants
+
+Platform-optional `Legacy.WChar` and `Legacy.WideString` require a symbol-aware
+compile-time query that can inspect whether a declaration resolves without
+first producing an ordinary unknown-type error. Future reflection must decide:
+
+- whether the query consumes an enclosed source unit or declaration path;
+- how an unavailable standard role differs from an unknown imported name;
+- whether private/ineligible declarations count as defined;
+- target versus compiler-host availability;
+- source-refactoring behavior; and
+- what metadata exists when the type itself is unavailable.
+
+Quoted string lookup is possible but loses symbol-aware checking and is not the
+preferred baseline.
+
+Generated fixed/floating type constants add reflection facts:
+
+- mathematical definition and correctly rounded concrete value;
+- special class (`inf`, `ninf`, `nan`, `snan`, `nzero`) and availability;
+- canonical versus raw NaN representation;
+- format limits and fixed-point quantum; and
+- language/provider version responsible for generation.
+
+String reflection must expose the logical underlying unit identity (`U8`,
+`AsciiChar`, `Ucs2`, `U16`, `U32`, `Legacy.Char`, or optional
+`Legacy.WChar`) independently of current storage representation. Future value
+reflection/capability queries may additionally report whether one value is
+already contiguous, but must not turn that transient fact into canonical string
+type identity.
+
+A terminated legacy string specialization additionally needs static policy
+metadata for terminator units, in-band acceptance/escaping, contiguity, physical
+suffix, logical length, admission, and mutation restoration. Baseline
+`Legacy.CharString`, optional `Legacy.WideString`, and MBCS have no implied
+terminator policy.
+
 ## Enum metadata
 
 [Zax enums](../../language/enums.md) now owns demand-generated string

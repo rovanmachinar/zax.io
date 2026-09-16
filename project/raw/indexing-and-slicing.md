@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining indexing, slicing, ranges, bit places, proxies, or multi-index operations |
-| Applies To | `operator index`, direct indexed mixfix, slicing, bounds, and projection pressure |
-| Owns | Representative source, direct-operation requirements, unsettled syntax, activation pressure, and retirement criteria |
-| Does Not Own | Accepted indexing semantics or current integer/lifetime behavior |
+| Applies To | `operator index`, direct indexed mixfix, slicing, bounds, projection, array/string capacity, and result-length pressure |
+| Owns | Representative source, direct-operation requirements, `IndexSize` container pressure, unsettled syntax, activation pressure, and retirement criteria |
+| Does Not Own | Accepted indexing semantics; current integer/lifetime behavior; or current string identity and compile-time joining ([strings and characters](../../language/strings-and-characters.md)) |
 | Source / Provenance | Legacy `arrays.md` evidence, operator review, and work item `015` allocation-syntax disposition |
 
 ## Direct indexed operations
@@ -120,6 +120,20 @@ Future indexing work must decide:
 - how checked multiplication converts element count and element size into
   `TypeSize`; and
 - how ordinary, near, and far domains constrain container availability.
+
+Current [strings and characters](../../language/strings-and-characters.md)
+requires every literal-created or compile-time-joined string/array result to fit
+its selected sequence type's `IndexSize` capacity. Future container work must
+preserve:
+
+- compile-time length addition with capacity diagnostics;
+- the distinction between logical length and reserved storage;
+- `length + 1` storage for NUL-terminated legacy strings without counting the
+  sentinel as an element;
+- fixed versus dynamic result-length identity;
+- allocation/materialization of large compile-time constants; and
+- no silent widening to another near/ordinary/far container domain after
+  capacity failure.
 
 ## Dynamic array allocation
 

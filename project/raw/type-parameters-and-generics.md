@@ -436,20 +436,34 @@ because it belongs to a type.
 
 ### Bounded size probing
 
-Maintainer literal input preserves a concrete generic compile-time selection
-need:
+Current [literal source and operator design](../../language/literal-source-and-operators.md#every-invocation-has-one-concrete-result)
+establishes a generic `uncommitted` scalar result slot. Compile-time/generic
+processing uses payload, candidate-hole, sign-intent, and suggestion facts to
+select one concrete result prototype before processing and invoking the literal
+body.
+
+The exact generic mechanism remains future work. It must preserve:
+
+- one selected concrete callable result, never an anonymous runtime value;
+- a fixed declared suggestion such as `UInteger` when no other hole applies;
+- separate suggestion and sign intent;
+- no value-magnitude overload ranking;
+- no result-overload family for integer versus `p` real payloads;
+- ordinary range checking only after one specialization is selected; and
+- no retry of another type after selected range failure.
+
+Literal input also preserves a concrete bounded selection need:
 
 ```zax
 mySmall := h'FF'
 myLarge := h'FFFFFFFFFFFFFFFFFFFFFFFFFFFFF'
 ```
 
-A numeric literal implementation receives a payload `String`, but the parsed
-magnitude may determine whether its final result is an ordinary or much wider
-exact integer. The baseline literal facility may require one declared concrete
-result. Future generic work should still permit a literal declaration or
-associated type factory to compute one concrete result identity from its
-compile-time payload before the literal enters its surrounding expression.
+A numeric literal implementation receives a payload `String`, but parsed
+magnitude may determine whether its suggested result is an ordinary or much
+wider exact integer. Future generic work should permit a literal declaration or
+associated type factory to compute that concrete suggestion before the literal
+body and surrounding expression are processed.
 
 More generally, compile-time code should be able to begin with an ordinary
 numeric size, test bounded conversion/support requirements, and deliberately
@@ -458,8 +472,8 @@ It should not be forced to instantiate one extreme maximum-width integer or
 floating value merely to discover a workable type.
 
 Future generic and compile-time work must define this as bounded static
-selection rather than exception-driven runtime fallback, source-order overload
-search, or reopening the selected literal as an uncommitted integer.
+specialization rather than exception-driven runtime fallback, source-order
+overload search, or reopening an invoked literal result.
 
 ## Constraints this input places on current work
 
@@ -554,6 +568,30 @@ specialization. They must not infer a guarantee from hidden allocation history.
   illustrative until the same mechanism is designed; and
 - public signedness pairs are declared relationally rather than inferred from
   names.
+
+### Legacy string termination policies
+
+Current string design defines conceptual concrete specializations:
+
+```text
+Legacy.TerminatedCharString<TerminatorPolicy>
+Legacy.TerminatedWideString<TerminatorPolicy>
+```
+
+Future generic work must let a platform/API-owned policy statically determine:
+
+- terminator code unit or sequence;
+- in-band rejection, escaping, or translation;
+- required contiguous storage and physical suffix;
+- logical length treatment;
+- admission/conversion behavior;
+- safe mutation/reallocation restoration; and
+- any additional platform-specific contract.
+
+Each realized policy application is one concrete string identity. A runtime
+policy value must not make one string change termination semantics dynamically.
+Exact generic syntax, policy constraints, specialization identity, and
+reflection remain future work.
 
 ## Activation and retirement
 

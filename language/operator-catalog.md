@@ -6,8 +6,8 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
-| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, and value join `<+>` forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
 ## How to use this catalog
@@ -48,6 +48,7 @@ Zax recognizes:
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
+| Literal source/value | Source merge `<\|>` and value join `<+>` |
 | Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
 | Delimited/multi-part | Call, index, and [mixfix](mixfix-operators.md) forms |
@@ -62,11 +63,13 @@ Higher levels bind first:
 
 | Level | Forms | Grouping |
 | --- | --- | --- |
+| Literal source formation | Adjacent same-declaration payload segments and optional `<\|>` merge | Forms one payload before expression parsing |
 | Enclosed/grouped | Parentheses and recognized circumfix forms | Delimiter-owned |
 | Postfix/delimited | Call, index, member/dereference, post `++`/`--` families | Left-to-right chaining |
 | Prefix | `?`, `!`, `~`, `~=`, `#...`, pre `++`/`--`, unary arithmetic policies | Separate applications require grouping |
 | Multiplicative | `*`, `/`, `%`, `full precision product`, and accepted policy variants | Left |
 | Additive | `+`, `-`, accepted policy variants, `delta`, `distance` | Left |
+| Literal join | `<+>` | Left for join chains; group when mixed with another value-operator level pending final placement |
 | Shift/rotate/composition | `<<`, `>>`, `>>>`, `<<<`, `<<%`, `>>%`, modulo-count phrases, multiword operations | Left |
 | Ordinary phrase | Conversion/admission forms, reserved language phrases, newly declared phrases | Left |
 | Relational | `<`, `<=`, `>`, `>=`, `<=>` | Ungrouped chaining is an intent error |
@@ -801,6 +804,41 @@ They are not generic post-unary delimiter operators.
 A mixfix component uses `call N` or `index N` to partition flattened inputs.
 Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
 
+## Literal merge and join
+
+Adjacent segments resolving to one literal declaration implicitly merge.
+`<|>` is the optional protected, non-overloadable explicit form:
+
+```zax
+myImplicit := x"first '" x' second"'
+myPayload := x"first '" <|> x' second"'
+```
+
+Both combine payload before expression parsing and therefore bind before every
+value operator. Every segment must independently resolve to the same literal
+declaration. Implicit merge requires ordinary `\` across a physical line;
+trailing `<|>` establishes symbolic continuation. Complete source, grouping,
+alias, continuation, and empty-operand rules are defined by
+[literal source and operators](literal-source-and-operators.md#merge-literal-source).
+
+`<+>` is an open overloadable binary operator. Join chains associate left:
+
+```zax
+myText := utf8'first' <+> c'\n' <+> utf8'second'
+```
+
+It associates left and uses ordinary left-receiver discovery and callable
+selection. Literal use requires the selected implementation to execute during
+compilation. String/character result identities and directional admission are
+defined by [strings and characters](strings-and-characters.md#compile-time-joining).
+
+`<|>` always forms source before `<+>`. The final placement of `<+>` among
+unrelated value-operator levels remains future catalog work; group an expression
+that mixes them rather than relying on an unstated precedence.
+
+When both immediate literal operands resolve to one declaration, `<+>` requires
+`intent<same-prefix-literal-join>`.
+
 ## Deferred and unavailable forms
 
 - Legacy `@@` parallel-allocation meaning is superseded. Arena capabilities
@@ -808,7 +846,8 @@ Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
 - `|>` remains function-chaining evidence.
 - Legacy result split/combine `<-` and `->` are superseded by the protected
   `>-`, `-<`, and `-<>-` structural mapping family.
-- Literal prefixes/quote behavior remain literal work.
+- Runtime `<+>` behavior outside required literal-time joining remains future
+  string/operator work.
 - Exact multiword, reversal, and masked extraction/deposit words remain numeric
   work.
 - Layout, lifetime, allocator, and complete reflection phrases remain their
@@ -872,6 +911,7 @@ Complete integer behavior is in the
 [integer operator catalog](integer-operator-catalog.md). Fixed and floating
 semantics are current in [fixed-point scalars](fixed-point-scalars.md) and
 [floating-point scalars](floating-point-scalars.md); exact wording for several
-advanced operations remains future catalog work. Complete literal, unbounded
-numeric, enum, pointer, indexing, allocation, reflection, panic-recovery, and
-build-option syntax remain focused future work.
+advanced operations remains future catalog work. Literal source and declarations
+are current in [literal source and operators](literal-source-and-operators.md).
+Runtime joining, unbounded numeric, enum, pointer, indexing, allocation,
+reflection, panic-recovery, and build-option syntax remain focused future work.

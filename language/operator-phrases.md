@@ -7,7 +7,7 @@
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type receivers, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
-| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); structural recognition of `dispose` by [Zax `using`](using.md); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
+| Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); attached literal phrases, payloads, declarations, merge, and join ([literal source and operators](literal-source-and-operators.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); structural recognition of `dispose` by [Zax `using`](using.md); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
 ## Mental model
@@ -555,6 +555,9 @@ and tree may qualify. General contextual operator fallback is defined by
 The fence's phrase role is owned here. Its interaction with general tokenization
 and attached literal prefixes is summarized by
 [source structure](source-structure.md#phrase-fences-and-literal-coordination).
+Attached literal phrases and their complete payload/result behavior are defined
+by
+[literal source and operators](literal-source-and-operators.md#attached-literal-phrases).
 
 ### Presentation confirms a selection; it never makes one
 

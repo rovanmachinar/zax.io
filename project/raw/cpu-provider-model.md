@@ -3,9 +3,9 @@
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining target and compiler-host CPU profiles, native scalar representations, numeric selection, and operation support |
-| Applies To | Native representation classification; integer, fixed, and floating selectors; support classes; machine-word families; pointer/size capacities; mapping stability; metadata; and fallback |
-| Owns | Preserved CPU-provider format, versioning, selection, support, cost, runtime-hardware, X87, and fallback requirements |
+| Audience | Future work defining target and compiler-host CPU profiles, native scalar and legacy character representations, numeric selection, and operation support |
+| Applies To | Native representation classification; integer, fixed, floating, and legacy character selectors; support classes; machine-word families; pointer/size capacities; mapping stability; metadata; and fallback |
+| Owns | Preserved CPU-provider format, versioning, selection, support, cost, runtime-hardware, X87, legacy character profile, and fallback requirements |
 | Does Not Own | Accepted scalar semantics, CPU-profile source format, ABI contracts, or implementation algorithms |
 | Source / Provenance | Current integer, fixed-point, floating-point, endian, and native/compiler-host/target execution design |
 
@@ -195,6 +195,37 @@ Near.IndexSize.maximum <= IndexSize.maximum <= Far.IndexSize.maximum
 Mirrored representations do not collapse distinct near/ordinary/far intent
 identities.
 
+## Legacy character profile
+
+Current [string and character design](../../language/strings-and-characters.md)
+moves native character roles under:
+
+```text
+Legacy.Char
+Legacy.WChar (optional)
+```
+
+A CPU/target provider must eventually expose:
+
+- exact narrow and wide logical widths;
+- selected signedness for each available role;
+- native narrow and wide encoding identities;
+- whether the active profile uses ASCII, EBCDIC, UTF, a code page, or another
+  declared mapping;
+- target and compiler-host selections independently;
+- storage alignment and endianness; and
+- conversion/support/cost facts.
+
+A conventional profile may use `I8` or `U8` representation for `Legacy.Char`
+while retaining its distinct public identity. `Legacy.Char` is always defined.
+A legacy wide profile may select sixteen, thirty-two, or another declared width;
+otherwise `Legacy.WChar` is unavailable rather than synthesized from an integer
+or `Rune`. “Legacy” does not mean unsupported.
+
+The provider model must make an optional role detectable through future static
+declaration-resolution/capability analysis without allowing an unavailable type
+to be instantiated.
+
 ## Mapping stability
 
 Changing a provider selection may change storage, alignment, overflow
@@ -227,7 +258,8 @@ exact-specialization detail on demand.
 Activate this input for CPU profiles, target descriptions, compiler-host/target
 execution environments, native scalar selection, integer/fixed/floating
 selectors, support classes, operation availability/cost, X87 behavior,
-machine-word families, pointer and size capacities, or mapping compatibility.
+machine-word families, legacy character profiles, pointer and size capacities,
+or mapping compatibility.
 Move accepted behavior into target-profile, scalar, build, reflection,
 compatibility, and interoperability owners, then retire this file after every
 preserved requirement is dispositioned.

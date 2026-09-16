@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase declaration ownership, type-parameter slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -1190,6 +1190,58 @@ compile-time function model; a phrase adds no special execution rule.
 For a non-generic declaration, the enclosing type name identifies the receiver
 type inside its body. Generic instantiations, aliases, and type-receiver
 qualifications remain future generic and reflection work.
+
+### Literal operators
+
+A literal operator declares one quoted lower-case phrase word, one `String`
+payload input, and one value result:
+
+```zax
+MyType :: type {
+  operator literal 'cstyle' final once : (
+    result : MyType
+  )(
+    payload : String
+  ) = {
+  }
+}
+
+myValue := MyType.cstyle'payload'
+```
+
+`final once` follows ordinary declaration ordering. `once` gives the owner one
+shared implementation; it does not by itself require compile-time execution.
+The `operator literal` category is available only through compile-time literal
+source.
+
+A literal has no instance receiver. Type ownership supplies a qualified path,
+not instance-based discovery. Future alias/import behavior may expose a short
+prefix, but the expected result never searches a type for its literal
+declarations.
+
+A generic literal may declare an `uncommitted` scalar result. The spelling below
+expresses the declaration relationship while exact generic processing syntax
+remains future work:
+
+```zax
+operator literal 'h' final once : (
+  result uncommitted : UInteger
+)(
+  payload : String
+) = {
+}
+```
+
+`UInteger` is a suggested specialization rather than the invocation's final
+type. Compile-time/generic processing selects one concrete result prototype
+before the body is processed and invoked. The body and every caller-facing rule
+then see only that concrete type.
+
+Complete payload, qualification, ambiguity, specialization, merge, join, and
+required-execution behavior is defined by
+[Zax literal source and literal operators](literal-source-and-operators.md).
+Exact literal alias/import/export, visibility, and forward declaration syntax
+remain future namespace/module design.
 
 ### Bounded private eligibility
 

@@ -159,14 +159,15 @@ preserve available qualification authority, and remain distinct from unchecked
 
 ## Commitment boundary
 
-A **commitment boundary** selects one concrete integer type for an uncommitted
-integer. Integer realization then checks sign intent and range and creates that
-concrete value.
+A **commitment boundary** selects one concrete scalar type for uncommitted
+numeric source. Integer realization then checks sign intent and range; real
+realization applies the selected fixed-point or floating format.
 
 Commitment may come from an inferred default, an explicitly typed declaration,
 a selected callable/operator input, a protected integer operand anchor, or a
-conditional convergence result. See
-[Zax integer literals and realization](integer-literals.md).
+conditional convergence result, or generic literal specialization. See
+[Zax integer literals and realization](integer-literals.md) and
+[literal source and operators](literal-source-and-operators.md#every-invocation-has-one-concrete-result).
 
 ## Completion mode and contextual completion
 
@@ -320,6 +321,22 @@ it, rather than being reached through a pointer or reference.
 For a directly stored value, the declared binding and value share one immediate
 replacement boundary. Indirection introduces additional boundaries.
 
+## Encoded legacy string
+
+An **encoded legacy string** is a string whose concrete identity carries one
+native-profile or named code-page interpretation rather than ordinary
+`String`, ASCII, or Unicode text semantics.
+
+An MBCS string is length-tracked, permits embedded NUL, and has no required
+sentinel. Baseline `Legacy.CharString` and optional `Legacy.WideString` are
+likewise length-tracked and permit NUL.
+
+A **terminated legacy string** is a distinct concrete specialization whose
+policy defines terminator units, in-band acceptance/escaping, contiguity,
+physical suffix, mutation, and admission. A NUL policy may reject embedded NUL
+and provide `.c_str()` semantics. See
+[Zax strings and characters](strings-and-characters.md#legacy-native-and-encoded-characters).
+
 ## Eager operator
 
 An **eager operator** evaluates every runtime operand hole required by the
@@ -338,6 +355,17 @@ discarded information.
 An exact-width integer instead describes a type whose logical width is fixed.
 An exact conversion preserves the source value. An exact arithmetic result is
 the mathematical result without another policy transformation.
+
+## Exact uncommitted real
+
+An **exact uncommitted real** is a finite mathematical rational value with no
+concrete fixed-point or floating representation yet selected.
+
+Its initial exact operations include grouping, sign, arithmetic with rational
+results, equality, and ordering. Commitment realizes the final rational once in
+the selected scalar type. Compiler capacity failure is distinct from hidden
+rounding in a compiler-host float. See
+[literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
 
 ## Flow label
 
@@ -397,6 +425,37 @@ intent<terminal-source-reuse>{
 
 It grants no capability and cannot make invalid source valid. See
 [Zax intent acknowledgements](intent-acknowledgements.md).
+
+## Literal phrase and payload
+
+A **literal phrase** is the one quoted lower-case word declared by an
+`operator literal`. At a use, a quote delimiter attaches directly to that name
+or qualified path.
+
+The **literal payload** is the admitted UTF-8 source content between delimiters,
+after any implicit adjacent or explicit `<|>` source merge and before the
+selected literal operator interprets it. Zax performs no built-in escaping or
+normalization.
+
+See [Zax literal source and literal operators](literal-source-and-operators.md).
+
+## Literal source merge and literal join
+
+A **literal source merge** combines adjacent payload segments that resolve to
+one literal declaration. `<|>` is its optional explicit spelling.
+
+A **literal join** uses overloadable `<+>` to combine already parsed, concrete
+constant results during compilation. Merge changes parser input; join invokes
+each parser independently and then performs a value operation.
+
+## Uncommitted generic result
+
+An **uncommitted generic result** is a scalar literal declaration slot whose one
+concrete result type is selected from payload, candidate-hole, sign-intent, and
+suggestion facts before the literal body is processed and invoked.
+
+It is generic specialization state, not an anonymous type or runtime value. See
+[every invocation has one concrete result](literal-source-and-operators.md#every-invocation-has-one-concrete-result).
 
 ## Lifecycle operation
 
@@ -949,6 +1008,23 @@ root alive. A **weak pointer** observes that ownership without keeping it open.
 Weak-to-strong construction may fail and produce an empty strong pointer.
 Pointer-layer `atomic` controls cross-thread lifetime accounting, not pointee
 thread safety. See [Zax pointers and arenas](pointers-and-arenas.md).
+
+## Suggested commitment
+
+A **suggested commitment** is the concrete type a generic literal result selects
+when no destination or candidate hole supplies another type. It is considered
+before realization and range checking; it is not an already selected type and
+does not itself establish sign intent.
+
+## Unicode scalar and grapheme cluster
+
+A **Unicode scalar** is a code point from `U+0000` through `U+10FFFF`, excluding
+the surrogate range `U+D800..U+DFFF`. `Rune` represents one scalar.
+
+A **grapheme cluster** is a presentation-oriented sequence that may contain
+several scalars while being displayed as one perceived character. It is not one
+`Rune`, and Zax strings do not implicitly normalize or validate grapheme
+presentation. See [Zax strings and characters](strings-and-characters.md).
 
 ## Symbolic operator
 

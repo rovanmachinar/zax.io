@@ -22,7 +22,8 @@ and the term itself by
 
 This legacy basics page no longer defines those concerns. The remaining sections
 preserve unreviewed design input for keywords, detailed operators, types,
-literals, and related concepts.
+and related concepts. Current literal source and string/character behavior is
+routed explicitly below.
 
 
 ### Keywords
@@ -129,23 +130,24 @@ keyword-role escape. This legacy page does not duplicate that source rule.
 > This flat list is retained only as legacy evidence. The current programmer
 > model is [Zax operators](language/operators.md), exact current forms are in the
 > [operator catalog](language/operator-catalog.md), and tree-pattern behavior is
-> in [mixfix operators](language/mixfix-operators.md). Literal, phrase,
-> allocation, pointer, and metaprogramming entries below remain future subjects;
-> the list does not make them current or available.
+> in [mixfix operators](language/mixfix-operators.md). Literal source and
+> declarations are current in
+> [literal source and operators](language/literal-source-and-operators.md).
+> Remaining allocation, pointer, and metaprogramming entries below are legacy
+> evidence; the list does not make them current or available.
 
-#### Remaining literal-operator evidence
+#### Literal-operator disposition
 
-The promoted symbolic, circumfix, call, index, and mixfix forms were removed from
-this legacy list. The single quote is now the
-[exact phrase fence](language/operator-phrases.md#exact-phrase-fencing) when it
-stands alone and separated by whitespace; a literal single quote must be attached
-to a literal prefix. Quote-delimited literal prefixes and custom literal
-operations remain future literal work:
+Current quote, prefix, merge, join, declaration, compile-time, numeric catalog,
+and raw-pattern behavior is defined by
+[Zax literal source and literal operators](language/literal-source-and-operators.md).
+A separated single quote remains the
+[exact phrase fence](language/operator-phrases.md#exact-phrase-fencing).
 
 ````
-"                  // ordinary unprefixed literal delimiter
-prefix'            // attached prefixed-literal delimiter evidence
-'                  // standalone single quote is a phrase fence, not a literal
+"                  // ordinary String shorthand
+prefix'            // attached literal payload
+'                  // separated phrase fence, not a literal
 ````
 
 
@@ -440,8 +442,9 @@ MyType :: type {
 > minimum-width `Half`/`Single` interpretation, and width-only `Float` generic
 > have been consumed rather than retained as duplicate teaching.
 >
-> The remaining block preserves unresolved non-numeric intrinsic and string
-> input.
+> The remaining block preserves unresolved non-numeric intrinsic input. String,
+> character, Unicode, and legacy-encoding behavior has moved to
+> [Zax strings and characters](language/strings-and-characters.md).
 
 ````zax
 // import the module system types into the global `Module` namespace
@@ -451,14 +454,6 @@ unknown : Unknown   // used as a generic pointer type to an `Unknown` type
 nothing : Nothing   // used as a generic type of `Nothing`
 void : Void         // an alias of the `Unknown` type
 boolean : Boolean   // A value representing `true` or `false` literals
-
-// strings have a built-in `length` `mutator` and are extended ASCII by default
-stringA : String = "hello"
-stringB := "type is implied"
-
-// other string encodings are supported
-utf8String : Utf8String = utf8'© Snowman Industries (☃)'
-wideString : WideString = w'hello'
 ````
 
 
@@ -468,11 +463,12 @@ Current unprefixed integer behavior is owned by
 [Zax integer literals and realization](language/integer-literals.md). Attached
 single-quote versus separated phrase-fence tokenization is owned by
 [Zax source structure](language/source-structure.md#phrase-fences-and-literal-coordination).
-
-The former prefix catalog, encoding/escape candidates, numeric-base payloads,
-custom literal operators, compile-time transformations, and merged literal
-examples remain unresolved future input. They are no longer presented here as
-current language behavior.
+Ordinary real/string source, literal operators, numeric bases, merge, joining,
+and raw patterns are current in
+[Zax literal source and literal operators](language/literal-source-and-operators.md).
+String/character identities, escapes, encodings, and directional joins are
+current in
+[Zax strings and characters](language/strings-and-characters.md).
 
 ### Intrinsic Namespaces
 

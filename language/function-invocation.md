@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -243,6 +243,33 @@ discovery.
 Declaration ownership, `operator type` receivers, and complete generic behavior
 are defined by
 [declarations and bindings](declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters).
+
+### Literal result specialization
+
+A generic literal result is specialized before its body is invoked:
+
+```zax
+myDefault := h'FF'  // selected result UInteger
+myByte : U8 = h'FF' // selected result U8
+```
+
+The literal declaration supplies one generic result slot, not several
+result-only overloads. Compile-time/generic processing uses its payload,
+candidate hole, sign intent, and suggestion to select one concrete result
+prototype. The body is processed and invoked under that prototype.
+
+Ordinary invocation then sees exactly the same contract as a declaration that
+had stated the concrete type directly. An `uncommitted` generic placeholder:
+
+- is not a runtime or anonymous result;
+- cannot enter ordinary result routing or an enclosing operator;
+- does not let value magnitude rank overloads;
+- does not reopen after invocation; and
+- does not retry another result type after selected range failure.
+
+Exact generic specialization syntax and compile-time type-selection mechanics
+remain future work. Complete programmer-facing literal behavior is defined by
+[Zax literal source and literal operators](literal-source-and-operators.md#every-invocation-has-one-concrete-result).
 
 ### Declaration-side replacement permission
 

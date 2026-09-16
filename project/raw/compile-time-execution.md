@@ -19,6 +19,61 @@ accepted, yet several accepted concepts depend on an execution context existing.
 
 This file keeps those dependencies visible.
 
+## Current literal boundary
+
+[Zax literal source and literal operators](../../language/literal-source-and-operators.md)
+now requires literal operators and literal-result `<+>` joins to execute during
+compilation.
+
+The current local contract already fixes:
+
+- one concrete generic result specialization before a literal body runs;
+- active execution context, with target/compiler-host facts selected explicitly;
+- host-locale-independent source and numeric parsing;
+- deterministic results from payload, declaration, explicit static inputs,
+  selected profile/environment, and versioned language/library data;
+- no mutable compile-time state that makes identical literal results depend on
+  source order;
+- no compiler allocation leaking into the produced value;
+- deliberate rejection and language panic becoming source diagnostics;
+- resource failure not becoming candidate fallback; and
+- no retry of a runtime or weaker `<+>` declaration after selected
+  compile-time unavailability.
+
+This input retains the general mechanism: exact availability syntax, literal
+rejection APIs and payload offsets, scheduling, capabilities, sandboxing,
+caching, allocation policy, recursion/termination limits, filesystem/network
+access, and work budgets.
+
+## Exact uncommitted real evaluation
+
+Current literal design calculates the initial uncommitted-real operation family
+as exact finite rationals and rounds once at commitment. Decimal and binary-power
+source, including `1.0 / 3.0`, does not use a hidden compiler-host floating
+format.
+
+Compile-time work must preserve:
+
+- exact grouping, sign, `+`, `-`, `*`, rational `/`, equality, and ordering;
+- zero-divisor diagnostics;
+- exact scaled source without expanding repeating decimal digits;
+- destination-aware algorithms only when they prove the same correctly rounded
+  result as exact evaluation followed by one realization;
+- capacity/work exhaustion as a compiler diagnostic rather than hidden
+  intermediate rounding; and
+- a concrete commitment requirement before square root, transcendental, or
+  representation-dependent operations.
+
+Future work must define practical capacity guarantees, algorithm-independent
+resource diagnostics, caching, and how a programmer establishes an earlier
+concrete boundary to control cost.
+
+Generated fixed/floating mathematical constants apply the same requirement:
+`T.pi`, `T.e`, and peers are rounded directly from their definitions into `T`,
+not copied from compiler-host constants or derived from another rounded type.
+Floating `inf`, `ninf`, `nan`, `snan`, and `nzero` are exact type-owned format
+values whose availability follows the concrete format.
+
 ## Directed and inferred execution
 
 Legacy material directs execution with a directive option set:
@@ -198,11 +253,28 @@ A statically discarded branch may name an unsupported operation without
 demanding executable support. A selected branch that uses it receives an
 availability diagnostic.
 
-Maintainer input also requires bounded type probing. In particular, a
-compile-time numeric literal declaration may parse `h'FF'` and a much longer
-payload into different exact magnitudes that need different concrete result
-widths. Future generic/type-factory work may let the literal compute one result
-identity from that payload before surrounding selection completes.
+Current optional `Legacy.WChar`/`Legacy.WideString` adds declaration-resolution
+pressure. Future compile-time/reflection design needs a static enclosed-source
+or declaration-path query whose payload may mention an unavailable name without
+producing an ordinary compilation error. A rejected payload:
+
+- contributes no declarations or runtime behavior;
+- does not execute ordinary side effects;
+- reports `false` or another static unavailability result;
+- preserves target versus compiler-host context; and
+- remains symbol-aware rather than depending only on a fragile string path.
+
+Exact source syntax remains open.
+
+Current literal design permits a generic `uncommitted` scalar result slot.
+Compile-time/generic processing selects one concrete result prototype before the
+literal body is processed and invoked. A fixed suggestion such as `UInteger`
+does not automatically widen after range failure.
+
+Future bounded type probing may compute another suggested specialization from
+payload magnitude. In particular, a numeric literal declaration may parse
+`h'FF'` and a much longer payload into different exact magnitudes that need
+different concrete result widths.
 
 More generally, generic code may begin with an ordinary size and deliberately
 test larger candidates until a supported conversion/type or declared limit is

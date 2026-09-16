@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization and literal result behavior ([integer literals and realization](integer-literals.md)); flow semantics ([core flow control](core-flow-control.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization ([integer literals and realization](integer-literals.md)); literal declarations, payload meaning, merge results, and joining ([literal source and operators](literal-source-and-operators.md)); string/character identities ([strings and characters](strings-and-characters.md)); flow semantics ([core flow control](core-flow-control.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -399,8 +399,78 @@ The phrase feature owns what fencing does to candidate interpretations; see
 [exact phrase fencing](operator-phrases.md#exact-phrase-fencing). Complete
 unprefixed integer realization is defined by
 [Zax integer literals and realization](integer-literals.md). Prefixed/custom
-literal catalogs and payload behavior remain future literal work. Neither may
-reinterpret this attachment boundary.
+literal catalogs, payload behavior, and compile-time execution are defined by
+[Zax literal source and literal operators](literal-source-and-operators.md).
+Neither may reinterpret this attachment boundary.
+
+### Quoted literal source
+
+An attached literal payload may use either quote kind:
+
+```zax
+s'my "quoted" text'
+s"single quote: '"
+```
+
+Before a literal operator runs, the source scanner:
+
+- requires well-formed UTF-8;
+- rejects physically present C0 controls `U+0000..U+001F`;
+- treats the matching quote as the terminator;
+- performs no escape processing or Unicode normalization; and
+- preserves physical spans for diagnostics and source reflection.
+
+The other quote remains an ordinary payload character. A backslash likewise has
+no lexical escape meaning. A literal operator such as `c` may interpret those
+characters after source scanning.
+
+Adjacent segments that independently resolve to one literal declaration
+implicitly merge:
+
+```zax
+myText := s"contains '" s' and "'
+```
+
+`<|>` is the optional explicit spelling:
+
+```zax
+myText := s"contains '" <|> s' and "'
+```
+
+Both forms bind before ordinary expression precedence and require every prefix
+to resolve independently to one declaration. Different declarations cannot be
+adjacent:
+
+```zax
+x'first' y'second' // error: different literal declarations
+```
+
+Grouping can surround a complete merge but cannot turn an expression back into
+source:
+
+```zax
+use((x'a' x'b'))
+(x'a') <|> x'b' // error: left side is already an expression
+```
+
+Implicit merge does not continue a physical line:
+
+```zax
+myValue := x'first ' \
+  x'second'
+```
+
+A trailing explicit `<|>` establishes symbolic-infix continuation, so `\` on
+the same newline is redundant:
+
+```zax
+myValue := x'first ' <|>
+  x'second'
+```
+
+An empty segment participating in implicit or explicit merge is a
+non-acknowledgeable redundant-structure error. Complete merge,
+declaration-identity, joining, and result behavior belongs to the literal owner.
 
 ### Contextual keywords and enclosure boundaries
 
@@ -1622,6 +1692,9 @@ Layout and separator diagnostics additionally distinguish:
 - a selected phrase component spanning a physical line;
 - an empty phrase fence, or a fence with an escape, leading space, or trailing
   space;
+- adjacent literal segments that resolve to different declarations;
+- an implicit literal merge broken by an uncontinued physical newline;
+- an empty segment participating in implicit or explicit literal merge;
 - an explicit `\` where a declaration colon or mixfix component list already
   continues the newline;
 - an initializer `=` followed by an uncontinued newline;

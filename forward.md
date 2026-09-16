@@ -16,9 +16,10 @@ dependency behavior, and generated forward material.
 > [Zax declarations and bindings](language/declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters)
 > and [Zax operators](language/operators.md#operator-phrases).
 >
-> `roman :: forward operator literal` remains unresolved literal evidence
-> preserved in
-> [raw literal input](project/raw/literal-operators.md).
+> Literal operators are current in
+> [Zax literal source and literal operators](language/literal-source-and-operators.md).
+> Whether they support a `forward operator literal` declaration remains
+> indexed future namespace/import/declaration work.
 >
 > The variable, type, enum, namespace, and module forward material on this page is
 > unaffected and remains ordinary legacy input.
@@ -54,7 +55,7 @@ EnumType :: forward enum
 // order matters as `EnumType` needs to be forwarded prior to `Value`
 EnumType.Value :: forward enum value
 
-// Literal forwarding remains raw literal evidence.
+// Illustrative legacy syntax; literal forwarding remains future work.
 roman :: forward operator literal
 
 // forward declare a namespace

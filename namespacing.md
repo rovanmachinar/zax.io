@@ -9,6 +9,10 @@ and qualified-path resolution behavior are defined by
 page remains legacy input for complete module, import, export, visibility, and
 namespace behavior.
 
+Current literal operators may be namespace- or type-owned and use deterministic
+qualified paths. Exact alias/import/export, visibility, collision, and
+`forward operator literal` syntax remains indexed future namespace/import work.
+
 A namespace also introduces a life path within global execution. Its instances
 end before the containing unnamed global path. Current lifetime terminology and
 ordering are defined by
@@ -464,4 +468,18 @@ func final : ()() = {
 
 ### Operator namespacing
 
-Unlike other namespaced type and variables, operators declared in a global scope do not have a method to be located by namespace. Instead, a search for matching operators is done by searching the current module first, then searching each module for global matching operators in the order they were imported. Operators contained within imported modules of imported modules are not searched for matches as imports of imports are never visible (unless intentionally re-exported).
+The legacy first-module/first-import-wins rule is not current Zax. Current
+operator selection never uses declaration, source, import, or module order to
+break a tie; see [Zax operators](language/operators.md).
+
+A literal merge may use a qualified path to verify a short alias:
+
+````zax
+MyNamespace.x'first' <|> x'second'
+````
+
+Both prefixes resolve independently and must identify one literal declaration.
+The qualified side does not disambiguate an ambiguous `x`. Complete current
+literal behavior is defined by
+[literal source and operators](language/literal-source-and-operators.md);
+future alias/import mechanics remain in the indexed namespace input above.

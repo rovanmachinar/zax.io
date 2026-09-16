@@ -333,10 +333,10 @@ left 'bakes bread' right
 
 A fence weeds candidates without grouping the wider expression. An attached
 single quote introduces a literal payload, while a whitespace-separated single
-quote introduces a phrase fence. The accepted rule is owned by
+quote introduces a phrase fence. The accepted fence rule is owned by
 [Zax operator phrases](../../language/operator-phrases.md#exact-phrase-fencing),
-and the remaining literal consequences are preserved in
-[raw literal input](literal-operators.md).
+while attached payload, merge, declaration, and result behavior is owned by
+[Zax literal source and literal operators](../../language/literal-source-and-operators.md).
 
 A local fence, postfix `_`, and this enclosure are therefore complementary
 rather than competing: a fence requires one exact phrase component, `_`

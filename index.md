@@ -88,6 +88,13 @@ producing them.
 - Read [Zax integer literals and realization](language/integer-literals.md) for
   how number literals get a type, how pre-unary `+` states signedness intent,
   how typed operands affect them, and when a value does not fit.
+- Read [Zax literal source and literal operators](language/literal-source-and-operators.md)
+  for ordinary real and string source, attached literal phrases, payload
+  merging, compile-time joining, radix catalogs, and custom literal
+  declarations.
+- Read [Zax strings and characters](language/strings-and-characters.md) for byte,
+  ASCII, Unicode, and legacy character/string identities, literal forms,
+  encoding transformations, and compile-time joins.
 - Use the [Zax integer operator catalog](language/integer-operator-catalog.md)
   to look up complete protected integer availability, results, policies,
   failures, counts, shifts, conversion, `delta`, and `distance`.
@@ -133,6 +140,8 @@ producing them.
 - [Fixed-point scalars](language/fixed-point-scalars.md)
 - [Binary floating-point scalars](language/floating-point-scalars.md)
 - [Integer literals and realization](language/integer-literals.md)
+- [Literal source and literal operators](language/literal-source-and-operators.md)
+- [Strings and characters](language/strings-and-characters.md)
 - [Integer operator catalog](language/integer-operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)
 - [Endianness](language/endianness.md)
@@ -145,8 +154,10 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Foundations and flow
 
-- [Basics](basics.md) — legacy foundations; current finite integer design is
-  owned by [Zax integers](language/integers.md)
+- [Basics](basics.md) — legacy foundations; current scalar and literal design is
+  owned by [Zax integers](language/integers.md),
+  [literal source and operators](language/literal-source-and-operators.md), and
+  [strings and characters](language/strings-and-characters.md)
 - [Type definition](type-definition.md)
 - [Arrays](arrays.md)
 - [Functions](functions.md)
@@ -166,7 +177,9 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Nothing type instances](nothing.md)
 - [Partial types](partial.md)
 - [Casting](casting.md) — legacy general casting input; current integer
-  conversion is owned by [Zax integers](language/integers.md)
+  conversion is owned by [Zax integers](language/integers.md), while current
+  string identities and compile-time joins are owned by
+  [strings and characters](language/strings-and-characters.md)
 
 ### Memory and lifetime
 

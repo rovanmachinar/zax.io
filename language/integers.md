@@ -7,7 +7,7 @@
 | Applies To | Fundamental finite integer types and their programmer-visible behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Integer choice and mental model; the `F = 0` intrinsic-family branch; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, concrete endianness, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; costs, diagnostics, portability, and source stability |
-| Does Not Own | Fixed-point `F > 0` behavior ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian operations ([endianness](endianness.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); general identity declarations ([identity types](identity-types.md)); enum members, admission, and operation policy ([enums](enums.md)); complete integer operation reference ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
+| Does Not Own | Fixed-point `F > 0` behavior ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian operations ([endianness](endianness.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal prefix and raw-pattern source ([literal source and operators](literal-source-and-operators.md)); string/character identity and encoding behavior ([strings and characters](strings-and-characters.md)); general identity declarations ([identity types](identity-types.md)); enum members and policies ([enums](enums.md)); complete integer operations ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
 | Source / Provenance | Legacy [basics](../basics.md) and [casting](../casting.md) integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
 
 ## Choosing an integer says what the value is for
@@ -301,15 +301,27 @@ environment, and fallback, then return one exact specialization.
 Small <= Short <= Integer <= Long <= LongLong
 ```
 
-### Character-width integer roles
+### Legacy character-width roles
 
-| Signed | Unsigned | Requirement |
-| --- | --- | --- |
-| `Char` | `UChar` | Ordinary character storage width; at least 8 bits |
-| `WChar` | `UWChar` | Wide-character storage width; at least 32 bits |
+| Role | Requirement |
+| --- | --- |
+| `Legacy.Char` | Exact profile-native narrow-character width, signedness, and encoding; always defined |
+| `Legacy.WChar` | Exact profile-native wide-character width, signedness, and encoding; optional |
 
-These names describe integer width. Unicode scalar validity and text behavior
-belong to separate semantic types.
+These are distinct profile identities for native or historical character
+interoperability, not ordinary Zax text. A conventional eight-bit profile may
+represent `Legacy.Char` with `I8` or `U8` according to its selected signedness.
+A legacy wide profile may select sixteen, thirty-two, or another declared width
+and encoding.
+
+A platform without a native wide-character model does not synthesize
+`Legacy.WChar` from `I32`, `U32`, or `Rune`. Exact C/C++ signed and unsigned
+character ABI identities remain future interop work rather than paired Zax
+roles.
+
+`Legacy` means a legacy-era representation model, not deprecated or unsupported.
+ASCII, Unicode scalar, validated text, native string, and NUL-termination
+behavior is defined by [Zax strings and characters](strings-and-characters.md).
 
 ### Machine-word roles
 
@@ -459,9 +471,27 @@ Zax calls a not-yet-typed mathematical source value such as the earlier `42` an
 intent, width-invariant operations, type selection, conditional behavior, and
 failures.
 
-Prefixed/custom literal catalogs and payload behavior remain future literal
-work. A resolved prefixed literal has one concrete result type rather than an
-uncommitted function-like result.
+An unqualified radix literal may use generic uncommitted specialization:
+
+```zax
+myDefault := h'FF'  // UInteger
+myByte : U8 = h'FF' // U8
+```
+
+Generic/compile-time processing selects one concrete result prototype before
+the literal body runs. The executed result is never an anonymous or typeless
+integer.
+
+An exact integer type also supplies raw logical-pattern literals:
+
+```zax
+mySigned := I8.h'FF' // I8 value -1
+myByte := U8.dec'255'
+```
+
+Digit order describes logical significance rather than stored byte order.
+Complete prefix, specialization, grouping, and raw-pattern behavior is defined
+by [Zax literal source and literal operators](literal-source-and-operators.md).
 
 ## Integer identity types
 

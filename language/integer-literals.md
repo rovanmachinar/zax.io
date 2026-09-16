@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers reading, writing, or evaluating integer source and compile-time integer expressions |
-| Applies To | Programmer-visible unprefixed integer source, the shared decimal `e`/`E` real-token boundary, uncommitted integer evaluation, commitment, realization, and interaction with typed operations |
+| Applies To | Programmer-visible unprefixed and generic-literal integer source, uncommitted integer evaluation, commitment, realization, and interaction with typed operations |
 | Implementation State | Not established by this repository |
-| Owns | Uncommitted integers; the shared decimal `e`/`E` real-token boundary; sign intent; width-invariant operations; default and direct realization; candidate holes; contextual completion of numeric operands; commitment and stopping boundaries; conditional convergence; interaction with conversion and optional construction; costs, failures, diagnostics, and source stability |
-| Does Not Own | Concrete integer types and ranges ([integers](integers.md)); fixed-point and floating real-number realization ([fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)); concrete protected operation policies ([integer operator catalog](integer-operator-catalog.md)); general callable and operator discovery ([function invocation](function-invocation.md), [operators](operators.md)); exact forms and precedence ([operator catalog](operator-catalog.md)); or unresolved prefixed/custom literal syntax and behavior |
+| Owns | Uncommitted integer values from ordinary or generic literal source; sign intent; width-invariant operations; default and direct realization; candidate holes; contextual completion of numeric operands; commitment and stopping boundaries; conditional convergence; interaction with conversion and optional construction; costs, failures, diagnostics, and source stability |
+| Does Not Own | Concrete integer types and ranges ([integers](integers.md)); general ordinary-real and prefixed/custom literal syntax, declarations, payloads, radix catalogs, merge, and joining ([literal source and operators](literal-source-and-operators.md)); fixed-point and floating real-number realization ([fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)); concrete protected operation policies ([integer operator catalog](integer-operator-catalog.md)); general callable and operator discovery ([function invocation](function-invocation.md), [operators](operators.md)); or exact forms and precedence ([operator catalog](operator-catalog.md)) |
 | Source / Provenance | Legacy integer and literal design corpus, refined against current integer, declaration, invocation, flow, and operator design |
 
 ## Start with ordinary integer source
@@ -781,36 +781,87 @@ A compile-time-known panic from a selected concrete operation becomes a compiler
 diagnostic. Constant evaluation does not reopen typed values as uncommitted
 integers.
 
-Resolved prefixed literals also have one concrete type. Their exact prefix
-catalog, ownership, payload behavior, and result types remain future literal
-work. Attached prefixed payloads use single quotes; backticks are not literal
-delimiters.
+Every invoked prefixed literal also has one concrete type. A generic
+`uncommitted` literal result is specialized to that type before its body runs:
+
+```zax
+myDefault := h'FF'  // specializes to suggested UInteger
+myByte : U8 = h'FF' // specializes directly to U8
+```
+
+Before specialization, the parser's mathematical integer source may fill the
+same integer candidate holes as ordinary source. The suggestion does not bind
+sign intent:
+
+```zax
+myNegative := -h'FF'
+```
+
+After one type is selected, ordinary realization and range rules apply. A range
+failure does not retry another type, and the concrete result never reopens.
+Complete prefix, payload, generic-result, and raw-pattern behavior is defined by
+[Zax literal source and literal operators](literal-source-and-operators.md).
 
 ## Real-number source and decimal exponents
 
 Source containing a fractional or floating exponent form does not become an
-uncommitted integer. Typed fixed-point and floating destinations realize that
-mathematical source according to their own range and rounding rules:
+uncommitted integer. It is uncommitted exact real source. Typed fixed-point and
+floating destinations realize its final mathematical value according to their
+own range and rounding rules:
 
 ```zax
 myFixed : I16F8 = 1.5
 myFloat : Binary32 = 0.1
 myExponent : Binary64 = 1.5e-14
+myDefaultReal := 1.5 // Float
 ```
 
 Decimal `e` or `E`, followed by an optionally signed decimal exponent, applies
 a power of ten to the exact mathematical source. It makes `1e100` real-number
 source even without a fractional point. Bare `e100` is not a number literal.
 
-This section owns that shared token boundary. The destination scalar owners
-define value realization.
+Digits are required on both sides of a decimal point:
 
-The programmer-facing behavior is defined by
+```zax
+.5 // error: write 0.5
+1. // error: write 1.0
+```
+
+The initial uncommitted-real operation family calculates exact rational results
+for grouping, sign, `+`, `-`, `*`, rational `/`, equality, and ordering:
+
+```zax
+myFloat : Float = 1.0 / 3.0
+myQuad : Quad = 1.0 / 3.0
+
+myA : Binary32 = 0.1 + 0.2
+myB : Binary32 = (0.1 + 0.2)
+// Both realize exact rational 0.3 once as Binary32.
+```
+
+Parentheses create no commitment. A concrete inner declaration does:
+
+```zax
+myConcrete : Binary32 =
+  (: Binary32 = 0.1) + 0.2
+```
+
+After that boundary, ordinary concrete Binary32 arithmetic and per-operation
+rounding apply. Square root, transcendental functions, representation
+operations, and other operations without an exact rational result require a
+concrete scalar first.
+
+Exact real evaluation has practical compiler capacity limits. Exceeding them is
+a compiler resource/capacity diagnostic rather than rounding in a hidden
+compiler-host float.
+
+The ordinary-real token boundary, suggested `Float`, optional binary/hexadecimal
+`p` exponents, and complete exact-real behavior are defined by
+[literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
+Destination realization is defined by
 [fixed-point scalars](fixed-point-scalars.md#initialization-and-real-number-source)
 and
 [floating-point scalars](floating-point-scalars.md#initialization-and-real-number-source).
-Binary/hexadecimal exponent forms, other exact token details, suffixes, and
-default type selection remain future literal work.
 
 ## Conversion and admission
 
@@ -1006,18 +1057,16 @@ failure, and cost model.
 
 Still future:
 
-- prefixed and custom literal catalogs, namespaces, declaration syntax, payload
-  alphabets, separators, grouping, escaping, concatenation, and bit-pattern
-  semantics;
-- the literal-only candidate spelling `55 : U8`;
 - compiler magnitude and resource limits;
-- required, inferred, and optional compile-time execution;
+- exact generic syntax and compile-time processing for an `uncommitted` literal
+  result specialization;
+- general required, inferred, and optional compile-time execution;
 - custom integer-family declarations;
 - exact final declaration grammar for `contextual`/`explicit` completion modes;
 - future callable categories that may opt into contextual completion;
 - generic and computed destination-type syntax;
 - reflection of literal spelling or realization provenance; and
-- exact real-number token grammar, suffixes, and default type selection.
+- any future numeric suffix beyond the rejected literal-only `55 : U8` form.
 
 Those future concerns do not change the current rule that an uncommitted integer
 never becomes a runtime value and that every selected expression result

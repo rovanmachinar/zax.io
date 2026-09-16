@@ -6,8 +6,8 @@
 | Audience | Human developers choosing, storing, converting, inspecting, or calculating with binary floating-point values |
 | Applies To | Ordinary IEEE-style, OFP8, profile-selected, and named legacy binary floating-point scalar formats; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Binary floating-point mental model; exact and profile-selected formats; sign, exponent, fraction, significand, special values, initialization, literals, arithmetic, comparison, conversion, representation adoption, validity and canonicalization, environment support, legacy formats, costs, diagnostics, and portability |
-| Does Not Own | Fixed-point values ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian semantics ([endianness](endianness.md)); aggregate compatibility and coercive conversion syntax ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); exact generic/factory syntax; complete operator forms; CPU-provider file format; or exact real-literal grammar |
+| Owns | Binary floating-point mental model; exact and profile-selected formats; sign, exponent, fraction, significand, special values, initialization, literals, type-owned special/mathematical/limit constants, arithmetic, comparison, conversion, representation adoption, validity and canonicalization, environment support, legacy formats, costs, diagnostics, and portability |
+| Does Not Own | Fixed-point values ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian semantics ([endianness](endianness.md)); aggregate compatibility and coercive conversion syntax ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); exact generic/factory syntax; complete operator forms; CPU-provider file format; or real-literal source and raw-pattern grammar ([literal source and operators](literal-source-and-operators.md)) |
 | Source / Provenance | Legacy floating input in [basics](../basics.md), refined against current integer, endian, structural, literal, and operator design |
 
 ## Choose intent or choose an exact format
@@ -253,12 +253,82 @@ myE : Binary64 = 1.5e-14
 The exponent is a power of ten applied to the exact mathematical source before
 destination realization. Its presence makes `1e100` real-number source even
 without a fractional point. Bare `e100` is not a number literal.
-The shared token boundary is owned by
-[integer literals and realization](integer-literals.md#real-number-source-and-decimal-exponents).
+Ordinary real source without another destination defaults to `Float`.
+Uncommitted exact-real arithmetic calculates before floating commitment:
 
-Binary/hexadecimal exponent spelling, other exact token details, suffixes,
-default typing without a selected destination, and a future exact-realization
-request remain focused literal work.
+```zax
+myResult : Binary32 = 0.1 + 0.2
+// Exact rational 0.3 is realized once as Binary32.
+
+myThird : Quad = 1.0 / 3.0
+// Exact rational 1/3 is rounded once as Quad.
+
+myConcrete : Binary32 =
+  (: Binary32 = 0.1) + 0.2
+// The inner declaration commits before +, so concrete Binary32 arithmetic occurs.
+```
+
+Binary and hexadecimal payloads may use a decimal `p`/`P` exponent denoting a
+power of two:
+
+```zax
+myBinary : Binary32 = b'1.1p-3'
+myHex : Binary64 = h'1.8p+10'
+h'1.8' // equivalent to h'1.8p0'
+```
+
+Exact token, default, prefix, and exponent behavior is owned by
+[literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
+
+An exact floating type also supplies type-qualified raw logical-pattern
+literals:
+
+```zax
+myOne := Binary32.h'3F80 0000'
+```
+
+The payload supplies exact format bits rather than a hexadecimal floating
+value. Valid noncanonical patterns are preserved and invalid format patterns
+are rejected. Complete raw-pattern rules are defined by
+[literal source and operators](literal-source-and-operators.md#type-qualified-raw-scalar-patterns).
+
+A future exact-realization request remains separate from raw-pattern source.
+
+### Type-owned special and mathematical constants
+
+Applicable floating formats expose concrete special values:
+
+```zax
+Float.inf
+Float.ninf
+Float.nan
+Float.nzero
+```
+
+`nan` is the canonical quiet NaN. A canonical `snan` may exist where signaling
+NaN is supported. Exact payload, sign, signaling state, or noncanonical
+representation uses raw logical bits.
+
+A format lacking a special class does not expose that constant:
+
+```zax
+E4M3.inf // error: E4M3 has no infinity
+MBF40.nan // error: MBF40 has no NaN
+```
+
+Applicable floating types also expose `pi`, `tau`, `e`, `phi`, `sqrt2`,
+`sqrt3`, `ln2`, `ln10`, `log2e`, `log10e`, `invPi`, `twoOverPi`,
+`invSqrtPi`, `halfPi`, and `quarterPi`.
+
+Each mathematical constant is rounded directly from its definition into the
+receiver format rather than derived from another already rounded constant.
+
+Floating representation limits remain separate: `maximumFinite`,
+`minimumFinite`, `minimumPositiveNormal`, `minimumPositiveSubnormal`, and
+`epsilon`.
+
+Complete shared constant naming and source behavior is routed through
+[literal source and operators](literal-source-and-operators.md#type-owned-scalar-constants).
 
 ## Profile-selected floating types
 
@@ -759,7 +829,7 @@ provider version, and operation cost.
 
 This document is current conceptual design, not formal grammar, an IEEE
 conformance claim, a CPU-provider schema, an ABI/wire contract, or an
-implementation mapping. Exact generic declarations, real-literal grammar,
-reflection APIs, most representation-operation words, provider files, and
-exhaustive protected operator forms remain future work and must preserve the
-programmer-visible behavior established here.
+implementation mapping. Exact generic declarations, reflection APIs, most
+representation-operation words, provider files, and exhaustive protected
+operator forms remain future work and must preserve the programmer-visible
+behavior established here.

@@ -6,8 +6,8 @@
 | Audience | Human developers choosing, storing, converting, or calculating with fixed-point values |
 | Applies To | Finite binary-scaled fixed-point specializations of Zax integers; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Fixed-point mental model; coefficient width and bounded fractional-bit position; exact and Q names; range, quantum, initialization, literals, arithmetic, full-precision product, bitwise behavior, numeric conversion, local representation relationships, costs, diagnostics, and portability |
-| Does Not Own | The `F = 0` integer surface ([integers](integers.md)); cross-family endian semantics ([endianness](endianness.md)); aggregate compatibility and coercive conversion syntax ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); exact generic/factory syntax; complete operator forms; or exact real-literal grammar |
+| Owns | Fixed-point mental model; coefficient width and bounded fractional-bit position; exact and Q names; range, quantum, initialization, literals, type-owned mathematical constants, arithmetic, full-precision product, bitwise behavior, numeric conversion, local representation relationships, costs, diagnostics, and portability |
+| Does Not Own | The `F = 0` integer surface ([integers](integers.md)); cross-family endian semantics ([endianness](endianness.md)); aggregate compatibility and coercive conversion syntax ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); exact generic/factory syntax; complete operator forms; or real-literal source and raw-pattern grammar ([literal source and operators](literal-source-and-operators.md)) |
 | Source / Provenance | Legacy numeric input in [basics](../basics.md), refined against current integer, endian, structural, literal, and operator design |
 
 ## Start with a coefficient and a fixed scale
@@ -237,12 +237,66 @@ mySmall : I16F14 = 1E-3
 The exponent is a power of ten applied to the exact mathematical source before
 fixed-point realization. Its presence makes `1e3` real-number source even
 without a fractional point. Bare `e3` is not a number literal.
-The shared token boundary is owned by
-[integer literals and realization](integer-literals.md#real-number-source-and-decimal-exponents).
+Ordinary real source without another destination defaults to `Float`.
+Uncommitted exact-real arithmetic calculates before the fixed-point commitment:
 
-Binary/hexadecimal exponent spelling, other exact token details, suffixes,
-default typing without a selected destination, and a future exact-realization
-request remain focused literal work.
+```zax
+myResult : I16F8 = 0.1 + 0.2
+// Exact rational 0.3 is realized once as I16F8.
+
+myConcrete : I16F8 =
+  (: I16F8 = 0.1) + 0.2
+// The inner declaration commits before +, so concrete I16F8 arithmetic occurs.
+```
+
+Binary and hexadecimal payloads may use a decimal `p`/`P` exponent denoting a
+power of two:
+
+```zax
+myBinary : I16F8 = b'1.1p-3'
+myHex : I16F8 = h'1.8p+1'
+h'1.8' // equivalent to h'1.8p0'
+```
+
+Exact token, default, prefix, and exponent behavior is owned by
+[literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
+
+An exact fixed-point type also supplies type-qualified raw logical-pattern
+literals:
+
+```zax
+myRaw := I16F8.h'0180'
+// Coefficient 384, represented value 1.5.
+```
+
+The payload supplies coefficient bits, not a mathematical hexadecimal real.
+Logical digit order is independent of storage endianness. Complete raw-pattern
+rules are defined by
+[literal source and operators](literal-source-and-operators.md#type-qualified-raw-scalar-patterns).
+
+A future exact-realization request remains separate from raw-pattern source.
+
+### Type-owned mathematical constants
+
+Every fixed-point type exposes an applicable constant only when the correctly
+rounded mathematical value fits:
+
+```zax
+myPi := I16F8.pi
+myRoot := I32F16.sqrt2
+```
+
+The shared catalog is `pi`, `tau`, `e`, `phi`, `sqrt2`, `sqrt3`, `ln2`,
+`ln10`, `log2e`, `log10e`, `invPi`, `twoOverPi`, `invSqrtPi`, `halfPi`, and
+`quarterPi`.
+
+Each value is rounded directly from its mathematical definition rather than
+derived from another already rounded constant. Fixed-point representation
+limits remain `minimum`, `maximum`, and `quantum`; the family has no NaN,
+infinity, signed zero, subnormal class, or floating epsilon.
+
+Complete cross-family constant naming and source behavior is routed through
+[literal source and operators](literal-source-and-operators.md#type-owned-scalar-constants).
 
 ## Arithmetic keeps one concrete type
 
@@ -533,6 +587,6 @@ I16 has no fractional values; use optional or explicitly rounded conversion
 
 This document is current conceptual design, not formal grammar, a CPU-provider
 format, an ABI/wire contract, or an implementation mapping. Exact generic
-declarations, real-literal grammar, reflection APIs, rounded-conversion wording,
-and exhaustive protected operator forms remain future focused work and must
-preserve the programmer-visible behavior established here.
+declarations, reflection APIs, rounded-conversion wording, and exhaustive
+protected operator forms remain future focused work and must preserve the
+programmer-visible behavior established here.

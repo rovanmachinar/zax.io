@@ -220,6 +220,7 @@ copying a diagnostic message.
 | `partial-enum-selection` | Deliberately omit one or more distinct declared enum member values from explicit switch coverage | [Enums](enums.md#selection-with-enum-values) |
 | `duplicate-resource-enrollment` | Deliberately enroll a place already known to be enrolled by an earlier `using` entry | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `repeated-resource-expression` | Deliberately repeat a resource-producing expression as a later `using` entry while preserving every evaluation | [Zax `using`](using.md#repeated-entries-and-aliases) |
+| `same-prefix-literal-join` | Deliberately invoke the same resolved literal declaration twice and join its concrete results rather than merge the payload for one invocation | [Literal source and operators](literal-source-and-operators.md#same-declaration-requires-intent-acknowledgement) |
 
 Anchored owning pointers also require intent acknowledgement when replacement
 of their target or an enclosing direct place can renew the resident member
@@ -535,6 +536,52 @@ saturated :=
 
 Natural `||value|` strongly resembles a norm expression missing its final `|`.
 The category confirms the asymmetric saturating-magnitude interpretation.
+
+### Same-prefix literal join
+
+`<|>` merges payload for one literal invocation, while `<+>` joins already
+parsed values. When two immediate literal operands resolve to the same
+literal-operator declaration, ordinary `<+>` is defined but strongly resembles
+a mistaken merge:
+
+```zax
+x'first' <+> x'second'
+// error: acknowledge two deliberate parser invocations
+```
+
+Use:
+
+```zax
+myValue := intent<same-prefix-literal-join>{
+  x'first' <+> x'second'
+}
+```
+
+Exact aliases count as the same declaration:
+
+```zax
+myValue := intent<same-prefix-literal-join>{
+  MyNamespace.x'first' <+> x'second'
+}
+```
+
+Both prefixes still resolve independently. The acknowledgement does not
+disambiguate an unqualified prefix, change either parser result, or alter `<+>`
+selection. It confirms only that two invocations and a value join were intended.
+Complete literal behavior is defined by
+[Zax literal source and literal operators](literal-source-and-operators.md).
+
+The enclosure does not disable implicit merge:
+
+```zax
+intent<same-prefix-literal-join>{
+  x'first' x'second'
+}
+// error: the segments merge, so no same-prefix join is present
+```
+
+The category is inapplicable rather than changing adjacent segments into a
+value join.
 
 `bare{...}` is not the intent mechanism. Its remaining future role is
 keyword-neutral source.

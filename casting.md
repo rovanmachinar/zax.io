@@ -18,9 +18,12 @@ remaining nonstructural conversion proposals on this page remain legacy input.
 > Safe structural recasting, compatibility postures, source anchors, coercive
 > layout conversion, and view-shaped `unsafe cast` are now current in
 > [Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md).
-> The remaining string/general conversion lattice and disabling generated
-> conversions remain legacy/future casting work. Nothing else on this page is
-> current design except where a current owner is linked.
+> Current string and character identities, literal-time validation, and
+> compile-time directional joins are owned by
+> [Zax strings and characters](language/strings-and-characters.md). Runtime
+> string admission, conversion, and concatenation remain indexed future input.
+> Nothing else on this page is current design except where a current owner is
+> linked.
 >
 > Current `as copy`, `as deep`, `as move`, and `as last` source restatement is
 > defined by [Zax transfer stances](language/transfer-stances.md). Those forms do
@@ -53,69 +56,18 @@ remaining nonstructural conversion proposals on this page remain legacy input.
 > `enumValue unsafe as OtherInteger` shortcut is superseded. Raw backing
 > adoption uses `EnumType unsafe from rawValue`.
 
-### Remaining intrinsic string-conversion input
+### String-conversion disposition
 
-The former integer conversion material has been consumed by
-[Zax integers](language/integers.md#conversion-to-exact-intrinsic-integers).
-Fixed and floating numeric behavior has likewise moved to its current owners.
-The remaining string conversion evidence below stays legacy casting input.
+The legacy conversion examples formerly here mixed byte strings, ASCII,
+validated UTF, native wide strings, code pages, panicking casts, and lossy
+conversion without stable identities or failure contracts.
 
-The superseded integer conversion prose and examples have been removed. The
-remaining examples preserve unresolved string encoding, validation, lossy
-conversion, and failure input.
-
-````zax
-// converting from a `WideString`to a `String` is not always safe (but this case
-// is safe)
-string := w'hello' as String
-
-// An unsafe conversion will cause a compilation error due to a string character
-// overflow
-stringError := w'this embedded non-ascii value "ů" is not convertible' \
-               as WideString
-
-// converting from a `String` to a `WideString` is always safe
-string := "always safe no matter what value"
-wideString := string as WideString
-
-// converting from a `Utf8String` to a `WideString` can cause runtime
-// panic errors if the value contains an illegal UTF8 sequence
-utf8String := utf8'© Snowman Industries (☃)'
-
-// this can overflow and cause panic if the string contains illegal UTF8
-// sequences (but won't in this case)
-wideString := utf8String as WideString
-
-// any illegal UTF8 sequences will be ignored and will not cause a panic
-wideString := utf8String unsafe as WideString
-
-// this can overflow and cause panic if the string contains UTF8 sequences which
-// do not have an ASCII counterpart
-asciiString := utf8String as String
-
-// any utf8 sequence is ignored and the string is converted directly to an
-// ASCII counterpart
-asciiString := utf8String unsafe as String
-
-// any illegal UTF8 sequences will be ignored and will not cause a panic
-wideString := utf8String unsafe as WideString
-
-
-wideString := w'Runtime value with a non-ascii value "ů" is not legal to ' \
-              w'express in an ascii string.'
-
-// this will cause a runtime panic since it cannot be converted to ASCII
-// (because the `as` keyword assumes all conversion is entirely legal)
-stringIsRuntimePanic := wideString as String
-
-// the overflow will be ignored during the conversion and the overflow value is
-// truncated
-StringOverflowIsIgnored := wideString unsafe as String
-
-// the wide string is convertible safely into a utf8 string as an no overflow
-// is possible
-stringIsRuntimeSafe := wideString as Utf8String
-````
+Their useful compile-time behavior is now taught by
+[Zax strings and characters](language/strings-and-characters.md), including
+explicit left-owned `<+>` admission and transcoding. Their runtime validation,
+optional/reporting/lossy conversion, allocation, mutation, and foreign-view
+pressure is preserved as indexed future string-runtime and encoding input.
+The superseded examples are removed rather than retained as competing teaching.
 
 
 ### Pointer casting using `unsafe as`

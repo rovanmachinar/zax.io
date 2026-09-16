@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; compile-time value join `<+>` as an ordinary left-owned operator; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); composition exposure and projection eligibility ([Zax composition](composition.md)); complete [structural shapes and compatibility](structural-shapes-and-compatibility.md); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); fixed-point behavior ([fixed-point scalars](fixed-point-scalars.md)); floating-point behavior ([floating-point scalars](floating-point-scalars.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
@@ -227,6 +227,43 @@ Mixfix declarations and uses are taught by
 
 The receiver's type and qualifications participate in selection. Complete
 qualification behavior is defined by [qualifiers](qualifiers.md).
+
+## Literal value joining
+
+`<+>` is an ordinary overloadable binary operator whose left operand supplies
+receiver ownership:
+
+```zax
+combined := left <+> right
+```
+
+Its common literal use joins two already concrete constant values during
+compilation:
+
+```zax
+myText := utf8'first line' <+> c'\n' <+> utf8'last line'
+```
+
+Each literal independently specializes and executes before ordinary `<+>`
+selection. The selected join must itself be available for required compile-time
+execution. A selected runtime-only or otherwise unavailable declaration reports
+unavailable best; selection does not fall through to a weaker compile-time
+candidate.
+
+The left result identity owns admission, transcoding, failure, and the joined
+result. Complete byte, ASCII, Unicode, and legacy string behavior is defined by
+[Zax strings and characters](strings-and-characters.md#compile-time-joining).
+
+`<+>` is distinct from implicit adjacent source merge and its optional explicit
+`<|>` spelling. That
+[literal-source merge](literal-source-and-operators.md#merge-literal-source) is
+non-overloadable and combines payload before any literal value or receiver
+exists.
+
+When both immediate literal operands resolve to the same literal declaration,
+written `<+>` requires
+`intent<same-prefix-literal-join>` because source merge was also available.
+The acknowledgement does not alter ordinary operator selection or evaluation.
 
 ## Operator phrases
 
@@ -1019,9 +1056,11 @@ contract, or an implementation mapping.
 See the [operator catalog](operator-catalog.md) for exact forms,
 [operator phrases](operator-phrases.md) for word-spelled operations, and
 [mixfix operators](mixfix-operators.md) for tree-pattern operations. Literal
-operators, unbounded/custom numeric families, exhaustive fixed/floating forms,
-call/index edge cases, allocation, pointers, generics, reflection,
-build-contract syntax, and panic recovery remain future focused work. Current
+declarations and required compile-time joining are defined by
+[literal source and operators](literal-source-and-operators.md). Runtime `<+>`,
+unbounded/custom numeric families, exhaustive fixed/floating forms, call/index
+edge cases, allocation, pointers, generics, reflection, build-contract syntax,
+and panic recovery remain future focused work. Current
 fixed-point and floating semantics are owned by
 [fixed-point scalars](fixed-point-scalars.md) and
 [floating-point scalars](floating-point-scalars.md).
