@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [023: Literal source and literal operators](work/023-literal-source-and-literal-operators.md) |
-| Next work number | `024` |
+| Active work item | [024: Namespaces, imports, aliases, and forwarding](work/024-namespaces-imports-aliases-and-forwarding.md) |
+| Next work number | `025` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
