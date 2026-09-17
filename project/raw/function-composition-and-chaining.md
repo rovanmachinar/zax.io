@@ -60,6 +60,50 @@ capture:
 Exact capture syntax, once-only callable contracts, lifetime, allocation, and
 reflection remain future lambda/callable work.
 
+### Bind a receiver and create a closed callable
+
+Current function design distinguishes:
+
+- a `bound` prototype, which has one receiver slot of a known type;
+- an `unbound` prototype, which has no receiver slot; and
+- a future closed callable value that captures or borrows one actual receiver.
+
+`type of myValue.memberFunction` preserves the bound prototype's receiver type
+without evaluating or capturing `myValue`. A function value of that type can use
+`_` in its implementation but cannot be invoked until a receiver is supplied.
+
+Preserve this suggested receiver-application syntax:
+
+```zax
+// Illustrative future syntax.
+myBoundFunc() // error: the bound prototype still needs a receiver
+
+callableMyBoundFunc := [&myValue] >> myBoundFunc
+callableMyBoundFunc()
+```
+
+The operation should consume the bound receiver slot rather than map `myValue`
+to an ordinary named input. It creates a generated receiverless callable and
+does not invoke `myBoundFunc` while capturing.
+
+Future review must decide:
+
+- final syntax and whether `>>` unifies receiver application, argument capture,
+  and function-result composition;
+- by-value versus explicit-reference capture;
+- capture evaluation and transfer stance;
+- target and overload selection before capture;
+- generated callable prototype and anonymous environment identity;
+- repeated invocation and destructive receiver use;
+- lifetime proof for a captured reference;
+- allocation and indirect-call cost; and
+- reflection of the bound prototype, captured receiver, and closed callable.
+
+This pressure strongly suggests reviewing lambda syntax, receiver application,
+partial argument capture, and function composition as one cohesive feature
+rather than assigning unrelated mechanisms to the same generated callable
+surface.
+
 Preserve both legacy explicit reference-capture shapes:
 
 ```zax

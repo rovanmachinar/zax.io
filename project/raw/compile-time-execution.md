@@ -266,6 +266,28 @@ producing an ordinary compilation error. A rejected payload:
 
 Exact source syntax remains open.
 
+Generative import injection adds a concrete module use. An imported module may
+ask whether its protected `Module` root already contains an injected dependency
+or option and declare/import a fallback only when absent:
+
+```zax
+// Illustrative only; exact availability and conditional-source syntax is open.
+if !compiles { Module.UseComplexMath } {
+  UseComplexMath :: import Module.DefaultComplexMath
+}
+```
+
+The query and selected branch become semantic inputs to that module instance.
+Future work must preserve:
+
+- symbol-aware lookup under the imported module's own root;
+- target-module ownership for declarations selected by the branch;
+- lexical identity of an injected alias from the importer;
+- no declarations or dependency edges from a statically discarded branch;
+- cycle detection for the selected fallback import;
+- no ordinary unknown-name diagnostic merely for asking the question; and
+- cache invalidation when injection changes the answer.
+
 Current literal design permits a generic `uncommitted` scalar result slot.
 Compile-time/generic processing selects one concrete result prototype before the
 literal body is processed and invoked. A fixed suggestion such as `UInteger`

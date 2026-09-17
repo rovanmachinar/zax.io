@@ -103,8 +103,8 @@ The same model applies across Zax:
 
 | Source | Life-path behavior |
 | --- | --- |
-| Global execution | Global declarations live within the process path and are destroyed in reverse of their established construction order; exact cross-module, dependency, and `once` ordering remains future work |
-| Namespace | A namespace introduces a path within global execution and ends before the containing unnamed global path |
+| Global execution | Global declarations live within the process path and are destroyed in reverse of their established construction order; each generative module instance has individualized state, while exact injected namespace aliases may deliberately share another module instance; exact dependency and `once` ordering remains future work |
+| Namespace | A module/namespace declaration introduces a path within global execution and ends before the containing unnamed global path; namespaces are not function-, block-, or type-local lifetime containers |
 | Flow scope | Blocks, clauses, loops, and explicit `scope` create bounded paths destroyed when control leaves them |
 | Type instance | Composition creates contained member places and nested paths bounded by the containing instance |
 | Function invocation | Parameters, result slots, and invocation temporaries live through the complete synchronous call and result-mapping boundary |
@@ -114,6 +114,11 @@ The same model applies across Zax:
 | Managed variant | Exactly one active alternative path is resident; changing alternatives ends one path and begins another |
 | Array or collection | A collection owns one or more element paths whose stability depends on its operation contract |
 | Dynamic allocation | An arena supplies storage for a separately owned path |
+
+Module-instance identity, injection, and namespace placement are defined by
+[Zax namespaces and modules](namespaces-and-modules.md). This document does not
+yet define construction order across module instances, repeated/failing startup,
+injected shared-state teardown, or `once` concurrency.
 
 `using` applies these ordinary paths to one resource list. Named and unnamed
 by-value entries occupy a header-owned path through the body and disposal phase.

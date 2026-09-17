@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; narrow type-callable `once` function declarations; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and `forward` at the depth required by declarations; declaration diagnostics and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Does Not Own | Complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -514,6 +514,20 @@ Once a name is shadowed, ordinary lookup no longer reaches it. Zax does not
 provide a general parent-scope or `..` lookup operator. A programmer who needs
 both entities can establish an alias before shadowing.
 
+Namespace openings have one narrow local rule. In:
+
+```zax
+namespace Utilities shadowable {
+  Utilities :: forward type
+}
+```
+
+`shadowable` permits this opening's body to introduce a declaration that hides
+the namespace's own unqualified name. It is not a property of the namespace
+identity and does not grant permission to hide unrelated outer declarations.
+The complete declaration/reopening rule is defined by
+[Zax namespaces and modules](namespaces-and-modules.md#self-name-shadow-permission-belongs-to-one-opening).
+
 ## Instance members
 
 Instance members are not injected into an instance function's ordinary lexical
@@ -709,6 +723,57 @@ label abstract : String final // valid: `final` qualifies String
 The complete publication, projection, routing, fulfillment, and collision rules
 are defined by [Zax composition](composition.md).
 
+### Bound and unbound function prototypes
+
+A function prototype records whether invocation has a receiver slot:
+
+- `bound` means the prototype has one receiver slot of a known type and `_` is
+  available in the implementation;
+- `unbound` means the prototype has no receiver slot and `_` is unavailable.
+
+Free functions are implicitly `unbound`. Functions declared directly in a type
+are implicitly `bound` to that type. Either word may be stated explicitly when
+intent should remain visible:
+
+```zax
+Utilities :: type {
+  compare final : (result : Boolean)(
+    lhs : String readonly &,
+    rhs : String readonly &
+  ) unbound = {
+  }
+}
+```
+
+The type owns and qualifies `Utilities.compare`, but no `Utilities` instance is
+passed to it.
+
+`type of` preserves the prototype's receiver type without evaluating or
+capturing an instance:
+
+```zax
+myValue : MyType
+BoundPrototype :: alias type type of myValue.process
+```
+
+A variable declared with `BoundPrototype` may implement `_` under the known
+`MyType` receiver type, but it cannot be invoked until a receiver is supplied.
+Future receiver capture/application remains function-composition work.
+
+Every `final` function has one fixed implementation and no replaceable
+function-value slot per instance or type:
+
+- `final bound` requires an instance receiver;
+- `final once bound` also permits a type-qualified call with a `Nothing`
+  receiver state;
+- `final unbound` is one fixed receiverless implementation owned by its
+  declaration path;
+- `varying unbound` has ordinary per-instance replaceable storage when declared
+  directly in a type;
+- `once varying unbound` has one replaceable slot for the complete type; and
+- `once final unbound` adds neither storage sharing nor another call form and is
+  a non-acknowledgeable intent error.
+
 ### Type-callable `once` functions
 
 A `once` function declared inside a type has one type-owned implementation
@@ -756,11 +821,27 @@ context-dependent type-versus-value lookup and makes collisions visible.
 Structured cases remain distinguishable:
 
 - declarations may form one overload set when overload rules permit it;
-- a forward declaration and its completion are one declaration;
+- a forward anchor and matching completion form one declaration relationship;
 - members occupy their containing entity's member scope;
 - operators are not ordinary identifiers; and
 - flow labels are a separate, explicitly shaped category that does not share
   ordinary-identifier lookup.
+
+Root availability is source-ordered. At a use, an ordinary root must already
+have been declared, exposed, or forwarded. The compiler does not search later
+source to rescue an unrecognized root.
+
+Lookup examines lexical scopes from nearest to farthest. Declarations
+ineligible to the source are filtered before a scope is selected. If none
+remain, lookup continues outward. Once a scope supplies one or more eligible
+declarations, lookup stops there and applies its ordinary unique, family, or
+ambiguity rules.
+
+Source order never breaks a tie. Several imported/exposed declarations may
+retain one spelling and remain ambiguous on demand, while two direct
+declarations in one scope are an immediate error unless an explicit category
+combines them. Complete namespace/import provenance and visibility behavior is
+defined by [Zax namespaces and modules](namespaces-and-modules.md).
 
 ### Naming intent
 
@@ -833,6 +914,65 @@ sets, or initialization behavior remain pending until enough information is
 available.
 
 This is dependency-directed later resolution, not speculative rebinding.
+
+### Exact aliases and property overlays
+
+Alias declarations add names without constructing runtime values:
+
+```zax
+MyReadView :: alias type MyType immutable readonly final &
+activeHandler :: alias variable handler
+Tools :: alias namespace Module.SharedTools
+MyMapping :: alias reshape ExistingMapping
+```
+
+Each category preserves its target:
+
+- `alias type` preserves canonical type identity;
+- `alias variable` denotes the same variable or approved polymorphic variable
+  family, including the same varying function slot;
+- `alias namespace` denotes the same namespace without granting reopening
+  authority; and
+- `alias reshape` denotes the same no-storage directional mapping.
+
+Functions are variables, so there is no separate `alias callable` form.
+`alias variable` creates no slot, capture, initialization, or compatible
+wrapper:
+
+```zax
+handler varying : Callback = firstHandler
+activeHandler :: alias variable handler
+
+activeHandler = secondHandler
+// handler now denotes the same replaced slot.
+```
+
+A type alias may state every property accepted where a type is explicitly
+declared, including qualification, indirection, transfer stance, and
+compatibility posture:
+
+```zax
+DeepView :: alias type MyType readonly & deep
+CopyView :: alias type DeepView writable copy
+```
+
+Resolution overlays from less local to more local:
+
+1. inherit properties supplied by the original type and previous alias;
+2. replace each axis explicitly stated by the new alias or use; and
+3. fill every still-unresolved axis from the common language defaults.
+
+Overlay changes the requested declaration profile rather than an existing
+value. `CopyView` cannot bind to a source that does not provide writable access,
+and no alias manufactures mutability, replacement authority, transfer support,
+or structural compatibility.
+
+Canonical identity is owned by
+[identity types](identity-types.md#transparent-aliases). The meanings and
+safety checks of overlaid properties remain with
+[qualifiers](qualifiers.md), [transfer stances](transfer-stances.md), and
+[structural compatibility](structural-shapes-and-compatibility.md#compatibility-posture).
+Namespace/module and literal aliases are completed by their respective owners.
 
 ## Qualifier axes
 
@@ -1198,20 +1338,21 @@ payload input, and one value result:
 
 ```zax
 MyType :: type {
-  operator literal 'cstyle' final once : (
+  operator literal 'cstyle' final : (
     result : MyType
   )(
-    payload : String
-  ) = {
+    payload : String immutable readonly final &
+  ) unbound = {
   }
 }
 
 myValue := MyType.cstyle'payload'
 ```
 
-`final once` follows ordinary declaration ordering. `once` gives the owner one
-shared implementation; it does not by itself require compile-time execution.
-The `operator literal` category is available only through compile-time literal
+`final` gives the declaration one fixed implementation. `unbound` states that
+type ownership supplies qualification but no instance receiver. `once` is
+neither needed nor legal in this `final unbound` combination. The
+`operator literal` category is available only through compile-time literal
 source.
 
 A literal has no instance receiver. Type ownership supplies a qualified path,
@@ -1224,11 +1365,11 @@ expresses the declaration relationship while exact generic processing syntax
 remains future work:
 
 ```zax
-operator literal 'h' final once : (
+operator literal 'h' final : (
   result uncommitted : UInteger
 )(
-  payload : String
-) = {
+  payload : String immutable readonly final &
+) unbound = {
 }
 ```
 
@@ -1240,8 +1381,10 @@ then see only that concrete type.
 Complete payload, qualification, ambiguity, specialization, merge, join, and
 required-execution behavior is defined by
 [Zax literal source and literal operators](literal-source-and-operators.md).
-Exact literal alias/import/export, visibility, and forward declaration syntax
-remain future namespace/module design.
+Exact literal aliases, visibility, and forwards are defined by
+[literal source and operators](literal-source-and-operators.md#lookup-aliases-and-forwarding);
+general import/export behavior is defined by
+[namespaces and modules](namespaces-and-modules.md).
 
 ### Bounded private eligibility
 
@@ -1278,10 +1421,10 @@ reflection, remains future visibility work.
 ## Assignment and overload selection
 
 Operators occupy language-recognized operator categories rather than the
-ordinary identifier namespace. Their declarations may be global or type-defined
-as permitted by [Zax operators](operators.md), but an arbitrary identifier or
-punctuation sequence does not become an operator through ordinary name
-declaration.
+ordinary identifier namespace. User-defined nonliteral declarations are
+receiver-owned as defined by [Zax operators](operators.md); literal declarations
+are the receiverless exception. An arbitrary identifier or punctuation sequence
+does not become an operator through ordinary name declaration.
 
 An overloadable operator is a callable operation. User-defined operators may have
 domain-specific effects and result shapes that are unusual outside their domain.
@@ -1380,6 +1523,9 @@ operator sets remain later operator design.
 Point :: type { }
 Fruit :: enum { }
 FriendlyName :: alias type ExistingType
+activeHandler :: alias variable handler
+Tools :: alias namespace Module.SharedTools
+MyMappingAlias :: alias reshape MyMapping
 MyCount :: identity admit expose type U32
 MyHandle :: identity restricted opaque type Integer
 MyMapping :: reshape {
@@ -1387,6 +1533,12 @@ MyMapping :: reshape {
 }
 ModuleName :: import Module.Definition
 TypeName :: forward type
+EnumName :: forward enum
+valueName :: forward variable
+NamespaceName :: forward namespace
+ImportedModule :: forward module
+MappingName :: forward reshape
+x :: forward operator literal
 ```
 
 The family does not imply one runtime behavior. In particular, `::` does not mean
@@ -1433,14 +1585,42 @@ anchor. Complete behavior belongs to
 identities. Their member prologue, backing eligibility, defaults, admission, and
 body behavior are defined by [Zax enums](enums.md).
 
-### `forward`
+### Forward anchors
 
-`forward` introduces a name before its complete declaration is otherwise
-encountered. A named type does not need `forward` merely to refer to its own name
-inside its body.
+`forward` introduces a source-ordered name and declaration-category anchor before
+its direct declaration or exact alias is encountered. An unrecognized root is
+otherwise diagnosed without searching later source.
 
-Forward declaration remains useful for out-of-order and mutually recursive
-names:
+The available categories are:
+
+```zax
+TypeName :: forward type
+EnumName :: forward enum
+valueName :: forward variable
+NamespaceName :: forward namespace
+ModuleName :: forward module
+MappingName :: forward reshape
+x :: forward operator literal
+```
+
+`forward variable` includes one function variable or approved polymorphic
+function family. Enum members need no separate forward because they can remain
+pending suffixes below a forwarded enum. Receiver-owned nonliteral operators
+need no forward because their receiver type is the root anchor.
+
+The forward supplies no body, value, layout, member set, function prototype,
+mapping, module instance, or initialization state. Dependent checks remain
+pending. The matching completion must have the same scope, name, and category
+and may be either a direct declaration or exact alias. `forward module`
+completes through one import. Partial declarations add to an already completed
+owner; they do not complete a forward.
+
+Every forward must complete exactly once before module finalization. A matching
+forward is legal even when no intervening source needed it; tooling may lint
+that redundancy. A named type does not need `forward` merely to refer to its own
+name inside its body.
+
+Forwarding remains useful for out-of-order and mutually recursive names:
 
 ```zax
 OtherNode :: forward type
@@ -1456,6 +1636,64 @@ OtherNode :: type {
 
 The later definition completes `OtherNode`.
 
+The declaration may be written physically inside another namespace when its
+qualified path selects the real owner:
+
+```zax
+namespace A {
+  namespace B {
+  }
+}
+
+namespace C {
+  A.B.PendingType :: forward type
+
+  func final : ()(
+    foo : A.B.PendingType
+  ) = {
+  }
+}
+
+namespace A.B {
+  PendingType :: type {
+  }
+}
+```
+
+Ordinary root lookup makes `Module.` optional here because `A` resolves
+unambiguously to `Module.A`. Writing
+`Module.A.B.PendingType :: forward type` fixes that root explicitly.
+
+Physical placement inside `C` does not introduce `C.PendingType`; an unqualified
+`PendingType` there is still an error unless source declares an explicit local
+alias. The qualified forward belongs to `A.B`, and the source writing it must
+have declaration/reopening authority over that namespace.
+
+Every containing component must already resolve as a namespace or matching
+namespace forward. Missing parents are explicit:
+
+```zax
+Module.A :: forward namespace
+Module.A.B :: forward namespace
+Module.A.B.PendingType :: forward type
+```
+
+A qualified forward never manufactures intermediate namespaces. This
+declaration requirement is stricter than an ordinary use whose suffix may remain
+pending below one already resolved incomplete prefix.
+
+The completion category must match:
+
+```zax
+Something :: forward namespace
+
+Something :: type { // error: expected a namespace completion
+}
+```
+
+The nearer wrong-category declaration does not make lookup skip outward seeking
+another completion.
+
 Direct infinitely recursive layout remains an error:
 
 ```zax
@@ -1464,15 +1702,17 @@ Node :: type {
 }
 ```
 
-Mutually recursive named types can forward each required name.
+Mutually recursive named types can forward each required name. A completion
+never makes an already selected root retry lexical lookup.
 
 ### Anonymous recursive type syntax
 
 Named types use their own incomplete names for self-reference. Anonymous
 recursive type syntax is not established by this design.
 
-Complete forward categories, anonymous recursive types, recursive-type identity,
-and dependency algorithms remain later type and name-resolution work.
+Anonymous recursive types, recursive-type identity, and dependency algorithms
+remain later type work. Namespace/module completion and visibility are defined
+by [Zax namespaces and modules](namespaces-and-modules.md).
 
 ## Declaration contexts
 
@@ -1764,6 +2004,8 @@ are owned by [Zax source structure](source-structure.md).
 Diagnostics should distinguish:
 
 - assignment to an unresolved name;
+- an unrecognized root from a recognized but incomplete forward anchor;
+- a forward category mismatch, duplicate completion, or missing completion;
 - a declaration with neither an explicit nor inferable type;
 - same-scope redeclaration;
 - shadowing without permission from the hidden declaration;
@@ -1777,6 +2019,10 @@ Diagnostics should distinguish:
 - an unavailable operator candidate for the qualified operands;
 - an attempt to regain replacement, writable, or mutability capabilities not
   supplied by the source;
+- an alias property profile that an actual source cannot satisfy;
+- an exact `alias variable` from a compatible visible callable wrapper;
+- a bound callable invoked without a receiver;
+- `once final unbound`, whose `once` has no remaining effect;
 - direct infinitely recursive type layout;
 - use of an incomplete type where completed layout is required;
 - ambiguous multi-result mapping;

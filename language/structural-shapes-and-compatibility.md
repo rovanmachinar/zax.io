@@ -6,7 +6,7 @@
 | Audience | Human developers defining, converting, routing, or inspecting structurally related values |
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, and `reshape`; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
+| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, and reshape forwarding; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
 | Does Not Own | Complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
 
 ## Start with distinct identities
@@ -299,6 +299,28 @@ compiler-generated report types default to `compatible strict` unless their
 owner explicitly says otherwise.
 
 No coercive or unsafe posture can be declared, including on a function result.
+
+### Type aliases may overlay posture
+
+A concrete type alias may supply or replace an inherited safe compatibility
+posture:
+
+```zax
+ShapeView :: alias type SensorPoint readonly & compatible shape
+StrictView :: alias type ShapeView compatible strict
+```
+
+Both aliases retain `SensorPoint` canonical identity. `StrictView` replaces only
+the posture axis and inherits the remaining profile before ordinary defaults
+apply.
+
+This does not recast a value or prove structural compatibility. An actual source
+must still satisfy the resolved destination and posture requirements. Coercive
+or unsafe relationships remain operations and cannot be smuggled into an alias
+profile.
+
+The general property-overlay order is defined by
+[declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
 
 ## Select one contiguous region with `anchor`
 
@@ -1132,6 +1154,24 @@ The explicit mappings prevent automatic `x: x:` and `y: y:` mappings.
 A reshape has no instance, runtime identity, storage, constructor, or anchor.
 It is checked when applied to concrete source and destination types. Reversing
 the direction requires another declaration; invertibility is never guessed.
+
+An exact alias adds another name without copying or reinterpreting the mapping:
+
+```zax
+RenderMapping :: alias reshape DeviceToRender
+```
+
+A forward may establish its source-ordered category before the mapping entries
+arrive:
+
+```zax
+RenderMapping :: forward reshape
+```
+
+No transformation can execute until the direct reshape or exact alias
+completion supplies the complete directional paths. General alias and forward
+rules are defined by
+[declarations and bindings](declarations-and-bindings.md#forward-anchors).
 
 An existing destination can be updated directly through the same declaration:
 

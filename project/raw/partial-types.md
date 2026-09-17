@@ -64,6 +64,55 @@ MyIntrinsicExtension :: partial U32 {
 }
 ```
 
+## Universal receiver ownership removes global operators
+
+Current [operator design](../../language/operators.md#discovery) now requires
+every user-defined nonliteral symbolic, phrase, circumfix, call/index, and mixfix
+operator to belong to its receiver type. User-defined global operators do not
+exist.
+
+That rule creates a strong partial-extension incentive:
+
+```zax
+myInteger + myValue
+```
+
+When `myInteger` is `Integer` and `myValue` is `MyType`, only the intrinsic left
+receiver can own the operation. `MyType` cannot contribute it from the right,
+and a global declaration cannot rescue the form.
+
+Future partial work should therefore investigate an appropriately authorized
+extension on the left receiver:
+
+```zax
+// Illustrative future syntax.
+MyIntegerExtension :: partial Integer {
+  operator binary '+' final : (
+    result : MyResult
+  )(
+    rhs : MyType
+  ) = {
+  }
+}
+```
+
+This is an important capability, not permission for arbitrary imports to mutate
+intrinsic surfaces. The mechanism must decide:
+
+- who may authorize a partial on an intrinsic or foreign-owned receiver;
+- whether the original owner opts in per type, operator form, or signature;
+- how two authorized extensions conflict;
+- how a module makes its complete extension set reproducible;
+- whether a partial is visible only in the importing module instance or changes
+  the receiver's exported surface;
+- how exact aliases and generative module identities affect extension identity;
+- how diagnostics identify the authority and contributing import; and
+- how adding/removing an extension changes source selection.
+
+Protected all-intrinsic signatures and reserved forms remain unavailable to
+user code. Partial, source, declaration, and import order cannot choose among
+conflicting extensions.
+
 ## Protected signatures must survive any extension
 
 Whatever partial mechanism is adopted, it must permanently preserve

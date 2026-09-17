@@ -122,6 +122,14 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
+## Bound and unbound prototype
+
+A **bound prototype** has one receiver slot of a known type and makes `_`
+available to its implementation. An **unbound prototype** has no receiver slot.
+Neither term says that a callable value has captured a particular receiver
+instance. See
+[Zax declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-prototypes).
+
 ## Compatibility anchor
 
 A **compatibility anchor** is a source-relative resident-storage path that
@@ -249,6 +257,13 @@ This is a lexical-role question rather than unsafe behavior or operator
 overload ambiguity. Words inside a declared or fenced operator phrase carry
 phrase roles instead of keyword roles; see
 [Zax operator phrases](operator-phrases.md#keyword-words-in-phrase-roles).
+
+## Keyword-neutral source
+
+**Keyword-neutral source** is one independently complete expression or effective
+statement inside `bare{...}` whose non-operator keyword roles are strictly
+suppressed. The enclosure creates no scope or final expression-tree boundary.
+See [Zax source structure](source-structure.md#keyword-neutral-bare-source).
 
 ## Current instance
 
@@ -381,6 +396,14 @@ lookup. See
 [Zax core flow control](core-flow-control.md#flow-labels-and-transfer-targets)
 and [Zax switch, case, and default](switch.md#labels-and-target-visibility).
 
+## Forward anchor
+
+A **forward anchor** is a source-ordered promise that one name has a stated
+declaration category and will receive exactly one compatible direct or
+exact-alias completion. It fixes root lookup while leaving category-dependent
+facts pending. See
+[Zax declarations and bindings](declarations-and-bindings.md#forward-anchors).
+
 ## Indirection level
 
 An **indirection level** is one pointer or reference layer between an access path
@@ -402,6 +425,14 @@ direct bridge. See
 An **identity type** is a distinct outer type based on an existing underlying
 type. Its declaration explicitly chooses admission and an exposed or opaque
 underlying surface. See [Zax identity types](identity-types.md).
+
+## Import injection
+
+**Import injection** inserts declarations into one new generative module
+instance before that module's own source resolves. Injected declarations use
+target-module ownership and collision rules while retaining lexical access to
+the injection site. See
+[Zax namespaces and modules](namespaces-and-modules.md#inject-declarations-before-module-source).
 
 ## Integer realization
 
@@ -488,6 +519,22 @@ minted implementation.
 
 See
 [Zax function invocation](function-invocation.md#minted-implementation-model).
+
+## Module instance
+
+A **module instance** is one generative import of resolved source under one
+complete injection environment. It owns an isolated `Module` root, declarations,
+and module state. Equal import inputs do not merge instances; exact injected
+aliases may deliberately share particular declarations or dependencies. See
+[Zax namespaces and modules](namespaces-and-modules.md#generative-imports-and-injection).
+
+## Namespace
+
+A **namespace** is a named declaration scope owned within one module instance.
+It may be declared at module root or inside another namespace and may be reopened
+by owner-authorized source. It is not a function-, block-, or type-local lifetime
+container. See
+[Zax namespaces and modules](namespaces-and-modules.md#namespaces-organize-one-module).
 
 ## Mixfix operator
 
@@ -1093,8 +1140,15 @@ See [Zax transfer stances](transfer-stances.md).
 ## Transparent alias
 
 A **transparent alias** is another source name for the same canonical type
-identity. It creates no conversion or overload domain. See
+identity. A concrete alias may overlay requested qualifications, stance,
+indirection, and compatibility posture without converting a value or creating
+another identity. It creates no conversion or overload domain. See
 [Zax identity types](identity-types.md#transparent-aliases).
+
+An **exact variable alias** similarly adds another declaration name for the same
+variable slot or approved polymorphic variable family. It is not a runtime
+reference or compatible callable wrapper. See
+[Zax declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
 
 ## Type parameter slot
 

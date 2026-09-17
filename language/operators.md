@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; ordinary operator declarations; global and receiver operands; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; compile-time value join `<+>` as an ordinary left-owned operator; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; universal receiver ownership for user-defined nonliteral declarations and the absence of global user operators; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; compile-time value join `<+>` as an ordinary left-owned operator; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); composition exposure and projection eligibility ([Zax composition](composition.md)); complete [structural shapes and compatibility](structural-shapes-and-compatibility.md); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); fixed-point behavior ([fixed-point scalars](fixed-point-scalars.md)); floating-point behavior ([floating-point scalars](floating-point-scalars.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
 | Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
 
@@ -77,21 +77,8 @@ their own [programmer model](operator-phrases.md), and mixfix has
 
 ## Declarations and receiver operands
 
-Ordinary declarations state their form explicitly:
-
-```zax
-operator pre unary '-' final :
-  (result : Vector)(value : Vector) = {
-  return negate(value)
-}
-
-operator binary '+' final :
-  (result : Vector)(lhs : Vector, rhs : Vector) = {
-  return add(lhs, rhs)
-}
-```
-
-A type-defined operation uses `_` as its receiver operand:
+User-defined nonliteral operators belong to their receiver type and state their
+form explicitly. `_` is the receiver operand:
 
 ```zax
 Vector :: type {
@@ -313,26 +300,31 @@ are in the [operator catalog](operator-catalog.md#operator-forms).
 For an ordinary symbolic use, candidates come from:
 
 1. protected or language-provided declarations for the exact form;
-2. visible global declarations; and
-3. type-defined declarations on the sole unary, enclosed circumfix, call/index
+2. type-defined declarations on the sole unary, enclosed circumfix, call/index
    base, or left binary receiver.
 
-The right binary operand does not contribute declarations from its type. A
-global declaration supports forms whose custom value appears on the right:
+The right binary operand does not contribute declarations from its type.
+User-defined global operators do not exist:
 
 ```zax
-operator binary '>' final :
-  (result : Boolean)(lhs : Integer, rhs : MyType readonly &) = {
-  return lhs > rhs.value
-}
+myInteger + myCustomValue
+// No declaration on MyCustomValue is discovered because it is not the receiver.
 ```
 
-Global mixfix declarations are not permitted. A mixfix belongs to its receiver
-type; future partial-type work must define any owner-authorized extension. Custom
-phrase implementations follow the same receiver-owned rule, so a phrase use
-discovers only protected or language-provided declarations for the exact form and
-type-defined declarations on its receiver operand. That narrowing, its rationale,
-and the receiver-oriented wording workaround are taught by
+Symbolic, phrase, circumfix, call/index, and mixfix declarations all follow this
+receiver rule. Future partial-type work has strong pressure to permit an
+appropriately authorized extension on the left receiver type so a shape such as
+`Integer + MyType` can become expressible without global declarations. Until
+then, use a custom-receiver operation, phrase, function, or another explicit
+formulation.
+
+Importing or exactly aliasing a type preserves its receiver-owned operators.
+Generative imported types have distinct receiver and operator identities.
+Compatibility posture never widens discovery.
+
+Custom phrase implementations therefore discover only protected or
+language-provided declarations for the exact form and type-defined declarations
+on their receiver operand. That narrowing and its rationale are taught by
 [operator phrases](operator-phrases.md#receiver-ownership).
 
 Structural similarity does not widen discovery to every type with a compatible
@@ -496,8 +488,8 @@ constraints, result context, and availability requirements fit.
 
 Preference is not a score. Candidate A dominates B only when A is no worse for
 every comparable receiver/input/result slot and strictly better somewhere.
-Declaration origin supplies no preference: a type-defined and global candidate
-that remain equal or incomparable are ambiguous.
+Declaration or partial provenance supplies no preference among declarations on
+the receiver: equal or incomparable surviving candidates are ambiguous.
 
 A uniquely best bodyless, `forbidden`, unsupported generated/default, or
 otherwise unavailable declaration reports an unavailable operation. Selection

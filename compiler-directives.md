@@ -3,7 +3,7 @@
 
 ## Compiler Directives
 
-> **Routing note.** This page remains legacy compiler-directive input. Three of its
+> **Routing note.** This page remains legacy compiler-directive input. Four of its
 > concerns now have live destinations:
 >
 > - **Execution context.** The `execute` directive's `host`, `target`, `dual`,
@@ -27,6 +27,15 @@
 >   syntax remains future
 >   [analysis-control input](project/raw/analysis-controls.md). The `[[panic=...]]`
 >   spellings below remain legacy evidence rather than accepted syntax.
+> - **Source, export, and module directives.** Current module roots, ordered
+>   source contribution, generative imports, injection, module-internal default
+>   visibility, and explicit-export requirement are owned by
+>   [Zax namespaces and modules](language/namespaces-and-modules.md). Exact
+>   `source`, `private`, `[[export]]`, selective exposure, alias export, and
+>   re-export syntax remains future
+>   [export/visibility directive input](project/raw/export-and-visibility-directives.md)
+>   or [build/dependency input](project/raw/build-and-dependencies.md). The
+>   spellings below do not override those current semantic baselines.
 >
 > Every directive, option, sizing example, and alignment detail on this page is
 > otherwise preserved unchanged as legacy evidence.
@@ -1281,11 +1290,11 @@ initializeMyType private := giveMeMyType()
 
 Function are assumed to be implicitly `asynchronous` for `promise`, `task` or `channel` functions. This default can be overridden by using a `synchronous` directive. When a `synchronous` directive is used, a function is declared to not operate asynchronously and all assumptions about any `asynchronous` intentions are no longer present. A `[[synchronous]]` directive effectively changes the expectations of a function from `asynchronous` to `synchronous` and indicates the code path does not need to be thread-aware.
 
-An implicit assumption for `asynchronous` functions is that pass by-values arguments must be qualified as `deep`. A compiler issues an `asynchronous-not-deep` warning on `asynchronous` functions for any pass by-value arguments that are not explicitly qualified as `deep` (or pre-qualified as `deep` based on a `type`'s definition). This check is done to ensure that values potentially crossing a thread boundary are automatically `deep` copied in an effort to prevent concurrency issues. A function can be labelled explicitly as `deep` or `shallow` to suppress this warning by forcing semantics on specific arguments.
+An implicit assumption for `asynchronous` functions is that pass by-values arguments must be qualified as `deep`. A compiler issues an `asynchronous-not-deep` warning on `asynchronous` functions for any pass by-value arguments that are not explicitly qualified as `deep` (or pre-qualified as `deep` based on a `type`'s definition). This check is done to ensure that values potentially crossing a thread boundary are automatically `deep` copied in an effort to prevent concurrency issues. A function can be labelled explicitly as `deep` or `copy` to suppress this warning by forcing semantics on specific arguments.
 
-If a `promise`, `task`, or `channel` declared function will never be used from a different thread contexts then an `[[synchronous]]` directive can be used to acknowledge a declared function is exclusively synchronously accessed and thus a `deep` qualifier need not be applied. Further, any type declared as `deep` (which normally would cause a `deep` copy to occur) will perform instead a `shallow` copy of that type. Individual arguments for promises or tasks declared as `deep` explicitly will still perform `deep` copies of any arguments.
+If a `promise`, `task`, or `channel` declared function will never be used from a different thread contexts then an `[[synchronous]]` directive can be used to acknowledge a declared function is exclusively synchronously accessed and thus a `deep` qualifier need not be applied. Further, any type declared as `deep` (which normally would cause a `deep` copy to occur) will perform an ordinary `copy` instead. Individual arguments for promises or tasks declared as `deep` explicitly will still perform `deep` copies of any arguments.
 
-If a `promise` or `task` truly is `asynchronous` (as it would be implicitly) but a pass by-value should only be `shallow` copied, then a `shallow` qualifier can be specified. This changes a pass by-value from being implicitly a `deep` copy to explicitly being a `shallow` copy, and an `asynchronous-not-deep` warning will be suppressed for that argument.
+If a `promise` or `task` truly is `asynchronous` (as it would be implicitly) but a pass by-value should use ordinary copying, then an explicit `copy` stance can be specified. This changes a pass by-value from being implicitly `deep` to explicitly `copy`, and an `asynchronous-not-deep` warning will be suppressed for that argument.
 
 A `[[synchronous]]` and `[[asynchronous]]` directive are mutually exclusive and they indicate opposite code intentions.
 
@@ -1315,7 +1324,7 @@ callable()
 
 Unlike a `promise`, `task`, or `channel`, normal functions are assumed to operate in a `synchronous` fashion. Using an `asynchronous` directive tells a compiler that a function will perform asynchronous operations despite not being a `promise`, `task`, or `channel` (which are already default assumed to be `[[asynchronous]]` implicitly). An `[[asynchronous]]` directive effectively changes a function's expectations from `synchronous` to `asynchronous` and indicates a normal function is designed to be thread-aware.
 
-When a function is labelled as `asynchronous`, a function is excepting that all pass by-value arguments are qualified with a `deep` specifier. A compiler will issue an `asynchronous-not-deep` warning if a `deep` qualifier is missing (as normally values are implicitly `shallow`). Adding a `deep` qualifier will override a default `shallow` behavior. If a value should be `shallow` copied then a `shallow` qualifier can be used either on an individual pass by-value argument or on a function as a whole.
+When a function is labelled as `asynchronous`, a function is excepting that all pass by-value arguments are qualified with a `deep` specifier. A compiler will issue an `asynchronous-not-deep` warning if a `deep` qualifier is missing (as values otherwise use ordinary `copy`). Adding a `deep` qualifier overrides that default. If a value should use ordinary copying then `copy` can be stated either on an individual pass by-value argument or on a function as a whole.
 
 A `[[synchronous]]` and `[[asynchronous]]` directive are mutually exclusive and they indicate opposite code intentions.
 
@@ -1325,14 +1334,14 @@ MyType :: type {
 }
 
 // functions labelled as `asynchronous` expects all pass by-value functions
-// to use a `deep` qualifier rather than an implicit `shallow` thus a warning
+// to use a `deep` qualifier rather than implicit `copy`, thus a warning
 // is issued to indicate the oversight
 func1 final : ()(myType : MyType) [[asynchronous]] = {
     // ...
 }
 
-// the pass by-value is `shallow` copied explicitly thus no warning is issued
-func2 final : ()(myType : MyType shallow) [[asynchronous]] = {
+// the pass by-value uses explicit `copy`, thus no warning is issued
+func2 final : ()(myType : MyType copy) [[asynchronous]] = {
     // ...
 }
 
@@ -1341,8 +1350,8 @@ func3 final : ()(myType : MyType deep) [[asynchronous]] = {
     // ...
 }
 
-// all pass by-values are `shallow` copied thus no warning is issued
-func4 final : ()(a : MyType, b : MyType) shallow [[asynchronous]] = {
+// all pass by-values use `copy`, thus no warning is issued
+func4 final : ()(a : MyType, b : MyType) copy [[asynchronous]] = {
     // ...
 }
 
@@ -1634,7 +1643,7 @@ MyType :: type {
 
 A `[[tab-stop=<n>]]` directive controls a source code's tab stop for all tokens that follow. This control what alignment a tab ASCII character (`\t`) is assumed to have within all the contained source code. Tab stops are reset to a default value for each module imported. A default hard tab stop is `8` unless otherwise specified.
 
-Typically `tab-stop` directive is declared in a `module.zax` to ensure all source files follow the same `tab-stop` directive. An Zax language aware editor may perform a shallow scan in a module's `modules.zax` and assume a default tab stop for editing all files within a module.
+Typically `tab-stop` directive is declared in a `module.zax` to ensure all source files follow the same `tab-stop` directive. A Zax-aware editor may perform a quick scan of a module's `module.zax` and assume a default tab stop for editing all files within that module.
 
 ````zax
 [[tab-stop=4]]

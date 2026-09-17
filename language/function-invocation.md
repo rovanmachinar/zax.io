@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound prototype invocation, missing receiver behavior, and the boundary to closed captured callables; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -85,6 +85,41 @@ instance.memberFunction(input)
 A resolved function value supplies one prototype. It does not dynamically search
 declarations that happen to share its source name.
 
+### Bound and unbound prototypes
+
+A `bound` prototype has one receiver slot of a known type. An `unbound`
+prototype has no receiver slot:
+
+```zax
+Utilities :: type {
+  compare final : (result : Boolean)(
+    lhs : String readonly &,
+    rhs : String readonly &
+  ) unbound = {
+  }
+}
+```
+
+`Utilities` owns the declaration, but invoking `Utilities.compare` evaluates no
+instance receiver and `_` is unavailable inside the body.
+
+`type of` preserves a bound prototype's receiver type without evaluating or
+capturing the instance expression:
+
+```zax
+myValue : MyType
+BoundPrototype :: alias type type of myValue.process
+```
+
+A function value with `BoundPrototype` still requires a receiver. Calling it as
+an ordinary receiverless value is a missing-receiver error. Future capture or
+receiver application may create a closed callable that stores or borrows one
+receiver; that generated value and its lifetime are not established here.
+
+Declaration defaults, `final` storage, and the `once final unbound` intent error
+are defined by
+[declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-prototypes).
+
 ### Default `Nothing` function values
 
 Default initialization of a function value establishes its `Nothing` state as
@@ -129,8 +164,8 @@ Complete receiver qualification is defined by
 
 ### Type and instance calls to `once` functions
 
-A type-owned `once` function has one implementation shared by all instances and
-may be selected through either the type or an instance:
+A type-owned `once bound` function may be selected through either the type or an
+instance:
 
 ```zax
 MyType.inspect()
@@ -148,9 +183,11 @@ For `value.inspect()`, `value` evaluates once before the explicit arguments and
 supplies the ordinary receiver. `_` identifies that instance.
 
 Both forms select the same declared callable and explicit parameter/result
-contract. `once` does not create an overload tie between a hidden type-callable
-implementation and an instance implementation. Declaration, `final`, generated
-default, replacement, and prohibition behavior is defined by
+contract. For a `final` function, `once` adds the type-qualified
+`Nothing`-receiver call rather than another implementation slot. `once` does not
+create an overload tie between a hidden type-callable implementation and an
+instance implementation. Declaration, `final`, generated default, replacement,
+and prohibition behavior is defined by
 [declarations and bindings](declarations-and-bindings.md#type-callable-once-functions).
 
 This call rule does not define global or `once` value initialization, capture,
@@ -1857,7 +1894,7 @@ labels into stored members or create one anonymous structural value.
 
 Use explicit `-<` recomposition when the remaining results should become one
 structural value; see
-[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#recompose-several-results-with).
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#recompose-several-results-with--).
 
 ## Narrow expected-result selection
 
@@ -2051,8 +2088,8 @@ The callee form determines the initial set:
 - a resolved function value supplies one prototype;
 - an identifier may name an overload group;
 - a member call uses declarations available for its receiver operand; and
-- operators use the protected, visible-global, and receiver-owned domains defined
-  by [Zax operators](operators.md#discovery).
+- operators use the protected and receiver-owned domains defined by
+  [Zax operators](operators.md#discovery).
 
 ### Viability
 
@@ -2719,6 +2756,7 @@ Complete continuation and indentation behavior is defined by
 Invocation diagnostics should distinguish:
 
 - no callable found;
+- invocation of a bound function value without a receiver;
 - invocation of a provably default-`Nothing` function value;
 - a type-qualified call to a non-`once` function;
 - unguarded instance use through `_` during a type-qualified `once` call;

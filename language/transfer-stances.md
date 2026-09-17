@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The transfer-stance mental model; declaration and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
+| Owns | The transfer-stance mental model; declaration, type-alias overlay, and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
 | Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
@@ -674,6 +674,28 @@ its declared `move` stance controls later uses in the body.
 An inferred declaration may adopt both the concrete value type and produced
 stance. Complete reference and pointer shape inference remains future
 declaration design.
+
+### Type aliases may overlay declaration stance
+
+A concrete type alias may supply or replace the declaration stance inherited
+from another alias:
+
+```zax
+DeepView :: alias type Payload readonly & deep
+CopyView :: alias type DeepView copy
+```
+
+`CopyView` has the same canonical `Payload` identity and reference shape while
+requesting `copy` for declarations that use it. `copy` replaces inherited
+`deep`.
+
+This is profile resolution, not transfer. No value is copied or consumed while
+the alias is declared or expanded. The actual source must still satisfy the
+resolved declaration and consumer contract. A use-site restatement remains
+strongest for one consumer.
+
+The general overlay order is defined by
+[declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
 
 ## Projection and aliases
 

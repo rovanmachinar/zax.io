@@ -21,6 +21,9 @@ producing them.
 - Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
   declaration, initialization, binding visibility, qualifiers, and assignment
   boundaries.
+- Read [Zax namespaces and modules](language/namespaces-and-modules.md) for
+  module-local roots, namespace declaration and lookup, generative imports,
+  injection, collisions, and the visibility/export baseline.
 - Read [Zax composition](language/composition.md) for named containment, data
   publication through `own`, expected-type projection through `preferred`,
   behavior exposure, abstract fulfillment, and outer casting.
@@ -115,6 +118,7 @@ producing them.
 - [Language principles](language/principles.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
+- [Namespaces and modules](language/namespaces-and-modules.md)
 - [Composition](language/composition.md)
 - [Identity types](language/identity-types.md)
 - [Structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
@@ -169,9 +173,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Types and data modeling
 
-- [Alias](alias.md) — legacy alias input; current transparent aliases and
-  explicit identities are owned by
-  [Zax identity types](language/identity-types.md)
 - [Optional values](language/optional-values.md) — current optional wrapper,
   construction, transfer, qualification, and proven-access design
 - [Nothing type instances](nothing.md)
@@ -195,8 +196,9 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Compiler directives](compiler-directives.md)
 - [Meta-functions](meta-functions.md)
 - [Meta-types](meta-types.md)
-- [Namespacing and module imports](namespacing.md)
-- [Forward declarations and hints](forward.md)
+- [Namespaces and modules](language/namespaces-and-modules.md) — current
+  namespace, import, injection, visibility-baseline, alias, and forwarding
+  integration
 
 ### Execution, errors, and concurrency
 

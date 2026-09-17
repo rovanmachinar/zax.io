@@ -9,6 +9,13 @@ partial-type work defines coherence, imports, conflicts, layout, construction,
 and source-stability behavior. That pressure is preserved in
 [raw partial type extensions](project/raw/partial-types.md).
 
+Current operator design removes every user-defined global nonliteral operator,
+not only global mixfix declarations. This creates strong pressure for future
+authorized partials to attach an operation to an intrinsic left receiver so
+`Integer + MyType` can be expressed without weakening receiver ownership or
+protected signatures. The raw partial input owns that unresolved authority and
+conflict design.
+
 The language has [`partial`](https://en.wikipedia.org/wiki/Class_(computer_programming)#Partial) support for types. However, `partial` types are heavily restricted and caution must be used in creating `partial` types as they can inject variables, types, and functions inside existing declared `type` where the original `type` was not expecting any additional values to exist.
 
 The primary motivation for `partial` is to support:

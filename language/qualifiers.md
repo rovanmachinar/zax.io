@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
+| Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, type-alias property overlay validation, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
 | Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and arenas](pointers-and-arenas.md) |
 
 ## Mental model
@@ -451,6 +451,33 @@ value final final : Payload = makePayload() // error
 Opposing stances applied to the same entity and layer are also errors. A
 diagnostic must identify the entity and layer rather than treating identical
 words at distinct indirection levels as duplicates.
+
+### Type-alias property overlays
+
+A concrete `alias type` may replace an inherited requested qualification on the
+same axis:
+
+```zax
+ReadView :: alias type Payload readonly &
+WriteView :: alias type ReadView writable
+```
+
+`WriteView` requests `Payload writable &`; it does not convert a readonly source
+or claim that every `Payload` place is writable. Alias resolution happens before
+an actual declaration binds its source:
+
+1. inherit the original type and less-local alias properties;
+2. replace axes explicitly stated by the more-local alias or use;
+3. apply ordinary defaults to unresolved axes; and
+4. validate the complete profile against the actual source, place, and access.
+
+The final step preserves the ordinary rule that a source's real qualifications
+cannot be overridden. An alias cannot turn immutable state mutable, readonly
+access writable, or a final place varying merely by spelling another profile.
+Canonical identity and the general overlay operation are defined by
+[identity types](identity-types.md#alias-property-overlays-do-not-create-identity)
+and
+[declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
 
 ## Canonical ordering
 

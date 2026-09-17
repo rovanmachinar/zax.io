@@ -115,6 +115,85 @@ Preserve consideration of:
 - cross-compilation and host/target separation; and
 - caching and incremental invalidation.
 
+## Generative module and injection pressure
+
+Current [namespace/module design](../../language/namespaces-and-modules.md)
+establishes that every import creates one generative module instance:
+
+```zax
+First :: import Module.Dependency
+Second :: import Module.Dependency
+```
+
+`First` and `Second` have distinct declaration identities and individualized
+module state even when source and injection inputs are equal. Build caching may
+reuse parsing, analysis, generated code, or another artifact only when that
+optimization preserves those language-level distinctions.
+
+An import's semantic input includes:
+
+- immutable resolved source identity;
+- complete importer-supplied injection;
+- language/profile/environment selection;
+- conditional source/import decisions made from that injection; and
+- transitive dependency identities.
+
+Injected declarations behave as target-module source while retaining lexical
+references to the injection site. Cache keys must therefore capture canonical
+declaration identities and semantic inputs rather than only source text.
+
+Exact namespace injection can deliberately share one already imported dependency
+and its state. That sharing must not arise merely because two import requests
+hash alike.
+
+### Import repeat and cycle identity
+
+Current module design forbids unbounded recursive import expansion but does not
+yet define which dependency facts constitute a repeated node on one active
+ancestry.
+
+Generative module-instance identity is insufficient because each import creates
+a new instance. Future dependency work must decide whether repetition uses:
+
+- immutable resolved source/content identity;
+- repository identity independent of revision;
+- selected version, commit, or content digest;
+- complete injection environment;
+- conditional source/import result;
+- or another canonical dependency key.
+
+Consequently, `A-v1 -> A-v2` is not yet classified as a cycle merely from the
+shared human name or repository, while `A-v1 -> A-v2 -> A-v1` demonstrates an
+obvious repeated resolved source identity. The final rule must permit finite
+multiple-version dependency graphs without allowing dynamic selectors or
+changing injections to manufacture unbounded unique instances.
+
+Diagnostics should show the active import ancestry and exact repeat facts rather
+than reporting only a human module name.
+
+## Source-list and visible-cache pressure
+
+Every module has an ordered `module.zax` source list. Legacy input preserves:
+
+- explicit relative source paths;
+- wildcard source selection;
+- generated-source markers;
+- once-only inclusion of one selected source; and
+- a visible local immutable cache that developers can inspect and refresh.
+
+Wildcard expansion needs a canonical host-independent path order because global
+initialization and root availability may observe source order. Future work must
+define path normalization, case behavior, invalid duplicate paths, generated
+inputs, and whether lifecycle-sensitive modules must use explicit lists.
+
+Branch and tag selectors remain update intent, not immutable identity. A durable
+import needs a resolved revision and/or canonical source-tree digest. A digest
+must define treatment of file modes, submodules, large-file content, generated
+inputs, line endings, paths, and algorithm migration.
+
+Deleting or repairing a cache may reacquire the same locked source. It must not
+silently update a moved selector or change a module instance's identity.
+
 ## Activation and retirement
 
 Activate this input before defining the lasting build/dependency owner,

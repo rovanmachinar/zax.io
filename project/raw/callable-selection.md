@@ -100,6 +100,56 @@ This input retains only the contract pressure that appears when the body is
 opaque or separately represented; it does not establish programmer-written
 lifetime parameters.
 
+### Receiver slots, capture, and declaration provenance
+
+Current declarations distinguish `bound` and `unbound` prototypes. `bound`
+means one receiver slot of a known type; it does not mean a callable value has
+captured one receiver instance.
+
+```zax
+myValue : MyType
+BoundPrototype :: alias type type of myValue.process
+```
+
+`type of` preserves the receiver type without evaluating or capturing
+`myValue`. A function value with `BoundPrototype` still needs receiver
+application before ordinary invocation.
+
+Exact prototype and selected declaration provenance remain distinct. This
+sequence selects one declaration:
+
+```zax
+selectedProcess final : ExactProcessPrototype = process
+```
+
+`type of selectedProcess` preserves its callable type, not a hidden claim that
+every later use of the original name `process` selects the same declaration:
+
+```zax
+Prototype :: alias type type of selectedProcess
+wrapper final : Prototype = process
+// May repeat selection and remain ambiguous if several declarations are
+// compatible with Prototype.
+```
+
+Targeting `selectedProcess` instead preserves the explicit selection.
+
+Current exact `alias variable` has another role:
+
+```zax
+processAgain :: alias variable process
+```
+
+It aliases the same variable or approved polymorphic family and creates no
+visible-prototype wrapper, capture, or slot. Future selection work must preserve
+that exact family identity while distinguishing it from:
+
+- a prototype type alias;
+- one compatible visible declaration;
+- a reference to a varying function slot;
+- a receiver-captured closed callable; and
+- whole-family composition adoption.
+
 Composition adds selection constraints without changing the partial-order
 baseline. `expose` and `preferred` are independent of `own`. Exposure produces a
 finite set of exact outer prototypes; it does not create a qualification-erased

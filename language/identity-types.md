@@ -6,7 +6,7 @@
 | Audience | Human developers defining, reading, or converting aliases and representation-related types |
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Transparent aliases; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
+| Owns | Transparent aliases and canonical identity preservation under alias property overlays; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
 | Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial-extension authority; or general [structural shape and compatibility](structural-shapes-and-compatibility.md) |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
@@ -65,8 +65,9 @@ A transparent alias is another name for one existing type:
 
 - both names refer to the same type identity;
 - no conversion is required between the names;
-- both names have the same values, operations, representation, and
-  qualifications; and
+- both names have the same values, operations, and representation;
+- a use may carry an explicitly overlaid qualification, stance, indirection, or
+  compatibility profile without changing canonical identity; and
 - the alias creates no additional overload domain.
 
 ```zax
@@ -81,6 +82,30 @@ MyShortName (alias of SomeLongTypeName)
 ```
 
 That presentation does not make the alias another type.
+
+### Alias property overlays do not create identity
+
+A concrete alias may abbreviate the complete property profile accepted where a
+type is explicitly declared:
+
+```zax
+DeepView :: alias type MyType readonly & deep
+CopyView :: alias type DeepView writable copy
+```
+
+Both aliases retain the canonical `MyType` identity. `CopyView` inherits the
+reference shape, replaces the access and transfer axes it states, and receives
+ordinary defaults only for still-unresolved properties.
+
+The overlay does not convert or modify an existing value. A declaration using
+`CopyView` still fails when its source cannot provide writable access or the
+requested transfer. Alias expansion never manufactures capability.
+
+The overlay algorithm and exact alias categories are defined by
+[declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
+[Qualifiers](qualifiers.md), [transfer stances](transfer-stances.md), and
+[structural compatibility](structural-shapes-and-compatibility.md#compatibility-posture)
+retain the meaning and safety constraints of their axes.
 
 ## Identity boundary and underlying type
 
@@ -575,6 +600,9 @@ detail available on demand.
 ## Source stability
 
 - Changing a transparent alias changes the type denoted by that name.
+- Changing one overlaid qualifier, stance, indirection, or compatibility
+  property changes which declarations and sources can use that alias without
+  creating another canonical identity.
 - Changing an identity's underlying type may change layout, value capacity, and
   cost without erasing its identity boundary.
 - Changing `admit`/`restricted` or `expose`/`opaque` changes source validity.

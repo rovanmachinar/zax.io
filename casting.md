@@ -454,5 +454,5 @@ defaulted := source as default
 This source is unresolved evidence, not an accepted transfer-reset contract.
 Future `as default` work must reconcile it with current declaration stance,
 one-use `as <stance>` restatement, qualifier defaults, generic metadata, and
-result typing. It must not revive the superseded `shallow`/`lease` equivalence or
-silently perform transfer.
+result typing. It must not silently perform transfer or invent another stance
+outside the current `copy`/`deep`/`move`/`last` model.

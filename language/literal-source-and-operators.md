@@ -6,9 +6,9 @@
 | Audience | Human developers reading, writing, declaring, or evaluating Zax literals |
 | Applies To | Programmer-facing ordinary, prefixed, merged, and joined literal source; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Literal taxonomy; ordinary decimal real source and default; attached literal phrases and payloads; source merge `<\|>`; compile-time literal join `<+>`; literal declarations, qualification, and lookup; generic uncommitted result specialization; first-class and extended radix catalogs; binary-power exponents; type-qualified raw scalar patterns; literal diagnostics, costs, and source stability |
+| Owns | Literal taxonomy; ordinary decimal real source and default; attached literal phrases and payloads; source merge `<\|>`; compile-time literal join `<+>`; final unbound literal declarations and borrowed payloads; qualification, lookup, exact aliases, and forwarding; generic uncommitted result specialization; first-class and extended radix catalogs; binary-power exponents; type-qualified raw scalar patterns; literal diagnostics, costs, and source stability |
 | Does Not Own | Uncommitted integer operations and realization ([integer literals and realization](integer-literals.md)); concrete [fixed-point](fixed-point-scalars.md) or [floating-point](floating-point-scalars.md) realization; string and character identities ([strings and characters](strings-and-characters.md)); general operator selection ([operators](operators.md)); complete source layout ([source structure](source-structure.md)); complete generics or compile-time execution; or runtime string libraries |
-| Source / Provenance | Legacy literal material in [basics](../basics.md), [casting](../casting.md), and [forward declarations](../forward.md), refined against current source, scalar, declaration, invocation, and operator design |
+| Source / Provenance | Legacy literal, casting, alias, and forward-declaration material refined against current source, scalar, declaration, invocation, operator, and namespace/module design |
 
 ## Start with the value each form produces
 
@@ -152,17 +152,22 @@ A literal operator declares one quoted lower-case phrase word:
 
 ```zax
 MyType :: type {
-  operator literal 'cstyle' final once : (
+  operator literal 'cstyle' final : (
     result : MyType
   )(
-    payload : String
-  ) = {
+    payload : String immutable readonly final &
+  ) unbound = {
     // Compile-time parsing.
   }
 }
 
 myValue := MyType.cstyle'payload'
 ```
+
+The owner supplies qualification but no receiver instance. `final` fixes the
+implementation and `unbound` removes `_`; adding `once` would have no effect and
+is an intent error. Source processing constructs one immutable payload in a
+final place and lends only readonly access to the invocation.
 
 The initial phrase-name shape is ASCII `[a-z][a-z0-9]*`. Literal phrase names do
 not contain spaces:
@@ -368,7 +373,7 @@ intent<same-prefix-literal-join>{
 
 The category is inapplicable rather than changing adjacency into `<+>`.
 
-## Lookup and result specialization
+## Lookup, aliases, and forwarding
 
 Literal lookup follows lexical visibility and explicit qualification. A result
 type does not cause owner discovery:
@@ -380,8 +385,37 @@ myValue : MyType = parse'payload'
 
 If several visible declarations expose `parse`, the use is ambiguous and must
 be qualified. Source, declaration, import, and module order do not break a tie.
-Exact alias/import syntax, visibility, and literal forwarding remain future
-module/declaration design.
+
+An exact short alias names the unique same-named literal family under one type
+or namespace:
+
+```zax
+x :: alias operator literal MyType
+
+MyType.x'first' <|> x'second'
+// Both prefixes independently denote the same declaration.
+```
+
+One literal family contains exactly one declaration. Generic result
+specialization occurs inside that declaration rather than through result-only
+overloads, so the alias needs no prototype preference.
+
+This is not a second compatible literal declaration reusing the same body.
+Equal implementation or result identity is insufficient for source merge.
+
+An unqualified prefix can be forwarded before its direct declaration or alias:
+
+```zax
+x :: forward operator literal
+
+value := x'payload'
+// Prefix identity is known; prototype and execution remain pending.
+```
+
+A qualified prefix needs no separate forward when its type or namespace owner
+already anchors the pending suffix. General imports, exposure, visibility, and
+collision behavior are defined by
+[Zax namespaces and modules](namespaces-and-modules.md).
 
 ### Every invocation has one concrete result
 
@@ -392,11 +426,11 @@ the intended declaration relationship; exact generic processing syntax remains
 future work:
 
 ```zax
-operator literal 'h' final once : (
+operator literal 'h' final : (
   result uncommitted : UInteger
 )(
-  payload : String
-) = {
+  payload : String immutable readonly final &
+) unbound = {
   // The body is processed under the one selected concrete result type.
 }
 ```
@@ -435,7 +469,7 @@ compile-time mechanism remains future work.
 
 ## First-class radix literals
 
-The main namespace provides:
+The protected language-provided module surface provides:
 
 | Prefix | Radix | Digits |
 | --- | ---: | --- |
@@ -709,7 +743,8 @@ The local guarantee is:
 
 Exact capability syntax, rejection APIs, scheduling, sandboxing, caching,
 filesystem/network access, recursion, and resource budgets remain future
-compile-time design. `once` alone does not claim compile-time availability.
+compile-time design. `final` and `unbound` describe declaration storage and
+receiver shape; required compile-time execution comes from the literal category.
 
 ## Costs and diagnostics
 
@@ -768,7 +803,8 @@ This document is current conceptual design, not formal grammar, generic syntax,
 a compile-time execution specification, or an implementation mapping.
 
 Still future are complete generics/type factories, compile-time APIs and
-capabilities, module/import/visibility syntax, runtime joining, code-page data,
-complete source-reflection representation, and exact diagnostic identifiers.
+capabilities, exact export/private compiler-directive syntax, runtime joining,
+code-page data, complete source-reflection representation, and exact diagnostic
+identifiers.
 Those future mechanisms must preserve the one-concrete-result, explicit-cost,
 no-order-fallback, and source-stability rules established here.

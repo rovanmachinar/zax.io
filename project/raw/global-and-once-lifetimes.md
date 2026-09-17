@@ -48,6 +48,36 @@ Future work must reconcile those proposals with:
 
 No exact ordering rule in this file is accepted.
 
+## Generative module-state pressure
+
+Current [namespace/module design](../../language/namespaces-and-modules.md)
+establishes:
+
+- every import creates a distinct module instance;
+- each instance has individualized module-global state;
+- equal source and injection inputs do not merge that state;
+- exact injected namespace aliases may deliberately let several module
+  instances use one already imported dependency and its state; and
+- there is no automatic super-module global facility.
+
+Future lifecycle work must decide:
+
+- when each generative module instance constructs and destroys its globals;
+- how import/source order and detected dependencies interact;
+- whether a module instance initializes eagerly, on first reachable use, or
+  under another explicit policy;
+- how an exactly injected shared dependency is initialized once and ordered
+  against each consumer;
+- failure, retry, panic, and partial-initialization behavior;
+- reverse destruction when several import paths reference one injected shared
+  instance; and
+- whether a broader shared-state facility is needed after concrete use cases
+  that exact injection cannot express.
+
+Cache or generated-code reuse must not merge state. Conversely, different local
+aliases to one deliberately injected module instance must not duplicate its
+state accidentally.
+
 ## Activation and retirement
 
 Activate this input when global initialization, `once`, module startup, process

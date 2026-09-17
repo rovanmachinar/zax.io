@@ -15,6 +15,10 @@ Accepted value declarations, initialization, binding visibility, qualifier
 axes, name resolution, and assignment boundaries are defined by
 [Zax declarations and bindings](language/declarations-and-bindings.md).
 
+Current module roots, namespaces, imports, injection, visibility defaults, and
+forward integration are defined by
+[Zax namespaces and modules](language/namespaces-and-modules.md).
+
 The accepted rule for when a spelling counts as a keyword is defined by
 [Zax source structure](language/source-structure.md#contextual-keyword-recognition),
 and the term itself by
@@ -32,8 +36,6 @@ Keywords are simple words that a compiler will intrinsically understands. Keywor
 
 ````zax
 alias
-alias keyword
-alias operator
 alias type
 anchored
 atomic
@@ -56,12 +58,10 @@ except
 false
 forever
 forward enum
-forward enum value
-forward operator binary
 forward operator literal
-forward operator post unary
-forward operator pre unary
+forward module
 forward namespace
+forward reshape
 forward type
 forward union
 forward variable
@@ -69,6 +69,7 @@ if
 if / else
 immutable
 import
+namespace
 writable
 last
 lazy
@@ -91,7 +92,6 @@ redo while
 replacement +++
 return
 scope
-shallow
 shareable
 strong
 switch
@@ -121,8 +121,9 @@ composition is a separate unresolved concept.
 
 The current rule is owned by
 [Zax source structure](language/source-structure.md#contextual-keyword-recognition).
-It defines contextual keyword recognition and the optional postfix `_`
-keyword-role escape. This legacy page does not duplicate that source rule.
+It defines contextual keyword recognition, postfix `_` for one word, and strict
+`bare{...}` neutralization for one complete source unit. Keyword aliases and
+compound-keyword replacements are not part of current Zax.
 
 
 ### Operators
@@ -364,8 +365,6 @@ vecList : VecIsShortForVector
 ### Type declaration
 
 ````zax
-:: import Module.System.Types
-
 // Use Pascal style variable declaration where the variable name is
 // specified followed by the type
 variableName : TypeName
@@ -447,9 +446,6 @@ MyType :: type {
 > [Zax strings and characters](language/strings-and-characters.md).
 
 ````zax
-// import the module system types into the global `Module` namespace
-:: import Module.System.Types
-
 unknown : Unknown   // used as a generic pointer type to an `Unknown` type
 nothing : Nothing   // used as a generic type of `Nothing`
 void : Void         // an alias of the `Unknown` type
@@ -472,7 +468,10 @@ current in
 
 ### Intrinsic Namespaces
 
-The language defines a default namespace named `Module`. The namespace is the root namespace for all types relative to any current namespace. See [namespacing](namespacing.md) for more details.
+`Module` is the protected name of the current module instance's root. `Scalars`
+and protected short built-in names are available automatically; independent
+libraries still require import. Complete current behavior is defined by
+[Zax namespaces and modules](language/namespaces-and-modules.md).
 
 
 ### Hello World

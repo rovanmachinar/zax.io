@@ -87,6 +87,56 @@ Future work must decide:
 - how recursive and self-referential types are reported without infinite
   expansion.
 
+Current alias design adds non-type and property-profile distinctions reflection
+must retain:
+
+- an exact variable alias versus a runtime reference binding;
+- one alias of a varying slot versus a captured function value;
+- a polymorphic variable-family alias versus one selected visible prototype;
+- an exact namespace alias without reopening authority;
+- an exact reshape or literal-family alias;
+- canonical type identity versus overlaid qualification, indirection, transfer
+  stance, and compatibility posture; and
+- the source alias path used by diagnostics.
+
+An explicit property overlay never creates another canonical type identity.
+
+### Generative module and forward metadata
+
+Every import creates one generative module instance even when source and
+injection inputs are equal. Reflection must distinguish:
+
+- immutable source identity;
+- import-site/module-instance identity;
+- injected direct declarations;
+- exact injected aliases to declarations owned elsewhere;
+- individualized versus explicitly shared module state;
+- local import binding and exported import aliases;
+- namespace identity and owning module instance;
+- owner-authorized reopening contributions;
+- a forward name/category anchor;
+- its direct or exact-alias completion; and
+- unresolved pending suffixes.
+
+Two generative declarations remain distinct even when every reflected field
+other than module-instance provenance appears equal. Compatibility posture may
+describe a relationship without merging identity.
+
+### Bound prototype versus captured receiver
+
+`type of myValue.memberFunction` returns a bound prototype with a receiver type
+but does not evaluate or capture `myValue`. Reflection must distinguish:
+
+- `bound` versus `unbound` prototype;
+- receiver type and qualifications;
+- a `Nothing` receiver state for a type-qualified `once bound` call;
+- one fixed `final` implementation;
+- one `once varying` shared function slot; and
+- a future generated closed callable that stores or borrows a receiver.
+
+The future closed callable must report capture lifetime and provenance without
+pretending the original prototype contained that instance.
+
 ## Declaration reflection
 
 The direct predicate list is intentionally small. Declaration properties such as
@@ -207,7 +257,7 @@ of `Integer` identity.
 Several distinct result slots each have a type but do not collectively form one
 expression type. A future explicit combiner would itself return one typed
 structure; see
-[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md#recompose-several-results-with).
+[Zax structural shapes and compatibility](../../language/structural-shapes-and-compatibility.md#recompose-several-results-with--).
 
 Future reflection must report structural facts without merging their authority:
 
@@ -230,8 +280,8 @@ type identity.
 An explicit
 [phrase fence](../../language/operator-phrases.md#exact-phrase-fencing) is
 required source presentation, yet it creates no node in the final expression
-tree. The same is true of the candidate transparent
-[bare source enclosure](bare-source.md).
+tree. The same is true of the current transparent
+[`bare{...}` source enclosure](../../language/source-structure.md#keyword-neutral-bare-source).
 
 Source reflection and documentation tooling must retain enough information to
 reproduce both. Future work must decide:

@@ -322,9 +322,9 @@ or dispatch mechanism. Complete compatibility and invocation timing are owned by
 
 ### Receiver-oriented wording
 
-Receiver ownership intentionally narrows one capability of the symbolic model. A
-*global symbolic* declaration can support a custom value that appears only on the
-right of an intrinsic left operand. A phrase cannot:
+Receiver ownership means a custom value appearing only on the right of an
+intrinsic left operand cannot contribute either a symbolic or phrase
+declaration:
 
 ```zax
 intrinsicValue combines with customValue
@@ -337,11 +337,15 @@ The workaround is to reframe the wording around the extensible receiver:
 customValue accepts then combines intrinsicValue
 ```
 
-Requiring the custom type to be the receiver can make a phrase less natural than
-the unavailable intrinsic-first wording. Zax accepts that ergonomic cost rather
-than allow arbitrary extension of intrinsic types. The programmer can rewrite
-the phrase around the custom receiver, use an ordinary function, or choose
-another supported operator form.
+Requiring the custom type to be the receiver can make source less natural than
+the unavailable intrinsic-first wording. The programmer can rewrite the phrase
+around the custom receiver, use an ordinary function, or choose another
+supported form.
+
+Future partial-type work has strong pressure to permit an appropriately
+authorized extension on the intrinsic left receiver while preserving protected
+signatures, ownership, order-independent conflicts, and reproducible imports.
+Until that authority exists, imports cannot add the intrinsic-first operation.
 
 ## How word-spelled source is interpreted
 
@@ -655,19 +659,18 @@ enclosure. After the payload independently completes, the enclosure may become
 transparent to final precedence and wider mixfix matching, so an outer operation
 may apply to the completed result.
 
-The keyword-neutral `bare{...}` enclosure is the illustrative future candidate
-used to show that boundary:
+The keyword-neutral `bare{...}` enclosure demonstrates that boundary:
 
 ```zax
 bare{ chickens cluck loudly } outdoors
 ```
 
-`bare{...}` is **not accepted Zax syntax**; it is described only as a future
-source-enclosure candidate under
-[source structure boundaries and maturity](source-structure.md#boundaries-and-maturity).
-The no-spanning rule above is stable phrase behavior regardless of how that
-future enclosure is eventually spelled or named, and an enclosure is never a
-substitute for grouping or for an exact phrase fence.
+`bare{...}` strictly suppresses non-operator keyword roles inside one
+independently complete payload, but it does not suppress phrase roles or change
+selection. An inner `bare{` is not recognized because the outer enclosure
+neutralizes the word. Complete source behavior is defined by
+[source structure](source-structure.md#keyword-neutral-bare-source).
+The enclosure is never a substitute for grouping or an exact phrase fence.
 
 ## Visibility and private phrase eligibility
 

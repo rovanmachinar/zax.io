@@ -583,8 +583,10 @@ intent<same-prefix-literal-join>{
 The category is inapplicable rather than changing adjacent segments into a
 value join.
 
-`bare{...}` is not the intent mechanism. Its remaining future role is
-keyword-neutral source.
+`bare{...}` is not the intent mechanism. It strictly neutralizes keyword roles
+as defined by
+[Zax source structure](source-structure.md#keyword-neutral-bare-source) and
+cannot acknowledge a suspicious form.
 
 ## Choosing category boundaries
 

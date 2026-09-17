@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition and the postfix `_` keyword-role escape; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition, postfix `_` keyword-role escape, and strict tree-transparent `bare{...}` neutralization; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization ([integer literals and realization](integer-literals.md)); literal declarations, payload meaning, merge results, and joining ([literal source and operators](literal-source-and-operators.md)); string/character identities ([strings and characters](strings-and-characters.md)); flow semantics ([core flow control](core-flow-control.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -1405,9 +1405,68 @@ name ending in `_`. After keyword suppression, ordinary grammar may recognize
 the word as an identifier, callable name, operator-phrase component, or another
 available non-keyword role.
 
-This narrow one-word mechanism does not replace the separate future
-`bare{...}` candidate for keyword-neutral treatment of a complete enclosed
-source tree.
+This narrow one-word mechanism complements `bare{...}`, which neutralizes
+keyword roles across one complete enclosed source unit.
+
+### Keyword-neutral `bare` source
+
+`bare{...}` is a non-scoping, keyword-neutral, tree-transparent source
+enclosure:
+
+```zax
+result := bare{ if + while } + fallback
+```
+
+The contiguous opener is required:
+
+```zax
+bare{ source }
+```
+
+Bare `bare` is not a keyword, and `bare { source }` is not the enclosure.
+
+The payload must independently form exactly one complete expression or effective
+statement. It cannot borrow an operand, separator, declaration piece, or body
+from outside. After that check:
+
+- the enclosure creates no runtime operation;
+- it creates no scope or destruction boundary;
+- it creates no final precedence boundary or expression-tree node;
+- wider operator and mixfix matching may use the completed payload result;
+- non-operator keyword roles remain strictly neutralized; and
+- ordinary qualification, protection, lifetime, layout, and diagnostics remain
+  active.
+
+Neutralization is strict:
+
+```zax
+bare{ value as Payload immutable readonly final & }
+// error unless these neutralized words form another valid non-keyword reading
+```
+
+`as`, `immutable`, `readonly`, and `final` do not regain keyword roles merely
+because they would make the payload convenient. Name the complete qualified type
+outside the enclosure when needed.
+
+Nesting is unavailable by ordinary recognition:
+
+```zax
+bare{ first bare{ second } }
+// Inner bare has no keyword role; ordinary parsing rejects the resulting source.
+```
+
+The language registers no special nested-`bare` diagnostic. Inside the outer
+payload, `bare` is an ordinary neutralized word; the attached `{` and any
+unresolved name receive the normal applicable diagnostics.
+
+The enclosure does not acknowledge a confusable form, grant unsafe authority,
+recognize arbitrary operators, select an ambiguous overload, or disable source
+layout. [Intent acknowledgements](intent-acknowledgements.md) own defined but
+suspicious forms.
+
+A phrase component cannot span the enclosure because the payload must first
+complete independently. Complete phrase interaction is defined by
+[operator phrases](operator-phrases.md#enclosure-boundaries).
 
 ## Comment lexical modes
 
@@ -1692,6 +1751,9 @@ Layout and separator diagnostics additionally distinguish:
 - a selected phrase component spanning a physical line;
 - an empty phrase fence, or a fence with an escape, leading space, or trailing
   space;
+- a spaced `bare {` form from the contiguous `bare{` opener;
+- a `bare{...}` payload that is not one complete expression or effective
+  statement;
 - adjacent literal segments that resolve to different declarations;
 - an implicit literal merge broken by an uncontinued physical newline;
 - an empty segment participating in implicit or explicit literal merge;
@@ -1845,21 +1907,11 @@ construct on the next do not use `\` merely to express that relationship.
 Explicit continuation retains its single purpose of continuing one statement
 across physical lines.
 
-Future phrase/source work must evaluate a keyword-neutral, tree-transparent
-`bare{...}` source enclosure. It is not current Zax syntax. The candidate uses
-the contiguous opener `bare{`; bare `bare` is not a keyword, and `bare {` is not
-the same form.
-
-The candidate payload must independently form exactly one complete expression or
-effective statement and cannot obtain a missing operand or separator from
-outside. The enclosure creates no scope. After that completeness check, it is
-transparent to final precedence and mixfix matching while preserving
-keyword-neutral interpretation. It does not acknowledge confusable forms;
-`intent<...>{...}` owns that role. Semicolon composition, continuation,
-qualification, protection, and lifetime remain unchanged. Strict neutralization,
-unavailable nesting, and the enclosure's interaction with reflection and
-formatting remain with that future work; the phrase no-spanning rule above is
-already stable regardless of the enclosure's final spelling.
+Keyword-neutral `bare{...}` uses a contiguous opener, requires one independently
+complete payload, creates no scope or final tree boundary, neutralizes
+non-operator keyword roles strictly, and does not recognize a nested opener.
+Complete behavior is defined above; source reflection must retain the written
+enclosure even though it creates no final expression-tree node.
 
 Comma-list continuation is the ordinary list-level implicit continuation because
 the parsed comma already requires another element. Declaration colon and mixfix

@@ -215,7 +215,10 @@ Target.Integer
 CompilerHost.Integer
 ```
 
-How those aliases become visible remains future module/import work.
+`Scalars` and language-provided short aliases are protected declarations
+automatically available in every module root. They retain one language-owned
+identity across generative imports. Complete visibility and module-root behavior
+is defined by [Zax namespaces and modules](namespaces-and-modules.md#language-provided-declarations).
 
 `I32` always fixes 32 logical value bits but resolves the active environment's
 concrete endianness. Use `Scalars.Integers.Little.I32` or

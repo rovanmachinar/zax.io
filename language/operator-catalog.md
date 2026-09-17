@@ -699,8 +699,10 @@ intent<asymmetric-saturating-magnitude>{ ||myValue| }
 ```
 
 The category and its defined-but-suspicious source contract are owned by
-[Zax intent acknowledgements](intent-acknowledgements.md). `bare{...}` remains
-future keyword-neutral source.
+[Zax intent acknowledgements](intent-acknowledgements.md). `bare{...}` is the
+separate strict keyword-neutral source enclosure defined by
+[Zax source structure](source-structure.md#keyword-neutral-bare-source); it does
+not acknowledge this form.
 
 `|myValue||` has no assigned operation.
 

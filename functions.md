@@ -15,6 +15,9 @@ Current ordinary calls, argument/default binding, result slots and routing,
 fixed-arity callable selection, compatible visible prototypes, and synchronous
 completion are defined by
 [Zax function invocation](language/function-invocation.md).
+Current `bound`/`unbound` prototypes, fixed implementation storage, exact
+variable aliases, and `once` declaration integration are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md#bound-and-unbound-function-prototypes).
 `copy`/`deep`/`move`/`last` behavior is defined by
 [Zax transfer stances](language/transfer-stances.md).
 
@@ -413,70 +416,55 @@ newValue := # : (output : Integer)() = {
 
 ### Functions marked as `final`
 
-If a function should never have its associated code changed then that function should be declared as `final`. Functions that are not marked `final` require additional storage capacity to accommodate a function pointer and may incur calling overhead to access the function via a function table instead of optimizing the call directly to code. Functions marked as `final` cannot have their code segment reassigned once declared.
+Current function declaration behavior is owned by
+[Zax declarations and bindings](language/declarations-and-bindings.md#bound-and-unbound-function-prototypes).
+A `final` function has one fixed implementation and no replaceable
+function-value slot per instance or type. A non-`final`/`varying` function has
+replaceable storage according to its declaration.
 
 ````zax
 MyType :: type {
-    value1 := 0
-    value2 := 0
-    value3 := 0
+  bucket final : (result : Integer)() readonly = {
+    return _.value % 17
+  }
 
-    bucket final : (output : Integer)() = {
-        return (value1 + value2 + value3) % 17
-    }
-}
-
-myType : MyType
-myType.value1 = 1
-myType.value2 = 55
-myType.value3 = 1001
-
-// call the function that exists within the type
-bucket := myType.bucket()
-
-// ERROR: The function `bucket` is declared as `final` and thus cannot be
-// reassigned to a new code segment.
-myType.bucket = {
-    // do something else
+  value : Integer
 }
 ````
 
 ### Functions marked as `once`
 
-Functions marked as `once` will only have a single function definition for all instances of a type and allow a function on a type to be called without specifying a type instance. A `once` function can be called by calling a function directly off a type instead of an instance of a type. Marking the function as `final` will ensure that a function cannot be reassigned to a new function definition.
+Current `once bound` invocation is owned by
+[Zax function invocation](language/function-invocation.md#type-and-instance-calls-to-once-functions).
+It permits type- or instance-qualified calls. A type-qualified call supplies
+the bound receiver slot in its `Nothing` state; an instance-qualified call
+supplies that instance.
 
 ````zax
 MyType :: type {
-    value : Integer
-
-    func1 final once : ()(value : Integer) readonly = {
-        // do something...
-    }
-
-    func2 final once : ()(value : Integer) = {
-        // check if called from type instance or from a type by checking if `_`
-        // points to nothing
-        if _
-            _.value = value   // only set value if called with a type instance
-    }
-
+  inspect final once : ()() = {
+    // `_` is Nothing for MyType.inspect() and the instance for value.inspect().
+  }
 }
 
-myType : MyType
-
-// OKAY: all instances share the same definition of `func1` so calling the
-// instance with the `type` name and not an instance of a `type` is legal
-MyType.func1(42)
-
-// OKAY: all instances share the same definition of `func2` so calling the
-// instance with the `type` name and not an instance of a `type` is legal
-MyType.func2(42)
-
-// OKAY: all instances share the same definition of `func2`, but calling
-// the function from an instance will pass in the instance pointer to the
-// shared `func2` implementation
-myType.func2(42)
+MyType.inspect()
+value : MyType
+value.inspect()
 ````
+
+`bound` means a prototype has a receiver slot; `unbound` means it does not.
+Type ownership alone does not create a receiver:
+
+````zax
+MyType :: type {
+  helper final : ()() unbound = {
+  }
+}
+````
+
+`once final unbound` is an intent error because `final unbound` already has one
+fixed receiverless implementation. Future receiver capture, lambda syntax, and
+function composition remain in indexed raw input.
 
 
 ### Structural decomposition, recomposition, and transformation

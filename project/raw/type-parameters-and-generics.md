@@ -146,6 +146,57 @@ functions. Future work must decide whether a compile-time function may return a
 type identity, what identity such a result has, and how it interacts with
 overload selection and reflection.
 
+### Concrete-at-alias-boundary requirement
+
+Current alias design preserves this future direction:
+
+```zax
+// Illustrative until type-returning execution syntax is designed.
+MySelectedType :: alias type giveMeAType()
+```
+
+The call must finish applicable static processing and return one concrete known
+type before the alias resolves. The alias never denotes a random future type or
+a type that will be chosen from later runtime use.
+
+A fully selected generic specialization follows the same rule:
+
+```zax
+// Illustrative generic syntax.
+MyConcreteType :: alias type MyType$(TypeA, TypeB)
+```
+
+It aliases one concrete specialization and creates no identity. A partially
+applied alias is different: it identifies a known generic family with remaining
+parameters rather than one concrete type. Generic work must define a dedicated
+generic alias declaration shape and cannot silently treat that family as an
+ordinary concrete `type`.
+
+Concrete aliases may carry an overlaid profile of qualification, indirection,
+transfer stance, and compatibility posture. Future generic aliases must decide
+how remaining parameters interact with that profile while preserving:
+
+- explicit more-local properties replace inherited properties on the same axis;
+- omitted properties inherit before common defaults apply;
+- canonical type identity remains separate from the resolved profile; and
+- no specialization or alias manufactures capability on an actual source.
+
+### Generic forwarding pressure
+
+Current non-generic forwards anchor a name and category before one exact
+completion. Generic work needs the corresponding model for:
+
+- a generic type family;
+- a partially applied generic alias;
+- a generic callable family;
+- generated qualifier or stance specializations; and
+- one concrete demanded specialization.
+
+It must decide which facts a forward promises, when constraints are checked,
+whether one generic family completion satisfies every specialization, and how
+an exact concrete alias completion differs from a still-generic declaration.
+Source order may require a forward; it must never rank specializations.
+
 ## Generic and alias type receivers
 
 For a non-generic declaration, the enclosing type name identifies the receiver
