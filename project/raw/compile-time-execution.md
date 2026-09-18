@@ -76,13 +76,15 @@ values whose availability follows the concrete format.
 
 ## Directed and inferred execution
 
-Legacy material directs execution with a directive option set:
+Legacy material directs execution with a directive option set. The option names
+remain future evidence; the examples use the current compiler-directive
+enclosure:
 
 ```zax
-main final [[execute=target]] : ()() = {
+main final [<execute=target>] : ()() = {
 }
 
-double final [[execute=dual]] : (result : Integer)(value : Integer) = {
+double final [<execute=dual>] : (result : Integer)(value : Integer) = {
     return value * 2
 }
 

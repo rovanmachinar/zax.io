@@ -8,7 +8,7 @@
 | Implementation State | Not established by this repository |
 | Owns | The `each` mental model; direct and cursor-driven traversal; header phases and entry bindings; positional and named roles; compiler-known array, enum, and structural traversal; cursor acquisition, value production, progression, erasure, direct re-entry to a live current entry, and active-`each` access; traversal costs, diagnostics, mutation responsibilities, and source stability |
 | Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); general token and layout rules ([source structure](source-structure.md)); collection-specific place stability ([lifetimes and references](lifetimes-and-references.md)); complete reflection or type-declaration traversal; generic constraint syntax; or compiler lowering |
-| Source / Provenance | Legacy [flow control](../flow-control.md), legacy [arrays](../arrays.md), and current enum, flow, declaration, qualifier, lifetime, safety, operator, and transfer designs |
+| Source / Provenance | Legacy [flow control](../flow-control.md) together with current array, enum, flow, declaration, qualifier, lifetime, safety, operator, and transfer designs |
 
 ## Start with one entry at a time
 
@@ -41,8 +41,8 @@ each value : from values {
 }
 ```
 
-- `in` knows the source's structure directly. Its initial source families are
-  fixed arrays, enum declarations, and stored instance members.
+- `in` knows the source's structure directly. Its source families are intrinsic
+  arrays and slices, enum declarations, and stored instance members.
 - `from` obtains a cursor and uses its declared progression and value
   operations.
 
@@ -239,10 +239,10 @@ to resemble a traversal protocol.
 Every direct source is finite. Its contract defines entry order, binding roles,
 value or place behavior, and exhaustion.
 
-### Fixed arrays
+### Intrinsic arrays and slices
 
-A fixed array supplies one `value` role. The default is a reference to the
-current element place:
+A fixed array, resizable array, or slice gives the loop one element on each
+pass. By default the loop accesses that element directly:
 
 ```zax
 each element : in values {
@@ -269,13 +269,19 @@ each element : Integer in values {
 That construction follows ordinary transfer and construction rules. It may call
 programmer code, share storage, allocate, or be unavailable.
 
-The array expression is evaluated once. Elements are visited in increasing
+The source expression is evaluated once. Elements are visited in increasing
 index order. Each pass establishes a fresh binding; a reference is not rebound
 from one element place to another.
 
-A fixed array's element places remain stable for its life path. Writable element
-access is available only when the source grants it. Dynamic collections,
-slices, and proxies require their own traversal and invalidation contracts.
+A fixed array's element places remain stable for its life path. A resizable
+array or slice uses the place-stability and invalidation contract defined by
+[Zax arrays and slices](arrays-and-slices.md#element-place-stability).
+Writable element access is available only when the source grants it.
+
+Element mutation that preserves the current place may remain valid. Structural
+mutation invalidates direct traversal rather than silently changing the
+remaining entry set. Use cursor-driven `each from` when controlled erasure or
+specialized progression is required.
 
 ### Enum declarations
 
@@ -408,6 +414,29 @@ capabilities.
 A concrete cursor needs no generic concept at a concrete `each` site. The
 compiler checks the selected type's exact operations directly. Future generic
 constraints will express this already-defined protocol for an unknown type.
+
+### Optional exact count
+
+An iterable source may expose an exact non-consuming count:
+
+```zax
+operator post unary 'count' final : (
+  result : IndexSize
+)() readonly = {
+}
+```
+
+An iterable need not provide `count`. When it does, the returned number must
+exactly match the values produced by the next corresponding traversal, and
+asking for it must not consume those values. Array construction can use that
+number to reserve storage once before traversal.
+
+If the iterable later produces a different number of values, the array
+operation panics because the iterable broke its promise. A source that knows
+only an estimate does not provide this exact operation. Complete array-entry
+`from`, reservation, element-count checking, and memory-domain behavior is
+explained by
+[Zax arrays and slices](arrays-and-slices.md#iterable-contributions).
 
 ### Acquiring the first cursor
 
@@ -925,7 +954,7 @@ Still future:
 
 - generic syntax for constraining an unknown iterable or cursor type;
 - the reflection payload and type-declaration traversal;
-- complete dynamic collection, slice, proxy, range, and view catalogs;
+- generic collection, proxy, range-value, and non-array view catalogs;
 - generator and coroutine production;
 - asynchronous, concurrent, and parallel traversal;
 - compile-time execution of traversal bodies;

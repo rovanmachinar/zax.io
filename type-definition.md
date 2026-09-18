@@ -292,7 +292,7 @@ compareToKnownAnimals final : ()(value : String) = {
 
     // declare and define a function that returns nothing and takes a single
     // `String` argument and captures the `value` variable
-    printIfEqual : ()(compare : String) = [value] {
+    printIfEqual : ()(compare : String) = [[value]] {
         if value == compare
             print("they are the same", value, compare)
         else

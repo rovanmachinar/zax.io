@@ -425,6 +425,26 @@ For a collection of length `L`, valid positions are zero through `L - 1` and
 slice/splice endpoints are zero through `L`. No separate endpoint type is
 required.
 
+Array code answers two different numeric questions:
+
+- `IndexSize` counts elements, positions, endpoints, and reserved element
+  capacity.
+- `TypeSize` measures the bytes needed for backing storage.
+
+The near and far array families use the corresponding near or far identities.
+Calculating backing extent therefore checks:
+
+```text
+element count * element storage extent
+plus metadata and alignment
+```
+
+An ordinary iterable `count` example returns ordinary `IndexSize`. Near/far and
+future generic iterables must use a count identity that the destination array
+can accept explicitly; representation coincidence never creates a silent
+cross-domain conversion. Complete array behavior is defined by
+[Zax arrays and slices](arrays-and-slices.md#counts-storage-extent-and-allocation).
+
 Profiles also satisfy:
 
 ```text

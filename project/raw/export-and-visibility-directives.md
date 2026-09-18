@@ -27,26 +27,28 @@ them.
 
 ## Syntax pressure
 
-Legacy material proposes forms such as:
+Legacy material proposed `[[export]]`. Current source reserves `[[ ... ]]` for
+lambda capture and uses `[< ... >]` for compiler directives. Future export
+syntax therefore starts from:
 
 ```zax
-// Illustrative legacy syntax; not accepted here.
-[[export]]
+// Illustrative export directive; exact export behavior is not accepted here.
+[<export>]
 MyType :: type {
 }
 
-[[export]]
+[<export>]
 Utilities :: import Module.UtilitiesDefinition
 ```
 
 and stateful directive forms:
 
 ```zax
-// Illustrative legacy syntax; not accepted here.
-[[export=always]]
-[[export=never]]
-[[export=yes]]
-[[export=no]]
+// Illustrative directive payloads; exact state behavior is not accepted here.
+[<export=always>]
+[<export=never>]
+[<export=yes>]
+[<export=no>]
 ```
 
 Future work must decide whether export is:
@@ -68,7 +70,7 @@ remains unavailable:
 
 ```zax
 // Illustrative export marker.
-[[export]]
+[<export>]
 PublicType :: alias type InternalType
 ```
 
@@ -108,7 +110,7 @@ another root.
 
 ## Activation and retirement
 
-Activate this input when exact `private`, `[[export]]`, declaration attachment,
+Activate this input when exact `private`, `[<export>]`, declaration attachment,
 selective exposure, alias export, import-module export, or re-export syntax is
 reviewed.
 

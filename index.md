@@ -58,6 +58,9 @@ producing them.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
   for constructors, construction packets, generated lifecycle operations,
   same-storage replacement, and destruction.
+- Read [Zax arrays and slices](language/arrays-and-slices.md) for fixed and
+  resizable arrays, array expressions, usable capacity, storage strategies,
+  indexing, slicing, element places, joining, and traversal.
 - Read [Zax `using`](language/using.md) for
   parenthesized `using` resource lists, structural `dispose`, disposal and
   destruction order, and explicit disposal bypass.
@@ -133,6 +136,7 @@ producing them.
 - [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
+- [Arrays and slices](language/arrays-and-slices.md)
 - [`using`](language/using.md)
 - [Core flow control](language/core-flow-control.md)
 - [Switch, case, and default](language/switch.md)
@@ -163,7 +167,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
   [literal source and operators](language/literal-source-and-operators.md), and
   [strings and characters](language/strings-and-characters.md)
 - [Type definition](type-definition.md)
-- [Arrays](arrays.md)
 - [Functions](functions.md)
 - [Variadic functions](variadic.md)
 - [Flow control](flow-control.md) — legacy value-polymorphism input;

@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing string and character identities and their literal-time behavior; not a complete runtime string library or formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Explicit string code-unit backing; `Byte`, `U8`, `AsciiChar`, `Ucs2`, and `Rune` distinctions as used by text; `String`, ASCII, UCS-2, UTF-8/16/32, MBCS, and legacy native string identities; direct, escaped, raw-unit, RFC, XML, and code-page literal catalogs; Unicode scalar/grapheme boundaries; policy-selected legacy termination; left-owned compile-time joining; literal-time validation, costs, diagnostics, and source stability |
-| Does Not Own | General literal source/declarations ([literal source and operators](literal-source-and-operators.md)); complete arrays, storage representation, allocation, mutation, slicing, runtime conversion, normalization, grapheme/presentation APIs, locale, formatting, foreign ABI, exact code-page tables, contiguous ordinary-string access, or exact generic MBCS/termination-policy syntax |
+| Does Not Own | General literal source/declarations ([literal source and operators](literal-source-and-operators.md)); intrinsic array and slice behavior ([arrays and slices](arrays-and-slices.md)); runtime string storage representation, allocation, mutation, slicing, conversion, normalization, grapheme/presentation APIs, locale, formatting, foreign ABI, exact code-page tables, contiguous ordinary-string access, or exact generic MBCS/termination-policy syntax |
 | Source / Provenance | Legacy string and casting material in [basics](../basics.md) and [casting](../casting.md), refined against current integer, identity, literal, source, operator, and scalar design |
 
 ## Choose bytes, characters, or validated text
@@ -88,8 +88,9 @@ utf8'' <+> Byte.h'41'   // error: Byte has no character semantics
 utf8'' <+> (: U8 = 65) // error: U8 has numeric semantics
 ```
 
-Use `AsciiChar` for ASCII meaning, or validate a complete `String`/`U8[]`
-sequence as UTF-8. `Byte` may append raw data to `String` or `U8[]`.
+Use `AsciiChar` for ASCII meaning, or validate a complete `String` or borrowed
+`U8[]` sequence as UTF-8. `Byte` may append raw data to `String` or a raw
+`U8` array/slice.
 
 ### `AsciiChar`
 
@@ -351,9 +352,9 @@ myBytes :=
   Rfc4648.Encoding.base64'VGhlIHF1aWNrIGJyb3duIGZveC4='
 ```
 
-These declarations produce `U8[]`, not `String`: their source payload is text,
-but the decoded value is binary data. Exact padding and accepted-alias policy
-remain future encoding-contract work.
+These declarations produce an owning fixed `U8[N]`, not `String`: their source
+payload is text, and compile-time decoding determines exact output count `N`.
+Exact padding and accepted-alias policy remain future encoding-contract work.
 
 XML entity processing is likewise explicit:
 
@@ -499,6 +500,9 @@ Legacy.Char[]  -> Legacy.CharString
 Legacy.WChar[] -> Legacy.WideString, when defined
 ```
 
+These `[]` inputs are borrowed complete-sequence slices. Construction produces
+an independently owned string under its selected transfer contract.
+
 Construction preserves the supplied logical units after validating any
 platform encoding/code-unit invariants. NUL is permitted.
 
@@ -641,12 +645,17 @@ concrete policy identity. Every join applies that policy's in-band terminator,
 encoding, contiguity, suffix, and failure rules before returning the same
 terminated type.
 
-### Raw arrays on the left
+### Raw byte arrays and slices on the left
 
-`U8[] <+> rhs` initially accepts `U8`, `Byte`, `U8[]`, and raw `String` bytes.
+`U8[] <+> rhs` uses a borrowed byte slice as the left sequence and constructs a
+new owning array result. It initially accepts `U8`, `Byte`, another raw
+`U8` array/slice, and raw `String` bytes. An owning `U8[N]` or ranged `U8`
+array provides the corresponding left-owned array join directly.
+
 Appending a UTF or legacy string's storage representation requires an explicit
 representation operation so semantic transcoding cannot be mistaken for byte
-extraction.
+extraction. Complete owning/slice result bounds, layout, and transfer behavior
+belong to [Zax arrays and slices](arrays-and-slices.md#joining-arrays).
 
 ### Character values are right operands
 

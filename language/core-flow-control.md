@@ -1186,7 +1186,7 @@ The following remain explicit future work and are not established here:
 - complete function capture and closure representation, including callable-like
   scope capture;
 - async suspension, cancellation, executors, and concurrent flow;
-- `[[likely]]`, `[[unlikely]]`, and other reachability or likelihood directives;
+- `[<likely>]`, `[<unlikely>]`, and other reachability or likelihood directives;
   and
 - formal reachability, definite-initialization, and termination algorithms,
   diagnostic identifiers, and compiler lowering.

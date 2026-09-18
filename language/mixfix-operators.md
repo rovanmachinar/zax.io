@@ -169,11 +169,31 @@ rules are owned by
 general continuation and physical-line mechanics remain with
 [source structure](source-structure.md#operator-phrase-source-integration).
 
-## Call and index components
+## Call, index, and splice components
 
-Direct `operator call` and `operator index` declarations derive argument count
-from their prototypes. Inside a flattened mixfix, `call N` and `index N` identify
-how many input holes belong to that component.
+Direct `operator call` declarations derive argument count from their
+prototypes. Each `operator index` declaration receives one index from one
+bracket. Inside a flattened mixfix, `call N` identifies the call's inputs while
+`index 1` identifies one index bracket.
+
+A direct `operator splice 1` declaration receives one normalized optional
+start/exclusive-end pair. Inside a flattened mixfix, `splice 1` identifies that
+one sliced bracket:
+
+```zax
+operator mixfix
+  splice 1
+  binary '='
+final : ()(
+  start : IndexSize?,
+  endExclusive : IndexSize?,
+  replacement : MySequence
+) writable = {
+}
+```
+
+Exact endpoint source, normalization, empty ranges, and intrinsic result
+behavior belong to [Zax arrays and slices](arrays-and-slices.md#slicing).
 
 ```zax
 CustomCallable :: type {
@@ -202,14 +222,14 @@ The call contributes `number` and `text`; `+` contributes `adjustment`. Omitted
 `:` still occupies a call slot and requires the mixfix parameter's declared
 default.
 
-A consumed call/index component produces no intermediate result or proxy. The
-complete mixfix declares the result. Ordinary call/index results matter only
-when direct mixfix selection finds no applicable candidate and decomposition
-occurs.
+A consumed call, index, or splice component produces no intermediate result or
+proxy. The complete mixfix declares the result. Ordinary component results
+matter only when direct mixfix selection finds no applicable candidate and
+decomposition occurs.
 
 Named/default mapping, variadics, result forwarding, lambda-generated callable
-types, construction-like call syntax, slices, and exact default timing remain
-future invocation/indexing integration.
+types, construction-like call syntax, non-array delimited forms, and exact
+default timing remain future invocation/indexing integration.
 
 ## Matching and selection
 
@@ -371,16 +391,22 @@ proxy := container[index]
 proxy = value
 ```
 
-Whether indexing supplies such a value remains future indexing work.
+Intrinsic array and slice indexing supplies an element place. Other custom
+index results follow their declarations.
 
-Splice assignment may likewise become one direct operation:
+Splice assignment is likewise one direct operation:
 
 ```zax
-// Illustrative future syntax; range syntax is not established.
 container[low ..< high] = replacement
 ```
 
-It may expose receiver, low, high, and replacement holes without a range proxy.
+The mixfix receives the container, the normalized optional start/end
+boundaries, and the replacement directly. It needs no intermediate range
+object. For intrinsic arrays, the container and range expressions evaluate
+first, the replacement evaluates next, and bounds are checked when the complete
+operation runs. Complete mutation, element-count checking, overlap, and
+invalidation are explained by
+[Zax arrays and slices](arrays-and-slices.md#direct-splice-mutation).
 
 ## Branch-specific mixfix selection
 
@@ -475,6 +501,6 @@ This document defines current conceptual mixfix behavior, not formal grammar,
 reflection metadata, implementation matching algorithms, or a conformance
 contract.
 
-Exact declaration syntax, generic substitution, partial-type extension, call/index
-edge cases, slicing, lambda types, exact multiword words, and diagnostics
-identifiers remain focused future work.
+Exact generic substitution, partial-type extension, non-array call/index edge
+cases, lambda types, exact multiword words, and diagnostic identifiers remain
+focused future work.

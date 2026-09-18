@@ -83,6 +83,44 @@ The compiler may optimize storage reservation and initialization when doing so
 preserves behavior. That does not collapse the programmer-visible distinction
 between introducing a name and initializing its value.
 
+### Array declarations and expressions
+
+Array declarations preserve the same declaration-versus-assignment boundary:
+
+```zax
+fixed : Integer[3] = [ 1, 2, 3 ]
+bounded : Integer[2 in 0..10] = [ 4, 5 ]
+
+inferred := [ 6, 7, 8 ]
+// Integer[3] using the resolved default storage profile
+
+fixed = [ 9, 10, 11 ]
+// Assignment to an existing array; no declaration occurs.
+```
+
+In `Integer[2 in 0..10]`, `2` is the number of elements initially constructed.
+The `0..10` part describes the sizes the array may have later. Neither number
+states how much backing storage is reserved.
+
+When the declaration does not provide an element type, all array entries must
+agree on one. Uncommitted number literals can take the type established by
+equal committed entries. Two different committed element types are an error;
+the first entry never wins merely because it appears first.
+
+An empty array or a list containing only constructor packets cannot determine
+its own element type and therefore needs a typed destination.
+
+Expanding a runtime slice or iterable creates an open resizable array using the
+resolved default storage profile. A bare array or slice remains one element;
+array-entry `from` explicitly contributes its sequence values. Complete
+examples are in
+[Zax arrays and slices](arrays-and-slices.md#array-expressions).
+
+`unsafe ???` bypasses initialization of the entire array representation. It
+does not create ordinary elements that are merely waiting to be filled and
+cannot be used to reserve uninitialized capacity. Complete delayed construction
+belongs to the array and lifecycle owners.
+
 ### Anonymous declarations and discard names
 
 An ordinary declaration may omit an accessible name:

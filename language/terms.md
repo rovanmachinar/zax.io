@@ -93,6 +93,74 @@ ownership is kept by the control block for the enclosing allocation root.
 target. See
 [Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
 
+## Array expression
+
+An **array expression** is `[ ... ]` source that constructs one owning intrinsic
+array. Every ordinary entry—including an array or slice—contributes one element.
+Contextual array-entry `from` contributes a sequence.
+
+Nested array source uses `[ [` while contiguous `[[` opens lambda capture. See
+[Zax arrays and slices](arrays-and-slices.md#array-expressions).
+
+## Fixed array and resizable array
+
+A **fixed array** owns an exact type-level number of element places and cannot
+insert, remove, or resize. Ordinary element access does not relocate them;
+complete array replacement or an explicit future storage transition may end
+them.
+
+A **resizable array** owns a current logical length within a type-level admitted
+length range and may add, end, renew, or relocate element places through its
+declared operations.
+
+Both are intrinsic owning array roles. See
+[Zax arrays and slices](arrays-and-slices.md#fixed-arrays-resizable-arrays-and-slices).
+
+## Logical length, capacity, and suggested capacity
+
+An array's **logical length** counts live elements. Its **capacity** counts
+usable element slots in the current backing while respecting the array's
+declared maximum. Its optional
+**suggested capacity** records programmer guidance without guaranteeing
+reservation.
+
+Provider backing may physically exceed usable array capacity. Capacity is never
+an uninitialized-element count. See
+[Zax arrays and slices](arrays-and-slices.md#length-capacity-and-suggestion-are-different).
+
+## Array storage provider and profile
+
+An array **storage provider** owns raw bytes, physical slot/chunk mapping, gross
+alignment, and storage stability. One provider may serve several arrays; each
+array owns one unique handle for its backing region and independently manages
+its element lifetimes.
+
+The **resolved storage profile** records the provider type/instance and
+capabilities that affect one owning array's representation and operations.
+Storage does not change logical array identity. See
+[Zax arrays and slices](arrays-and-slices.md#storage-strategies).
+
+## Storage-erased array reference
+
+A **storage-erased array reference** borrows an array without requiring its
+inline or provider-backed storage profile. It carries the common operations
+needed to locate elements through that source storage, so one concrete function
+can accept compatible arrays backed in different ways.
+
+The erased reference guarantees ordinary array access, not one contiguous
+layout or provider-specific APIs. See
+[Zax arrays and slices](arrays-and-slices.md#passing-an-array-by-reference).
+
+## Slice and splice
+
+A **slice** is a non-owning descriptor over selected array element places. It
+owns no element and cannot widen beyond its current view.
+
+A **splice** is bracket source containing inclusive `..` or half-open `..<`
+range components. It may produce a slice or another custom declared result.
+Direct splice assignment is one mixfix mutation rather than assignment through
+a hidden slice proxy. See [Zax arrays and slices](arrays-and-slices.md#slicing).
+
 ## Binding
 
 A **binding** associates a source-level name with a declaration. The binding
@@ -164,6 +232,22 @@ restoration obligation after a write. Both forms are local reference views,
 preserve available qualification authority, and remain distinct from unchecked
 `unsafe cast`. See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-reference-views).
+
+## Compiler-directive enclosure
+
+A **compiler-directive enclosure** uses contiguous `[<` and `>]` delimiters to
+attach recognized compiler metadata:
+
+```zax
+// Illustrative directive name; exact directive catalog remains future work.
+[<likely>] if condition {
+  handleExpectedCase()
+}
+```
+
+The enclosure is not an array expression, lambda capture, or grouping.
+Contiguous `[[ ... ]]` belongs to lambda capture. See
+[Zax source structure](source-structure.md#compiler-directive-enclosure).
 
 ## Commitment boundary
 

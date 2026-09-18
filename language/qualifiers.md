@@ -1033,6 +1033,51 @@ independently replace the old payload through postfix access.
 Complete optional operations, nested optional layers, and transfer effects are
 defined by [Zax optional values](optional-values.md).
 
+## Array and slice qualification
+
+An immutable array may still occupy a writable varying place:
+
+```zax
+myArray varying :
+  Integer[4 in 4..10] immutable writable varying = [ 1, 2, 3, 4 ]
+
+myArray[0] = 10   // error: mutates the immutable array
+myArray.resize(6) // error: mutates the immutable array
+myArray = replacement
+// valid reconstructive replacement when the contracts match
+```
+
+`immutable` prevents changing elements, length, capacity, suggestion, or
+storage during the current array lifetime. Type-side `varying`,
+declaration-side `varying`, and `writable` together still permit ending that
+lifetime and constructing a complete successor array in the same place.
+
+A slice has two separately controlled things:
+
+1. the elements reached through it; and
+2. its own window description, such as start and length.
+
+Source keeps those qualifier layers visible:
+
+```text
+T <element/type qualifiers> [] <slice qualifiers>
+```
+
+Words before `[]` govern element access. Words after `[]` govern the slice
+window itself. A readonly window cannot be narrowed through that path, but an
+independently writable element path may still change an element.
+
+An owning array directly contains its elements, so making the array immutable
+also constrains contained element state. A slice only borrows elements; its
+window qualification does not replace their qualifications.
+
+Creating or copying a slice can keep or reduce existing authority. It cannot
+turn readonly elements writable, make immutable state mutable, permit
+replacement of a final place, or extend an element's lifetime. Complete syntax,
+window narrowing, storage-profile properties, and element access are explained
+by
+[Zax arrays and slices](arrays-and-slices.md#slice-qualification-and-narrowing).
+
 ## Indirection
 
 Dereferencing does not change the qualifications of the dereferenced instance.

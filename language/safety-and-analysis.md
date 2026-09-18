@@ -332,6 +332,44 @@ rejected. If opaque code may have reset or transferred the prior allocation,
 narrow unsafe responsibility may assert that missing fact. Intent
 acknowledgement cannot supply lifecycle proof.
 
+### Array bounds, slices, and disabled checks
+
+When the compiler can prove that an intrinsic array operation is invalid—for
+example, indexing a fixed five-element array at index ten—it rejects the source.
+When the deciding index, length, or source count is known only while running,
+the required operation checks it and panics on failure.
+
+The array failures are kept separate: element bounds, slice bounds/order,
+requested length, initializer element count, invalidated slice, foreign slice
+origin, broken iterable count promise, storage-size overflow, and required
+backing allocation.
+
+A programmer may independently disable one registered failure category. That
+choice tells the compiler to assume the failure cannot happen and permits it to
+remove the corresponding check. If the promise is false, behavior is undefined.
+
+Optional/reporting array operations retain the checks required to produce their
+declared results even when the corresponding required-operation panic is
+disabled. A slice validity check may carry origin and generation cost; disabling
+it transfers responsibility rather than turning an invalid slice into an empty
+one.
+
+Array and storage providers may cooperate through future stability
+kinds/tokens and observed versions. The provider reports changed raw mappings;
+the array determines which element-place guarantees ended. A version mismatch
+is the runtime evidence for the existing invalidated-slice panic, not a second
+kind of slice failure.
+
+Array and storage providers may cooperate through future stability
+kinds/tokens and observed versions. The provider reports changed raw mappings;
+the array determines which element-place guarantees ended. A version mismatch
+is the runtime evidence for the existing invalidated-slice panic, not a second
+kind of slice failure.
+
+Complete array conditions and programmer-visible behavior belong to
+[Zax arrays and slices](arrays-and-slices.md#required-reporting-and-unchecked-behavior).
+Exact registry syntax and identifiers remain analysis-control work.
+
 ## Runtime failure and unsafe failure
 
 Defined runtime failure is not the same as unsafe undefined behavior.

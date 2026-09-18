@@ -575,6 +575,47 @@ design. The semantic distinction is that one anonymous value becomes one
 constructor input; it is not a packet containing several arguments and member
 initializers.
 
+### Array element construction
+
+The outer `[ ... ]` lists array elements. When an element needs constructor
+arguments, put one construction packet at that element's position:
+
+```zax
+items : MyItem[3] = [
+  [{ "first", 3 }],
+  [{ "second", 7 }],
+  [{}]
+]
+```
+
+Each packet receives `MyItem` as its destination type and follows the ordinary
+argument mapping, evaluation, default, and lifecycle rules in this document.
+The packet itself still has no independent type.
+
+Array source expressions evaluate once from left to right. When every sequence
+contribution has an exact count, the complete destination backing request
+finishes before the first element construction. An uncounted iterable may grow
+incrementally; each backing expansion and any required relocation complete
+before construction of the next element.
+
+Elements construct from the lowest index upward and are destroyed from the
+highest index downward. If construction panics, ordinary code never receives
+the incomplete array or a successfully constructed prefix. Complete element
+counts, iterable expansion, relocation, and element access are explained by
+[Zax arrays and slices](arrays-and-slices.md#construction-and-destruction).
+
+`unsafe ???` can instead bypass initialization of the entire array:
+
+```zax
+rawArray : MyItem[3] = unsafe ???
+rawArray.+++([ makeFirst(), makeSecond(), makeThird() ])
+```
+
+The bracket expression first creates an ordinary array value. The explicit
+constructor then uses that array to establish `rawArray`; it is not a special
+variadic array constructor. Extra reserved capacity still contains no elements
+and requires no unsafe bypass.
+
 ## Declared and generated lifecycle operations
 
 For the lifecycle operations reviewed here, Zax distinguishes five declaration

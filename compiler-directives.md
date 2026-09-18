@@ -3,9 +3,15 @@
 
 ## Compiler Directives
 
-> **Routing note.** This page remains legacy compiler-directive input. Four of its
+> **Routing note.** This page remains legacy compiler-directive input. Five of its
 > concerns now have live destinations:
 >
+> - **Directive enclosure.** Current source uses `[<directive>]`; contiguous
+>   `[[ ... ]]` belongs to lambda capture. The `[[...]]` spellings throughout
+>   the legacy material below preserve historical evidence and must not be
+>   copied as current directive syntax. The current enclosure and its
+>   attachment boundary are owned by
+>   [Zax source structure](language/source-structure.md#compiler-directive-enclosure).
 > - **Execution context.** The `execute` directive's `host`, `target`, `dual`,
 >   `generate`, and `delegate` options, the `resolve` ordering options, and the
 >   `host`/`target` prefixed sizing and constant variants are preserved as future

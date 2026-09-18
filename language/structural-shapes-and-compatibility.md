@@ -1321,6 +1321,40 @@ through the route afterward.
 Name-aware compatibility continues to use physical declaration names. A renamed
 `via` can help transformation but cannot manufacture shape equality.
 
+## Arrays remain structural leaves
+
+Structural conversion treats a complete array as one member. It does not unpack
+every element merely because it is comparing flattened shapes:
+
+```zax
+MyRecord :: type {
+  values : Integer[100]
+}
+```
+
+`values` remains one `Integer[100]` member; it does not become one hundred
+implicit `Integer` members.
+
+Comparing two owning array leaves considers their element type, dimensions,
+size limits, qualifications, and resolved storage profile. Storage does not
+change logical array identity, but inline versus provider-backed representation
+can change the complete stored shape and `size of`.
+
+A storage-erased array reference provides ordinary array operations without
+claiming that the several owning representations have one binary layout. A
+slice remains one borrowed view rather than a flattened list of its current
+elements.
+
+Changing an array of structures into a structure of arrays rearranges how data
+is grouped. That can require visiting elements, allocating storage, constructing
+destinations, transferring values, and handling overlap. The programmer must
+request an explicit transformation; ordinary `as shape` or `as layout` does not
+perform it.
+
+Complete array dimensions, layout guarantees, element lifetimes, and future
+AoS/SoA pressure are explained by
+[Zax arrays and slices](arrays-and-slices.md#structural-and-reflection-boundaries).
+
 ## Shared hidden arithmetic reports
 
 Integer report types are anonymous to their caller-facing source surface, but

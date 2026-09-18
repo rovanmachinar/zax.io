@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, and value join `<+>` forms; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -49,9 +49,9 @@ Zax recognizes:
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Literal source/value | Source merge `<\|>` and value join `<+>` |
-| Mutation | Compounds, increment/decrement, `~=`, and exact phrase mutations |
+| Mutation | Compounds including array `<+>=`, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
-| Delimited/multi-part | Call, index, and [mixfix](mixfix-operators.md) forms |
+| Delimited/multi-part | Call, index, splice, and [mixfix](mixfix-operators.md) forms |
 | Allocation initializer | `@`, `@!`, `@<`, `@!<`, with optional attached `@{...}` policy |
 
 A type may overload a recognized form where its operand domain remains open.
@@ -81,7 +81,7 @@ Higher levels bind first:
 | Logical XOR | `^^`, `logical xnor` | Left |
 | Logical OR | `\|\|`, `logical nor`, `logical or not` | Left |
 | Conditional | `condition ?? trueValue ;; falseValue` | Right-nesting |
-| Assignment/compound | `=`, compounds, exact phrase mutations | Right |
+| Assignment/compound | `=`, compounds including `<+>=`, exact phrase mutations | Right |
 | Swap | `<<>>` | Left |
 
 Every newly declared phrase uses ordinary phrase precedence. A language-defined
@@ -652,6 +652,41 @@ create a generic iterator constraint by themselves. Complete acquisition,
 result-shape, progression, erasure, and availability behavior is owned by
 [Zax iteration](iteration.md#cursor-driven-from-traversal).
 
+An iterable may additionally declare:
+
+| Phrase words | Use shape | Protocol role |
+| --- | --- | --- |
+| `count` | `<source> count` | Return the exact non-consuming `IndexSize` count for the corresponding traversal |
+
+The `count` operation is optional. A provided operation returns a concrete
+count and promises exact agreement with traversal. Array construction may use
+it for reservation; complete behavior is in
+[Zax arrays and slices](arrays-and-slices.md#iterable-contributions).
+
+## Array capacity forms
+
+Intrinsic arrays provide exact pre-unary query phrases:
+
+```zax
+actual := capacity of values
+suggested := suggested capacity of values
+
+minimum := minimum length of MyArrayType
+maximum := maximum length of MyArrayType
+```
+
+`capacity of` returns concrete `IndexSize`. `suggested capacity of` returns
+`IndexSize?`, absent when no suggestion is present.
+
+`minimum length of` receives an array type and returns concrete `IndexSize`.
+`maximum length of` returns `IndexSize?`, absent for an open maximum. Current
+value length uses the ordinary `array.length()` callable.
+
+Mutating reserve, trim, and suggest operations are ordinary array callables
+rather than phrase operators.
+Complete behavior belongs to
+[Zax arrays and slices](arrays-and-slices.md#length-capacity-and-suggestion-are-different).
+
 ## Endianness reference
 
 Endian type teaching belongs to [Zax endianness](endianness.md). Endianness is
@@ -792,19 +827,40 @@ construction packet and trailing source are distinct forms.
 Complete behavior is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
 
-## Call, index, and mixfix
+## Call, index, splice, and mixfix
 
 Call and index are recognized postfix delimited forms:
 
 ```zax
 myCallable(myArguments)
-myContainer[myIndexes]
+myContainer[myIndex]
 ```
 
 They are not generic post-unary delimiter operators.
 
-A mixfix component uses `call N` or `index N` to partition flattened inputs.
+Each index bracket contains one index. Multidimensional access chains brackets:
+
+```zax
+myMatrix[row][column]
+```
+
+A bracket containing a range forms splice source:
+
+```zax
+myContainer[start..<end]
+myContainer[start..end]
+```
+
+`..` is inclusive and `..<` is half-open. They are recognized in splice and
+other specifically assigned range contexts rather than receiving a general
+binary-expression precedence. `start..<` is malformed.
+
+A custom splice declaration uses `operator splice 1`. A mixfix component uses
+`call N` for an N-input call or `index 1`/`splice 1` for one bracket component.
+Several adjacent brackets appear as several index/splice components.
 Complete mixfix matching belongs to [Zax mixfix operators](mixfix-operators.md).
+Endpoint normalization, empty ranges, intrinsic bounds, custom results, and
+slice behavior belong to [Zax arrays and slices](arrays-and-slices.md#slicing).
 
 ## Literal merge and join
 
@@ -841,6 +897,17 @@ that mixes them rather than relying on an unstated precedence.
 When both immediate literal operands resolve to one declaration, `<+>` requires
 `intent<same-prefix-literal-join>`.
 
+Intrinsic arrays define ordinary runtime `<+>` and its assignment-level
+compound `<+>=`:
+
+```zax
+combined := left <+> right
+left <+>= right
+```
+
+Array-specific result and mutation behavior belongs to
+[Zax arrays and slices](arrays-and-slices.md#joining-arrays).
+
 ## Deferred and unavailable forms
 
 - Legacy `@@` parallel-allocation meaning is superseded. Arena capabilities
@@ -848,7 +915,7 @@ When both immediate literal operands resolve to one declaration, `<+>` requires
 - `|>` remains function-chaining evidence.
 - Legacy result split/combine `<-` and `->` are superseded by the protected
   `>-`, `-<`, and `-<>-` structural mapping family.
-- Runtime `<+>` behavior outside required literal-time joining remains future
+- Runtime `<+>` behavior outside current intrinsic arrays remains future
   string/operator work.
 - Exact multiword, reversal, and masked extraction/deposit words remain numeric
   work.
@@ -915,5 +982,6 @@ semantics are current in [fixed-point scalars](fixed-point-scalars.md) and
 [floating-point scalars](floating-point-scalars.md); exact wording for several
 advanced operations remains future catalog work. Literal source and declarations
 are current in [literal source and operators](literal-source-and-operators.md).
-Runtime joining, unbounded numeric, enum, pointer, indexing, allocation,
-reflection, panic-recovery, and build-option syntax remain focused future work.
+Runtime joining outside arrays, unbounded numeric, enum, pointer, non-array
+indexing, allocation, reflection, panic-recovery, and build-option syntax remain
+focused future work.

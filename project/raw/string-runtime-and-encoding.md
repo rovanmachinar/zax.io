@@ -6,7 +6,7 @@
 | Audience | Future work defining runtime string APIs, admission, conversion, mutation, allocation, encoding data, normalization, graphemes, or presentation |
 | Applies To | Unresolved runtime and data-contract consequences of current string, character, literal, and compile-time join design |
 | Owns | Runtime admission/conversion pressure; runtime joining; encoded-string family naming; code-page and RFC data contracts; allocation, mutation, capacity, normalization, grapheme, locale, presentation, and foreign-view pressure; representative source; activation and retirement |
-| Does Not Own | Current literal source ([literal source and operators](../../language/literal-source-and-operators.md)); current character/string identities and compile-time joins ([strings and characters](../../language/strings-and-characters.md)); complete arrays; or accepted runtime APIs |
+| Does Not Own | Current literal source ([literal source and operators](../../language/literal-source-and-operators.md)); current character/string identities and compile-time joins ([strings and characters](../../language/strings-and-characters.md)); intrinsic arrays and slices ([arrays and slices](../../language/arrays-and-slices.md)); or accepted runtime APIs |
 | Source / Provenance | Legacy string and casting input after literal-focused review established current source identities and compile-time behavior |
 
 ## Why this input exists
@@ -150,14 +150,18 @@ result.
 
 ## Allocation, mutation, and capacity
 
-Future string/container work must define:
+Current [arrays and slices](../../language/arrays-and-slices.md) now supplies
+fixed/ranged owning arrays, borrowed slices, logical length, usable and
+suggested capacity, storage-provider selection, joining, transfer, relocation,
+invalidation, and iterable construction. Future string work consumes those
+concepts rather than redefining them.
 
-- fixed versus dynamic length identities;
-- `IndexSize` capacity and overflow;
-- flat, segmented, rope-like, inline, stack, arena, heap, or borrowed storage;
+String-specific work must still define:
+
 - builders and amortized growth;
-- copy/move/deep/last behavior;
-- slices and views;
+- whether string values share array-compatible storage providers and unique
+  backing handles;
+- which provider types/capabilities preserve each string invariant;
 - mutation while preserving UTF, ASCII, code-page, and selected terminator-policy
   invariants;
 - querying whether an ordinary string is already contiguous;
@@ -166,6 +170,12 @@ Future string/container work must define:
 - writable code-unit access;
 - invalidation of references and views; and
 - compile-time constants materialized into runtime storage.
+
+An ordinary string may use a linked, rope, inline, contiguous, or another
+storage provider without exposing itself as an intrinsic array. A required
+contiguous foreign view must force or prove one applicable provider region and
+preserve its array/slice lifetime contract. Unsafe access to an erased provider
+object is not raw access to string code units.
 
 Baseline `Legacy.CharString`, optional `Legacy.WideString`, and MBCS are
 length-tracked and have no sentinel requirement.

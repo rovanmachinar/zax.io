@@ -82,10 +82,10 @@ func final : (result : String)(input1 : Integer, input2 : String) = {
 
 // capture values for a later function invocation
 // (don't actually call the function now)
-funcLater1 := [2, "hello"] >> func
+funcLater1 := [[2, "hello"]] >> func
 
 // the above statement is functionally equivalent to this statement
-funcLater2 := [a := 2, b := "hello"] { func(a, b) }
+funcLater2 := [[a := 2, b := "hello"]] { func(a, b) }
 
 // call the previously captured function
 result := funcLater1()
@@ -110,7 +110,7 @@ func1 final : ()(name : String, age : Integer) = {
 
 myNameIs final := "Slim"
 
-func2 final := [name = myNameIs] >> func1
+func2 final := [[name = myNameIs]] >> func1
 
 // will print "name: Slim age: 47"
 func2(47)
@@ -122,14 +122,14 @@ func2(48)
 name final := "Shady"
 
 // capture the `name` variable which matches the functions input variable `name`
-func3 final := [name] >> func1
+func3 final := [[name]] >> func1
 
 // will print "name: Shady age: 47"
 func3(47)
 
 // capture the `name` variable, and positionally assign to the functions input 
 // arguments (excluding name which is already matched)
-func4 final := [name, 48] >> func1
+func4 final := [[name, 48]] >> func1
 
 // will print "name: Shady age: 48"
 func4()
@@ -242,7 +242,7 @@ myMessage : String = "Try to capture me!"
 
 // ERROR: The function variable named `funcWithNoCapture` is not capable of
 // capturing data and thus will error if a capture was attempted
-funcWithNoCapture = [myMessage] {
+funcWithNoCapture = [[myMessage]] {
     // ...
 }
 ````
@@ -258,7 +258,7 @@ print final : ()(...) = {
 value := 42
 
 // ERROR: The function is a raw function pointer and cannot capture any values.
-func : ()()* = [value] {
+func : ()()* = [[value]] {
     print(value)
 }
 

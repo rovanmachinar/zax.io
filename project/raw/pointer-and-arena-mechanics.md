@@ -272,14 +272,35 @@ Pointer-layer `atomic` protects shared lifetime accounting only.
 
 ## Arrays and relocated elements
 
-An array implementation may keep elements contiguous, segmented, or otherwise
-organized. If future design provides an owning element view, it must not claim
-that keeping the array allocation alive keeps one relocated element place valid.
+Current [arrays and slices](../../language/arrays-and-slices.md) permits shared
+raw storage providers with one unique backing handle per array. Providers own
+raw chunks/slots and physical lookup; arrays own element lifetimes and
+programmer-visible invalidation. Backing relocation invalidates ordinary element
+pointers, references, slices, and cursors; keeping the provider alive does not
+keep one relocated element place valid.
 
-Array operation contracts and element-place stability are retained by
-[raw indexing and slicing input](indexing-and-slicing.md). Pointer provenance
-work must consume those guarantees rather than inventing a hidden stability
-promise.
+Future pointer work must define:
+
+- strong ownership of the provider versus unique ownership of one array handle;
+- transferring or adopting the unique handle during `move`/`last`;
+- provider/handle lifetime when an array is inline;
+- storage-erased versus exact provider references;
+- unsafe raw pointers to an erased provider object;
+- why such a pointer exposes no element contiguity;
+- provider-root provenance and safe typed access when storage type is known;
+- provider physical allocations hidden behind one array handle; and
+- failure/disposition when changing providers.
+
+The shared provider, unique handle, slot/chunk lookup, stability, factory, and
+storage-change protocol pressure is preserved by
+[raw array storage strategies](array-storage-strategies.md). This file owns the
+pointer provenance and ownership consequences of that future contract.
+
+Ordinary slices remain non-owning. If future design provides an owning or
+allocation-anchored slice, it must retain the exact array root while separately
+proving that every targeted element place remains current. Pointer provenance
+work must consume array operation guarantees rather than inventing hidden
+stability or treating one element as an allocation root.
 
 ## Structural slicing and copied pointers
 

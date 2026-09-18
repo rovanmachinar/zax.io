@@ -480,7 +480,7 @@ A module may explicitly export a named import binding. Downstream source then
 reaches that same generative instance through the exported path rather than
 creating another import automatically.
 
-Exact `private`, `[[export]]`, selective export, alias export, and re-export
+Exact `private`, `[<export>]`, selective export, alias export, and re-export
 syntax remains future compiler-directive/visibility work. That work inherits
 these constraints:
 

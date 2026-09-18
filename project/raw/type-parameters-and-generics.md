@@ -585,6 +585,33 @@ A `#` traversal requires progression but no `value at` result. Constraints must
 therefore compose protocol capabilities rather than require one monolithic
 iterator interface.
 
+Current [arrays and slices](../../language/arrays-and-slices.md) add an optional
+exact `source count` operation and contextual array-entry `from`. Future generic
+constraints must express:
+
+- whether exact non-consuming `count` exists;
+- which `IndexSize`, `Near.IndexSize`, or `Far.IndexSize` identity carries the
+  count;
+- agreement between that count and the corresponding traversal;
+- the element type and qualifications produced by `value at`;
+- whether a source is an owning fixed/resizable array, borrowed slice, or
+  another iterable;
+- exact storage provider type/instance or storage-relaxed acceptance;
+- provider capabilities such as contiguity, jagged shape, stable-prefix
+  mutation, or handle transfer;
+- logical array identity versus resolved storage profile;
+- storage-erased versus exact reference behavior;
+- unique provider-handle and associated stability token types;
+- storage-dependent `size of` and structural-layout constraints;
+- provider-factory/default-context selection;
+- consuming range/chunk transfer;
+- place-stability guarantees when required; and
+- whether structural mutation invalidates the cursor or yielded references.
+
+The intrinsic `T[N]`, `T[min..max]`, and `T[]` families do not establish the
+syntax for declaring general user-defined generic collections. Generic work
+must express the current concrete behavior rather than reinterpreting it.
+
 Generic syntax must describe these existing operations. It must not introduce a
 second cursor protocol or reinterpret concrete `each from` behavior.
 

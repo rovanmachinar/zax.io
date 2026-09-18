@@ -194,20 +194,36 @@ overloadable complete call form.
 ### Index
 
 ```zax
-Matrix :: type {
+MySequence :: type {
   // Illustrative declaration syntax.
   operator index final :
-    (result : Float)(row : Index, column : Index) readonly = {
-    return readElement(_, row, column)
+    (result : MyResult)(index : IndexSize) readonly = {
+    return readElement(_, index)
   }
 }
 
-element := matrix[row, column]
+sequence : MySequence
+element := sequence[index]
 ```
 
-Index is a postfix delimited form rather than a pair of independent bracket
-operators. Exact indexing, slicing, proxy, and bounds behavior remains future
-work.
+Each postfix index bracket supplies one index. Multidimensional source chains
+brackets:
+
+```zax
+element := matrix[row][column]
+```
+
+Intrinsic arrays use each operation to select the corresponding element or
+nested array storage. A custom declaration may instead return an ordinary value,
+a reference, or a helper object that represents later access; that helper is
+called a proxy.
+
+A bracket containing an inclusive or half-open range forms a distinct splice
+operation. Custom `operator splice 1` declarations may return any result type.
+Direct indexed or spliced mutation can select one mixfix without an
+intermediate proxy. Complete array bounds, slicing, mutation, and result
+behavior is defined by
+[Zax arrays and slices](arrays-and-slices.md#indexing-element-places).
 
 Mixfix declarations and uses are taught by
 [Zax mixfix operators](mixfix-operators.md).
@@ -240,6 +256,18 @@ candidate.
 The left result identity owns admission, transcoding, failure, and the joined
 result. Complete byte, ASCII, Unicode, and legacy string behavior is defined by
 [Zax strings and characters](strings-and-characters.md#compile-time-joining).
+
+Intrinsic arrays also define runtime `<+>` as nonmutating sequence joining and
+`<+>=` as direct append into a resizable left receiver:
+
+```zax
+combined := left <+> right
+left <+>= right
+```
+
+Their result bounds, layout, allocation, transfer, overlap, and source-state
+behavior belong to
+[Zax arrays and slices](arrays-and-slices.md#joining-arrays).
 
 `<+>` is distinct from implicit adjacent source merge and its optional explicit
 `<|>` spelling. That
@@ -1050,8 +1078,9 @@ See the [operator catalog](operator-catalog.md) for exact forms,
 [mixfix operators](mixfix-operators.md) for tree-pattern operations. Literal
 declarations and required compile-time joining are defined by
 [literal source and operators](literal-source-and-operators.md). Runtime `<+>`,
-unbounded/custom numeric families, exhaustive fixed/floating forms, call/index
-edge cases, allocation, pointers, generics, reflection, build-contract syntax,
+outside the current array family and future runtime string behavior,
+unbounded/custom numeric families, exhaustive fixed/floating forms, non-array
+call/index edge cases, pointers, generics, reflection, build-contract syntax,
 and panic recovery remain future focused work. Current
 fixed-point and floating semantics are owned by
 [fixed-point scalars](fixed-point-scalars.md) and

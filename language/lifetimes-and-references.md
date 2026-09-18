@@ -416,19 +416,45 @@ lifetime rather than rebinding.
 
 ### Arrays and collections
 
-A fixed-shape array keeps its element places stable for the array's life path.
-A dynamic collection's operation contract must say which element places remain:
+A fixed array never changes how many element places it owns, so a reference to
+one of those places can remain valid until that element or the array ends.
+Complete array replacement or an explicit future storage transition may still
+end those places; fixed describes element count, not immunity from replacing
+the whole array representation.
 
-- an in-capacity operation may preserve existing elements;
-- contiguous growth may construct new elements, transfer contents, and destroy
-  every old element;
-- a segmented structure may relocate only affected segments; and
-- removal ends the removed element path.
+A resizable array may have to move or remove elements. Each size-changing
+operation therefore states what remains valid:
 
-Reference stability is programmer-visible behavior, not an invisible
-implementation choice.
+- Growing at the end within existing capacity preserves the old elements.
+- Moving to new backing storage invalidates access to every old element place.
+- Shrinking ends the removed suffix and preserves the earlier elements.
+- Insertion preserves an unaffected prefix at most and moves or replaces later
+  elements.
+- Removal ends the selected elements and may move or replace later elements.
 
-Complete dynamic-array operation contracts remain future array work.
+A slice borrows the particular element places selected when it is created. It
+does not retarget whatever values later occupy the same numeric indexes.
+Relocation invalidates every affected slice; insertion or removal invalidates
+intersecting and following slices. An invalidated slice never becomes empty or
+revives after later growth.
+
+If source makes an invalid use certain, the compiler rejects it. When validity
+can only be checked while running, the slice may carry origin/validity
+information and the use can panic. Complete array operations, slice behavior,
+capacity, and traversal are explained by
+[Zax arrays and slices](arrays-and-slices.md#element-place-stability).
+
+A reference obtained from an element remains bound to the original place. It
+does not follow that element when an array moves it elsewhere.
+
+Array storage providers participate in this decision. The provider reports
+which raw slots, chunks, or mappings changed; the array translates that change
+into element-place and slice invalidation. Future storage work may represent the
+relationship with stability kinds/tokens and observed versions.
+
+An unconstrained `T[N] &` can be a storage-erased array reference carrying the
+common operations needed to reach inline or provider-backed elements. It still
+borrows one fixed source array place and may not outlive that array.
 
 ### Pointer members and pointees
 
@@ -653,7 +679,7 @@ Lambda capture defaults to `copy`, even when the captured name is a reference:
 source : Document
 view : Document readonly & = source
 
-callback := [view] {
+callback := [[view]] {
   inspect(view) // observes a Document copied into the capture path
 }
 ```
@@ -800,7 +826,7 @@ Still deferred:
 - exact compiler proof algorithms;
 - opaque callable origin metadata;
 - exact reference-capture syntax;
-- dynamic-array stability contracts;
+- runtime-fixed array and multidimensional block-view lifetime contracts;
 - variant and unmanaged-union design;
 - async suspension and cancellation;
 - formal grammar, ABI, layout, and lowering.

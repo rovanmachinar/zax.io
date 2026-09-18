@@ -330,6 +330,173 @@ result : MyType? ? =
 Complete optional depth and construction behavior is defined by
 [Zax optional values](optional-values.md#nested-optionals).
 
+### Array expressions, capture delimiters, and slicing
+
+One bracket pair forms an array expression:
+
+```zax
+values := [ 1, 2, 3 ]
+matrix := [ [ 1, 2 ], [ 3, 4 ] ]
+```
+
+A contiguous double-bracket opener instead begins lambda capture:
+
+```zax
+callback := [[ values ]] : ()() = {
+  use(values)
+}
+```
+
+This is a mandatory intent boundary:
+
+- `[ [` and `] ]` present nested array source;
+- `[[ ... ]]` presents capture;
+- compact nested-array `[[1, 2], [3, 4]]` is a confusable-form error;
+- `]]` has capture-closing meaning only in the corresponding capture context;
+  and
+- adjacent `][` remains ordinary chained indexing.
+
+```zax
+matrix[row][column] = replacement
+```
+
+An array expression's comma list follows the ordinary delimiter and list rules.
+Each ordinary entry contributes one element, including an array or slice value:
+
+```zax
+slices := [ firstRow[..], secondRow[..] ]
+```
+
+Contextual `from` in an array entry expands an array, slice, or cursor-driven
+iterable:
+
+```zax
+values := [
+  from firstRow,
+  from secondRow[1..],
+  from generatedValues
+]
+```
+
+Final bare `..` requests default construction of an exact remaining element
+count:
+
+```zax
+values : MyItem[5] = [ first, second, .. ]
+```
+
+It is not a general expression or open-ended source outside this array-entry
+position.
+
+Inside an array expression, `[{...}]` remains one construction packet for one
+expected element:
+
+```zax
+items : MyItem[2] = [
+  [{ "first", 1 }],
+  [{ "second", 2 }]
+]
+```
+
+Postfix brackets containing an index remain index source. A bracket containing
+`..` or `..<` forms splice source:
+
+```zax
+element := values[index]
+inclusive := values[start..end]
+halfOpen := values[start..<end]
+```
+
+`..<` is the longest recognized token. `start..<` is malformed because the
+exclusion marker has no endpoint. Bare and omitted inclusive endpoints remain
+contextual inside the splice brackets.
+
+In an array type, `T[0..]` and `T[..]` are equivalent open length ranges.
+Inclusive `T[0..0]` permits only zero; half-open `T[0..<0]` permits no length
+and cannot declare a value.
+
+Array storage source must preserve an explicit provider instance versus
+provider type:
+
+```zax
+byInstance : Integer[50] storage provider
+byType : Integer[50] storage type MyStorage
+both : Integer[50] storage provider type MyStorage
+```
+
+One storage clause follows the complete dimension list and applies to the whole
+multidimensional array:
+
+```zax
+matrix : Integer[4][3] storage type Flat
+```
+
+Putting separate storage clauses inside individual dimensions is invalid.
+
+A type alias may retain a storage type requirement but cannot capture a runtime
+provider instance:
+
+```zax
+MyFlatArray :: alias type Integer[4][3] storage type Flat
+```
+
+`storage` precedes its provider instance expression. An optional following
+`type MyStorage` explicitly restates the inferred provider type. `storage type`
+without an instance supplies only the provider type requirement.
+
+Future storage-contract work may add capability requirements without changing
+this single-clause, whole-array attachment.
+
+Dimension descriptors remain written from outermost to innermost. Slicing one
+dimension replaces that dimension's count/range with `[]` while preserving
+later dimensions:
+
+```zax
+myValues : Integer[5][6]
+rows := myValues[..]
+// Integer[][6]
+
+row := myValues[0][..]
+// Integer[]
+```
+
+`Integer[][]` instead describes an outer slice whose elements are themselves
+slices.
+
+Complete array identity, inference, endpoint normalization, capture meaning,
+and operation behavior belongs to
+[Zax arrays and slices](arrays-and-slices.md#array-expressions).
+
+### Compiler-directive enclosure
+
+Contiguous `[[ ... ]]` belongs to lambda capture. A compiler directive instead
+uses contiguous `[<` and `>]` delimiters:
+
+```zax
+// Illustrative directive name; exact directive catalog remains future work.
+[<likely>] if condition {
+  handleExpectedCase()
+}
+```
+
+`[<likely>]` is metadata attached to the following `if`; it is not an array,
+capture, grouped expression, or ordinary `<`/`>` comparison.
+
+The enclosure is recognized only where compiler-directive attachment is
+permitted. Its payload must follow the selected directive's own argument
+grammar. Several directives may be adjacent:
+
+```zax
+// Illustrative directive names; exact directive catalog remains future work.
+[<likely>][<hot>] while condition {
+  process()
+}
+```
+
+The source form does not establish `likely`, `hot`, or any other directive by
+itself. Current/future directive owners define which names exist, where they
+attach, whether they carry arguments, and what they mean.
+
 ### Circumfix attachment
 
 A circumfix opener attaches to the enclosed expression on its right, and its
@@ -1776,6 +1943,14 @@ Layout and separator diagnostics additionally distinguish:
   region;
 - a body-opening `{` separated onto the next physical line;
 - a scope-opening `{` without whitespace on both sides;
+- compact nested-array `[[...]]` where contiguous `[[` presents lambda capture;
+- malformed or mismatched `[[ ... ]]` capture delimiters;
+- malformed or mismatched `[< ... >]` compiler-directive delimiters;
+- a compiler-directive enclosure in a source position that accepts no
+  directive attachment;
+- an array-entry `from` without a complete iterable source;
+- bare default-remainder `..` outside a valid final array-entry position;
+- `..<` without a written end;
 - compact `T??` where two optional type layers require `T? ?`;
 - spaced `[{ }]` where a zero-entry construction packet requires `[{}]`;
 - a bare construction packet in an expression position without a destination;
@@ -1900,12 +2075,12 @@ a declared or fenced operator phrase carry phrase roles instead. The complete
 keyword catalog and each construct's grammar remain with their own owners and
 future work.
 
-Legacy material places compiler directives adjacent to, within, or around source
-constructs, but their placement and attachment semantics remain later
-compiler-directive design. A directive on one physical line and a related
-construct on the next do not use `\` merely to express that relationship.
-Explicit continuation retains its single purpose of continuing one statement
-across physical lines.
+Compiler directives use the current `[< ... >]` enclosure. Each directive owner
+still defines its permitted attachment positions and whether a physical-line
+relationship is part of that attachment. A directive on one physical line and a
+related construct on the next do not use `\` merely to express that
+relationship. Explicit continuation retains its single purpose of continuing
+one statement across physical lines.
 
 Keyword-neutral `bare{...}` uses a contiguous opener, requires one independently
 complete payload, creates no scope or final tree boundary, neutralizes

@@ -218,8 +218,9 @@ operator call final :
 The input prototype supplies argument count, labels, defaults, qualifications,
 and transfers. Its result prototype uses ordinary result mapping.
 
-Inside a flattened mixfix declaration, `call N` or `index N` states how many
-prototype inputs belong to that component:
+Inside a flattened mixfix declaration, `call N` states how many prototype
+inputs belong to one call component. Each index bracket instead contributes one
+`index 1` component:
 
 ```zax
 // Illustrative mixfix declaration fragment.
@@ -391,6 +392,80 @@ call is ambiguous rather than silently choosing one ownership effect.
 
 Complete stance meaning, fallback, projection, and source post-state are defined
 by [Zax transfer stances](transfer-stances.md).
+
+### Array values, bounded references, and slices
+
+An owning array by-value parameter constructs an independent local array:
+
+```zax
+consume final : ()(
+  values : Integer[2..10]
+) = {
+}
+```
+
+The caller's array must currently contain between two and ten elements. If the
+compiler already knows that it does not, the call is an error. Otherwise the
+call checks the current length and panics before entering the body when it falls
+outside that range.
+
+The local parameter is a newly constructed owning array. The source's
+`copy`, `deep`, `move`, or `last` stance determines how that construction uses
+the caller's elements and storage.
+
+When the parameter names a provider instance, the local array uses that
+provider. When it names only `storage type MyStorage`, construction obtains a
+provider of that type. With no storage requirement, construction may reuse a
+compatible source provider or choose the destination context's default.
+
+A source array using another provider remains acceptable because this by-value
+boundary constructs new destination storage.
+
+A bounded array reference may adapt another intrinsic array while retaining its
+underlying bounds and storage capabilities:
+
+```zax
+change final : ()(
+  values : Integer[0..10] &
+) = {
+  values.resize(10)
+}
+```
+
+The call first checks that the array's current length fits `0..10`. The
+reference still remembers what the original array can actually do. A later
+resize must satisfy both the parameter's written limits and the original
+array's limits.
+
+Remembering those two sets of limits may require extra metadata, so this
+adapting reference can cost more than a reference to one exact array type.
+
+An array reference without a storage requirement is also storage-erased. Inline
+arrays and arrays using different provider instances/types can bind to the same
+concrete function implementation. The reference carries the common operations
+needed to locate elements through the source storage and may therefore be wider
+or more indirect than an exact storage-qualified reference.
+
+Binding such a reference creates no second array and copies no elements. A
+reference naming an exact provider type or instance accepts only a source using
+that storage because no destination storage is constructed.
+
+The source's complete declared length range need not fit inside the parameter
+range. Binding checks the current length. Later writable size changes check both
+the parameter's visible range and the source's actual range and may panic when
+only one accepts the request.
+
+A readonly array reference cannot change length, so after its entry check it
+does not need the source to support every size named by the parameter. A future
+no-panic callable capability may request stronger static range containment;
+ordinary writable references remain dynamically adapting.
+
+A by-value `T[]` parameter copies only the slice's window description; it does
+not copy the viewed elements. `T[] &` refers to that description and may bind
+to a temporary slice created from an array for the duration of the call.
+Complete identity, construction, storage selection, qualification, and failure
+behavior belongs to
+[Zax arrays and slices](arrays-and-slices.md#array-and-slice-parameters).
 
 ### Preferred composition projection
 

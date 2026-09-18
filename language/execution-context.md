@@ -4,9 +4,9 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers using thread-scoped services and context-provided defaults |
-| Applies To | The `___` execution context, its application-wide shape, per-thread instance, replacement, and default-arena role; not a formal grammar or runtime ABI |
+| Applies To | The `___` execution context, its application-wide shape, per-thread instance, replacement, default arenas, and default array-storage selection; not a formal grammar or runtime ABI |
 | Implementation State | Not established by this repository |
-| Owns | The programmer-facing execution-context mental model and its relationship to allocation defaults |
+| Owns | The programmer-facing execution-context mental model and its relationship to allocation and array-storage defaults |
 | Does Not Own | Allocation syntax and arena behavior ([pointers, allocation, and arenas](pointers-and-arenas.md)); partial-type mechanics; async context switching; arena interfaces; task-local context; or implementation transport |
 | Source / Provenance | Legacy context input reconciled with current allocation, lifetime, and concurrency design |
 | Supersedes | The retired root context page |
@@ -97,6 +97,45 @@ The complete allocation forms, defaults, ordering, failure, ownership, and arena
 requirements are defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
 
+## Default array storage
+
+An array declaration with no explicit provider resolves a storage
+representation profile before its owning layout and `size of` are fixed. When
+that profile is provider-backed, construction may ask the current context for a
+compatible provider instance:
+
+```zax
+values : Integer[0..]
+```
+
+The request identifies the element slot size/alignment, dimensions and size
+limits, initial count, and any required storage capabilities. The context may
+return strong access to a compatible shared provider or another declared
+provider default whose costs remain visible.
+
+Runtime context replacement cannot change one already resolved owning
+representation from inline to provider-backed or otherwise change its
+self-contained size. Inline versus provider-backed representation is resolved
+before runtime provider-instance selection.
+
+An explicitly supplied provider or provider type overrides this selection:
+
+```zax
+provider : MyStorage * strong
+
+byInstance : Integer[50] storage provider
+byType : Integer[50] storage type MyStorage
+```
+
+A shared provider still gives each array one unique backing handle. The
+provider's own backing arenas remain its concern; selecting an array provider
+does not silently replace the context's default object or control-block arenas.
+
+Exact context hooks, storage-provider factories, capability request shape,
+shared-provider initialization, and teardown remain future work. Current
+programmer-visible storage selection is explained by
+[Zax arrays and slices](arrays-and-slices.md#storage-strategies).
+
 ## Nested allocations
 
 An arena selected for one allocation does not become an implicit default for
@@ -127,13 +166,14 @@ callees.
 ## Costs and diagnostics
 
 Using a context-provided default introduces a dependency on the current thread
-context even though source omits an explicit arena operand. Tooling should expose
-which context member supplied an effective default.
+context even though source omits an explicit arena or storage operand. Tooling
+should expose which context member supplied an effective default.
 
 Representative diagnostics include:
 
 - replacement context has the wrong resolved shape;
 - required default arena is unavailable;
+- no default array storage satisfies the requested shape/capabilities;
 - selected context service is incompatible with the current thread;
 - context replacement would violate a live operation's captured dependency; and
 - async or cross-thread code has no defined context-transfer behavior.

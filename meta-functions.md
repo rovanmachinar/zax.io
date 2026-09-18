@@ -28,6 +28,11 @@ runtime result inference.
 > Reflection-dependent behavior is preserved in
 > [raw reflection input](project/raw/reflection.md).
 >
+> Current compiler directives use `[<directive>]`; contiguous `[[ ... ]]`
+> belongs to lambda capture. Directive spellings using `[[...]]` below remain
+> legacy evidence. See
+> [Zax source structure](language/source-structure.md#compiler-directive-enclosure).
+>
 > This note routes those concerns without rewriting the complete legacy syntax
 > below.
 
@@ -198,7 +203,7 @@ alternativeAdd final : (
 )(
     input1 : Float,
     input2: Float
-) = [importantValue] {
+) = [[importantValue]] {
     return importantValue + input1 + input2
 }
 
@@ -332,7 +337,7 @@ result2 : Short = add(100, 50)
 // some value to capture
 myValue : U8 = 8
 
-alternativeAdd : [myValue] (
+alternativeAdd : [[myValue]] (
     result : U8
 )(
     value1 : Integer,

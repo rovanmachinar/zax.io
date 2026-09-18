@@ -370,6 +370,58 @@ reflection remains responsible for deciding how tools and generic code inspect:
 Reflection must not claim that a runtime value remembers which duplicate-valued
 member name produced it.
 
+## Array and slice metadata
+
+Current [arrays and slices](../../language/arrays-and-slices.md) establishes
+facts that future reflection must expose without turning representation into a
+contract.
+
+Type-level facts include:
+
+- owning fixed, owning resizable, or borrowed slice role;
+- element type and complete element qualifications;
+- rank and each dimension's exact or ranged bounds;
+- logical array identity versus resolved storage provider/profile;
+- exact provider type/instance and statically required storage capabilities;
+- inline/provider-backed owning representation;
+- storage-erased versus exact reference profile;
+- descriptor-layer qualifications; and
+- explicit versus defaulted storage, bounds, and source properties where
+  provenance affects stability.
+
+Value-level facts include:
+
+- current logical length for each applicable dimension;
+- usable array capacity;
+- provider physical slot/byte extent when its API exposes that fact;
+- absent or present suggested capacity;
+- current operation/capability availability;
+- provider identity and unique handle under permitted typed access;
+- stability kind/token and observed/current versions; and
+- dynamically exposed storage state only when a declared API makes that state
+  programmer-visible.
+
+Array expressions also create source-reflection pressure for `[ ... ]`,
+`[ [` nested source, `[[ ... ]]` capture distinction, required array-entry
+`from` expansion, final default-remainder `..`, storage clauses, and nested
+construction packets.
+
+Reflection must distinguish:
+
+- `size of T`, which reports one self-contained owning representation;
+- `size of T &`, which reports the reference representation;
+- a logical type obtained by stripping reference;
+- actual owner storage erased behind an unconstrained reference; and
+- external provider backing, which neither `size of` query includes.
+
+Knowing a provider type may permit safe typed provider/handle access. Erased
+storage may expose an unsafe raw provider-object pointer, never an automatically
+contiguous element pointer.
+
+Exact API names, metadata record shape, iterable count provenance, stability
+representation, provider/handle reflection, and source-location representation
+remain future work.
+
 ## Traversal reflection roles
 
 [Zax iteration](../../language/iteration.md) defines current enum and structural

@@ -1179,6 +1179,43 @@ The `move source` adapter forwards `move` inward without scheduling absence.
 The complete wrapper, nested-state, cleanup, and optional swap behavior is
 defined by [Zax optional values](optional-values.md).
 
+## Arrays and slices
+
+Copying an owning array creates another array with its own element places and
+backing storage. Each element performs its ordinary `copy`. `deep` does the
+same at the array level but requires every element to support its exact
+independent-copy contract; it never falls back to ordinary copy.
+
+An array using inline storage cannot hand its enclosing bytes to another value,
+so `move` and `last` transfer its elements one by one. A provider-backed array,
+including a fixed-length one, may hand over its strong provider participation
+and unique backing handle when the destination accepts them.
+
+`move` must leave the source as a valid live moved-from array. `last` can leave
+less behind because the source only needs to remain safe for its final
+destruction.
+
+Copying or moving a slice changes only its window description. It never
+implicitly copies or moves the array elements viewed through that slice. A
+storage-assisted consuming range transfer must be rooted in the owning array;
+`slice as last` cannot transfer a handle the slice does not own.
+
+Array joining accepts ordinary stance restatement:
+
+```zax
+combined := left <+> right
+reused := left as last <+> right
+```
+
+With no explicit destination provider, `copy` or `deep` may retain the same
+shared provider while requesting another unique region. `move` or `last` may
+transfer the existing unique handle under their source-state rules.
+
+The selected array operation decides whether provider/backing storage can be
+reused, which elements must be copied or transferred, and which result size is
+produced. Complete behavior is explained by
+[Zax arrays and slices](arrays-and-slices.md#copy-deep-move-and-last).
+
 ## Qualifier promises remain exact
 
 Transfer stance is not a fourth per-layer qualifier axis. Consumer declarations

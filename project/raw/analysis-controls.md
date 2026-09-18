@@ -403,6 +403,41 @@ Candidate domains include bounds, nonzero divisors, explicit panic-on-absence
 operations, allocation failure, and other checks whose runtime condition is
 well-defined. Each domain still owns its safe default and exact failure.
 
+### Panic registry pressure from intrinsic arrays
+
+Every defined runtime panic condition needs a stable registry entry rather than
+an ad hoc feature-local switch. Language-owned and programmer/library-owned
+categories need collision-free provenance. Tooling and reproducible build
+metadata must expose the effective enabled/disabled state of each category.
+
+Current [arrays and slices](../../language/arrays-and-slices.md) require
+provisional registry entries for:
+
+- element index outside bounds;
+- splice endpoint or order outside bounds;
+- requested logical length outside its admitted range;
+- initializer cardinality mismatch;
+- invalidated slice use;
+- foreign slice origin supplied to mutation;
+- iterable exact-count promise mismatch;
+- backing extent overflow; and
+- required backing allocation failure.
+
+Exact identifiers remain future work. Each condition is independently
+selectable. Disabling one permits omission of its required runtime check and
+makes violation undefined, but it never suppresses a statically mandated error
+or the check required by an optional/reporting operation.
+
+Slice invalidation additionally pressures the registry to expose check cost and
+provenance. Current storage-strategy direction may let a slice retain a
+stability kind/token and observed version while the array and provider
+cooperate to advance versions after mapping/chunk changes. A statically proved
+use may eliminate the check; a mismatch enters the existing invalidated-slice
+category.
+
+Exact token/version representation remains future array-storage work rather
+than registry authority.
+
 Categories are independently selectable rather than one all-or-nothing panic
 mode. For allocation, ordinary `@` checks request failure and enters panic.
 Disabling only that category may omit the check under a success guarantee; an

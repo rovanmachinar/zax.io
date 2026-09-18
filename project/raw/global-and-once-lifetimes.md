@@ -78,6 +78,48 @@ Cache or generated-code reuse must not merge state. Conversely, different local
 aliases to one deliberately injected module instance must not duplicate its
 state accidentally.
 
+## Shared array-storage provider pressure
+
+Current array storage direction permits one provider instance to back several
+arrays through strong provider participation and independent unique array
+handles.
+
+A storage type may expose a receiverless factory:
+
+```zax
+MyStorage :: type {
+  defaultStorage final : (
+    result : MyStorage * strong
+  )() unbound = {
+    return MyStorage.sharedStorage
+  }
+
+  // Illustrative future once-value syntax.
+  sharedStorage once : MyStorage * strong
+}
+```
+
+The `unbound` factory can be called through the storage type. `once` on a
+function would not memoize its result. Sharing therefore requires separately
+owned persistent provider state, potentially through a future type-owned
+`once` value, the execution context, a global owner, or another explicit
+lifecycle.
+
+Future work must define:
+
+- construction and publication of the shared provider;
+- whether concurrent first use blocks, retries, or panics;
+- how provider-factory calls prove stable shared identity;
+- provider replacement;
+- teardown after arrays and raw provider pointers end;
+- module-instance versus process-wide sharing;
+- interaction with execution-context replacement; and
+- failure while an array requests its unique backing handle.
+
+The provider/handle protocol remains
+[indexed array-storage-strategy work](array-storage-strategies.md). This file
+owns only the shared provider value's global/`once` lifetime pressure.
+
 ## Activation and retirement
 
 Activate this input when global initialization, `once`, module startup, process

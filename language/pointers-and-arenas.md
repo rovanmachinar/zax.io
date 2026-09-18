@@ -623,9 +623,20 @@ The distinction determines:
 - whether raw `reset` may disposition the allocation; and
 - what an anchored pointer keeps alive.
 
-An array's complete allocated array place is its root, not any individual
-element. The allocation root is a language-level place and path, not a promise
-that its address is the first physical byte.
+When the array object itself is dynamically allocated, the complete array place
+is that allocation's root; no element is an independent root merely because a
+pointer can target it.
+
+The array may separately retain strong ownership of a raw storage provider and
+one unique handle for its backing region. A provider may implement that region
+with one allocation, several chunks, or individual nodes. The unique handle
+owns their combined disposition for this array; individual elements remain
+non-dispositionable.
+
+Growing, trimming, or changing provider may relocate elements. Complete storage
+selection, usable capacity, handles, and relocation are explained by
+[Zax arrays and slices](arrays-and-slices.md#counts-storage-extent-and-allocation).
+Exact provider/handle mechanics remain indexed future storage-strategy work.
 
 Every dynamic allocation retains or can recover an allocation record containing:
 
@@ -1026,6 +1037,11 @@ cross:
 
 Those paths may disappear, relocate, or belong to another life path while the
 proposed ownership anchor remains alive.
+
+An ordinary slice does not change this boundary. It borrows array element
+places and cannot keep a relocated element alive merely by retaining the
+array's allocation. Owning or allocation-anchored slices remain explicit future
+array/pointer design.
 
 Whether one uninterrupted chain of direct composition may be anchored in one
 operation remains deferred. Unsafe ownership anchoring also remains future work.
