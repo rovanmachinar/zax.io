@@ -226,7 +226,7 @@ print final : ()(...) = {
 
 // define and declare a function that return no results and takes no input
 // arguments and has no ability to capture data and assign the function to
-// point to nothing (since the function is only a function pointer without
+// start unavailable (the function is only a function pointer without
 // the storage capacity of captured values)
 funcWithNoCapture : ()() *
 
@@ -436,14 +436,16 @@ MyType :: type {
 
 Current `once bound` invocation is owned by
 [Zax function invocation](language/function-invocation.md#type-and-instance-calls-to-once-functions).
-It permits type- or instance-qualified calls. A type-qualified call supplies
-the bound receiver slot in its `Nothing` state; an instance-qualified call
-supplies that instance.
+It permits a receiverless type call or an instance-qualified call. A
+receiverless type call supplies the bound receiver slot with the type's Nothing
+instance; an instance-qualified call supplies the evaluated instance receiver.
+The cohesive model is defined by
+[Zax Nothing instances](language/nothing-instances.md).
 
 ````zax
 MyType :: type {
   inspect final once : ()() = {
-    // `_` is Nothing for MyType.inspect() and the instance for value.inspect().
+    // `?_` is false for MyType.inspect() and true for value.inspect().
   }
 }
 

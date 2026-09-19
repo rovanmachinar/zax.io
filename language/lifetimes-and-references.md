@@ -144,8 +144,8 @@ its disposition responsibility is transferred. `alias` copies only the raw
 address and cannot safely outlive that path.
 
 Replacing or resetting `scheduled` ends the old allocation path according to its
-recorded disposition and invalidates dependent aliases. A terminal transfer sets
-`scheduled` to `Nothing`; its later scheduled cleanup is therefore a no-op.
+recorded disposition and invalidates dependent aliases. A terminal transfer
+leaves `scheduled` vacant; its later scheduled cleanup is therefore a no-op.
 
 An open-ended raw allocation has no declaration-attached owner:
 
@@ -202,17 +202,35 @@ view = replacement
 ```
 
 It does not assign another target into `view`. A pointer is different: its
-pointer value may be replaced so that it points elsewhere or to `Nothing`.
+pointer value may be replaced so that it targets another place or becomes
+vacant.
 
 ### Non-null does not mean owning
 
-A live reference always has a referent. It cannot point to `Nothing`, but it does
-not keep the referent's life path alive.
+A live reference always has one fixed referent place and has no independent
+vacancy state. Ordinary reference construction starts from an ordinary live
+place, but unchecked pointer dereference can mechanically bind a reference to
+the pointee type's Nothing backing:
+
+```zax
+pointer : MyValue * = choosePointer()
+view : MyValue & = pointer.
+```
+
+The dereference performs no ordinary vacancy check. A statically proved vacant
+source is diagnosed; otherwise a runtime-vacant pointer binds `view` to the
+special backing. Prepared reads, trapping access, invalid writes, and custom
+containment then follow the type's
+[Nothing policy](nothing-instances.md#pointer-dereference-is-unchecked).
+
+The reference representation itself remains non-null-like and never rebinds.
+Binding or destroying it does not keep an ordinary pointee life path alive.
 
 Safe use requires proof that:
 
 - the referenced place still exists;
-- the place contains a complete resident instance;
+- the place contains a complete resident instance, or the selected operation
+  has defined Nothing-backing behavior;
 - no forbidden lifecycle transition overlaps the access; and
 - the access path retains the required qualifications and permissions.
 

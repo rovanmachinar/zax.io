@@ -212,7 +212,7 @@ copying a diagnostic message.
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
 | `redundant-outer-tracking` | Deliberately retain optional tracked outer-provenance semantics when the selected contract proves the exact origin | [Zax composition](composition.md#deliberately-retaining-redundant-tracking) |
-| `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer at `Nothing` | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
+| `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer vacant | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
 | `case-conflicting-enum-member-names` | Declare ASCII case-equivalent enum member names with different enum values | [Enums](enums.md#ascii-case-insensitive-lookup) |
 | `unreachable-selection-clause` | Deliberately retain one semantically proven unreachable complete `case` or `default` clause | [Switch, case, and default](switch.md#ordering-effects-and-overlap) |
 | `empty-selection` | Deliberately retain a runtime switch containing no clauses | [Switch, case, and default](switch.md#empty-selection) |
@@ -510,7 +510,7 @@ MyType :: type {
 
 The direct member allocation suppresses automatic pointee allocation for this
 constructor. The acknowledgement confirms that a normal path may deliberately
-leave the valid scheduled pointer at `Nothing`; it does not permit an
+leave the valid scheduled pointer vacant; it does not permit an
 indeterminate pointer representation.
 
 ### Terminal-source reuse

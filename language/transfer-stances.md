@@ -540,7 +540,7 @@ scheduled : MyValue * = @
 owner : MyValue * unique = scheduled as last
 ```
 
-An accepted transfer sets `scheduled` to `Nothing`. Its declaration cleanup
+An accepted transfer leaves `scheduled` vacant. Its declaration cleanup
 remains scheduled but later has no allocation to disposition. The `unique`
 destination becomes the allocation owner.
 
@@ -553,7 +553,7 @@ scheduled = otherScheduled as last
 ```
 
 It dispositions its previous allocation before adoption. The accepted source
-becomes `Nothing`.
+becomes vacant.
 
 An ordinary raw destination cannot retain either ownership relationship:
 
@@ -879,6 +879,36 @@ Document :: type {
 ```
 
 Receiver stance is independent from parameter and result stances.
+
+### Receiverless `once` calls
+
+A receiverless type call has no source declaration from which to obtain a
+stance. It synthesizes the containing type's Nothing receiver under `copy`
+before callable selection:
+
+```zax
+MyResource :: type {
+  inspect final once : ()() = {
+  }
+
+  consume final once : ()() last = {
+  }
+}
+
+MyResource.inspect()
+MyResource.consume() // error: receiverless copy cannot select exact last
+```
+
+An instance-qualified call retains its actual receiver stance:
+
+```zax
+(resource as last).consume()
+```
+
+No runtime rule turns `last` into `copy`. The invocation route determines the
+offered stance statically, and aliases or future closed callables must preserve
+that route. Complete receiverless and Nothing-instance behavior is defined by
+[Zax Nothing instances](nothing-instances.md#receiver-stance-is-statically-known).
 
 ### Compiler-created temporary receivers
 

@@ -517,8 +517,8 @@ requirements. Identity syntax cannot hide replacement, move, or destruction of
 that place.
 
 Exact identity-reference admission, representation-cast, alias, qualifier, and
-type-receiver syntax remain future identity and casting work. Complete reference
-behavior is defined by
+qualified type-identity discovery remain future identity and casting work.
+Complete reference behavior is defined by
 [lifetimes and references](lifetimes-and-references.md#same-storage-identity-views).
 
 The compiler never silently substitutes a reference view for a requested
@@ -550,6 +550,29 @@ and transfer use the applicable place, value, access, `copy`, `deep`, `move`, `l
 and lifetime rules.
 
 Storage compatibility never grants implicit conversion.
+
+### Nothing preparation
+
+A representation-trivial identity uses its compiler-prepared underlying
+default when a Nothing instance needs a readable member:
+
+```zax
+MyCount :: identity admit expose type U32
+```
+
+The prepared `MyCount` representation starts from the prepared `U32` default.
+This is not ordinary source admission through `from` and does not bypass an
+identity boundary for ordinary values.
+
+An identity with additional resident data follows the recursive aggregate
+member rules. If an exact member path has no valid prepared representation,
+access through compiler-provided Nothing uses the applicable panic or hardware
+trap where supported. A trapping policy requests target trapping before
+exposing the identity, while custom Nothing storage is prepared by its
+`+++ final once` body.
+
+Complete behavior belongs to
+[Zax Nothing instances](nothing-instances.md#what-compiler-preparation-provides).
 
 ## Partial definitions
 

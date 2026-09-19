@@ -129,13 +129,40 @@ but does not evaluate or capture `myValue`. Reflection must distinguish:
 
 - `bound` versus `unbound` prototype;
 - receiver type and qualifications;
-- a `Nothing` receiver state for a type-qualified `once bound` call;
+- a receiverless type-call route using the type's Nothing instance;
 - one fixed `final` implementation;
 - one `once varying` shared function slot; and
 - a future generated closed callable that stores or borrows a receiver.
 
 The future closed callable must report capture lifetime and provenance without
 pretending the original prototype contained that instance.
+
+### Nothing-instance metadata
+
+[Zax Nothing instances](../../language/nothing-instances.md) requires future
+reflection to distinguish:
+
+- the effective compiler-default, trapping, or custom policy for one concrete
+  type;
+- an explicit type policy from an inherited namespace-opening default, module
+  default, or language default;
+- the written directive source and the opening to which it attached;
+- a prepared readable member path from one that panics when accessed;
+- a receiverless type-call route from an instance-qualified route;
+- runtime pointer presence and function-value availability from static type
+  policy;
+- requested trap policy, target read/write trap capabilities, and whether
+  missing capability leaves an undefined access boundary;
+- canonical built-in identity and its fixed cross-module trapping policy;
+- custom Nothing storage and initialization cost; and
+- semantic pointer vacancy and function availability from a tag, sentinel
+  address, shared backing, thunk, target-protected region, or other physical
+  representation.
+
+Reflection must not expose compatible backing overlap as ordinary shared
+resident identity, merge concrete generic specializations, or imply that a
+vacant pointer and absent optional share one state. Exact metadata schema,
+source form, and compile-time/runtime availability remain future work.
 
 ## Declaration reflection
 

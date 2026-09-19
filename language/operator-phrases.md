@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, declaring, or evaluating word-spelled Zax operations |
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type receivers, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
+| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type-qualified discovery, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
 | Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); attached literal phrases, payloads, declarations, merge, and join ([literal source and operators](literal-source-and-operators.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); structural recognition of `dispose` by [Zax `using`](using.md); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
@@ -180,7 +180,7 @@ This document owns the phrase-specific word and presentation contract. General
 tokenization, comments, continuation, physical lines, and layout mechanics are
 owned by [source structure](source-structure.md#operator-phrase-source-integration).
 
-### Type arguments and type receivers
+### Type arguments and type-qualified operators
 
 A phrase prototype may declare a **type parameter slot** completed by one
 concrete type identity:
@@ -207,26 +207,48 @@ schema : MyReceiverType
 result := schema for SomeType
 ```
 
-A phrase may also be discovered through a concrete type identity rather than an
-instance:
+A phrase may also use a concrete type identity as its qualification and
+discovery anchor without inventing a separate receiver category:
 
 ```zax
 MyType :: type {
-  operator type pre unary 'custom type info for' final : (
+  operator pre unary 'custom type info for' final : (
     result : MyCustomTypeInfo
-  )() = {
-    // `_` has the Nothing state because no MyType instance exists.
+  )() unbound = {
+    // `_` is unavailable.
   }
 }
 
 info := custom type info for MyType
 ```
 
-A type-receiver phrase is not inherently compile-time; it may execute at runtime
-and return a runtime value. Type parameter slots, type arguments, and
-`operator type` receivers are general declaration and invocation concerns owned by
-[declarations and bindings](declarations-and-bindings.md#type-parameter-slots-and-type-arguments)
-and [function invocation](function-invocation.md#type-parameter-slots).
+`MyType` supplies type-owned lookup and no runtime receiver slot. The declaration
+is `unbound`, so `_` is unavailable. The phrase is not inherently compile-time;
+it may execute at runtime and return a runtime value.
+
+When one declaration deliberately supports both an instance operand and a
+type-qualified receiverless route, it uses ordinary `once`:
+
+```zax
+MyType :: type {
+  operator pre unary 'inspect' final once : ()() = {
+    if ?_
+      inspectInstance(_.)
+    else
+      inspectType()
+  }
+}
+
+value : MyType
+
+inspect value
+inspect MyType
+```
+
+Type parameter slots, type arguments, type-qualified `unbound`, and
+type-callable `once` are general declaration and invocation concerns owned by
+[declarations and bindings](declarations-and-bindings.md#type-qualified-operators)
+and [function invocation](function-invocation.md#type-and-instance-calls-to-once-functions).
 
 ### Reserved transfer-stance phrases
 
@@ -821,7 +843,8 @@ a formal grammar, a compatibility contract, or an implementation mapping.
 Complete source-reflection representation, richer phrase patterns,
 owner-authorized external phrase extensions, complete literal realization, the
 final spelling of a keyword-neutral source enclosure, exact diagnostic
-identifiers, and generic or alias type receivers remain focused future work.
+identifiers, and generic or alias type-qualified discovery remain focused future
+work.
 
 For exact forms and precedence see the
 [operator catalog](operator-catalog.md); for the shared operator model see

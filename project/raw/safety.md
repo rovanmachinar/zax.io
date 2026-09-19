@@ -197,7 +197,8 @@ incomplete destruction, or expose partial lifecycle state to ordinary code.
 
 For example, an allocation-failure helper may obtain more backing storage, extend
 the arena, and let the same blocked request succeed. It cannot turn a failed
-`@` allocation into `Nothing`; source selects `@!` when that result is wanted.
+`@` allocation into a vacant pointer; source selects `@!` when that result is
+wanted.
 
 Required-result fixed-width overflow likewise cannot resume with wrapping or a
 substitute result. Programs select optional, wrapping, saturating, or reporting
@@ -215,7 +216,7 @@ undefined, provided the cost and responsibility remain visible and reproducible.
 Panic categories are independently enabled or disabled rather than controlled
 as one all-or-nothing mode. Allocation has no separate unchecked operator:
 disabling the allocation-failure panic category applies the general promise to
-ordinary `@`, while `@!` must retain its check to produce `Nothing`.
+ordinary `@`, while `@!` must retain its check to report vacancy.
 
 This does not require runtime handles for static lifetime proof. A false unsafe
 optional-presence, reference-lifetime, or alias assertion may have undefined
@@ -225,6 +226,46 @@ that instrumentation is not a language guarantee.
 A source-program panic during compile-time execution must become a compiler
 diagnostic with source and evaluation-path context rather than an internal
 compiler crash. This does not imply a compile-time panic handler.
+
+## Nothing-instance safety pressure
+
+[Zax Nothing instances](../../language/nothing-instances.md) establishes a
+vacant pointer's special target and leaves several cross-feature safety
+classifications for future work:
+
+- a proved dereference of a vacant pointer is diagnosed, while an unproved
+  postfix dereference performs no universal vacancy check;
+- trapping policy uses target read protection when available, but an access
+  relying on unavailable hardware trapping has undefined behavior rather than
+  a universal generated software check;
+- access to an unreadable compiler-prepared member panics;
+- a write to compiler-provided Nothing backing is invalid, may be diagnosed
+  statically, traps on targets with suitable write protection, may be noticed by
+  optional instrumentation, and otherwise can corrupt shared backing or have
+  undefined consequences;
+- a custom Nothing instance may be writable, but mutation is ordinary shared
+  state with programmer-owned synchronization;
+- disabling an applicable pointer-arithmetic or access check accepts narrow
+  unsafe responsibility; and
+- unsafe cannot bypass managed-pointer disposition or legalize a guaranteed
+  leak.
+
+Future safety work must integrate these boundaries with independently
+selectable panic categories without promising one fixed proof algorithm or a
+check on every store. It must keep vacant pointers, absent optionals,
+unavailable function values, uninitialized storage, and ended lifetimes
+distinct in diagnostics.
+
+It must also distinguish certainty from suspicion. A compiler that proves an
+invalid Nothing write may reject it. When a pointer may flow into a later
+writer but invalidity is not proved, any standard unsafe responsibility likely
+belongs at that handoff or call boundary rather than on the eventual store.
+The provisional unsafe catalog records `possible-nothing-write` and
+`possible-nothing-read-trap`; the latter applies only to built-in trapping
+Nothing or a defined type selecting `= trap`.
+Whether stronger non-mandatory findings use standard compiler-dependent
+analysis, only language-defined cases, or `x-` extension diagnostics remains
+future safety/error design.
 
 ## Unchecked versus unsafe admission
 

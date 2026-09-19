@@ -8,12 +8,12 @@
 > completed by one concrete
 > [type argument](language/function-invocation.md#type-parameter-slots) that has
 > no runtime storage, lifetime, or evaluation. A
-> [type-receiver operation](language/declarations-and-bindings.md#type-receiver-operators)
-> is discovered through a concrete type identity and is not inherently
-> compile-time.
+> [type-qualified operation](language/declarations-and-bindings.md#type-qualified-operators)
+> uses a concrete type identity as its lookup anchor, is declared `unbound` or
+> `once`, and is not inherently compile-time.
 >
 > The `MyType$(Type)` parameterized-type spelling, the `$Type` sigil, generic
-> instantiation identity, generic and alias type receivers, and generated type
+> instantiation identity, generic and alias type-qualified discovery, and generated type
 > families below are **not** current design. They are preserved as future input in
 > [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
 >

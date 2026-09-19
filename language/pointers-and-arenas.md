@@ -6,8 +6,8 @@
 | Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
 | Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset`; pointer presence and ownership transitions; allocation/pointer costs and diagnostics |
-| Does Not Own | General declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; arena API/registration; or pointer-cast syntax |
+| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; pointer vacancy, presence, and ownership transitions; allocation/pointer costs and diagnostics |
+| Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; arena API/registration; or pointer-cast syntax |
 | Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
 
@@ -61,8 +61,8 @@ view : MyValue *
 anotherView : MyValue * = view
 ```
 
-`empty` and `view` contain `Nothing`. `anotherView` copies the raw address-like
-value from `view`.
+`empty` and `view` are vacant. `anotherView` copies the raw address-like value
+from `view`.
 
 Allocation cannot appear as an independent expression. Assignment requires an
 already typed pointer destination:
@@ -122,7 +122,7 @@ open = @<{ anotherArena }
 // error when the prior open allocation is still live
 ```
 
-This is safe when analysis proves `open` is already `Nothing` or its previous
+This is safe when analysis proves `open` is already vacant or its previous
 allocation was dispositioned. Overwriting a proved live open allocation is a
 non-acknowledgeable lifecycle error. When opaque code prevents proof of prior
 disposition, narrow unsafe responsibility—not intent acknowledgement—must supply
@@ -165,13 +165,13 @@ The exact reserved forms are:
 | Form | Storage-request failure | Raw result |
 | --- | --- | --- |
 | `@` | Panic | Destination declaration schedules disposition |
-| `@!` | Return `Nothing` | Destination declaration schedules disposition after success |
+| `@!` | Return a vacant pointer | Destination declaration schedules disposition after success |
 | `@<` | Panic | Open-ended; no automatic disposition owner |
-| `@!<` | Return `Nothing` | Open-ended after success |
+| `@!<` | Return a vacant pointer | Open-ended after success |
 
 These are indivisible tokens, not compositions of independently invoked `@`,
 `!`, and `<` operators. `@!` reports request failure through the pointer's
-ordinary `Nothing` state; plain `@` still checks failure and panics.
+ordinary vacancy; plain `@` still checks failure and panics.
 
 `@<` and `@!<` apply to raw pointer destinations. They do not make sense for
 `unique` or shared destinations whose pointer role already owns disposition.
@@ -301,7 +301,7 @@ The programmer-visible order is:
 9. Publish the complete pointer.
 
 For `@!` and `@!<`, failure of a later storage request releases every earlier
-uncommitted reservation exactly once before producing `Nothing`.
+uncommitted reservation exactly once before producing a vacant pointer.
 
 For `@` and `@<`, a failed request enters panic while the operation remains
 blocked. A narrowly applicable helper may repair the condition and allow that
@@ -310,7 +310,7 @@ not return a substitute result, skip the failed operation, continue with partial
 state, or introduce exception-style unwinding.
 
 `@!` controls allocation-request failure only. It does not translate a
-constructor or nested-operation panic into `Nothing`.
+constructor or nested-operation panic into vacancy.
 
 ### Adopt an existing allocation
 
@@ -348,19 +348,26 @@ prepared : MyValue * unique shareable =
 The producer's declared result stance and disposition authority—not its name—
 determine whether adoption is safe.
 
-When the source is runtime `Nothing`, both `@` and `@!` produce a `Nothing`
+When the source is runtime-vacant, both `@` and `@!` produce a vacant
 destination without requesting metadata or entering panic. Applying this
-operation to a source statically proved `Nothing` is a non-acknowledgeable intent
+operation to a source statically proved vacant is a non-acknowledgeable intent
 error because no work can occur.
 
-For `@!`, metadata-allocation failure leaves the destination at `Nothing`, keeps
+For `@!`, metadata-allocation failure leaves the destination vacant, keeps
 the source's original authority unchanged, and releases partial metadata. `@`
 blocks in panic until the failure is repaired or the program crashes.
 
 ## Pointer instances and pointees
 
 A pointer is an ordinary instance with its own life path. Its value identifies
-another instance place or `Nothing`.
+an ordinary target place or semantically targets the pointee type's Nothing
+instance. The latter state is **vacant**.
+
+Vacancy is not a numeric-address promise. Exact same-type vacant pointers
+compare equal. Built-in type identities are canonical across modules, so two
+vacant pointers to the same built-in type compare equal even when they cross a
+module boundary. The compiler-default, trapping, and custom Nothing policies
+are defined by [Zax Nothing instances](nothing-instances.md).
 
 The pointer place and pointee place are distinct:
 
@@ -431,7 +438,7 @@ view : MyValue *
 
 A raw pointer:
 
-- may point to `Nothing`;
+- may be vacant;
 - may be repointed;
 - owns no life path;
 - performs no automatic pointee destruction;
@@ -455,7 +462,7 @@ Creating a dynamic path with no independently tracked owner or containing
 lifecycle—only a raw pointer value—remains unsafe: losing or repointing that
 pointer may leave no authority able to end the path.
 
-`?view` proves only that the raw pointer value is not `Nothing`. It does not
+`?view` proves only that the raw pointer value is non-vacant. It does not
 by itself prove a live pointee, valid provenance, alignment, or permitted
 access. When origin and lifetime analysis already proves those facts, the
 presence test may complete the safe proof.
@@ -481,6 +488,9 @@ It preserves the address while providing no pointee identity, provenance,
 alignment, lifetime, or qualification guarantee. Complete source forms and the
 distinction from checked-layout coercion belong to
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#view-shaped-unsafe-cast).
+It also preserves a vacant source's raw representation rather than remapping it
+to the destination type's Nothing representation. A false claim has undefined
+consequences; coincidental sentinel equality is not portable.
 Deeper pointer-copy and provenance policy remains indexed future pointer work.
 
 #### Scheduled raw allocations
@@ -511,16 +521,16 @@ scoped = uniqueOwner as last
 scoped = otherScheduledRaw as last
 ```
 
-The source becomes `Nothing`. Its own scheduled cleanup remains in place but
-later observes `Nothing` and performs no disposition.
+The source becomes vacant. Its own scheduled cleanup remains in place but
+later observes vacancy and performs no disposition.
 
 An ordinary borrowed raw source is adoptable only when analysis proves that it
 identifies an allocation root and carries the sole disposition authority.
 Otherwise the adoption requires narrow unsafe responsibility. A known interior,
 ended, or independently owned target is rejected.
 
-Assigning `Nothing` dispositions a scheduled slot's current allocation before
-emptying it:
+Assigning a typed default vacant pointer dispositions a scheduled slot's current
+allocation before emptying it:
 
 ```zax
 scoped = (: MyValue *)
@@ -539,7 +549,8 @@ They are safe only when analysis proves another lifetime/disposition owner or a
 complete manual protocol. Otherwise creation or escape requires narrow unsafe
 responsibility.
 
-Assigning `Nothing` to an open-ended raw pointer discards only the address:
+Assigning a typed default vacant pointer to an open-ended raw pointer discards
+only the address:
 
 ```zax
 manual = (: MyValue *)
@@ -567,11 +578,11 @@ makeValue final : (
 value : MyValue * = makeValue()
 ```
 
-The producer result pointer becomes `Nothing`; its scheduled cleanup remains but
+The producer result pointer becomes vacant; its scheduled cleanup remains but
 is a no-op. If the result is discarded, its own slot retains responsibility and
 dispositions the allocation.
 
-`@!` produces the same contract with a possible `Nothing` result:
+`@!` produces the same contract with a possibly vacant result:
 
 ```zax
 tryMakeValue final : (
@@ -592,7 +603,7 @@ when an exact deep-capable consumer exists; it never implies built-in pointee
 cloning.
 
 For results, `@` and `@<` promise presence on every normal exit; `@!` and `@!<`
-permit `Nothing`. A compatible visible prototype may change scheduled versus
+permit vacancy. A compatible visible prototype may change scheduled versus
 open-ended outward cleanup without reminting the implementation body, but it
 cannot change definite versus maybe-present guarantees.
 
@@ -717,9 +728,9 @@ Because the existing object has no reserved inline block, this operation
 allocates a detached block. `@` blocks in panic on allocation failure;
 `@!` returns an empty `prepared` pointer.
 
-The operation is transactional. On success, `owner` becomes `Nothing` and
+The operation is transactional. On success, `owner` becomes vacant and
 `prepared` owns the same resident instance through a dormant control block. On
-`@!` failure, `prepared` is `Nothing`, `owner` remains an unchanged usable
+`@!` failure, `prepared` is vacant, `owner` remains an unchanged usable
 unique owner, and any partial block reservation is released.
 
 The legacy pointer qualifier `own` is superseded by `unique shareable`. Any
@@ -782,7 +793,7 @@ Every pointer supports `?`, but its guarantee depends on the pointer role:
 | `unique` or `unique shareable` | This pointer currently owns a target |
 | `strong` | This pointer currently participates in live strong ownership |
 | `weak` | At the instant of this non-owning probe, strong ownership remained open |
-| Raw | The pointer value is not `Nothing`; no pointee-validity guarantee |
+| Raw | The pointer value is non-vacant; no pointee-validity guarantee |
 
 Weak probing does not acquire ownership:
 
@@ -819,7 +830,7 @@ for an atomic weak pointer.
 ## Resetting a pointer
 
 Protected pre-unary `reset` ends the relationship for which a pointer or its
-declaration has authority, then leaves the pointer containing `Nothing`:
+declaration has authority, then leaves the pointer vacant:
 
 ```zax
 reset pointer
@@ -834,11 +845,11 @@ reset pointer
 | `unique shareable` | Release unique ownership and its dormant block |
 | `strong` | Release this strong participation; destroy only when ownership closes |
 | `weak` | Release this weak observation and any final retained block |
-| Already `Nothing` | No-op |
+| Already vacant | No-op |
 
 An anchored strong or weak pointer follows its shared ownership role: reset
 releases participation in the enclosing allocation's control block and leaves
-the anchored pointer at `Nothing`. It does not destroy the targeted member as an
+the anchored pointer vacant. It does not destroy the targeted member as an
 independent allocation.
 
 For raw pointers, safe reset requires proof that the pointer identifies the
@@ -854,10 +865,10 @@ Reset applies the disposition recorded at allocation:
 - `AttachedLifespan` closes the pointer's local responsibility while destruction
   and recovery remain attached to arena teardown.
 
-Resetting `Nothing` is a harmless no-op because this protected operation examines
-the pointer state rather than invoking a member through its pointee.
+Resetting a vacant pointer is a harmless no-op because this protected operation
+examines the pointer state rather than invoking a member through its pointee.
 
-Assignment to `Nothing` remains ordinary destination behavior. It releases a
+Assignment to vacancy remains ordinary destination behavior. It releases a
 scheduled or managed destination's current relationship, but for an open-ended
 raw pointer it discards only the address:
 
@@ -866,10 +877,46 @@ manual : MyValue * = @<
 manual = (: MyValue *) // does not disposition the allocation
 ```
 
-Resetting the same pointer again is harmless after the first reset leaves
-`Nothing`. A disposition attempt through a stale alias is rejected when analysis
+Resetting the same pointer again is harmless after the first reset leaves it
+vacant. A disposition attempt through a stale alias is rejected when analysis
 proves that the allocation already ended; an unproved alias relationship
 requires narrow unsafe responsibility.
+
+## Vacating a raw pointer
+
+Protected pre-unary `vacate` discards one raw address and installs vacancy
+without disposition:
+
+```zax
+value : MyValue
+borrowed : MyValue * = value
+
+vacate borrowed
+```
+
+Plain `vacate` requires proof that the pointer is a non-owning raw relationship,
+that no declaration-attached schedule is bypassed, and that discarding the
+address loses no required disposition authority.
+
+When another potentially valid disposition relationship is opaque:
+
+```zax
+unsafe vacate opaqueRaw
+```
+
+This responsibility form is available only for raw pointers. A proved last
+usable address to a live open-ended allocation, or a scheduled raw pointer still
+carrying a live schedule, remains invalid even under `unsafe`.
+
+Managed and self-accounting pointer roles never support `vacate`:
+
+```zax
+unsafe vacate owner // error: unique ownership must be released or transferred
+```
+
+The same applies to `strong`, `weak`, `anchored`, and future managed roles.
+Unsafe source may assert an opaque but potentially valid raw relationship; it
+cannot legalize a guaranteed leak or corrupt ownership accounting.
 
 ## Pointer-layer `atomic`
 
@@ -910,7 +957,7 @@ scheduled : MyValue * = @
 owner : MyValue * unique = scheduled as last
 ```
 
-On success, `scheduled` becomes `Nothing`; its cleanup remains scheduled but
+On success, `scheduled` becomes vacant; its cleanup remains scheduled but
 later performs no disposition. `owner` becomes the allocation's unique owner.
 
 A scheduled raw destination may likewise adopt `unique` ownership or another
@@ -922,7 +969,7 @@ scheduled = otherScheduled as last
 ```
 
 The destination first dispositions its old allocation, then adopts the new
-allocation. The accepted source becomes `Nothing`.
+allocation. The accepted source becomes vacant.
 
 Transferring either authority into an ordinary unscheduled raw destination makes
 the allocation open-ended:
@@ -983,7 +1030,7 @@ On success:
 
 On failure:
 
-- the destination is a valid empty pointer to `Nothing`;
+- the destination is a valid vacant pointer;
 - the source retains its ownership and active block;
 - `as last` leaves the source in terminal state; and
 - ordinary destruction later releases that retained strong ownership.
@@ -1208,7 +1255,7 @@ determine how source observes that failure.
 
 ### Panicking allocation
 
-A `@` allocation either returns a non-`Nothing` pointer or enters panic. This is
+A `@` allocation either returns a non-vacant pointer or enters panic. This is
 the ordinary default for automatic allocation performed while constructing a
 stack, global, or containing resident instance. Failure prevents normal
 construction completion.
@@ -1220,8 +1267,8 @@ continue with partial allocation or construction state.
 
 ### Non-panicking allocation
 
-A `@!` allocation produces a pointer to `Nothing` when the arena cannot
-satisfy the request. Automatic pointer members may therefore remain `Nothing`
+A `@!` allocation produces a vacant pointer when the arena cannot satisfy the
+request. Automatic pointer members may therefore remain vacant
 while the containing instance completes successfully.
 
 This permits deliberately small or exhaustible arenas.
@@ -1339,12 +1386,15 @@ Representative diagnostics include:
 - pointee or destructor is thread-affine;
 - object or control-block arena would end while dependent pointers remain;
 - weak acquisition failed and produced an empty strong pointer;
-- raw pointer was not proved non-`Nothing` before access;
+- raw pointer was statically proved vacant at an access;
+- unchecked raw pointer access may reach Nothing backing;
 - raw pointer has no proved live pointee, provenance, alignment, or access
   permission;
 - raw pointer escaped the container or life path that established its proof;
 - open-ended raw allocation lost its last usable address;
 - raw reset target is not a proved allocation root;
+- `vacate` would bypass a live schedule, lose the last usable allocation
+  address, or apply to a managed pointer;
 - raw allocation was dispositioned through a stale alias;
 - scheduled raw adoption lacks sole disposition authority;
 - scheduled raw result used `copy` where its cleanup must transfer;
@@ -1407,7 +1457,7 @@ Still deferred:
 - deeper or unsafe ownership anchoring;
 - pointer representation and tagging;
 - complete casts, arithmetic, and provenance;
-- pointer-to-`Nothing` dereference behavior;
+- exact pointer sentinel/tag ABI and target representation;
 - exact process-wide collection trigger spelling, cycle-root discovery,
   traversal, and concurrent coordination;
 - prompt-disposition generic constraints;

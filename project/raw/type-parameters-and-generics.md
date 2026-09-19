@@ -7,7 +7,7 @@
 | Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, scalar-family, and composition review |
 | Owns | Preserved type-parameter, generic, whole-type contract, intrinsic endian/fixed/floating specialization, numeric factory, bounded probing, language-limit, relational-pair, associated-type, representative-source, activation, and retirement questions |
 | Does Not Own | Accepted generic semantics or current declaration/scalar/type behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters/type receivers, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, and work item `020` composition constraints |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type-qualified discovery, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, and work item `020` composition constraints |
 
 ## Why this input exists
 
@@ -16,7 +16,8 @@ Current documentation accepts a deliberately narrow type-input model:
 - a prototype may declare a `ParameterType : type` slot;
 - a caller completes it with one concrete type identity;
 - that type argument has no runtime storage, lifetime, or evaluation; and
-- a `operator type` receiver is a concrete type identity rather than an instance.
+- a concrete type identity may anchor type-owned `unbound` or `once` operator
+  discovery without creating a separate receiver category.
 
 See
 [declarations and bindings](../../language/declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters)
@@ -197,16 +198,16 @@ whether one generic family completion satisfies every specialization, and how
 an exact concrete alias completion differs from a still-generic declaration.
 Source order may require a forward; it must never rank specializations.
 
-## Generic and alias type receivers
+## Generic and alias type-qualified discovery
 
-For a non-generic declaration, the enclosing type name identifies the receiver
-type inside its body:
+For a non-generic declaration, the enclosing type name identifies the owner
+inside an unbound type-qualified operator body:
 
 ```zax
 MyType :: type {
-  operator type pre unary 'custom type info for' final : (
+  operator pre unary 'custom type info for' final : (
     result : MyCustomTypeInfo
-  )() = {
+  )() unbound = {
   }
 }
 ```
@@ -214,31 +215,33 @@ MyType :: type {
 Undecided:
 
 - what the enclosing name means inside a generic definition;
-- whether a type-receiver operation is discovered through an alias;
-- whether an alias and its target share type-receiver operations;
-- how qualified type identities behave as receivers; and
-- whether a generic instantiation may add or remove type-receiver operations.
+- whether a type-qualified operation is discovered through an alias;
+- whether an alias and its target share type-qualified operations;
+- how qualified type identities anchor discovery without becoming runtime
+  receivers; and
+- whether a generic instantiation may add or remove type-qualified operations.
 
-### Qualified type receivers and `once`
+### Qualified type identities, `unbound`, and `once`
 
 Reference admission creates pressure for a qualified type identity to supply
-receiver discovery:
+type-owned discovery:
 
 ```zax
-// Illustrative; qualified type-receiver syntax is not established.
+// Illustrative; qualified type-identity discovery is not established.
 myView := MyIdentity & from myUnderlying
 ```
 
 Future work must decide:
 
-- whether `MyIdentity &` is one qualified type receiver;
+- whether `MyIdentity &` is one qualified type-identity lookup anchor;
 - whether expected-result context instead selects a reference-returning
   `MyIdentity from ...` operation;
 - how alias and generic identities participate;
-- whether an explicit type parameter slot would duplicate the implicit
-  `operator type` receiver;
-- how `operator type` relates to legacy/static `once final`; and
-- whether `once varying` has a corresponding type-receiver role.
+- whether the declaration is type-qualified `unbound` or deliberately
+  type/instance `once`;
+- whether an explicit type parameter slot would duplicate the source type
+  identity; and
+- whether `once varying` has a corresponding type-qualified role.
 
 The result must never silently change between by-value identity construction and
 same-storage reference view.
@@ -318,6 +321,37 @@ permits projection only after a concrete expected type or complete shape exists.
 It must not invent a deduction target, widen member, callable, or operator
 discovery, or outrank an exact direct match. Generic work must preserve that
 boundary unless a later design explicitly replaces it.
+
+### Nothing policy per concrete specialization
+
+[Zax Nothing instances](../../language/nothing-instances.md) establishes that
+each concrete specialization may require its own semantic Nothing policy even
+when an implementation can share physical compiler-provided backing.
+
+Future generic work must define:
+
+- when an omitted, explicit default, trapping, or custom policy is resolved for
+  a specialization;
+- whether `+++ final once` in generic source produces one custom Nothing
+  initializer per concrete specialization;
+- reachability analysis and elimination when a specialization can never expose
+  vacant-pointer access or receiverless `_` use;
+- interaction with module-instance identity and generic arguments;
+- diagnostics when substituted members have no readable prepared
+  representation;
+- reflection of generic-source policy versus one specialization's effective
+  policy; and
+- backend deduplication that preserves language-level specialization identity,
+  custom state, and synchronization.
+
+Equal layout or equal generated code must not merge custom Nothing storage or
+semantic identity. A fully selected specialization is one concrete type; no
+universal Nothing type or generic source value is introduced.
+
+Merely forming a concrete specialization does not require materialized Nothing
+backing. Preparation may occur during ordinary global startup, and a compiler
+may omit or combine backing whenever it proves no observable access requires a
+separate instance.
 
 ## Intrinsic endian and numeric families
 
@@ -437,10 +471,10 @@ MyStorage :: alias type MyNumericType storage type
 MyCounterpart :: alias type MyNumericType signedness counterpart type
 ```
 
-These are type-receiver operations returning concrete type identities with no
-runtime construction. Future work must determine whether they are specialized
-operator phrases, one general associated-type facility, type metadata queries,
-or a combination.
+These are type-qualified operations returning concrete type identities with no
+runtime receiver construction. Future work must determine whether they are
+specialized unbound operator phrases, one general associated-type facility,
+type metadata queries, or a combination.
 
 The relationships must remain usable in result declarations and constraints
 without forcing generic code to branch manually between ordinary and large
@@ -482,8 +516,8 @@ Generic work retains:
 The numeric value of `LanguageLimits.maximumWidth`, and any separate exponent,
 fraction, storage, or alignment limits, remain future language-version
 decisions. A limit must be available while concrete types are formed; a
-type-receiver or `once` declaration is not inherently compile-time merely
-because it belongs to a type.
+type-qualified `unbound` or `once` declaration is not inherently compile-time
+merely because it belongs to a type.
 
 ### Bounded size probing
 
@@ -636,7 +670,7 @@ Those constraints must remain visible in callable compatibility and
 specialization. They must not infer a guarantee from hidden allocation history.
 
 - a concrete type argument is never a runtime value;
-- a type-receiver operation is not inherently compile-time;
+- a type-qualified operation is not inherently compile-time;
 - non-generic enclosing type identity is sufficient for current behavior; and
 - current documentation must not imply that a general computed type result
   exists;
@@ -674,7 +708,7 @@ reflection remain future work.
 ## Activation and retirement
 
 Activate this input when generics, type parameters, constraints, whole-type
-abstract contracts, computed type results, type-receiver identity, intrinsic
+abstract contracts, computed type results, qualified type-identity discovery, intrinsic
 integer/fixed/floating families, endian selection, numeric factories,
 language-limit values, bounded size probing, relational type pairs, associated
 types, cursor-protocol constraints, or generated type families are reviewed.

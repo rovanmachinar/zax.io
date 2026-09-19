@@ -232,6 +232,58 @@ After the nested member exists, `Utilities` within later namespace source may
 name that member. `Module.Utilities` remains the explicit route to the
 namespace itself.
 
+### Nothing-policy defaults
+
+The compiler directive:
+
+```zax
+[<nothing-instance-default=trap>]
+```
+
+selects the omission default for types declared in the attached module or
+physical namespace opening. `default` selects compiler-prepared readable
+Nothing behavior.
+
+A namespace setting is local to one opening rather than stored on the namespace
+identity:
+
+```zax
+[<nothing-instance-default=trap>]
+namespace Services {
+  First :: type {
+  }
+}
+
+[<nothing-instance-default=default>]
+namespace Services {
+  Second :: type {
+  }
+}
+```
+
+`First` inherits `trap`; `Second` inherits `default`. The declarations still
+belong to the same `Services` namespace identity.
+
+A nested namespace opening inherits from its physical containing opening and
+restores the outer setting when it ends. Reopening a namespace elsewhere does
+not inherit an earlier opening's local directive. Conflicting settings attached
+to one opening are errors; compatible repetition is redundant.
+
+A module-level setting is one property of that generative module instance and
+is inherited by its namespace openings unless they override it. Conflicting
+module-level settings are errors. An explicit `+++ final once` declaration on a
+type always overrides the inherited omission default.
+
+This attachment is scope-bound rather than stateful source-order mutation, so
+moving an unrelated declaration or source file does not silently change later
+type policies. Complete Nothing behavior belongs to
+[Zax Nothing instances](nothing-instances.md#set-a-scoped-default).
+
+Language-provided built-in types are not declared inside the opening and do not
+inherit this directive. Their Nothing policy is canonically trapping across
+modules, so one built-in pointer identity never changes vacancy meaning
+according to its lexical use site.
+
 ## Files contribute to one ordered module
 
 Every module has a `module.zax` source that establishes its source-file set and

@@ -6,9 +6,9 @@
 | Audience | Human developers reading, writing, defining, or evaluating Zax operators |
 | Applies To | Programmer-facing operator model and selection; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; universal receiver ownership for user-defined nonliteral declarations and the absence of global user operators; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; compile-time value join `<+>` as an ordinary left-owned operator; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
+| Owns | The operator mental model; the general operator form and fixity table; symbolic, phrase, circumfix, call/index, and mixfix categories; type ownership, ordinary receiver ownership, type-qualified `unbound`/`once` discovery, and the absence of global user operators; candidate-tree formation, structural completeness, and pruning; outward result flow and expected-result limits; candidate discovery; contextual/explicit operator completion and direct-before-contextual fallback; application of shared callable viability, expected-result, preference, ambiguity, unavailable-best, and post-discovery preferred-projection rules; private eligibility before preference; once-only evaluation; eager, protected, and short-circuit behavior; protected intrinsic domains; compile-time value join `<+>` as an ordinary left-owned operator; generic transfer-stance source forms; direct-before-fallback and optional presence/reset/transfer-source behavior; operator costs, diagnostics, source stability, and summary menu |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); composition exposure and projection eligibility ([Zax composition](composition.md)); complete [structural shapes and compatibility](structural-shapes-and-compatibility.md); phrase-specific behavior ([operator phrases](operator-phrases.md)); exact forms and domain reservation ([operator catalog](operator-catalog.md)); complete [optional behavior](optional-values.md); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); protected integer behavior ([integer operator catalog](integer-operator-catalog.md)); fixed-point behavior ([fixed-point scalars](fixed-point-scalars.md)); floating-point behavior ([floating-point scalars](floating-point-scalars.md)); mixfix matching ([mixfix operators](mixfix-operators.md)); or shared callable preference/result routing ([function invocation](function-invocation.md)) |
-| Source / Provenance | Legacy [basics](../basics.md), [Nothing](../nothing.md), and retired optional evidence together with dispositioned operator-overloading material |
+| Source / Provenance | Legacy [basics](../basics.md), current [Nothing-instance design](nothing-instances.md), and retired optional evidence together with dispositioned operator-overloading material |
 
 ## Mental model
 
@@ -77,8 +77,8 @@ their own [programmer model](operator-phrases.md), and mixfix has
 
 ## Declarations and receiver operands
 
-User-defined nonliteral operators belong to their receiver type and state their
-form explicitly. `_` is the receiver operand:
+User-defined nonliteral operators belong to their owning type and state their
+form explicitly. For ordinary instance operations, `_` is the receiver operand:
 
 ```zax
 Vector :: type {
@@ -123,6 +123,14 @@ The family selector is not punctuation alone.
 | Circumfix | Enclosed operand | None |
 | Call/index | Callee/base operand | Declared call/index inputs |
 | Mixfix | Declared receiver-anchor hole | Every other hole |
+
+When a concrete type identity occupies the source position that anchors
+type-owned lookup, it is not automatically a runtime receiver. An `unbound`
+operator uses the type identity only for qualification and discovery, so `_` is
+unavailable. A `once bound` operator deliberately supports both the
+type-qualified receiverless route and an instance-qualified route. Complete
+declaration examples are in
+[Zax operator phrases](operator-phrases.md#type-arguments-and-type-qualified-operators).
 
 Representative declarations and uses:
 
@@ -823,6 +831,23 @@ optional-presence contract must be recognized by the analyzer. The lifetime
 obligation is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#conditionally-live-storage-and-access-proof).
 
+### Pointer, function, and receiver presence
+
+The protected `?` form also returns exactly `Boolean` for:
+
+- a pointer, using its ownership-role-specific presence guarantee;
+- a function value, reporting whether it is callable; and
+- `_` inside a `once bound` function, reporting whether the call supplied an
+  ordinary receiver source.
+
+`?_` in a non-`once` bound function is a non-acknowledgeable intent error.
+Postfix access still binds first, so `?_.` dereferences `_` and applies ordinary
+`?` selection to the resulting value.
+
+These domains share source spelling without sharing one universal value.
+Complete Nothing-instance and unavailable-function behavior belongs to
+[Zax Nothing instances](nothing-instances.md).
+
 ### Transfer-stance source forms
 
 The reserved post-unary phrases:
@@ -875,7 +900,7 @@ casting remains explicitly unsafe. Exact source forms are listed by the
 [operator catalog](operator-catalog.md), and complete programmer behavior belongs to
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
-### Optional and pointer reset
+### Optional, pointer, and function reset
 
 `reset value` is a protected pre-unary optional phrase. It destroys a present
 boxed value, leaves the same wrapper absent, and returns a reference to that
@@ -888,7 +913,7 @@ reset optionalValue
 
 For a pointer, `reset` releases the allocation, ownership, observation, or
 scheduled-disposition relationship for which the pointer or its declaration has
-authority, then leaves the pointer at `Nothing`:
+authority, then leaves the pointer vacant:
 
 ```zax
 reset pointer
@@ -897,6 +922,22 @@ reset pointer
 An open-ended raw pointer requires allocation-root and disposition-authority
 proof or narrow unsafe responsibility. Complete pointer behavior is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
+
+For a varying function value, `reset` releases its callable representation and
+owned captures, then leaves the slot unavailable. Function presence becomes
+false. Complete behavior belongs to
+[Zax Nothing instances](nothing-instances.md#function-values-have-presence).
+
+### Raw pointer vacate
+
+`vacate pointer` is a protected pre-unary phrase for raw pointers. It discards
+the address and installs vacancy without disposition. Plain use requires a
+proved non-owning relationship; `unsafe vacate` accepts responsibility for an
+opaque but potentially valid external relationship.
+
+Managed pointers and any use that would guarantee a leak reject the form even
+under `unsafe`. Complete behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
 
 ### Protected transfer-source operations
 

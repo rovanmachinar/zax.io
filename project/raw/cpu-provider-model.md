@@ -57,6 +57,32 @@ A provider declaration cannot weaken an exact format's semantics. It either
 supplies an operation for every valid input under that operation's contract or
 reports the operation unavailable.
 
+## Nothing-instance trap capabilities
+
+Target profiles must eventually report whether the CPU and execution
+environment can protect compiler-provided Nothing backing against:
+
+- reads;
+- writes; and
+- execution through an invalid or protected function target.
+
+[Zax Nothing instances](../../language/nothing-instances.md) uses write
+protection whenever it is cheaply available and allows types or directives to
+request trapping reads. The language does not emulate missing capability by
+checking every potential access. A profile must therefore expose when the
+requested trap is unavailable and the corresponding access has an undefined
+boundary.
+
+Built-in types always use the trapping read policy and retain one canonical
+identity across modules. A provider cannot make built-in Nothing readable for
+one module and trapping for another; it reports whether the selected target can
+enforce the canonical policy.
+
+Future provider metadata must distinguish immediate hardware trapping from
+debugger-after-the-fact detection, generated panic-function routing, and
+ordinary readable prepared backing. Exact CPU/OS protection mechanisms and
+costs remain provider details.
+
 ## Integer selector facts
 
 A provider supplies concrete selections satisfying language family contracts:

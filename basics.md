@@ -178,7 +178,7 @@ defined by
 [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md#allocation-forms).
 Legacy parallel `@@` is superseded because concurrency is an arena capability.
 Legacy synchronous `@!` is superseded; current `@!` reports allocation failure
-through the pointer's `Nothing` state.
+through the destination role's vacant pointer state.
 
 
 #### Remaining historical operator-phrase input
@@ -447,10 +447,13 @@ MyType :: type {
 
 ````zax
 unknown : Unknown   // used as a generic pointer type to an `Unknown` type
-nothing : Nothing   // used as a generic type of `Nothing`
 void : Void         // an alias of the `Unknown` type
 boolean : Boolean   // A value representing `true` or `false` literals
 ````
+
+There is no universal `Nothing` type. Per-type Nothing instances and vacant
+pointers are defined by
+[Zax Nothing instances](language/nothing-instances.md).
 
 
 ### Intrinsic system literals

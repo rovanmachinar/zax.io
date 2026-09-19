@@ -101,30 +101,15 @@ while i := 1 ;; i < 100 ;; ++i {
 }
 ````
 
+#### Nothing-instance disposition
 
-#### Value polymorphism using `if` on nothing instances
+The former `+++(: Nothing)` value-polymorphism branch is superseded and
+removed.
 
-A [nothing instance](nothing.md) can filter between normal function calls and functions that are called on a nothing instance. By checking if a self pointer  (`_`) is valid inside an `if` condition of a value polymorphic function, code can decide if a nothing version of a function or a normal version function should be called.
-
-````zax
-MyType :: type {
-    +++ final : ()(:Nothing) = {
-        // instance to a nothing type
-    }
-
-    doSomething final : ()( : Integer) if [[unlikely]] { return !_ } = {
-        // do nothing -- inside nothing instance of MyType
-    }
-    doSomething final : ()(value : Integer) = {
-        // ...
-        // do something -- normal instance of MyType
-        // ...
-    }
-}
-
-myType1 : MyType *       // points to Nothing
-myType2 : MyType * = @   // declaration-bound allocation
-
-myType1.doSomething()   // does nothing
-myType2.doSomething()   // does something
-````
+Inside a `once bound` function, protected `?_` distinguishes a receiverless
+type call from an instance-qualified call. On the receiverless route `_`
+identifies the type's Nothing instance; on the instance route it identifies the
+evaluated receiver. This is invocation behavior, not `if`-based overload
+selection. See
+[Zax function invocation](language/function-invocation.md#type-and-instance-calls-to-once-functions)
+and [Zax Nothing instances](language/nothing-instances.md).

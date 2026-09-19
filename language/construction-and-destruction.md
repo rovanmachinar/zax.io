@@ -37,6 +37,47 @@ Reconstructive replacement reuses the outer storage while recycling the
 previous representation and resources into a new complete immutable value
 lifetime.
 
+### Nothing preparation is not ordinary construction
+
+A compiler-provided Nothing instance is prepared for type-directed vacant
+pointer and receiverless-call behavior without invoking an ordinary `T`
+constructor:
+
+```zax
+MyType :: type {
+  value : Integer
+}
+
+pointer : MyType *
+// The pointer is vacant; no ordinary MyType was constructed.
+```
+
+Preparation recursively establishes readable member defaults where the member
+kind supports them and panicking behavior otherwise. It does not establish an
+ordinary complete enclosing `T`, satisfy its cross-member invariants, or
+schedule its ordinary destructor.
+
+The special `+++ final once` declaration instead prepares dedicated custom
+Nothing storage:
+
+```zax
++++ final once : ()() = {
+  // Complete the custom Nothing representation before publication.
+}
+```
+
+Its body takes no inputs, is not directly callable, and is distinct from an
+ordinary zero-input constructor. Exact default, trapping, custom, and scoped
+policy behavior belongs to
+[Zax Nothing instances](nothing-instances.md#select-the-types-nothing-policy).
+Global ordering, concurrent publication, failure, and teardown remain future
+global/`once` lifecycle work.
+
+Resetting a varying function value ends and dispositions its current callable
+representation, including owned captures, then establishes the function type's
+unavailable default state. It is lifecycle-aware and therefore distinct from
+raw-pointer `vacate`, which deliberately performs no target disposition.
+
 ## Ordinary construction
 
 ### Constructor declarations
@@ -97,8 +138,8 @@ Container :: type {
 }
 ```
 
-`empty` contains `Nothing`. `allocated` obtains storage and constructs `Child`
-as part of automatic member initialization. `maybeAllocated` contains `Nothing`
+`empty` is vacant. `allocated` obtains storage and constructs `Child`
+as part of automatic member initialization. `maybeAllocated` is vacant
 when its storage request fails, and the enclosing construction may still
 complete.
 
@@ -169,7 +210,7 @@ For this selected constructor:
 
 - the presence of direct `_.foo = @...` suppresses `foo`'s automatic pointee
   allocation before body entry;
-- the pointer member itself is initialized to `Nothing`, with its
+- the pointer member itself is initialized vacant, with its
   declaration-attached schedule ready to adopt an allocation;
 - the first reached direct allocation fills that empty slot; and
 - a later reached direct allocation dispositions the current allocation and
@@ -180,7 +221,7 @@ The constructor-specific behavior here is only suppression: syntactic
 `_.member = @...` tells the compiler not to perform that member's declared
 automatic pointee allocation before body entry.
 
-Every normal path may leave the pointer member at `Nothing`; the pointer resident
+Every normal path may leave the pointer member vacant; the pointer resident
 instance is still fully constructed. However, a declaration written `= @`
 strongly signals automatic allocation. A selected constructor that may suppress
 that allocation on a normal path requires:
@@ -192,7 +233,7 @@ intent<conditionally-unallocated-member>{
 }
 ```
 
-The acknowledgement confirms that `bar` may remain `Nothing`. It does not permit
+The acknowledgement confirms that `bar` may remain vacant. It does not permit
 an indeterminate pointer representation.
 
 ```zax
@@ -463,7 +504,7 @@ plan. Packet order does not reorder members.
 
 For a dynamically allocated destination, all required object and detached
 control-block storage is obtained before this packet evaluation begins.
-`@!` therefore returns `Nothing` without evaluating packet entries when a
+`@!` therefore returns a vacant pointer without evaluating packet entries when a
 storage request fails. Complete allocation ordering is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-order-and-failure).
 
@@ -1547,7 +1588,7 @@ Automatic allocation occurs before construction of the allocated value.
 The selected allocation initializer decides how exhaustion appears:
 
 - `@` prevents normal construction completion and enters panic;
-- `@!` constructs a pointer member containing `Nothing`, so the
+- `@!` constructs a vacant pointer member, so the
   enclosing instance may still complete; or
 - a future disabled allocation-failure panic category may omit the `@` check
   under a programmer guarantee, with undefined behavior if failure occurs.

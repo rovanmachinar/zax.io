@@ -708,11 +708,15 @@ body when the direct declaration should supply behavior.
 Equal generated mappings and ordinary overload sets never use declaration or
 generation order as a tiebreaker. An unresolved best set is an ambiguity error.
 
-A `once` function is never exposed automatically. Its type-call mode has a
-`Nothing` receiver while its instance-call mode has a present receiver, so one
-automatic wrapper cannot preserve both meanings. A programmer may deliberately
-provide a mode-specific `via`, select a unique existing mapping, or write a
+A `once` function is never exposed automatically. Its receiverless type-call
+mode uses a `copy`-stanced Nothing receiver while its instance-call mode uses
+the actual receiver source, so one automatic wrapper cannot preserve both
+meanings. A programmer may deliberately provide a mode-specific `via`, select a
+unique existing mapping, or write a
 wrapper body.
+
+Complete receiverless and Nothing-instance behavior is defined by
+[Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
 
 Lifecycle operations are also excluded. `expose`, `via`, and `= existing`
 cannot turn a member constructor, replacement constructor, destructor,

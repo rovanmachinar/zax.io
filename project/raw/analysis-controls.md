@@ -442,7 +442,7 @@ Categories are independently selectable rather than one all-or-nothing panic
 mode. For allocation, ordinary `@` checks request failure and enters panic.
 Disabling only that category may omit the check under a success guarantee; an
 actual failure then has undefined consequences. `@!` remains checked because its
-defined result must distinguish success from `Nothing`.
+defined result must distinguish success from pointer vacancy.
 
 Static proof obligations remain distinct. Optional presence, reference lifetime,
 and alias validity may be impossible or prohibitively expensive to track at
@@ -504,6 +504,98 @@ produce undefined behavior when false. It is not a lint suppression or general
 optimizer hint.
 
 No exact category name or syntax is established here.
+
+## Nothing-instance diagnostics and controls
+
+[Zax Nothing instances](../../language/nothing-instances.md) establishes the
+semantic boundaries. Future analysis-control work must define exact,
+independently selectable categories for:
+
+- proved dereference or arithmetic from a vacant pointer;
+- access that requests a trapping Nothing policy on a target with or without
+  suitable hardware support;
+- access to a member without a readable prepared representation;
+- a proved write to compiler-provided Nothing backing;
+- a runtime pointer-arithmetic check when ordinary target validity is required;
+  and
+- a proved call of an unavailable function value.
+
+Compiler analysis remains intentionally incomplete. A selected category may
+control a required check where the language defines one; it must not convert a
+static error into valid source or imply that every unchecked dereference checks
+vacancy. Debug instrumentation may catch additional writes or invalid access,
+but it is tooling rather than a language guarantee.
+
+The default and trapping policies do not authorize universal software vacancy
+checks. Hardware write protection is used when available; a requested read trap
+also relies on target capability. On a target without the needed trap, an access
+that relies on it has undefined behavior. Future controls and diagnostics must
+expose this capability difference without pretending a debugger can stop every
+operation at the faulting instruction.
+
+### Proven errors versus suspected flow
+
+A compiler may prove with certainty that a pointer is vacant when source
+dereferences or writes it. That is an error. A different case arises when
+analysis only suspects that a pointer may become vacant before reaching a
+later writer:
+
+Provisional unsafe-catalog additions:
+
+| Provisional identifier | Permission |
+| --- | --- |
+| `possible-nothing-write` | Accept a pointer handoff or operation whose downstream write may reach compiler-provided Nothing backing, without claiming that the pointer is present |
+| `possible-nothing-read-trap` | Accept a pointer handoff or operation whose downstream read may reach a built-in type's canonical trapping Nothing or a defined type using `= trap` |
+
+`unsafe` already communicates risk, so the identifiers name the uncertain
+condition rather than appending `risk`. Both are permissions for possible flow,
+not assertions that the pointer is non-vacant.
+
+```zax
+writeValues final : ()(value : MyType *) = {
+  value.writeValuesIntoType()
+}
+
+// Illustrative placement; exact triggering rules remain future work.
+unsafe<possible-nothing-write>{
+  writeValues(possiblyVacant)
+}
+```
+
+The risky boundary may be the call or handoff that supplies the pointer, not the
+eventual store. Writing through a pointer is not inherently unsafe, so attaching
+an unsafe marker mechanically to every write would identify the wrong
+responsibility boundary.
+
+This is an unsafe concern rather than intent acknowledgement: the programmer is
+accepting possible memory-safety consequences, not merely confirming surprising
+defined behavior. The provisional identifiers will exist in the unsafe catalog;
+future work still owns their exact triggering scenarios and source placement.
+
+Neither permission disables an actual hardware trap, makes a proved vacant
+access valid, or promises successful execution. `possible-nothing-read-trap`
+names only reads subject to trapping policy: built-in Nothing instances and
+defined types selecting `= trap`. It is not a general warning for readable
+defined-type Nothing backing.
+
+Future safety/error work must choose how non-certain findings affect portable
+source:
+
+- compiler-dependent analysis with a standard unsafe escape;
+- only language-mandated findings affecting standard validity; or
+- language-mandated findings plus `x-` extension diagnostics and controls for
+  stronger compiler analysis.
+
+It may choose another coherent model. The design must avoid one compiler
+requiring a standard unsafe marker that another compiler rejects as needless,
+while still allowing implementations to report high-confidence problems beyond
+the mandatory language baseline.
+
+Future syntax must also express narrow unsafe responsibility for disabling an
+applicable check or asserting ordinary target validity. A false assertion has
+undefined consequences. Unsafe cannot legalize a proved managed-pointer leak,
+and no control may collapse a vacant pointer, absent optional, or unavailable
+function value into one universal state.
 
 ## What this input does not decide
 

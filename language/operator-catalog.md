@@ -43,7 +43,7 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
-| Optional | `?value`, `value.`, `reset value`, `last value`, `move value` |
+| Presence and lifecycle | `?value`, `value.`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
@@ -555,15 +555,17 @@ result := source as move as copy
 This is legal but normally pointless: no consumer observes the intermediate
 `move`, so `as copy` replaces it without any transfer occurring.
 
-## Optional and pointer lifecycle forms
+## Optional, pointer, and function lifecycle forms
 
-These exact forms are protected for optional operands:
+These exact forms are protected for their recognized operand domains:
 
 | Form | Fixity/level | Result role |
 | --- | --- | --- |
-| `?value` | Symbolic prefix | Return exactly `Boolean` presence |
+| `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
-| `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional absent, or release a pointer relationship and leave the pointer at `Nothing` |
+| `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
+| `vacate value` | Pre-unary phrase at ordinary phrase level | Discard a proved non-owning raw pointer address without disposition and leave vacancy |
+| `unsafe vacate value` | Pre-unary phrase at ordinary phrase level | Accept responsibility for an opaque but potentially valid raw-pointer disposition relationship; never available to managed pointers or a proved guaranteed leak |
 | `last value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type, offer `last`, and schedule optional payload cleanup at consumer completion |
 | `move value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type and offer `move` without scheduling wrapper absence |
 
@@ -571,6 +573,8 @@ Protected optional forms are distinct from generic post-unary stance
 restatement. Complete optional behavior and source consequences are defined by
 [Zax optional values](optional-values.md). Pointer `reset` is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
+Pointer `vacate`, function presence/reset, and receiver-presence behavior are
+defined by [Zax Nothing instances](nothing-instances.md).
 
 `T? ?` is two optional type layers and requires the separating space. Compact
 `T??` contains the conditional-expression token. `[{}]` is the canonical
@@ -586,8 +590,8 @@ A reserved phrase form cannot be declared by user code.
 | --- | --- | --- | --- |
 | `as default` | Post-unary type identity or value | Default-qualified type identity or compatible default-type value | Complete qualifier defaults, transfer, generics |
 | `type of` | Pre-unary expression | Concrete selected static type without execution | Anonymous/qualified identity, reflection |
-| `size of` | Pre-unary type receiver | Byte size in active execution environment | Complete layout/context |
-| `alignment of` | Pre-unary type receiver | Required alignment in active environment | Complete layout/context |
+| `size of` | Pre-unary type-identity operand | Byte size in active execution environment | Complete layout/context |
+| `alignment of` | Pre-unary type-identity operand | Required alignment in active environment | Complete layout/context |
 | `offset of` | Binary member path and containing type | Byte offset to member path | Member-designator grammar/layout |
 | `is constant` | Post-unary expression | Whether expression is compile-time available | Constant/execution model |
 | `is final` | Post-unary type-use query | Underlying place final/varying truth | Qualifier reflection |
@@ -784,9 +788,9 @@ tokens:
 | Form | Request failure | Raw destination behavior |
 | --- | --- | --- |
 | `@` | Panic | Declaration-attached disposition |
-| `@!` | Produce `Nothing` | Declaration-attached disposition on success |
+| `@!` | Produce a vacant pointer | Declaration-attached disposition on success |
 | `@<` | Panic | Open-ended |
-| `@!<` | Produce `Nothing` | Open-ended on success |
+| `@!<` | Produce a vacant pointer | Open-ended on success |
 
 They are not ordinary open unary operators and require either a declaration
 initializer or an existing typed pointer destination:

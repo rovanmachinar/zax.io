@@ -42,6 +42,10 @@ producing them.
 - Read [Zax lifetimes and references](language/lifetimes-and-references.md) for
   life paths, instance places, fixed reference binding, replacement, borrowing,
   escape, and capture.
+- Read [Zax Nothing instances](language/nothing-instances.md) for pointer
+  vacancy, unavailable function values, receiverless type calls,
+  compiler-provided/trapping/custom Nothing policies, and unchecked access
+  boundaries.
 - Read [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md) for
   declaration-bound allocation, raw and managed ownership, allocation policy,
   control blocks, reset, collection, and arena behavior.
@@ -129,6 +133,7 @@ producing them.
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)
 - [Lifetimes and references](language/lifetimes-and-references.md)
+- [Nothing instances](language/nothing-instances.md)
 - [Pointers, allocation, and arenas](language/pointers-and-arenas.md)
 - [Execution context](language/execution-context.md)
 - [Safety and analysis](language/safety-and-analysis.md)
@@ -178,7 +183,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 - [Optional values](language/optional-values.md) — current optional wrapper,
   construction, transfer, qualification, and proven-access design
-- [Nothing type instances](nothing.md)
 - [Partial types](partial.md)
 - [Casting](casting.md) — legacy general casting input; current integer
   conversion is owned by [Zax integers](language/integers.md), while current

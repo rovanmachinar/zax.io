@@ -865,6 +865,14 @@ selection. Receiver transfer stance is an independent callable slot whose
 complete behavior is defined by
 [Zax transfer stances](transfer-stances.md#receiver-stance).
 
+A receiverless type call to a `once bound` declaration uses the same declared
+receiver qualifications; it does not introduce another qualifier system. `_`
+identifies compiler-prepared, trapping, or custom Nothing backing according to
+the containing type's policy. Writable access to custom backing follows the
+ordinary declaration, while writing shared compiler-provided backing remains
+invalid and may be unchecked. Complete behavior belongs to
+[Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
+
 No operator, including `=` or `+=`, receives conventional qualifier behavior
 merely because of traditional meaning. The reconstructive `=` scenario is
 special only because the compiler recognizes an immutable value in an existing

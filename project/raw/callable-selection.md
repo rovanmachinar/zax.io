@@ -223,8 +223,8 @@ makeFoo final : (
 
 Current syntax cannot express an unconstructed owning, raw, or optional result
 that is established later while still promising presence on every normal exit.
-Likewise, a pointer parameter cannot promise non-`Nothing` entry while retaining
-pointer ownership/rebinding semantics; a reference supplies non-`Nothing`
+Likewise, a pointer parameter cannot promise non-vacant entry while retaining
+pointer ownership/rebinding semantics; a reference supplies non-vacant
 borrowed access but is a different contract.
 
 Future callable contracts should investigate general preconditions and
@@ -253,6 +253,24 @@ define:
 - what callers may assume after selection;
 - how opaque proof uses narrow unsafe responsibility;
 - and reflection and diagnostics.
+
+Callable contracts must also preserve Nothing-instance route facts rather than
+infer them from runtime state:
+
+- a contract may promise that a pointer input is present or that a pointer
+  result is non-vacant on every normal exit;
+- a closed alias or future generated callable that represents a receiverless
+  type call must preserve that route and its synthesized `copy`-stanced Nothing
+  receiver;
+- an alias representing an instance-qualified call must preserve its evaluated
+  receiver route;
+- callable selection must not merge those routes merely because their visible
+  parameter and result slots match; and
+- an exact `last` receiver remains unavailable to a receiverless type call even
+  when another candidate accepts unstanced `copy`.
+
+Exact contract syntax, proof, alias metadata, and selection comparison remain
+future work.
 
 ## Cross-axis comparison
 

@@ -393,6 +393,31 @@ Repeated values use an ordinary iterable such as
 `makeMeRepeatIterable(value, count)`. Arrays need no separate repetition
 syntax.
 
+### Nothing preparation does not create elements
+
+Compiler-provided Nothing backing does not ordinary-construct array elements.
+An array member reached through a Nothing receiver is therefore invalid when the
+operation requires an element:
+
+```zax
+MyArrayOwner :: type {
+  values : Integer[5]
+
+  first final once : (result : Integer)() = {
+    return _.values[0] // invalid; trap/panic when target support permits
+  }
+}
+```
+
+Zeroed or reserved storage is not an array with live elements. A type may
+instead choose trapping Nothing behavior or prepare a custom Nothing instance.
+Complete policy behavior belongs to
+[Zax Nothing instances](nothing-instances.md#what-compiler-preparation-provides).
+A future narrower prepared-array form must preserve the element-lifetime rules
+in this document. Targets without suitable trap support do not receive a
+software vacancy check before every element access; relying on the missing trap
+has undefined behavior.
+
 ## Logical length ranges
 
 Array declaration ranges describe the counts that one array is allowed to have:

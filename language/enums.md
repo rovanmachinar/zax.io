@@ -190,6 +190,12 @@ For a strict or relaxed enum:
 - otherwise the first member is the default; and
 - an enum with no members uses the backing type's default value.
 
+That enum default also supplies the compiler-prepared representation when an
+enclosing Nothing instance needs a readable enum member. This is preparation of
+special backing, not ordinary construction of the enclosing type. Trapping and
+custom policies remain available through
+[Zax Nothing instances](nothing-instances.md).
+
 ```zax
 Fruit :: enum I8 {
   Apple = 4
@@ -619,9 +625,9 @@ maybeFromType := Color.fromString(text)
 maybeFromValue := color.fromString(text)
 ```
 
-On a type call, `_` has the `Nothing` instance state. On an instance call, `_`
-identifies that instance. `final` prevents reassignment under ordinary function
-rules.
+On a receiverless type call, `_` identifies the enum type's Nothing instance
+and `?_` is false. On an instance call, `_` identifies that instance and `?_` is
+true. `final` prevents reassignment under ordinary function rules.
 
 This narrow callable rule does not decide global or `once` value initialization,
 concurrency, teardown, capture, or generic-specialization behavior.

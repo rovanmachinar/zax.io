@@ -120,14 +120,29 @@ Declaration defaults, `final` storage, and the `once final unbound` intent error
 are defined by
 [declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-prototypes).
 
-### Default `Nothing` function values
+### Default unavailable function values
 
-Default initialization of a function value establishes its `Nothing` state as
-defined by [Zax declarations and bindings](declarations-and-bindings.md#default-function-values).
+Default initialization establishes a live but unavailable function value as
+defined by
+[Zax declarations and bindings](declarations-and-bindings.md#default-function-values).
 
 The compiler diagnoses an invocation it can prove still targets that default
 state. An otherwise unhandled invocation panics. It does not execute a no-op,
 manufacture arbitrary results, or invoke an unrelated overload.
+
+Recognized function presence returns exactly `Boolean`. A known fixed `final`
+function is statically present; a varying function value may require a runtime
+presence observation:
+
+```zax
+if ?callback
+  callback()
+```
+
+`reset callback` releases the callable representation and any owned captures,
+then restores the unavailable state. Complete presence, reset, and relationship
+to type Nothing behavior is defined by
+[Zax Nothing instances](nothing-instances.md#function-values-have-presence).
 
 ### Receiver operands
 
@@ -175,20 +190,46 @@ value.inspect()
 ```
 
 For `MyType.inspect()`, the type identity supplies member lookup without a
-runtime instance expression. `_` has the `Nothing` instance state inside the
-body. The implementation may perform type-level work or branch on whether an
-instance exists; it may not access an absent instance as though it were live.
+receiver source expression. This is a **receiverless type call**. `_` identifies
+`MyType`'s Nothing instance and `?_` is false. The implementation may perform
+type-level work, read compiler-prepared members, use custom Nothing behavior, or
+branch on receiver presence. Trapping or unprepared member access uses the
+available generated panic or hardware trap; missing target trap capability has
+the undefined boundary defined by the Nothing owner.
 
 For `value.inspect()`, `value` evaluates once before the explicit arguments and
-supplies the ordinary receiver. `_` identifies that instance.
+supplies the ordinary receiver. `_` identifies that instance and `?_` is true.
 
 Both forms select the same declared callable and explicit parameter/result
 contract. For a `final` function, `once` adds the type-qualified
-`Nothing`-receiver call rather than another implementation slot. `once` does not
+receiverless call rather than another implementation slot. `once` does not
 create an overload tie between a hidden type-callable implementation and an
-instance implementation. Declaration, `final`, generated default, replacement,
-and prohibition behavior is defined by
+instance implementation.
+
+The receiverless route synthesizes a `copy`-stanced Nothing receiver before
+selection. An exact `last` receiver declaration therefore remains available to
+an instance source but not to the type call:
+
+```zax
+(value as last).consume()
+MyType.consume() // error when consume requires exact last receiver
+```
+
+There is no runtime change from `last` to `copy`. Aliases, forwarding, and
+future closed callables must preserve whether they represent receiverless
+lookup or an instance receiver.
+
+`_` is pointer-shaped, while `_.` supplies the dereferenced form. Mapping to an
+expected pointer prefers `_`; mapping to an expected `MyType` may use `_.`.
+Either form may be passed or returned, including through a verified `self`
+result. Pointer dereference remains unchecked unless the type selected trapping
+Nothing behavior.
+
+Declaration, `final`, generated default, replacement, and prohibition behavior
+is defined by
 [declarations and bindings](declarations-and-bindings.md#type-callable-once-functions).
+Complete Nothing policies and receiver access behavior are defined by
+[Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
 
 This call rule does not define global or `once` value initialization, capture,
 concurrency, teardown, or generic-specialization behavior.
@@ -278,8 +319,8 @@ than being an operator-only concept. A concrete type argument is not a runtime
 value and does not become one merely because a value receiver supplied
 discovery.
 
-Declaration ownership, `operator type` receivers, and complete generic behavior
-are defined by
+Declaration ownership, type-qualified `unbound`/`once` operators, and complete
+generic behavior are defined by
 [declarations and bindings](declarations-and-bindings.md#operator-phrase-declarations-and-type-parameters).
 
 ### Literal result specialization
@@ -1103,7 +1144,7 @@ The caller declaration adopts the allocation and schedules its disposition. If
 the result is discarded, the result slot retains responsibility and dispositions
 the successful allocation.
 
-Reporting allocation transfers either a successful schedule or `Nothing`:
+Reporting allocation transfers either a successful schedule or vacancy:
 
 ```zax
 tryMakeValue final : (
@@ -1145,21 +1186,20 @@ when an exact deep-capable consumer exists and never implies built-in raw-pointe
 cloning. Only `last` ordinarily transfers a scheduled raw result's disposition
 responsibility.
 
-For result declarations, non-reporting `@` and `@<` also promise a non-`Nothing`
+For result declarations, non-reporting `@` and `@<` also promise a non-vacant
 pointer on every normal exit. The body may temporarily reset or replace the
-result but must restore presence. `@!` and `@!<` permit a normal `Nothing`
-result.
+result but must restore presence. `@!` and `@!<` permit a normally vacant result.
 
 | Result initializer | Body-entry state | Normal-exit guarantee |
 | --- | --- | --- |
 | `@` | Definitely present, scheduled | Definitely present |
-| `@!` | Possibly `Nothing`, scheduled after success | Possibly `Nothing` |
+| `@!` | Possibly vacant, scheduled after success | Possibly vacant |
 | `@<` | Definitely present, open-ended | Definitely present |
-| `@!<` | Possibly `Nothing`, open-ended after success | Possibly `Nothing` |
+| `@!<` | Possibly vacant, open-ended after success | Possibly vacant |
 | None | Unconstructed result slot | Body must construct one complete pointer value |
 
 An opaque operation may use narrow unsafe responsibility to assert a
-presence fact that analysis cannot prove. A path proved to return `Nothing`
+presence fact that analysis cannot prove. A path proved to return vacancy
 cannot satisfy a non-reporting contract through unsafe assertion.
 
 Current result syntax cannot express a delayed-construction contract that leaves
@@ -1168,11 +1208,13 @@ presence on every normal exit. `= @` provides the promise by allocating before
 body entry; an uninitialized pointer or optional result permits delayed
 construction but exposes no presence guarantee to callers.
 
-References provide non-`Nothing` borrowed inputs, but do not preserve pointer
-ownership, rebinding, or absence state. General future callable preconditions and
-postconditions should express contracts such as “this pointer is present on
-entry” or “this optional/owning result is present on normal exit” without
-inventing pointer-only type qualifiers.
+References provide borrowed inputs with no independent vacancy state, but do
+not preserve pointer ownership or rebinding. Unchecked pointer dereference may
+mechanically bind a reference to Nothing backing; a statically proved vacant
+source is diagnosed. General future callable preconditions and postconditions
+should express contracts such as “this pointer is present on entry” or “this
+optional/owning result is present on normal exit” without inventing
+pointer-only type qualifiers.
 
 Pre-body constructedness is part of body/prototype compatibility. A body that
 expects a live result on entry cannot be reused with a prototype that leaves
@@ -2452,10 +2494,10 @@ It may not:
 - synthesize missing values; or
 - enter the body with an unconstructed result when the implementation requires a
   constructed one;
-- provide a possibly `Nothing` allocated result to an implementation minted
+- provide a possibly vacant allocated result to an implementation minted
   under a definitely present result;
 - promise callers a definitely present result when the minted implementation
-  may produce `Nothing`; or
+  may produce vacancy; or
 - change operations already selected inside the body.
 
 For allocated raw results, presence and outward cleanup are separate:
@@ -2485,7 +2527,7 @@ maybeEntry final : (
 // error: implementation requires presence on entry
 ```
 
-Conversely, an implementation minted with `@!` may return `Nothing`, so an alias
+Conversely, an implementation minted with `@!` may return vacancy, so an alias
 using `@` would overpromise presence to callers.
 
 Changing outward stance does not alter internal stance-driven behavior already
@@ -2832,9 +2874,12 @@ Invocation diagnostics should distinguish:
 
 - no callable found;
 - invocation of a bound function value without a receiver;
-- invocation of a provably default-`Nothing` function value;
+- invocation of a provably unavailable function value;
 - a type-qualified call to a non-`once` function;
-- unguarded instance use through `_` during a type-qualified `once` call;
+- `?_` in a non-`once` bound function;
+- a receiverless type call whose synthesized `copy` receiver cannot select the
+  declaration;
+- trapping or unprepared Nothing access through `_`;
 - unknown parameter or result labels;
 - label-versus-declaration intent errors;
 - duplicate parameter, source-result, or destination mapping;

@@ -177,179 +177,26 @@ danglingPointer.value2 = "hello"
 ````
 
 
-### Casting a pointer to a by-reference or by-value type
+### Pointer dereference and reference formation
 
-A pointer cannot be implicitly converted back to a by-reference type (or to a by-value type). A compiler does not allow this kind of casting to occur because a pointer may point to nothing and a programmer should check for `Nothing` (or decide they don't need to check). If a pointer is not checked if that the pointer is pointing to a valid type's instance then a panic may occur at runtime if the pointer actually points to `Nothing`.
+The former claim that every pointer-to-reference operation performs a mandatory
+pointer-vacancy check and panic is superseded.
 
-An `as` operator can be used as one method to convert a pointer to a by-value or by-reference type, or alternatively the dot (`.`) operator can convert a pointer to a by-reference type.
+Postfix pointer dereference is unchecked. Static analysis diagnoses the
+operation when it proves the pointer vacant. If runtime vacancy escapes that
+proof, the resulting reference mechanically binds to the pointee type's Nothing
+instance. Compiler-prepared, trapping, and custom Nothing policies then
+determine whether subsequent access reads a prepared member, panics, or uses
+custom state. A reference has no independent vacant state.
 
-The `unsafe as` operator will forcefully convert any pointer type into a value reference of any other type but this is not recommended as it can lead to undefined behaviors.
+Current behavior and its invalid-write boundary are defined by
+[Zax Nothing instances](language/nothing-instances.md),
+[Zax lifetimes and references](language/lifetimes-and-references.md), and
+[Zax safety and analysis](language/safety-and-analysis.md).
 
-Examples of pointer casting:
+The superseded examples are removed rather than retained as competing
+pointer-to-reference teaching.
 
-````zax
-MyType :: type {
-    value1 : Integer
-    value2 : String
-}
-
-AnotherType :: type {
-    value1 : Float
-    value2 : WideString
-}
-
-funcByValue final : ()(input : MyType) = {
-    // ...
-}
-
-funcByRef final : ()(input : MyType &) = {
-    // ...
-}
-
-myType : MyType
-anotherType : AnotherType
-
-myTypePointer := myType as MyType *     // allowed
-
-myTypeRef1 := myType as MyType &        // allowed - implicit casting
-myTypeRef2 := myType as &               // allowed - deduced reference type
-myTypeRef3 : MyType & = myType          // allowed - implicit casting 
-myTypeRef4 : & = myType                 // allowed - implicit casting with
-                                        // deduced reference type
-funcByValue(myType)                     // allowed - copy
-funcByRef(myType)                       // allowed
-
-
-myTypeRef5 := myTypePointer as MyType & // allowed - implicit casting but would
-                                        // runtime panic if myTypePointer was
-                                        // pointing to `Nothing`
-myTypeRef6 := myTypePointer as &        // allowed - deduced reference type but
-                                        // would runtime panic if myTypePointer
-                                        // was pointing to `Nothing`
-
-funcByValue(myTypePointer as MyType &)  // allowed - copy but would runtime
-                                        // panic if myTypePointer was pointing
-                                        // to `Nothing`
-funcByRef(myTypePointer as MyType &)    // allowed - implicit casting but would
-                                        // runtime panic if myTypePointer was
-                                        // pointing to `Nothing`
-
-
-// ERROR: cannot implicitly convert from a pointer type to a reference type
-myTypeRef7 : MyType & = myTypePointer 
-myTypeRef8 : & = myTypePointer
-
-// ERROR: cannot implicitly convert from a pointer type to a by-value type or
-// a reference type
-funcByValue(myTypePointer)
-funcByRef(myTypePointer)
-
-
-if myTypePointer {
-    // safe because the pointer was checked if it points to something
-    // valid and this code executes and the conversion is performed
-    checkedType := myTypePointerToNothing as MyType &
-}
-
-// may runtime panic as `myTypePointer` was not checked if it is valid
-// (although in this context it most certainly is a valid pointer)
-myTypeRefA := myTypePointer. as MyType &// allowed - already a reference
-myTypeRefB := myTypePointer. as &       // allowed - already a reference
-
-funcByValue(myTypePointer. as MyType &) // allowed - copy
-funcByRef(myTypePointer. as &)          // allowed - already a reference
-
-myTypeRefC : MyType & = myTypePointer.  // allowed - already a reference
-myTypeRefD : & = myTypePointer.         // allowed - already a reference
-myTypeRefE := myTypePointer.            // allowed - copy with
-                                        // deduced type
-
-funcByValue(myTypePointer.)             // allowed - copy
-funcByRef(myTypePointer.)               // allowed - already a reference
-
-
-myTypeCopy1 := myType as MyType         // allowed - copy 
-myTypeCopy2 : MyType = myType           // allowed - copy 
-myTypeCopy3 := myType                   // allowed - copy with deduced type 
-
-funcByValue(myType as MyType)           // allowed - copy of a copy
-funcByRef(myType as MyType)             // allowed - reference to a copy
-
-funcByValue(myType)                     // allowed - copy
-funcByRef(myType)                       // allowed
-
-
-myTypeCopy4 := myTypePointer as MyType  // allowed - implicit copy casting 
-
-// ERROR: cannot implicitly convert from a pointer type to a value copy
-myTypeCopy4 : MyType = myTypePointer
-
-
-funcByValue(myTypePointer as MyType)    // allowed - copy of a copy
-funcByRef(myTypePointer as MyType)      // allowed - reference of a copy
-
-// ERROR: cannot implicitly convert from a pointer type to a value copy
-funcByValue(myTypePointer)
-// ERROR: cannot implicitly convert from a pointer type to a reference
-funcByRef(myTypePointer)
-
-
-// accessing `myTypePointer` may runtime panic if it points to `Nothing`
-myTypeCopy5 := myTypePointer. as MyType // allowed - copy 
-myTypeCopy6 : MyType = myTypePointer.   // allowed - copy 
-
-funcByValue(myTypePointer. as MyType)   // allowed - copy of a copy
-funcByRef(myTypePointer. as MyType)     // allowed - reference to a copy
-
-funcByValue(myTypePointer.)             // allowed - copy
-funcByRef(myTypePointer.)               // allowed reference to type
-
-
-
-myTypePointerToNothing : MyType *       // points to nothing
-
-if myTypePointerToNothing {
-    // safe because the pointer was checked if it points to something
-    // valid (this code will not execute)
-    checkedType := myTypePointerToNothing as MyType &
-}
-
-myTypePanic1 := myTypePointerToNothing as MyType &  // PANIC AT RUNTIME
-myTypePanic2 := myTypePointerToNothing as &         // PANIC AT RUNTIME
-myTypePanic3 := myTypePointerToNothing as MyType    // PANIC AT RUNTIME
-
-funcByValue(myTypePointerToNothing as MyType &)     // PANIC AT RUNTIME
-funcByRef(myTypePointerToNothing as MyType &)       // PANIC AT RUNTIME
-
-funcByValue(myTypePointerToNothing as &)            // PANIC AT RUNTIME
-funcByRef(myTypePointerToNothing as &)              // PANIC AT RUNTIME
-
-funcByValue(myTypePointerToNothing as MyType)       // PANIC AT RUNTIME
-funcByRef(myTypePointerToNothing as MyType)         // PANIC AT RUNTIME
-
-myTypePanic4 := myTypePointerToNothing. as MyType & // PANIC AT RUNTIME
-myTypePanic5 := myTypePointerToNothing. as &        // PANIC AT RUNTIME
-myTypePanic6 := myTypePointerToNothing. as MyType   // PANIC AT RUNTIME
-
-
-// ERROR: cannot implicitly convert from a pointer type to a reference type
-myTypePanicA : MyType & = myTypePointerToNothing
-myTypePanicB : & = myTypePointerToNothing
-myTypePanicC : MyType = myTypePointerToNothing
-
-
-// ERROR: cannot implicitly convert from a pointer type to a reference type
-funcByValue(myTypePointerToNothing)
-funcByRef(myTypePointerToNothing)
-
-
-myTypePanicD : MyType & = myTypePointerToNothing.   // PANIC AT RUNTIME
-myTypePanicE : & = myTypePointerToNothing.          // PANIC AT RUNTIME
-myTypePanicF : MyType = myTypePointerToNothing.     // PANIC AT RUNTIME
-
-funcByValue(myTypePointerToNothing.)                // PANIC AT RUNTIME
-funcByRef(myTypePointerToNothing.)                  // PANIC AT RUNTIME
-````
 
 
 ### Structural shape and layout conversion

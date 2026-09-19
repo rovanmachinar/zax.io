@@ -13,9 +13,11 @@ runtime result inference.
 > prototype may declare a `ParameterType : type`
 > [type parameter slot](language/declarations-and-bindings.md#type-parameter-slots-and-type-arguments)
 > completed by one concrete type identity with no runtime storage, lifetime, or
-> evaluation, and `operator type` declares a
-> [type-receiver operation](language/declarations-and-bindings.md#type-receiver-operators)
-> that is *not* inherently compile-time.
+> evaluation. A
+> [type-qualified operator](language/declarations-and-bindings.md#type-qualified-operators)
+> is declared `unbound` when it has no receiver or `once` when it deliberately
+> supports type and instance routes; type qualification is *not* inherently
+> compile-time.
 >
 > The `$Type` sigil, omitted-type inference, generic constraints, and computed
 > type results shown below are **not** current design. They are preserved as

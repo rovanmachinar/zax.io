@@ -48,6 +48,34 @@ Future work must reconcile those proposals with:
 
 No exact ordering rule in this file is accepted.
 
+## Nothing-instance preparation pressure
+
+[Zax Nothing instances](../../language/nothing-instances.md) requires the
+applicable Nothing backing to be prepared before any observable access.
+Ordinary global startup is the expected common strategy; the language does not
+require delayed first-use construction. A type that never needs an observable
+vacant-pointer target or receiverless `_` access need not materialize backing.
+
+Future lifecycle work must define:
+
+- how demand dependencies are discovered and ordered across modules;
+- startup publication and, only if a future implementation/language policy
+  permits lazy preparation, concurrent first demand;
+- cycles among custom `+++ final once` Nothing initializers;
+- panic, failure, retry, and partial preparation;
+- identity per generative module instance and concrete generic specialization;
+- destruction of dedicated custom Nothing storage;
+- dynamic loading and unloading; and
+- whether compatible compiler-provided backing is materialized during startup,
+  synthesized without addressable storage, or safely delayed without changing
+  observable ordering.
+
+Preparation must complete before publication. It does not invoke an ordinary
+zero-input constructor, does not establish automatic process-global uniqueness,
+and does not make compiler-provided shared backing an ordinary complete `T`
+instance. Custom Nothing mutation remains ordinary shared-state mutation whose
+synchronization is the programmer's responsibility.
+
 ## Generative module-state pressure
 
 Current [namespace/module design](../../language/namespaces-and-modules.md)

@@ -60,6 +60,31 @@ capture:
 Exact capture syntax, once-only callable contracts, lifetime, allocation, and
 reflection remain future lambda/callable work.
 
+### Capture disposition during function reset
+
+Current function-value behavior permits:
+
+```zax
+callback varying : ()() = makeCapturingCallback()
+reset callback
+```
+
+After `reset`, the slot is unavailable and `!callback` is true. Composition and
+capture work must define the owned callable representation and every resource
+released when reset dispositions its captures. It must preserve:
+
+- exactly-once disposition of owned by-value capture storage;
+- no destruction of a target merely borrowed by reference capture;
+- transfer and terminal-state obligations already accepted by the generated
+  callable;
+- behavior when capture disposition itself panics;
+- visible reset cost, allocation recovery, and indirect representation; and
+- the distinction between resetting a varying function slot and changing a
+  fixed `final` declaration.
+
+The signature-compatible unavailable behavior after reset is current; its
+capture representation and exact cost remain deferred here.
+
 ### Bind a receiver and create a closed callable
 
 Current function design distinguishes:

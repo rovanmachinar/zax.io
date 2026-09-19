@@ -650,7 +650,8 @@ MyStorage :: alias type MyInteger storage type
 MyCounterpart :: alias type MyInteger signedness counterpart type
 ```
 
-These type-receiver operations return type identities and perform no runtime
+These type-qualified operations use the concrete integer type identity as their
+lookup anchor, return type identities, and perform no runtime receiver
 construction. Exact generic declarations remain future work.
 
 ## Integer operations

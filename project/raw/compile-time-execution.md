@@ -7,15 +7,16 @@
 | Applies To | Directed/inferred compile-time execution, host/target context, target-format realization, and static support questions |
 | Owns | Preserved compile-time execution, target-format realization, capability-dependent static selection, representative source, activation pressure, and retirement questions |
 | Does Not Own | Accepted compile-time semantics or current integer/fixed/floating/literal/reflection behavior |
-| Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type receivers, `is constant`, and native execution context |
+| Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type-qualified discovery, `is constant`, and native execution context |
 
 ## Why this input exists
 
 Current documentation says only that compile-time execution is *directed and
-inferred* under the ordinary compile-time function model, that a type-receiver
-operation is not inherently compile-time, and that a compile-time language-level
-panic becomes a compiler diagnostic. Nothing else about compile-time execution is
-accepted, yet several accepted concepts depend on an execution context existing.
+inferred* under the ordinary compile-time function model, that a type-qualified
+`unbound` or `once` operation is not inherently compile-time, and that a
+compile-time language-level panic becomes a compiler diagnostic. Nothing else
+about compile-time execution is accepted, yet several accepted concepts depend
+on an execution context existing.
 
 This file keeps those dependencies visible.
 
@@ -162,10 +163,10 @@ Future work must decide what makes an expression "available as a compile-time
 constant", whether availability depends on the requesting context, and how the
 answer interacts with directed execution and resolution order.
 
-## Type-receiver execution
+## Type-qualified execution
 
-A type-receiver operation is discovered through a concrete type identity and is
-**not** inherently compile-time:
+A type-qualified operation is discovered through a concrete type identity used
+as a lookup anchor and is **not** inherently compile-time:
 
 ```zax
 instance := factory create MyType
@@ -175,9 +176,9 @@ Future work must decide:
 
 - when such an operation may execute at compile time;
 - whether a type argument alone ever forces compile-time execution;
-- what a compile-time type-receiver operation may observe; and
+- what a compile-time type-qualified operation may observe; and
 - whether the answer differs for language-provided versus user-declared
-  type-receiver operations.
+  `unbound` or `once` operations.
 
 ## Concrete results and constant inputs
 
@@ -323,7 +324,7 @@ Future work must decide:
 
 ## Constraints this input places on current work
 
-- current documentation must not treat a type-receiver operation as
+- current documentation must not treat a type-qualified operation as
   compile-time by default;
 - `native` must not be used interchangeably with `host` or `target`; and
 - contextual layout and constant queries must be preserved as context-dependent

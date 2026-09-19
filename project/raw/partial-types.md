@@ -296,8 +296,8 @@ operations begin.
 - whether language-generated conversion partials use the same coherence rules as
   source partials;
 - whether an identity owner may add behavior after its initial declaration;
-- whether `once final`, `once varying`, and `operator type` functions participate
-  in one partial authority model;
+- whether type-qualified `unbound`, `once final`, and `once varying`
+  declarations participate in one partial authority model;
 - how diagnostics identify the original owner and every contributing partial;
 - import and visibility behavior, including whether an extension's private
   members participate in the owning type's private context;

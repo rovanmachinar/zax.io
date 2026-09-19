@@ -183,9 +183,9 @@ Each entry preserves:
   `&&` and `||` are globally `Boolean`-only rather than ordinary eager overloads
   outside the protected exact `Boolean`/`Boolean` operations.
 - **Why local review misses it.** Remaining contradictions span core flow,
-  optional, and except pages.
-- **Likely owners.** [Except error handling](../../except.md),
-  [Nothing](../../nothing.md), and their future reviews.
+  optional, and error-handling surfaces.
+- **Likely owners.** [Except error handling](../../except.md) and its future
+  review.
 - **Resolution.** Every contradicted legacy claim is corrected or routed to a
   current owner.
 - **Activation pressure.** Each affected page's focused review, or a reported

@@ -6,7 +6,7 @@
 | Audience | Future work defining complete pointer provenance, arena interfaces, custom control blocks, collector algorithms, recovery internals, or affinity |
 | Applies To | Mechanics deferred by current lifetime and pointer design |
 | Owns | Preservation of unresolved arena interfaces, custom control-block implementation, deeper/unsafe ownership anchoring, pointer provenance and casts, pointer-layer presence mechanics, cycle-tracing algorithms, recovery implementation, prompt-disposition generic pressure, and thread-affine release |
-| Does Not Own | Current reference lifetime or pointer ownership semantics; future `Nothing` resident-instance and representation behavior ([Nothing input](nothing-instances.md)) |
+| Does Not Own | Current reference lifetime, pointer ownership semantics, or the programmer-facing Nothing-instance model |
 | Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; work items `014` and `015` |
 
 ## Current constraints
@@ -129,20 +129,39 @@ retaining distinct source identities and intent.
 `pointerA delta pointerB` must not overflow for a semantically valid difference,
 but that does not make arbitrary pointers comparable.
 
-## Pointer-to-`Nothing` behavior
+## Vacant-pointer and Nothing-instance mechanics
 
-Current pointers may contain `Nothing`, and `?pointer` reports the guarantee
-appropriate to the pointer role. Real monitored sentinels, custom global
-`Nothing`, generated member-access checks, compatible overlap, and exact
-representation are preserved by
-[raw Nothing-instance input](nothing-instances.md).
+Current semantics are defined by
+[Zax Nothing instances](../../language/nothing-instances.md). A vacant pointer
+semantically targets its pointee type's Nothing instance, and `?pointer` reports
+the guarantee appropriate to the pointer role. `@!` and `@!<` produce the
+destination pointer role's vacancy when a storage request fails. This is not
+optional absence and creates no ownership of Nothing backing.
 
-`@!` and `@!<` produce the destination pointer role's ordinary semantic
-`Nothing` when a storage request fails. This is not optional absence and creates
-no ownership of a shared sentinel.
+Future pointer mechanics must define:
 
-No representation may weaken the rule that a raw non-`Nothing` pointer does not
-by itself prove a live pointee.
+- exact tags, sentinel addresses, protected target storage, or other
+  representations by pointer role and target;
+- whether compatible compiler-provided Nothing backing has an address at all;
+- provenance and alignment attributed to a vacant representation;
+- arithmetic checks when an ordinary target is required;
+- safe type-aware conversion that remaps vacancy to the destination role;
+- view-shaped `unsafe cast`, which preserves the raw source representation and
+  does not remap a sentinel;
+- same-type vacant equality and any permitted byte-level observation; and
+- interaction with foreign nullability, target protection, and debug
+  instrumentation.
+
+Pointer mechanics must not assume a universal software vacancy check. Hardware
+write protection is used when available; trapping reads likewise depend on
+target capability. When required hardware support is absent, debugger detection
+does not create an equivalent panic guarantee and an access relying on that trap
+has undefined behavior.
+
+No representation may weaken the rule that raw pointer presence proves no
+pointee lifetime, provenance, alignment, or authority. A managed vacant pointer
+owns no target and never retains, releases, counts, or destroys a Nothing
+instance.
 
 ## Arena interfaces
 
@@ -341,8 +360,8 @@ process-wide cycle-collection algorithms, memory recovery implementation, or
 thread-affine release is reviewed. Current allocation and pointer source is
 owned by
 [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md).
-`Nothing` resident-instance, representation, and dereference behavior belongs
-to [raw Nothing input](nothing-instances.md).
+Programmer-facing Nothing-instance and dereference behavior belongs to
+[Zax Nothing instances](../../language/nothing-instances.md).
 
 Move accepted behavior into domain-oriented current owners, preserve remaining
 future concerns in narrower indexed inputs, then retire this file.

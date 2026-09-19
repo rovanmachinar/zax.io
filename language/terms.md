@@ -384,7 +384,7 @@ enclosure cannot make it valid. See
 A **declaration-attached raw allocation** uses a raw pointer value while its
 destination declaration's life path independently schedules allocation
 disposition. Copying the raw address does not copy that schedule. An accepted
-terminal transfer leaves the source pointer at `Nothing`, so its later scheduled
+terminal transfer leaves the source pointer vacant, so its later scheduled
 cleanup is a no-op.
 
 See
@@ -673,6 +673,29 @@ that every operation has a direct instruction or one uniform cost. See
 [Zax integers](integers.md#native-representation-and-software-emulation) and
 [binary floating-point support](floating-point-scalars.md#environment-support).
 
+## Nothing instance and Nothing policy
+
+A **Nothing instance** is the per-concrete-type semantic target used by vacant
+pointers and receiverless type calls. It is not a universal `Nothing` type or a
+source-level null value.
+
+A type's **Nothing policy** selects compiler-prepared readable backing, trapping
+access, or dedicated custom backing prepared by `+++ final once`.
+Defined types default to readable backing. Built-in types use one canonical
+trapping policy across modules.
+
+A **prepared Nothing representation** is the compiler-established member
+representation used for readable compiler backing. It does not imply ordinary
+construction of the complete enclosing type.
+
+A **custom Nothing instance** has dedicated type-owned storage and is intended
+for receiverless type calls. A **trapping Nothing policy** retains presence
+testing but requests target-supported trapping on dereference or member access.
+When the target lacks the needed trap, Zax does not insert universal software
+checks and an access relying on that trap has undefined behavior.
+
+See [Zax Nothing instances](nothing-instances.md).
+
 ## Normal completion
 
 **Normal completion** is relative to the construct being discussed. A body
@@ -842,7 +865,9 @@ stored there. See [Zax qualifiers](qualifiers.md) and
 A **pointee** is the place or value targeted by a pointer.
 
 The binding storing a pointer and its pointee are distinct qualification layers.
-A pointer may target Nothing; a reference must have a valid referent.
+A vacant pointer semantically targets its pointee type's Nothing instance.
+Unchecked pointer dereference may mechanically bind a reference to that special
+backing; the reference itself has no vacancy state.
 
 ## Post operation
 
@@ -960,6 +985,20 @@ meanings, and "receiver object" incorrectly suggests an object-oriented model.
 
 All three qualifier axes may constrain a receiver operand. See
 [Zax qualifiers](qualifiers.md#receiver-operands).
+
+## Receiverless type call
+
+A **receiverless type call** invokes a `once bound` declaration through its
+containing type rather than through an instance expression:
+
+```zax
+MyType.inspect()
+```
+
+`_` identifies the type's Nothing instance, `?_` is false, and the synthesized
+receiver offers `copy`. An instance-qualified call to the same declaration uses
+its actual receiver. See
+[Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
 
 ## Receiver stance
 
@@ -1247,18 +1286,21 @@ It occupies its ordered slot for viability, preference, and diagnostics like any
 other parameter. See
 [Zax declarations and bindings](declarations-and-bindings.md#type-parameter-slots-and-type-arguments).
 
-## Type-receiver operator
+## Type-qualified operator
 
-A **type-receiver operator** is an operation discovered through a concrete type
-identity rather than through an instance:
+A **type-qualified operator** is owned and discovered through a concrete type
+identity used as a lookup anchor:
 
 ```zax
 BackingType :: alias type EnumType underlying type
 ```
 
-It is declared with `operator type`, has no receiver instance, and is not
-inherently compile-time. See
-[Zax declarations and bindings](declarations-and-bindings.md#type-receiver-operators).
+An `unbound` declaration has no runtime receiver and `_` is unavailable. A
+`once bound` declaration deliberately supports both type-qualified
+receiverless and instance-qualified routes.
+
+Type qualification does not make an operation inherently compile-time. See
+[Zax declarations and bindings](declarations-and-bindings.md#type-qualified-operators).
 
 ## Type use
 
@@ -1324,6 +1366,20 @@ multiple access paths.
 
 Value mutation, place replacement, and access capability are separate concerns.
 See [Zax qualifiers](qualifiers.md).
+
+## Vacant pointer and vacate
+
+A **vacant pointer** is a live pointer value that semantically targets its
+pointee type's Nothing instance rather than an ordinary target. Pointer-role
+presence remains distinct from pointee lifetime and provenance.
+
+`vacate` is the protected raw-pointer operation that discards one address and
+installs vacancy without disposition. Plain use requires proof that no
+disposition authority is lost; `unsafe vacate` accepts responsibility only for
+an opaque but potentially valid raw relationship. Managed pointers and
+guaranteed leaks reject it even under `unsafe`.
+
+See [Zax pointers and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
 
 ## Value lifetime
 

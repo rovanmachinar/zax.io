@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-receiver operators; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
 | Does Not Own | Complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -207,8 +207,8 @@ scoped : Item * = @
 ```
 
 `@` obtains storage, constructs `Item`, and initializes the pointer declaration.
-It does not first create an empty pointer and assign over it. A pointer
-declaration without an allocation initializer contains `Nothing`:
+It does not first create a vacant pointer and assign over it. A pointer
+declaration without an allocation initializer is vacant:
 
 ```zax
 emptyOwner : Item * unique
@@ -485,17 +485,20 @@ initialization:
 callback : ()()
 ```
 
-Its default value is the function type's `Nothing` state. The compiler should
-diagnose an invocation it can prove still targets that default state. An
-otherwise unhandled invocation panics rather than manufacturing arbitrary
-results or executing undefined code.
+Its default value is the function type's unavailable state. Recognized
+`?callback` presence is false. The compiler diagnoses an invocation it can prove
+still targets that state; an otherwise unhandled invocation panics rather than
+manufacturing arbitrary results or executing undefined code.
 
 Call-boundary behavior for that state is defined by
 [Zax function invocation](function-invocation.md#callable-prototypes-and-visible-contracts).
+The relationship to per-type Nothing instances, function reset, and
+signature-compatible panic behavior is defined by
+[Zax Nothing instances](nothing-instances.md#function-values-have-presence).
 
 Future explicit behavior may permit selected function types to request a no-op
-or default-result `Nothing` implementation. Exact directives and complete
-`Nothing` semantics remain later work.
+or default-result unavailable implementation. That is a distinct future
+function-type contract.
 
 ## Shadowing
 
@@ -802,8 +805,8 @@ Every `final` function has one fixed implementation and no replaceable
 function-value slot per instance or type:
 
 - `final bound` requires an instance receiver;
-- `final once bound` also permits a type-qualified call with a `Nothing`
-  receiver state;
+- `final once bound` also permits a receiverless type call using the containing
+  type's Nothing instance;
 - `final unbound` is one fixed receiverless implementation owned by its
   declaration path;
 - `varying unbound` has ordinary per-instance replaceable storage when declared
@@ -820,7 +823,7 @@ shared by all instances:
 ```zax
 MyType :: type {
   inspect final once : ()() = {
-    // `_` is Nothing for MyType.inspect() and the instance for value.inspect().
+    // `?_` is false for MyType.inspect() and true for value.inspect().
   }
 }
 ```
@@ -834,10 +837,31 @@ value : MyType
 value.inspect()
 ```
 
-On a type call, `_` has the `Nothing` instance state. On an instance call, `_`
-identifies that instance. A body that uses instance state must account for both
-call forms. `final` prevents reassignment under ordinary function declaration
-rules.
+On a receiverless type call, `_` identifies the containing type's Nothing
+instance and offers `copy`; `?_` is false. On an instance call, `_` identifies
+the evaluated receiver and `?_` is true. A body that uses receiver state must
+account for both call forms. `final` prevents reassignment under ordinary
+function declaration rules.
+
+`?_` is protected for this `once` receiver test. In a non-`once` bound function
+it is a non-acknowledgeable intent error because an ordinary receiver is
+certainly present. Postfix access binds first, so `?_.` dereferences `_` and
+applies the ordinary selected `?` operation to the result.
+
+The special constructor family selects the type's Nothing policy:
+
+```zax
++++ final once : ()() = default
++++ final once : ()() = trap
++++ final once : ()() = {
+  // Prepare dedicated custom Nothing storage.
+}
+```
+
+The declaration takes no inputs, is not directly callable, and does not create
+an ordinary zero-input constructor. Complete policy behavior and scoped
+defaults are defined by
+[Zax Nothing instances](nothing-instances.md#select-the-types-nothing-policy).
 
 For a language-generated `once` function:
 
@@ -1334,28 +1358,46 @@ schema : MyReceiverType
 result := schema for SomeType
 ```
 
-### Type-receiver operators
+### Type-qualified operators
 
-`operator type` declares an operation whose receiver is a concrete type identity
-rather than an instance:
+A concrete type identity may supply type-owned qualification and discovery for
+an operator without becoming a runtime receiver:
 
 ```zax
 MyType :: type {
-  operator type pre unary 'custom type info for' final : (
+  operator pre unary 'custom type info for' final : (
     result : MyCustomTypeInfo
-  )() = {
-    // `_` has the Nothing state because no MyType instance exists.
+  )() unbound = {
+    // `_` is unavailable.
   }
 }
 
 info := custom type info for MyType
 ```
 
-The concrete type identity supplies discovery and has no runtime storage or
-lifetime. `_` points to the `Nothing` instance state because there is no receiver
-instance.
+`MyType` anchors lookup in declarations owned by `MyType`. The declaration is
+ordinary `unbound`, has no receiver slot, and adds no runtime storage or
+lifetime for the type identity.
 
-A type-receiver operation is not inherently compile-time. It may execute at
+One operator may instead deliberately support both an instance-qualified call
+and a type-qualified receiverless call by using ordinary `once`:
+
+```zax
+MyType :: type {
+  operator pre unary 'inspect' final once : ()() = {
+    if ?_
+      inspectInstance(_.)
+    else
+      inspectType()
+  }
+}
+```
+
+Type-qualified operators use `unbound` when no receiver exists and `once bound`
+when both type-qualified and instance-qualified routes are part of the
+declaration.
+
+A type-qualified operation is not inherently compile-time. It may execute at
 runtime and return a runtime value:
 
 ```zax
@@ -1363,11 +1405,10 @@ instance := factory create MyType
 ```
 
 Compile-time execution remains directed and inferred under the ordinary
-compile-time function model; a phrase adds no special execution rule.
-
-For a non-generic declaration, the enclosing type name identifies the receiver
-type inside its body. Generic instantiations, aliases, and type-receiver
-qualifications remain future generic and reflection work.
+compile-time function model; a phrase adds no special execution rule. For a
+non-generic declaration, the enclosing type name identifies the owner inside
+its body. Generic instantiations, aliases, and qualified type-identity lookup
+remain future generic and reflection work.
 
 ### Literal operators
 
@@ -2074,8 +2115,8 @@ Diagnostics should distinguish:
 - an identity declaration missing either its admission or surface keyword; and
 - conflicting `admit`/`restricted` or `expose`/`opaque` intent;
 - a type-qualified call to a function that is not `once`; and
-- a `once` function body that uses a missing instance without handling the
-  `Nothing` receiver state.
+- a receiverless `once` call that selects an unavailable receiver stance or
+  performs a trapping/unprepared Nothing access.
 
 Exact identifiers, wording, and presentation remain later diagnostics design.
 

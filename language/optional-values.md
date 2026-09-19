@@ -7,7 +7,7 @@
 | Applies To | Optional type formation, absence and presence, boxed construction and lifetime, reset, transfer effects, proven access, nested optionals, qualification, and related diagnostics; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
-| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); [pointer ownership and validity](pointers-and-arenas.md); complete `using` enrollment and disposal ([Zax `using`](using.md)); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function `Nothing`; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
+| Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); pointer vacancy, ownership, and Nothing behavior ([Nothing instances](nothing-instances.md), [pointers and arenas](pointers-and-arenas.md)); complete `using` enrollment and disposal ([Zax `using`](using.md)); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function availability; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
 | Source / Provenance | Retired legacy optional design input, refined against current construction, qualifier, operator, invocation, flow, integer, and identity design |
 
 ## Start with absence and presence
@@ -982,7 +982,7 @@ life-path and reference-origin behavior is defined by
 
 ### Pointer presence is not optional presence
 
-Pointers have their own `Nothing` state without requiring an optional wrapper.
+Pointers have their own vacancy without requiring an optional wrapper.
 
 ```zax
 owner : MyValue * unique
@@ -1003,20 +1003,21 @@ An optional pointer adds another independent layer:
 maybeOwner : MyValue * unique ?
 ```
 
-It distinguishes absent optional wrapper from a present pointer containing
-`Nothing` and from a present pointer owning a target. Each `?` operation or
-postfix access acts on one explicit semantic layer. Complete pointer presence,
-weak acquisition, and ownership are defined by
+It distinguishes an absent optional wrapper from a present vacant pointer and
+from a present pointer owning a target. Each `?` operation or postfix access
+acts on one explicit semantic layer. Complete pointer presence, Nothing
+instances, weak acquisition, and ownership are defined by
+[Zax Nothing instances](nothing-instances.md) and
 [pointers and arenas](pointers-and-arenas.md#presence-and-weak-acquisition).
 
 ### Existing empty-like boxed states remain distinct
 
 Optional absence never collapses a boxed type's own empty-like value:
 
-- an optional pointer distinguishes outer absence, a present pointer-to-nothing,
+- an optional pointer distinguishes outer absence, a present vacant pointer,
   and other present pointer states;
 - an optional function distinguishes outer absence, a present function
-  `Nothing`, and a present callable;
+  value that is unavailable, and a present callable;
 - a nested optional distinguishes outer absence, outer-present/inner-absent, and
   both layers present.
 

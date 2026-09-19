@@ -45,7 +45,8 @@ must decide explicitly:
 - whether a selected foreign boundary uses a separate discriminant or a valid
   niche;
 - how nested optional states remain distinguishable;
-- whether optional pointers/functions preserve their inner null/`Nothing` state;
+- whether optional pointers/functions preserve their inner vacant or
+  unavailable state;
 - size, alignment, padding, parameter passing, and result return;
 - stability across modules, toolchains, targets, and language versions;
 - adapter behavior when a foreign optional/nullability model has fewer states.
@@ -53,6 +54,30 @@ must decide explicitly:
 Representation coincidence on one target does not make two semantic states or
 type layers equivalent. Manual ABI use remains an explicit low-level boundary
 until a named contract accepts an exact optional representation.
+
+## Nothing-instance and foreign-nullability pressure
+
+[Zax Nothing instances](../../language/nothing-instances.md) fixes semantic
+state without fixing an ABI representation. Future interop work must define:
+
+- how a foreign null pointer maps to a Zax vacant pointer and the destination
+  pointee type's Nothing instance;
+- whether a foreign function pointer maps to an unavailable Zax function value,
+  is rejected, or requires an adapter;
+- how safe type-aware adapters remap vacancy while raw foreign and unsafe views
+  preserve representation;
+- whether trapping or custom Nothing policies may cross a foreign boundary;
+- whether the foreign target supplies read/write/execute trap capabilities or
+  needs an adapter with a different documented failure boundary;
+- pointer width, tags, sentinels, function thunks, and calling-convention
+  effects;
+- ownership and provenance when foreign code returns or stores a sentinel; and
+- diagnostics when the foreign model has fewer states than a Zax optional
+  containing a vacant pointer or unavailable function value.
+
+No foreign null address is the universal Zax representation. A named ABI
+contract may select one representation for one boundary; adapters remain
+required where semantic states differ.
 
 Current
 [Zax structural shape and compatibility](../../language/structural-shapes-and-compatibility.md)

@@ -3,7 +3,7 @@
 
 ## Compiler Directives
 
-> **Routing note.** This page remains legacy compiler-directive input. Five of its
+> **Routing note.** This page remains legacy compiler-directive input. Several of its
 > concerns now have live destinations:
 >
 > - **Directive enclosure.** Current source uses `[<directive>]`; contiguous
@@ -18,7 +18,8 @@
 >   input in
 >   [raw compile-time execution input](project/raw/compile-time-execution.md).
 >   Current documentation states only that compile-time execution is directed and
->   inferred, that a type-receiver operation is not inherently compile-time, and
+>   inferred, that a type-qualified `unbound` or `once` operation is not
+>   inherently compile-time, and
 >   that `size of`, `alignment of`, `offset of`, and `is constant` answer in the
 >   *active execution context*.
 > - **Native byte order.** **Native** endianness means the byte order of the
@@ -33,6 +34,17 @@
 >   syntax remains future
 >   [analysis-control input](project/raw/analysis-controls.md). The `[[panic=...]]`
 >   spellings below remain legacy evidence rather than accepted syntax.
+> - **Nothing-instance policy.** The current
+>   `[<nothing-instance-default=default>]` and
+>   `[<nothing-instance-default=trap>]` directive semantics are defined by
+>   [Zax Nothing instances](language/nothing-instances.md). Current `[<...>]`
+>   attachment syntax belongs to
+>   [Zax source structure](language/source-structure.md#compiler-directive-enclosure).
+>   Built-in types do not inherit this directive; their Nothing policy is
+>   canonically trapping across modules.
+>   Exact panic-category names, independently selectable checks, debug
+>   instrumentation, and unsafe controls remain future
+>   [analysis-control input](project/raw/analysis-controls.md).
 > - **Source, export, and module directives.** Current module roots, ordered
 >   source contribution, generative imports, injection, module-internal default
 >   visibility, and explicit-export requirement are owned by
@@ -232,15 +244,13 @@ Upon importing a module, all panic states are pushed and all panic states are po
 
 The following are registered panic scenarios, default states, and their meaning:
 * `out-of-memory` (always)
-    * memory was requested to be allocated but insufficient memory exists to fill the request (allocation failures normally panic rather than return a pointer to `Nothing`)
+    * memory was requested to be allocated but insufficient memory exists to
+      fill the request (allocation failures normally panic rather than return a
+      vacant pointer)
 * `intrinsic-type-cast-overflow` (always)
     * an intrinsic type may overflow during an `as` operator to a type with lower bit sizing if a value is beyond the capacity of a given intrinsic type
 * `string-conversion-contains-illegal-sequence` (always)
     * a string literal conversion was found to contain an illegal character sequence during a conversion process
-* `reference-from-pointer-to-nothing` (always)
-    * a pointer was converted to a reference but a pointer points to `Nothing`
-* `pointer-to-nothing-accessed` (always)
-    * a value (or function) was accessed but a pointer points to `Nothing`
 * `not-all-pointers-destructed-during-allocator-cleanup`
     * memory cleanup is being performed but not all allocated instances in memory from an allocator were destructed
 * `impossible-switch-value` (always)
@@ -253,6 +263,12 @@ The following are registered panic scenarios, default states, and their meaning:
     * an attempt was made to call a `lazy` function that has already cause a final `return` from that `lazy` function
 * `value-polymorphic-function-not-found` (always)
     * a function supporting value polymorphism was called but none of the pre-condition checks succeeded
+
+The former `reference-from-pointer-to-nothing` and
+`pointer-to-nothing-accessed` entries are superseded. Pointer dereference is
+unchecked, a vacant pointer semantically targets its pointee type's Nothing
+instance, and compiler-prepared, trapping, and custom policies have distinct
+failure boundaries. Exact categories remain future analysis-control work.
 
 
 ### `deprecate` directive
@@ -1629,8 +1645,15 @@ MyType2 :: type {
 An `[[abi=<options>]]` directive can override a calling convention to force a particular ABI for a given function. For ABI compatibility purposes with C/C++, a function within a type can declare `final` function with an alternative ABI. Normally the Zax language makes no ABI commitments across compiled functions as source code is always compiled as a whole and compiled libraries are not considered compatible across compilers or compiler versions.
 
 The ABI options are as follows:
-* `virtual` - this causes a function to assume `C++` virtual calling conventions to be inserted into a virtual table for a `type` where a `virtual` table for a `type` will be auto-created and auto-maintained (warning: the context variable `___` will point to nothing upon entry to a function)
-* `c` - this causes a function to assume a `c` style calling convention (warning: the context variable `___` will point to nothing upon entry to a function and a `_` will point to `Nothing`)
+* `virtual` - this causes a function to assume `C++` virtual calling conventions
+  to be inserted into a virtual table for a `type` where a `virtual` table for a
+  `type` will be auto-created and auto-maintained; the legacy context-state
+  assumption is not current and remains future interoperability input
+* `c` - this causes a function to assume a `c` style calling convention; the
+  legacy receiver-state claim is not current. Foreign receiver and context
+  adaptation belongs to [raw interoperability input](project/raw/interop.md),
+  and receiverless type calls belong to
+  [Zax Nothing instances](language/nothing-instances.md)
 * `never` - a function never returns and a compiler can generate jump assembly instructions without an instruction pointer stack frame pushed or return instructions
 * `interrupt` - a function will be called directly from an interrupt and a compiler should generate interrupt return instructions instead of standard return instructions
 

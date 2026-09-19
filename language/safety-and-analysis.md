@@ -153,6 +153,41 @@ unsafe<lifetime>{
 }
 ```
 
+## Diagnosable unchecked Nothing access
+
+Nothing-instance access has one deliberate low-level boundary that does not
+require proof before every operation. Postfix pointer dereference is unchecked:
+
+```zax
+pointer : MyValue * = choosePointer()
+view : MyValue & = pointer.
+```
+
+If analysis proves `pointer` vacant, the compiler reports an error. If runtime
+vacancy escapes analysis, the reference mechanically reaches the type's Nothing
+backing. Prepared reads may succeed, unprepared access uses its defined panic
+path where available, and a write to compiler-provided shared backing is
+invalid.
+
+Zax does not require a generated vacancy check on every read or store. Suitable
+target protection traps writes and requested trapping-policy reads; debug
+instrumentation may detect additional misuse. When the target lacks the needed
+trap, a missed access can read prepared backing, corrupt shared backing, or have
+undefined consequences.
+
+Compiler improvements may diagnose more certainly invalid source without
+requiring every implementation to use one proof algorithm. How a compiler acts
+on a high-confidence but unproved flow remains future safety/error design. Any
+unsafe responsibility may belong at the call or handoff that exposes a possibly
+vacant pointer to a writer, rather than on the eventual store; it is not an
+intent acknowledgement. The future unsafe catalog retains provisional
+`possible-nothing-write` and `possible-nothing-read-trap` categories for those
+two uncertain-flow classes.
+
+This is not an unsafe assertion silently inserted by the compiler. It is a
+domain rule for unchecked pointer access whose exact behavior is owned by
+[Zax Nothing instances](nothing-instances.md#pointer-dereference-is-unchecked).
+
 ## Intent, unsafe, and linting are different
 
 | Mechanism | Programmer statement |
@@ -278,7 +313,7 @@ valid origin may need an unsafe assertion or future callable-origin contract.
 
 ### Raw pointers
 
-A non-`Nothing` raw pointer does not prove:
+A non-vacant raw pointer does not prove:
 
 - live pointee storage;
 - a resident instance;
@@ -292,7 +327,7 @@ selected contract. A structurally bounded pointer whose allocation,
 construction, use, destruction, and recovery remain inside one containing life
 path may be fully provable.
 
-`?rawPointer` proves only non-`Nothing`. Existing origin analysis may prove the
+`?rawPointer` proves only non-vacancy. Existing origin analysis may prove the
 remaining facts, or an escape, opaque operation, owner release, reset,
 relocation, or arena teardown may invalidate that proof.
 
@@ -326,11 +361,18 @@ open : MyValue * = @<
 open = @<{ anotherArena }
 ```
 
-This is safe when analysis proves `open` is `Nothing` or its prior allocation
+This is safe when analysis proves `open` is vacant or its prior allocation
 was dispositioned. A proved live overwrite is a known resource loss and is
 rejected. If opaque code may have reset or transferred the prior allocation,
 narrow unsafe responsibility may assert that missing fact. Intent
 acknowledgement cannot supply lifecycle proof.
+
+Raw `vacate` follows the same distinction. Plain use requires proof that
+discarding the address loses no required disposition authority. `unsafe vacate`
+may assert an opaque but potentially valid external relationship, but it cannot
+legalize a proved last usable address to a live allocation. Managed pointers
+reject `vacate` even under `unsafe` because bypassing their release guarantees a
+leak or corrupts ownership accounting.
 
 ### Array bounds, slices, and disabled checks
 
@@ -378,7 +420,7 @@ Examples of defined failure include:
 
 - a failed shared-to-unique ownership claim producing an empty unique pointer;
 - a failed weak acquisition producing an empty strong pointer;
-- a non-panicking allocation producing a pointer to `Nothing`;
+- a non-panicking allocation producing a vacant pointer;
 - a panicking allocation failing its arena request;
 - a checked operation returning absence; and
 - a required runtime check panicking.
@@ -510,7 +552,7 @@ the compiler to omit its check. If the condition occurs anyway, behavior is
 undefined. Other panic categories remain enabled.
 
 For allocation, this is not a third unchecked operator: `@` remains panicking
-and `@!` must still detect request failure to return `Nothing`. Exact
+and `@!` must still detect request failure to return a vacant pointer. Exact
 panic-category names and control syntax remain future analysis-control work.
 
 ## Diagnostics

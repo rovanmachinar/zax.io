@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [026: Nothing values, states, and instances](work/026-nothing-values-states-and-instances.md) |
-| Next work number | `027` |
+| Active work item | [027: Lambda definitions and callable composition](work/027-lambda-definitions-and-callable-composition.md) |
+| Next work number | `028` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
