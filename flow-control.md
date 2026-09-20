@@ -23,7 +23,7 @@ non-authoritative until its own focused review.
 
 ### Value polymorphism using `if`
 
-An `if` statement can also be used in a function declaration to indicate that a function supports value polymorphism. Which function to call is based on a pre-condition check for a given `if` statement. The compiler will execute each test based on the order of appearance in code if no specific order has a bias. If no match is found (and if present) then a undecorated version of a function will be executed. A compiler may decide to reorder tests if the reordering will have no net resulting impact on the code flow. Care should be taken to not have overlapping pre-conditions if code order cannot be preserved or guaranteed. The `[[likely]]` and `[[unlikely]]` compiler directives can be used as a hint to a compiler which execution path is more likely to be followed (thus tests can be reordered appropriately).
+An `if` statement can also be used in a function declaration to indicate that a function supports value polymorphism. Which function to call is based on a pre-condition check for a given `if` statement. The compiler will execute each test based on the order of appearance in code if no specific order has a bias. If no match is found (and if present) then a undecorated version of a function will be executed. A compiler may decide to reorder tests if the reordering will have no net resulting impact on the code flow. Care should be taken to not have overlapping pre-conditions if code order cannot be preserved or guaranteed. The `[<likely>]` and `[<unlikely>]` compiler directives can be used as a hint to a compiler which execution path is more likely to be followed (thus tests can be reordered appropriately).
 
 If some value polymorphic functions are declared using an `if` statement then a single polymorphic version function using the same types can be declared as a catch-all if none of the other conditions succeed (i.e. the logical equivalent of a `switch` `default` statement). If no function was found a panic may be issued.
 
@@ -77,11 +77,11 @@ toString final : (result : String)(value : Integer) = {
     // ...
 }
 
-next final : (s: String)(i : Integer) if [[unlikely]] { return i % 15 == 0 } = {
+next final : (s: String)(i : Integer) if [<unlikely>] { return i % 15 == 0 } = {
     return "FizzBuzz"
 }
 
-next final : (s: String)(i : Integer) if [[likely]] { return i % 3 == 0 } = {
+next final : (s: String)(i : Integer) if [<likely>] { return i % 3 == 0 } = {
     return "FizzBuzz"
 }
 
@@ -91,7 +91,7 @@ next final : (s: String)(i : Integer) if { return i % 5 == 0 } = {
 
 // next is not marked as `final` and can be replaced with an alternative
 // implementation
-next : (s: String)(i : Integer) [[likely]] = {
+next : (s: String)(i : Integer) [<likely>] = {
     return toString(i)
 }
 

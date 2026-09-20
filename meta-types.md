@@ -149,7 +149,7 @@ myType2.value = "not going to work"
 A meta-type can can have arguments that are compile-time constants as an input to the definition of the meta-type.
 
 ````zax
-MyType$(Value [[compile]] : Integer) :: type {
+MyType$(Value [<compile>] : Integer) :: type {
     value : Integer[$Value]
 }
 
@@ -172,7 +172,7 @@ myType.value[5] = 101
 A meta-type can can have arguments that are compile-time constants as an input to the definition of the meta-type and these constants can be defaulted if not specified.
 
 ````zax
-MyType$(Bits [[compile]] : Integer = size of Integer) :: type {
+MyType$(Bits [<compile>] : Integer = size of Integer) :: type {
     bits : Boolean[$Bits]
 }
 
@@ -190,17 +190,17 @@ myType.value[10000] = false
 
 #### Meta-function selection using the `concept` directive
 
-For meta-functions, the `[[concept]]` directive can be used as a compile type mechanism to check if the function can be selected as a candidate for a given input, or output argument specified. If the code in the `[[concept]]` block fails to compile or returns false then the meta-function cannot be selected as a legal candidate by the caller. The executed code must evaluate to a `true` or `false` statement.
+For meta-functions, the `[<concept>]` directive can be used as a compile type mechanism to check if the function can be selected as a candidate for a given input, or output argument specified. If the code in the `[<concept>]` block fails to compile or returns false then the meta-function cannot be selected as a legal candidate by the caller. The executed code must evaluate to a `true` or `false` statement.
 
 ````zax
-IsSelectable final : (result : Boolean)(ignored : ) [[concept]] = {
+IsSelectable final : (result : Boolean)(ignored : ) [<concept>] = {
     if size of ignored > size of Integer
         return false
     // ...
     return true
 }
 
-MyType$(UseType [[concept=IsSelectable]] = Integer) :: type {
+MyType$(UseType [<concept=IsSelectable>] = Integer) :: type {
     valueA : $UseType
 }
 

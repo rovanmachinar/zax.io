@@ -6,7 +6,7 @@
 | Audience | Human developers defining, converting, routing, or inspecting structurally related values |
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, and reshape forwarding; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
+| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, and callable result/input reshape mapping; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
 | Does Not Own | Complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
 
 ## Start with distinct identities
@@ -1172,6 +1172,31 @@ No transformation can execute until the direct reshape or exact alias
 completion supplies the complete directional paths. General alias and forward
 rules are defined by
 [declarations and bindings](declarations-and-bindings.md#forward-anchors).
+
+### Mapping callable results to inputs
+
+A reshape can map one concrete callable result shape into another callable's
+input shape:
+
+```zax
+ParseToRender :: reshape {
+  tree: document:
+  notes: diagnostics:
+}
+
+pipeline := parse >> ParseToRender >> render
+```
+
+The reshape remains no-storage. The complete three-part expression constructs
+one composition and creates no intermediate structural value.
+
+Mapping applies explicit entries first, then exact equal labels, then remaining
+positions in declaration order. Destination defaults and source-result omission
+apply afterward. Mapping never backtracks, and an incompatible equal-label pair
+is an error until an explicit entry states another route.
+
+Complete callable construction and invocation are defined by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#remap-with-reshape).
 
 An existing destination can be updated directly through the same declaration:
 

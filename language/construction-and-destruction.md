@@ -78,6 +78,14 @@ representation, including owned captures, then establishes the function type's
 unavailable default state. It is lifecycle-aware and therefore distinct from
 raw-pointer `vacate`, which deliberately performs no target disposition.
 
+Replacement first completes the new callable, then dispositions the old
+installed mode, then publishes one complete successor. Unbound and borrowed
+targets release no receiver lifetime; unique, strong, atomic strong, and weak
+targets release their applicable ownership or observation relationship. A panic
+leaves the same replacement/reset operation blocked rather than exposing a
+half-updated slot. Complete mode-specific behavior belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-transfer-reset-and-recursion).
+
 ## Ordinary construction
 
 ### Constructor declarations

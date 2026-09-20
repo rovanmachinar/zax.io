@@ -374,6 +374,30 @@ legalize a proved last usable address to a live allocation. Managed pointers
 reject `vacate` even under `unsafe` because bypassing their release guarantees a
 leak or corrupts ownership accounting.
 
+### Opaque owner and observer recovery
+
+`OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver` preserve a private
+exact type/capability witness while hiding typed access.
+
+`value is type MyType` is a safe nonexecuting proof operation. It transfers
+nothing, creates no access path, and does not prove liveness. Safe recovery still
+checks ownership role, origin, and qualification authority:
+
+- owner or pointer recovery can report failure through a vacant typed pointer;
+- reference-observer recovery panics on mismatch because a reference cannot be
+  vacant; and
+- a successful preceding `is type` test supplies the exact type fact to its
+  proven flow path.
+
+`unsafe transfer (opaqueOwner as last)` is a defined unsafe assertion that
+bypasses the type-witness check while performing an ownership transition. It
+cannot recover an erased interior target from allocation-root ownership, regain
+lost qualifications, or turn a nonowner into an owner. A known mismatch remains
+an error; a false opaque assertion has undefined consequences.
+
+Complete domain behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
+
 ### Array bounds, slices, and disabled checks
 
 When the compiler can prove that an intrinsic array operation is invalid—for

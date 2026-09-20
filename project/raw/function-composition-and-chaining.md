@@ -1,249 +1,109 @@
-# Raw input: function composition and chaining
+# Raw input: remaining callable-adjacent pressure
 
 | Field | Value |
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
-| Audience | Future work defining function composition, capture, chaining, generated callable types, or generic callable reflection |
-| Applies To | Preserved `>>`, `|>`, call-component, capture, optional callable construction/combinators, and reflection pressure |
-| Owns | Representative source, generated-signature concepts, optional callable/combinator pressure, costs, boundaries, activation pressure, and retirement criteria |
-| Does Not Own | Accepted composition semantics or current invocation/operator ownership |
-| Source / Provenance | Legacy `functions.md`, operator review, and work item `012` optional callable/combinator pressure |
+| Audience | Future work defining optional combinators, restricted capture scopes, callable generics/reflection, or advanced call/mixfix integration |
+| Applies To | Callable-adjacent material deliberately not resolved by current lambda and composition design |
+| Owns | Optional callable construction/combinator pressure; restricted `scope` capture evidence; advanced `operator call`/mixfix pressure; generic and reflection questions; activation and retirement |
+| Does Not Own | Current lambda, capture, callable-storage, composition, or chaining behavior |
+| Source / Provenance | Retired legacy function-composition material, optional review, operator review, and work item `027` disposition |
 
-## Composition and capture pressure
+## Current behavior moved
 
-Legacy composition joins compatible callable results and inputs:
+Current lambda expressions, capture construction, callable storage and receiver
+lifetime, partial application, positional and reshape composition, immediate
+chaining, reset, weak invocation, and costs are now owned by
+[Zax lambdas and callable composition](../../language/lambdas-and-callable-composition.md).
 
-```zax
-combined := first >> second
-```
+This raw file must not be used to recover competing `>>`, `|>`, capture, or
+receiver-reattachment behavior.
 
-Value capture may create a new callable without invoking it immediately:
+## Restricted captured scope
 
-```zax
-bound := 55 >> process
-```
-
-The generated result may have an unnameable concrete type containing capture
-state while remaining compatible with a visible callable prototype. Future work
-must define:
-
-- which `>>` operand/result shapes are language-generated;
-- output-to-input mapping;
-- capture evaluation and lifetime;
-- allocation, copy, move, and indirect-call costs;
-- chaining versus composition;
-- overload and generated-candidate preference;
-- protected all-callable combinations;
-- lambda and closure type identity;
-- and reflection.
-
-[Zax transfer stances](../../language/transfer-stances.md) now constrains
-capture:
-
-- constructing the callable is the transfer consumer; later invocation is not
-  the capture transfer point;
-- ordinary capture defaults to `copy`; when the captured name is a reference,
-  this copies the referent into the callable's capture path rather than storing
-  another reference;
-- a by-value capture owns its captured storage and may adopt a declaration
-  stance;
-- an explicit reference capture behaves like an alias, retains the original
-  fixed target, requires lifetime proof for every invocation, and does not
-  silently inherit `move` or `last` from the source declaration;
-- destructive use through a reference capture requires an explicit
-  `as move` or `as last` restatement;
-- repeated invocation must not accidentally repeat a one-time destructive
-  transfer; and
-- forwarding through generated callable types must preserve the exact accepted
-  stance and affected object.
-
-Exact capture syntax, once-only callable contracts, lifetime, allocation, and
-reflection remain future lambda/callable work.
-
-### Capture disposition during function reset
-
-Current function-value behavior permits:
-
-```zax
-callback varying : ()() = makeCapturingCallback()
-reset callback
-```
-
-After `reset`, the slot is unavailable and `!callback` is true. Composition and
-capture work must define the owned callable representation and every resource
-released when reset dispositions its captures. It must preserve:
-
-- exactly-once disposition of owned by-value capture storage;
-- no destruction of a target merely borrowed by reference capture;
-- transfer and terminal-state obligations already accepted by the generated
-  callable;
-- behavior when capture disposition itself panics;
-- visible reset cost, allocation recovery, and indirect representation; and
-- the distinction between resetting a varying function slot and changing a
-  fixed `final` declaration.
-
-The signature-compatible unavailable behavior after reset is current; its
-capture representation and exact cost remain deferred here.
-
-### Bind a receiver and create a closed callable
-
-Current function design distinguishes:
-
-- a `bound` prototype, which has one receiver slot of a known type;
-- an `unbound` prototype, which has no receiver slot; and
-- a future closed callable value that captures or borrows one actual receiver.
-
-`type of myValue.memberFunction` preserves the bound prototype's receiver type
-without evaluating or capturing `myValue`. A function value of that type can use
-`_` in its implementation but cannot be invoked until a receiver is supplied.
-
-Preserve this suggested receiver-application syntax:
-
-```zax
-// Illustrative future syntax.
-myBoundFunc() // error: the bound prototype still needs a receiver
-
-callableMyBoundFunc := [&myValue] >> myBoundFunc
-callableMyBoundFunc()
-```
-
-The operation should consume the bound receiver slot rather than map `myValue`
-to an ordinary named input. It creates a generated receiverless callable and
-does not invoke `myBoundFunc` while capturing.
-
-Future review must decide:
-
-- final syntax and whether `>>` unifies receiver application, argument capture,
-  and function-result composition;
-- by-value versus explicit-reference capture;
-- capture evaluation and transfer stance;
-- target and overload selection before capture;
-- generated callable prototype and anonymous environment identity;
-- repeated invocation and destructive receiver use;
-- lifetime proof for a captured reference;
-- allocation and indirect-call cost; and
-- reflection of the bound prototype, captured receiver, and closed callable.
-
-This pressure strongly suggests reviewing lambda syntax, receiver application,
-partial argument capture, and function composition as one cohesive feature
-rather than assigning unrelated mechanisms to the same generated callable
-surface.
-
-Preserve both legacy explicit reference-capture shapes:
+Legacy input proposed a non-callable restricted scope:
 
 ```zax
 // Legacy illustrative syntax.
-callback := [&source, alternate : & = otherSource] {
-  use(source)
-  use(alternate)
-}
-```
-
-`&source` keeps the source name. `alternate : & = otherSource` proposed a named
-reference capture. Neither spelling is accepted yet.
-
-Legacy `scope` input also proposed callable-like capture:
-
-```zax
-// Legacy illustrative syntax.
-scope [myInput, &myOutput] {
+scope [ myInput, &myOutput ] {
   myOutput = transform(myInput)
 }
 ```
 
-Future work must decide whether this remains an independently useful restricted
-scope form or is better expressed by ordinary declarations, a lambda, or a
-direct call. It must preserve the current capture rule: ordinary capture copies
-the source value, while explicit reference capture borrows one fixed target and
-requires lifetime proof. If callable-like restricted scope remains, names not
-listed in its capture list are not visible inside that scope.
+Future flow/scope work must decide whether this remains independently useful or
+is better expressed by ordinary declarations, a lambda, or a direct call. If it
+remains, names absent from the list are unavailable inside the scope, ordinary
+capture copies, and explicit reference capture borrows one fixed place.
 
-`>>` retains the operator catalog's shift-level precedence for every use. Types
-cannot assign composition another precedence.
+## Optional callable construction
 
-## Invocation chaining
-
-`|>` remains a separate chaining candidate:
-
-```zax
-value |> process
-```
-
-It may use the same general generated-candidate machinery without sharing
-composition semantics.
-
-## Call-form mixfix and reflection
-
-A custom callable may use a `call N` mixfix component:
-
-```zax
-result := callable(5, "apple") + adjustment
-```
-
-Future work must integrate call labels, defaults, variadics, result forwarding,
-and generated lambda types.
-
-Preserve generic/reflection pressure:
-
-```zax
-myReflectionAnalyzer << myFunc
-```
-
-At least one custom operand keeps this outside an all-intrinsic signature, but
-complete generic and reflection behavior remains unsettled.
-
-## Optional callable construction pressure
-
-[Zax optional values](../../language/optional-values.md) requires a construction
-packet to establish a boxed function value in an existing optional:
+An existing optional may construct a present callable through an ordinary
+construction packet:
 
 ```zax
 callback : MyCallback?
 callback = [{ doSomethingFunc }]
 ```
 
-A future inline callable value may contain a braced body:
+Future optional/callable integration may permit an inline lambda as the one
+packet input. Packet braces and lambda body braces must remain distinct, and
+`[{}]` remains the zero-entry construction packet.
 
-```zax
-callback = [{ { doSomething() } }]
-```
+## Optional combinators
 
-That source is illustrative, not accepted. Function-value work must decide
-whether the inner braces construct a callable, create a scope, or require a
-prior named value. It must preserve `[{}]` as the explicit zero-entry packet and
-`[{ expression }]` as one packet input rather than confusing callable-body and
-packet boundaries.
-
-## Optional combinator pressure
-
-Optional values may benefit from present/absent callable composition:
+Optional values may benefit from operations such as:
 
 ```zax
 fold(optionalValue, onPresent, onAbsent)
 ```
 
-Possible `on some`, `on none`, mapping, and folding operations must decide:
+Future work must define:
 
 - only the selected callback executes;
 - how a present callback receives boxed qualifications and lifetime proof;
-- how outermost `copy`/`deep`/`move`/`last` stance reaches the callback;
+- how outer transfer stance reaches the callback;
 - result convergence between present and absent callbacks;
-- capture, temporary, allocation, and indirect-call costs;
-- async callback behavior;
-- protected language operation versus library API ownership.
+- capture, allocation, temporary, and indirect-call costs;
+- async callback behavior; and
+- protected operation versus library ownership.
 
-`optionalValue.onSome(...)` is not neutral candidate syntax because postfix `.`
-already crosses into the boxed value. Exact source must respect current optional
-access and operator-phrase rules.
+This pressure does not establish a general monad abstraction. A reusable model
+would require concrete evidence across several value families.
 
-This concrete pressure does not establish a general monad abstraction. If later
-work finds a reusable model spanning optionals, results, collections, async
-values, and composition laws, it may justify a separately indexed owner.
+## Call-form mixfix pressure
+
+A custom callable may use a `call N` mixfix component. Future work must
+integrate labels, defaults, variadics, result forwarding, and generated callable
+types without creating an intermediate call result for a consumed component.
+
+## Generic and reflection pressure
+
+Future generic work must decide:
+
+- generic lambda parameter and constraint syntax;
+- specialization identity and body minting;
+- type erasure and finite runtime callable surfaces; and
+- interaction with exact callable prototypes.
+
+Future reflection must distinguish:
+
+- anonymous generated receiver identity;
+- capture declarations and source presentation;
+- fixed/varying and bound/unbound static storage capacity;
+- the installed callable binding kind;
+- visible prototype versus minted implementation;
+- receiver ownership/observation mode;
+- source availability and reset state; and
+- generated composition stages and reshape mapping.
+
+No exact reflection source form is accepted here.
 
 ## Activation and retirement
 
-Activate this input for composition, chaining, captures, lambdas, partial
-application, callable generics, callable reflection, optional callable
-construction, or optional combinators. Move accepted behavior into function,
-invocation, operator, optional, generic, selection, or reflection owners and
-retire this file when fully dispositioned.
+Activate this input for restricted scopes, optional callback construction or
+combinators, generic lambdas, callable reflection, or advanced call/mixfix
+integration.
+
+Move accepted behavior into its domain owners. Retire this file when every
+remaining concern has been promoted, rejected, or moved to a narrower indexed
+input.

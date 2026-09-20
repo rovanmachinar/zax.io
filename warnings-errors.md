@@ -26,16 +26,16 @@ source and its acknowledgement categories are defined by
 
 #### Forcing the compiler to issue an error
 
-An `error` can forcefully be issued by a programmer by using an `[[error="<message>", <optional-registered-error-name>,name=<opt-name>, value=<opt-value>, name..., value...]]` compiler directive. If a compiler compiles-in an `error` directive, a compiler will display an error and halt. A compiler error may optionally include one of the built-in error names or declare a custom error name with a `x-` prefix.
+An `error` can forcefully be issued by a programmer by using an `[<error="<message>", <optional-registered-error-name>,name=<opt-name>, value=<opt-value>, name..., value...>]` compiler directive. If a compiler compiles-in an `error` directive, a compiler will display an error and halt. A compiler error may optionally include one of the built-in error names or declare a custom error name with a `x-` prefix.
 
 An optional `name` and `value` are any arguments that are part of an error message to display. A `name` value is looked up in the string and substituted with the `value`. Multiple `name` and `value` pairs may exist.
 
 ````zax
 if size of Integer != 4 {
-    [[error="this poorly written code assumes an Integer is 4 bytes"]]
+    [<error="this poorly written code assumes an Integer is 4 bytes">]
 }
 
-[[error="these are not the droids you are looking for", x-not-droids]]
+[<error="these are not the droids you are looking for", x-not-droids>]
 ````
 
 
@@ -131,7 +131,7 @@ The following are registered errors, and their meaning:
 * `scope-flow-control-skips-declaration`
     * an attempt was made to use `break` or `continue` within a scope which would cause important declarations to be skipped
 * `inline-function-not-final`
-    * an attempt was made to declare a non-final function as `[[inline]]`
+    * an attempt was made to declare a non-final function as `[<inline>]`
 * `constant-syntax`
     * a constant was found to contain a syntax error
 * `syntax`
@@ -145,18 +145,18 @@ The following are registered errors, and their meaning:
 
 ### Forcing the compiler to issue a warning
 
-A `warning` can forcefully be issued by the compiler by using the `[[warning="<message>", <optional-registered-warning-name>, name=<opt-name>, value=<opt-value>, name..., value...]]` compiler directive. If the compiler compiles-in a `warning` directive, the compiler will display the warning and continue to compile. A compiler warning may optionally include one of the built-in warning names or declare a custom warning name with a `x-` prefix.
+A `warning` can forcefully be issued by the compiler by using the `[<warning="<message>", <optional-registered-warning-name>, name=<opt-name>, value=<opt-value>, name..., value...>]` compiler directive. If the compiler compiles-in a `warning` directive, the compiler will display the warning and continue to compile. A compiler warning may optionally include one of the built-in warning names or declare a custom warning name with a `x-` prefix.
 
 The optional `name` and `value` are any arguments that are part of the error message to display. The `name` value is looked up in the string and substituted with the `value`. Multiple `name` and `value` pairs may exist.
 
 ````zax
 if size of Integer > 4 {
-    [[warning="this poorly written code hasn't been testing on Integers larger than 4 bytes"]]
+    [<warning="this poorly written code hasn't been testing on Integers larger than 4 bytes">]
 }
 
 // ...
 
-[[warning="random warning for no good reason", x-blue-moon]]
+[<warning="random warning for no good reason", x-blue-moon>]
 
 // ...
 ````
@@ -166,7 +166,7 @@ if size of Integer > 4 {
 
 #### Enabling/disabling a compiler warning
 
-A warning can be enabled or disabled by using the `[[warning=<option>, <optional-registered-warning-name>]]`. If the compiler compiles-in the `warning` directive, the compiler will enable or disable the compiler warning or treat a specific warning as an error or merely as a warning. All compilers must register their warnings meanings into a shared authoritative registry. Experimental non-standard warnings names must include an `x-` prefix as part of the warning name. Naming a specific warning is optional. If the compiler warning name is not specified, the directive will apply to all warnings.
+A warning can be enabled or disabled by using the `[<warning=<option>, <optional-registered-warning-name>>]`. If the compiler compiles-in the `warning` directive, the compiler will enable or disable the compiler warning or treat a specific warning as an error or merely as a warning. All compilers must register their warnings meanings into a shared authoritative registry. Experimental non-standard warnings names must include an `x-` prefix as part of the warning name. Naming a specific warning is optional. If the compiler warning name is not specified, the directive will apply to all warnings.
 
 The options for warnings are:
 * `yes` - enables the warning for only to the current statement
@@ -188,49 +188,49 @@ randomValue final : (output : S32)() = {
 
 value := randomValue()
 
-[[warning=no, intrinsic-type-cast-overflow]]
+[<warning=no, intrinsic-type-cast-overflow>]
 castedValue1 := value unsafe as U32
 
-[[warning=yes, intrinsic-type-cast-overflow]]
+[<warning=yes, intrinsic-type-cast-overflow>]
 castedValue2 := value unsafe as U32
 
 
-[[warning=always, intrinsic-type-cast-overflow]]
+[<warning=always, intrinsic-type-cast-overflow>]
 
 // ...
 
-[[warning=never, intrinsic-type-cast-overflow]]
+[<warning=never, intrinsic-type-cast-overflow>]
 
 // ...
 
-[[warning=default, intrinsic-type-cast-overflow]]
+[<warning=default, intrinsic-type-cast-overflow>]
 
 // ...
 
-[[warning=error]]                                   // all warnings are errors
-[[warning=warning, intrinsic-type-cast-overflow]]    // this specific warning is
+[<warning=error>]                                   // all warnings are errors
+[<warning=warning, intrinsic-type-cast-overflow>]    // this specific warning is
                                                     // just a warning
 
 // ...
 
-[[warning=never, x-strange-experimental-alignment-warning]]
+[<warning=never, x-strange-experimental-alignment-warning>]
 ````
 
 
 #### Warning push and pop
 
-The state of all warnings can be pushed and popped into a compiler stack using the `[[warning=push]]` and `[[warning=pop]]` compiler directives. A `push` operation will keep a copy of all warning states and push these warnings on a compiler's stack. A `pop` operation will take the last pushed compiler warning states and apply these warning states as the current warning states.
+The state of all warnings can be pushed and popped into a compiler stack using the `[<warning=push>]` and `[<warning=pop>]` compiler directives. A `push` operation will keep a copy of all warning states and push these warnings on a compiler's stack. A `pop` operation will take the last pushed compiler warning states and apply these warning states as the current warning states.
 
 Upon importing a module, all warnings are pushed and all warnings are popped at the end of an `import`. This ensures that imported modules cannot affect the warning state of a module performing an import.
 
 ````zax
-[[warning=push]]
+[<warning=push>]
 
-[[warning=never, intrinsic-type-cast-overflow]]
+[<warning=never, intrinsic-type-cast-overflow>]
 
 // ... code with the warning disabled
 
-[[warning=pop]]
+[<warning=pop>]
 ````
 
 
@@ -296,13 +296,13 @@ The following are registered warnings, default states, and their meaning:
 * `unknown-directive-argument` (error)
     * a directive argument not prefixed with `x-` was encountered which was not understood
 * `forever` (always)
-    * code was detected that appears to run forever without the code that follows including a `[[never]]` directive
+    * code was detected that appears to run forever without the code that follows including a `[<never>]` directive
 * `divide-by-zero` (error)
     * a numerical type was divided by 0
 * `always-true` (always)
-    * a condition always appears to be `true` (without using the `[[always]]` directive)
+    * a condition always appears to be `true` (without using the `[<always>]` directive)
 * `always-false` (always)
-    * a condition always appears to be `false` (without using the `[[never]]` directive))
+    * a condition always appears to be `false` (without using the `[<never>]` directive))
 * `float-equal` (always)
     * a floating point was used in an `==` comparison
 * `size-of-zero` (always)
@@ -312,7 +312,7 @@ The following are registered warnings, default states, and their meaning:
 * `upgrade-directive` (always)
     * usage of an obsolete directive was found and should be upgraded to its replacement (or removed)
 * `export-disabled-from-export-never` (always)
-    * an export keyword was encountered on a `type` that cannot be exported due to the `[[export=never]]` directive
+    * an export keyword was encountered on a `type` that cannot be exported due to the `[<export=never>]` directive
 * `redundant-access-via-self` (always)
     * an attempt to access a value via the self variable (`_`) was made in a non-ambiguous situation
 * `redundant-access-via-own` (always)
@@ -320,6 +320,6 @@ The following are registered warnings, default states, and their meaning:
 * `bad-style` (always)
     * the style of the code is found to be undesirable and language or compiler changes in the future may be breaking
 * `descope-directive-required` (always)
-    * calling an `[[inline-descope]]` function requires the `[[descope]]` declaration to acknowledge the current scope is polluting with new variables from an inlined function
+    * calling an `[<inline-descope>]` function requires the `[<descope>]` declaration to acknowledge the current scope is polluting with new variables from an inlined function
 * `generated-file-not-touched` (error)
     * the compiler attempted to load a source file that was not touched by a generator routine

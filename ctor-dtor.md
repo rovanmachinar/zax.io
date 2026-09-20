@@ -394,7 +394,7 @@ MyOtherType :: type {
         // force the compiler to see the type as already having been
         // manually constructed (even though the never clause will never
         // actually execute the constructor manually here)
-        if never() [[never]]
+        if never() [<never>]
             containedType.+++()
     }
 }

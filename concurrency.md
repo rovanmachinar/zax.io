@@ -79,12 +79,12 @@ runOnThread final : ()(callable : ) = {
     // ...
 }
 
-func final : (value : Double)(algorithm : String) lazy [[asynchronous]] = {
+func final : (value : Double)(algorithm : String) lazy [<asynchronous>] = {
     forever {
         // ... complex algorithm ...
         yield return value
     }
-    [never]
+    [<never>]
 }
 
 later := func("sha265")
@@ -458,7 +458,7 @@ fetchRandomDataForever final : (result : Integer)() task = {
         // the `task` but instead the `task` continues its cancellation process 
         yield return number
     }
-    [[never]]
+    [<never>]
 }
 
 myTask := fetchRandomDataForever()

@@ -906,7 +906,7 @@ An instance-qualified call retains its actual receiver stance:
 ```
 
 No runtime rule turns `last` into `copy`. The invocation route determines the
-offered stance statically, and aliases or future closed callables must preserve
+offered stance statically, and aliases or bound callable values preserve
 that route. Complete receiverless and Nothing-instance behavior is defined by
 [Zax Nothing instances](nothing-instances.md#receiver-stance-is-statically-known).
 
@@ -1186,6 +1186,35 @@ forward(resource) // remains a move offer
 Improved analysis may discover more intent errors, but it must not silently
 select a different user body. Destruction does not count as ordinary later use.
 
+## Callable values and captures
+
+Capture construction and later callable transfer are different consumers:
+
+```zax
+callback := [[ source as last: captured ]] ()() bound strong {
+  use(captured)
+}
+```
+
+`source as last` controls construction of `captured`. That capture expression
+runs once. Later transfer of `callback` never reevaluates or reconstructs it:
+
+- `copy` copies the callable's receiver/lifetime relationship;
+- a borrowed copy remains a borrow of the same receiver;
+- a strong copy participates in the same receiver lifetime;
+- a weak copy adds another observation;
+- unique ownership cannot be copied;
+- `move` and `last` transfer the applicable relationship and leave the source
+  callable initialized but unavailable without releasing the moved
+  relationship; and
+- callable `deep` is undefined.
+
+An accepted `move` or `last` inside a lambda body changes the captured value's
+state. The callable remains live, so repeated invocation is valid only when
+later operations accept the capture's moved-from or terminal state. Static
+analysis diagnoses invalid repeated use. Complete behavior is defined by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-transfer-reset-and-recursion).
+
 ## Optional values
 
 Optional values have type-specific phrase adapters in addition to generic source
@@ -1417,7 +1446,6 @@ Focused future work remains for:
 - qualifier-generic syntax and constraints;
 - detailed pointer provenance and casting beyond the current ownership model;
 - moved-from and terminal operation eligibility;
-- lambda capture and repeated invocation;
 - async suspension and cancellation;
 - cross-thread value preparation and whether it is a stance, result capability,
   or separate contract;

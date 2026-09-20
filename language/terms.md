@@ -190,13 +190,45 @@ The callable category determines discovery and any category-specific behavior.
 Ordinary argument binding, results, and fixed-arity selection are defined by
 [Zax function invocation](function-invocation.md).
 
-## Bound and unbound prototype
+## Bound and unbound callable
 
-A **bound prototype** has one receiver slot of a known type and makes `_`
-available to its implementation. An **unbound prototype** has no receiver slot.
-Neither term says that a callable value has captured a particular receiver
-instance. See
-[Zax declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-prototypes).
+A **bound callable** has a receiver available to its implementation through `_`.
+An **unbound callable** has no receiver.
+
+A fixed bound member receives the instance used for its call. Receiver-capable
+varying storage may instead install an unbound implementation, a borrowed
+receiver, or an applicable unique/strong/weak receiver relationship. The
+installed receiver type belongs to its minted implementation and may be erased
+from the visible result/input prototype.
+
+See
+[Zax declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-storage)
+and
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-prototypes-and-storage).
+
+## Lambda and capture receiver
+
+A **lambda** is a callable expression combining a delayed body with an explicit
+capture list.
+
+A capturing lambda constructs an anonymous **capture receiver** containing its
+captured declarations. Ordinary capture copies; explicit reference capture
+borrows one fixed place. See
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md).
+
+## Callable binding kind
+
+A callable's **binding kind** is the mode currently installed in
+receiver-capable storage: unavailable, unbound, borrowed bound, unique, strong,
+strong atomic, weak, or weak atomic. It is distinct from the static maximum
+capacity of the slot.
+
+## Liveness probe
+
+A **liveness probe** is a nonacquiring momentary query asking whether strong
+ownership is open for a weak relationship. Its Boolean result may become stale
+immediately and grants no lifetime proof. Presence `?` separately asks whether
+the immediate pointer, owner, or callable relationship is stored.
 
 ## Compatibility anchor
 
@@ -695,6 +727,19 @@ When the target lacks the needed trap, Zax does not insert universal software
 checks and an access relying on that trap has undefined behavior.
 
 See [Zax Nothing instances](nothing-instances.md).
+
+## Opaque owner and observers
+
+An **`OpaqueOwner`** retains a managed allocation-root ownership relationship
+while hiding typed access.
+
+An **`OpaqueObserver`** is a possibly vacant, nonowning type-erased pointer
+target. An **`OpaqueReferenceObserver`** is a non-vacant, fixed type-erased
+reference target.
+
+All preserve private exact type/origin/capability facts for safe recovery
+without creating an arbitrary “any” value. See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 ## Normal completion
 

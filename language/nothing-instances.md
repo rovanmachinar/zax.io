@@ -489,9 +489,9 @@ receiver declaration and therefore offers `copy`; the instance-qualified call
 uses its actual receiver stance. An unstanced receiver declaration remains the
 ordinary fallback for the receiverless `copy` offer.
 
-Aliases, forwarding, and future closed callable values must preserve whether
-they represent receiverless lookup or a captured instance. They cannot erase
-that distinction and guess at invocation time.
+Aliases, forwarding, and bound callable values preserve whether they represent
+receiverless lookup or an installed instance receiver. They cannot erase that
+distinction and guess at invocation time.
 
 ## Function values have presence
 
@@ -512,6 +512,14 @@ Calling a value proved unavailable is an error. Otherwise an unavailable call
 panics through signature-compatible behavior. It does not execute a no-op,
 invent results, rely on an invalid instruction address, throw an exception, or
 unwind.
+
+A zero-result `bound weak` callable is a separate conditional-call contract.
+Invocation performs no body work when its slot is unavailable or when temporary
+strong promotion fails. Caller-side argument/default evaluation and setup still
+occur. An assigned weak relationship remains present after ownership closes,
+while an unavailable slot is absent; neither condition makes invocation panic
+under this callable mode. Complete weak callable behavior belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#weak-invocation-is-conditionally-empty).
 
 Reset releases any callable representation and captures, then restores the
 unavailable state:
@@ -551,8 +559,9 @@ second : MyValue *
 same := first == second // true: same exact pointer type, both vacant
 ```
 
-`?pointer` asks the pointer role whether it currently has an ordinary target. It
-does not ask whether the represented address bits are nonzero.
+`?pointer` asks whether the immediate pointer relationship is non-vacant. It
+does not ask whether the represented address bits are nonzero or whether a weak
+target remains live.
 
 For a raw pointer, success proves only that the pointer is not vacant:
 
@@ -578,9 +587,11 @@ if ?owner
 A vacant `unique` or `strong` pointer owns nothing. It does not reference-count,
 retain, release, or destroy the Nothing instance.
 
-A weak pointer asks a different momentary question: whether strong ownership was
-still open at that instant. Failed weak acquisition produces a vacant strong
-pointer. Weak termination remains distinct from the represented Nothing state.
+A weak pointer remains present while it stores a weak relationship, including
+after strong ownership closes. `liveness probe observer` performs the separate
+momentary observation of whether ownership is open; it acquires nothing and may
+become stale immediately. Actual weak-to-strong construction both checks and,
+on success, pins the allocation.
 
 Some operations report failure by returning a vacant pointer instead of
 panicking. `@!` does this when storage cannot be obtained:
@@ -606,6 +617,10 @@ if !acquired
 In each case the destination pointer keeps its declared role. A successful
 `unique` result owns uniquely; a failed one is a vacant `unique` pointer that
 owns nothing.
+
+`OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver` preserve the same
+layering while erasing target identity. Their complete behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 Vacancy is not optional absence. `MyValue * unique ?` can be an absent optional,
 a present vacant owner, or a present owner.

@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected reset, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, callable binding-kind and composition/chaining forms, opaque type probe/transfer, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -43,11 +43,13 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
-| Presence and lifecycle | `?value`, `value.`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
+| Presence and lifecycle | `?value`, `value.`, `liveness probe value`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
+| Callable flow | Composition `>>`, reshape composition `>> reshape >>`, and immediate chaining `|>` |
+| Opaque lifetime | `value is type Type` and `unsafe transfer (value as last)` |
 | Literal source/value | Source merge `<\|>` and value join `<+>` |
 | Mutation | Compounds including array `<+>=`, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -563,6 +565,8 @@ These exact forms are protected for their recognized operand domains:
 | --- | --- | --- |
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
+| `liveness probe value` | Pre-unary phrase at ordinary phrase level | Observe momentary weak-target liveness without acquiring ownership |
+| `binding kind of value` | Pre-unary phrase at ordinary phrase level | Report the installed callable target mode |
 | `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
 | `vacate value` | Pre-unary phrase at ordinary phrase level | Discard a proved non-owning raw pointer address without disposition and leave vacancy |
 | `unsafe vacate value` | Pre-unary phrase at ordinary phrase level | Accept responsibility for an opaque but potentially valid raw-pointer disposition relationship; never available to managed pointers or a proved guaranteed leak |
@@ -575,6 +579,21 @@ restatement. Complete optional behavior and source consequences are defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
 Pointer `vacate`, function presence/reset, and receiver-presence behavior are
 defined by [Zax Nothing instances](nothing-instances.md).
+
+`value is type Type` is an ordinary-phrase-level protected binary form whose
+right operand is a concrete type identity. It probes the exact hidden type of an
+opaque owner or observer without recovering access.
+
+`unsafe transfer (value as last)` is a protected pre-unary phrase at ordinary
+phrase level. It performs unchecked typed ownership recovery from
+`OpaqueOwner`; complete behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
+
+`>>` retains shift/rotate/composition precedence and left association for direct
+composition. `callable >> reshape >> callable` is recognized as one
+three-component composition mapping form. `|>` is the protected immediate
+chaining form at the same level. Complete behavior belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md).
 
 `T? ?` is two optional type layers and requires the separating space. Compact
 `T??` contains the conditional-expression token. `[{}]` is the canonical
@@ -916,7 +935,6 @@ Array-specific result and mutation behavior belongs to
 
 - Legacy `@@` parallel-allocation meaning is superseded. Arena capabilities
   express concurrency requirements.
-- `|>` remains function-chaining evidence.
 - Legacy result split/combine `<-` and `->` are superseded by the protected
   `>-`, `-<`, and `-<>-` structural mapping family.
 - Runtime `<+>` behavior outside current intrinsic arrays remains future

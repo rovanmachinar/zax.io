@@ -993,9 +993,10 @@ if ?owner {
 ```
 
 For an owning pointer, `?owner` proves that this pointer currently owns a
-target. For a weak pointer, `?observer` is only a non-owning momentary probe; it
-does not acquire ownership or permit dereference. Weak-to-strong `copy` performs
-the actual conditional acquisition.
+target. For a weak pointer, `?observer` reports that a weak relationship is
+stored even after ownership closes. `liveness probe observer` is the
+nonacquiring momentary liveness query. Weak-to-strong `copy` performs the actual
+conditional acquisition and pins the target on success.
 
 An optional pointer adds another independent layer:
 
@@ -1020,6 +1021,11 @@ Optional absence never collapses a boxed type's own empty-like value:
   value that is unavailable, and a present callable;
 - a nested optional distinguishes outer absence, outer-present/inner-absent, and
   both layers present.
+
+A present weak callable remains present while its weak binding is installed,
+even when receiver ownership has closed. `liveness probe` asks that separate
+momentary question. Complete callable states and reset behavior belong to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#presence-liveness-and-installed-binding-kind).
 
 Destroying a boxed pointer follows that pointer type's ownership contract. A raw
 pointer may perform no pointee work; an owning or reference-counted pointer may

@@ -57,6 +57,10 @@ producing them.
   and lint boundaries.
 - Read [Zax function invocation](language/function-invocation.md) for ordinary
   calls, arguments, defaults, results, result routing, and callable selection.
+- Read [Zax lambdas and callable composition](language/lambdas-and-callable-composition.md)
+  for lambda expressions, captures, callable storage and receiver lifetime,
+  partial application, composition, reshape mapping, chaining, reset, and weak
+  callbacks.
 - Read [Zax intent acknowledgements](language/intent-acknowledgements.md) for
   defined but suspicious-looking source that requires explicit confirmation.
 - Read [Zax construction, replacement, and destruction](language/construction-and-destruction.md)
@@ -138,6 +142,7 @@ producing them.
 - [Execution context](language/execution-context.md)
 - [Safety and analysis](language/safety-and-analysis.md)
 - [Function invocation](language/function-invocation.md)
+- [Lambdas and callable composition](language/lambdas-and-callable-composition.md)
 - [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
 - [Construction, replacement, and destruction](language/construction-and-destruction.md)
@@ -172,7 +177,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
   [literal source and operators](language/literal-source-and-operators.md), and
   [strings and characters](language/strings-and-characters.md)
 - [Type definition](type-definition.md)
-- [Functions](functions.md)
 - [Variadic functions](variadic.md)
 - [Flow control](flow-control.md) — legacy value-polymorphism input;
   current ordinary flow and runtime selection are owned by

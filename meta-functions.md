@@ -31,8 +31,8 @@ runtime result inference.
 > [raw reflection input](project/raw/reflection.md).
 >
 > Current compiler directives use `[<directive>]`; contiguous `[[ ... ]]`
-> belongs to lambda capture. Directive spellings using `[[...]]` below remain
-> legacy evidence. See
+> belongs to lambda capture. Directive names and semantics below remain legacy
+> evidence even though their enclosures use current syntax. See
 > [Zax source structure](language/source-structure.md#compiler-directive-enclosure).
 >
 > This note routes those concerns without rewriting the complete legacy syntax
@@ -107,7 +107,7 @@ result4 := addThenMultiply(3, 4.5)
 
 #### Meta-function selection using the `compiles` directive
 
-For meta-functions, a `[[compiles]]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate given input or output arguments specified. If code in a `[[compiles]]` block fails to compile then a meta-function cannot be selected as a legal candidate by a caller. Compiled code is never executed and any values, types or variables declared in a `[[compiles]]` block are discarded and ignored outside of a `[[compiles]]` block.
+For meta-functions, a `[<compiles>]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate given input or output arguments specified. If code in a `[<compiles>]` block fails to compile then a meta-function cannot be selected as a legal candidate by a caller. Compiled code is never executed and any values, types or variables declared in a `[<compiles>]` block are discarded and ignored outside of a `[<compiles>]` block.
 
 ````zax
 next final : (
@@ -115,10 +115,10 @@ next final : (
 )(
     value1 :,
     value2 :
-) [[compiles]] {
+) [<compiles>] {
     if !(value1 is Integer) && \
        !(value1 is Float) {
-        [[error]]
+        [<error>]
     }
 } = {
 }
@@ -127,9 +127,9 @@ next final : (
 
 #### Meta-function selection using a `requires` directive
 
-For meta-functions, a `[[requires]]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate given input or output arguments specified. If code in a `[[requires]]` block fails to compile or returns false then a meta-function cannot be selected as a legal candidate by a caller. Executed code must evaluate to a `true` or `false` statement.
+For meta-functions, a `[<requires>]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate given input or output arguments specified. If code in a `[<requires>]` block fails to compile or returns false then a meta-function cannot be selected as a legal candidate by a caller. Executed code must evaluate to a `true` or `false` statement.
 
-As a side note, replacing a `[[requires]]` and a code block that follows with a literal `true` or `false` will have the same effect if `requires` has returned `true` or `false`. All functions accept an optional `true` or `false` declarative to indicate if they can be selected as a candidate or not. Placing a hard coded `false` on a function will ensure a function can never be used as a candidate. By default all functions are `true` indicating a functions is selectable as a candidate. However, meta-functions use this boolean criteria in candidate selection condition. Other use cases can include intentionally disabling functions based on compile-time decisions.
+As a side note, replacing a `[<requires>]` and a code block that follows with a literal `true` or `false` will have the same effect if `requires` has returned `true` or `false`. All functions accept an optional `true` or `false` declarative to indicate if they can be selected as a candidate or not. Placing a hard coded `false` on a function will ensure a function can never be used as a candidate. By default all functions are `true` indicating a functions is selectable as a candidate. However, meta-functions use this boolean criteria in candidate selection condition. Other use cases can include intentionally disabling functions based on compile-time decisions.
 
 All inputs and outputs are considered captured in the context allowing for compile-time reflection of the types. Memory backing argument values are invalid as the actual value is only evaluated at runtime and `requires` is a compile-time evaluation directive. Access to the values is undefined behavior.
 
@@ -143,7 +143,7 @@ next final : (
 )(
     value1 :,
     value2 :
-) [[requires]] { return isSelectable(value1, value2) } = {
+) [<requires>] { return isSelectable(value1, value2) } = {
     // ...
 }
 ````
@@ -151,17 +151,17 @@ next final : (
 
 #### Meta-function selection using a `concept` directive
 
-For meta-functions, a `[[concept]]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate for a given input or output argument specified. If code in a `[[concept]]` block fails to compile or returns false then a meta-function cannot be selected as a legal candidate by a caller. Executed code must evaluate to a `true` or `false` statement and follow a `(:Boolean)(#:)` calling convention. Meta argument types are available in a concept function and will mirror arguments passed into a decorated function.
+For meta-functions, a `[<concept>]` directive can be used as a compile type mechanism to check if a function can be selected as a candidate for a given input or output argument specified. If code in a `[<concept>]` block fails to compile or returns false then a meta-function cannot be selected as a legal candidate by a caller. Executed code must evaluate to a `true` or `false` statement and follow a `(:Boolean)(#:)` calling convention. Meta argument types are available in a concept function and will mirror arguments passed into a decorated function.
 
 ````zax
-IsSelectable final : (result : Boolean)(ignored : ) [[concept]] = {
+IsSelectable final : (result : Boolean)(ignored : ) [<concept>] = {
     if size of ignored > size of Integer
         return false
     // ...
     return true
 }
 
-next$(UseType [[concept=IsSelectable]]) final : (
+next$(UseType [<concept=IsSelectable>]) final : (
     result :
 )(
     value1 : $UseType,
@@ -205,7 +205,7 @@ alternativeAdd final : (
 )(
     input1 : Float,
     input2: Float
-) = [[importantValue]] {
+) = [[ importantValue ]] {
     return importantValue + input1 + input2
 }
 
@@ -339,7 +339,7 @@ result2 : Short = add(100, 50)
 // some value to capture
 myValue : U8 = 8
 
-alternativeAdd : [[myValue]] (
+alternativeAdd : [[ myValue ]] (
     result : U8
 )(
     value1 : Integer,

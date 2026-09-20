@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing instance lifetimes, life paths, instance places, references, reference origin, escape, and synchronous borrowing; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references, including receiver-origin `self`; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
-| Does Not Own | How construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
+| Does Not Own | Lambda expression/capture syntax and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); how construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy pointer, function-capture, scope, construction, and global-lifecycle evidence reconciled with current qualifier, invocation, optional, identity, and transfer design |
 | Supersedes | Reference and lifetime teaching formerly distributed through root legacy pages |
 
@@ -697,7 +697,7 @@ Lambda capture defaults to `copy`, even when the captured name is a reference:
 source : Document
 view : Document readonly & = source
 
-callback := [[view]] {
+callback := [[ view ]] ()() {
   inspect(view) // observes a Document copied into the capture path
 }
 ```
@@ -713,12 +713,26 @@ original place. It:
 - may not silently inherit destructive `move` or `last` stance; and
 - defaults ordinary nested use to `copy`.
 
-Exact reference-capture syntax and callable representation remain future
-callable work.
+Reference capture states its destination explicitly:
+
+```zax
+callback := [[ view: borrowed : & ]] ()() {
+  inspect(borrowed)
+}
+```
+
+Complete capture syntax and callable receiver behavior belong to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#capture-values-references-and-producer-results).
 
 Storing a reference in a field, optional, callback, or result never resets its
 origin. The destination must not outlive the target path unless a separate owner
 keeps that path alive.
+
+`OpaqueReferenceObserver` preserves the same fixed target and origin while
+erasing its type. `OpaqueObserver` preserves one pointer target but provides no
+ownership or liveness guarantee. Their complete pointer-facing behavior belongs
+to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 ## `move`, `last`, and reference lifetime
 
@@ -843,7 +857,6 @@ Still deferred:
 
 - exact compiler proof algorithms;
 - opaque callable origin metadata;
-- exact reference-capture syntax;
 - runtime-fixed array and multidimensional block-view lifetime contracts;
 - variant and unmanaged-union design;
 - async suspension and cancellation;

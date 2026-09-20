@@ -100,20 +100,26 @@ This input retains only the contract pressure that appears when the body is
 opaque or separately represented; it does not establish programmer-written
 lifetime parameters.
 
-### Receiver slots, capture, and declaration provenance
+### Receiver binding and declaration provenance
 
-Current declarations distinguish `bound` and `unbound` prototypes. `bound`
-means one receiver slot of a known type; it does not mean a callable value has
-captured one receiver instance.
+Current declarations distinguish bound and unbound implementations. A bound
+implementation has an installed receiver available through `_`; an unbound
+implementation does not.
 
 ```zax
 myValue : MyType
 BoundPrototype :: alias type type of myValue.process
 ```
 
-`type of` preserves the receiver type without evaluating or capturing
-`myValue`. A function value with `BoundPrototype` still needs receiver
-application before ordinary invocation.
+`type of` inspects callable type information without evaluating `myValue`.
+The query does not create a runtime callable waiting for later receiver
+application. The expression `myValue.process` forms the actual bound callable.
+
+Receiver-capable varying storage may install unbound, borrowed-bound, or
+applicable unique/strong/weak targets. Future preference work must compare the
+visible explicit prototype without treating an erased receiver type as another
+caller-supplied slot. Complete current behavior is owned by
+[Zax lambdas and callable composition](../../language/lambdas-and-callable-composition.md).
 
 Exact prototype and selected declaration provenance remain distinct. This
 sequence selects one declaration:
@@ -147,7 +153,7 @@ that exact family identity while distinguishing it from:
 - a prototype type alias;
 - one compatible visible declaration;
 - a reference to a varying function slot;
-- a receiver-captured closed callable; and
+- a bound callable value and its installed binding kind; and
 - whole-family composition adoption.
 
 Composition adds selection constraints without changing the partial-order

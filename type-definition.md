@@ -237,7 +237,11 @@ myUnion.b = #
 
 Functions are a `type` just as any other `type` except they do not have a formal type declaration. Instead a `type` is always inlined in a lambda style definition as part of a declared function. Functions can be declared and defined at the global namespace, inside other types, and inside other functions.
 
-More information about functions can be found in the [functions](functions.md) section.
+Current function declarations are defined by
+[Zax declarations and bindings](language/declarations-and-bindings.md), calls by
+[Zax function invocation](language/function-invocation.md), and lambda
+expressions and captures by
+[Zax lambdas and callable composition](language/lambdas-and-callable-composition.md).
 
 
 #### Simple function declaration and definition
@@ -290,9 +294,9 @@ print final : ()(...) = {
 // capturing any values in this instance)
 compareToKnownAnimals final : ()(value : String) = {
 
-    // declare and define a function that returns nothing and takes a single
-    // `String` argument and captures the `value` variable
-    printIfEqual : ()(compare : String) = [[value]] {
+    // declare a callable from a complete lambda expression that returns
+    // nothing, takes one `String`, and captures `value`
+    printIfEqual := [[ value ]] ()(compare : String) {
         if value == compare
             print("they are the same", value, compare)
         else

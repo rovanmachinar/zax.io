@@ -487,7 +487,7 @@ explicit:
 ````zax
 :: import Module.System.Standard.Io
 
-runApplication final [[execute=target]] : ()() = {
+runApplication final [<execute=target>] : ()() = {
     out.writeLine("Hello world!")
 }
 

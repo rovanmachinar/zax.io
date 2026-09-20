@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound prototype invocation, missing receiver behavior, and the boundary to closed captured callables; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); complete function declaration/capture representation; composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -85,10 +85,10 @@ instance.memberFunction(input)
 A resolved function value supplies one prototype. It does not dynamically search
 declarations that happen to share its source name.
 
-### Bound and unbound prototypes
+### Bound and unbound callables
 
-A `bound` prototype has one receiver slot of a known type. An `unbound`
-prototype has no receiver slot:
+A bound implementation executes with an installed receiver available through
+`_`. An unbound implementation has no receiver:
 
 ```zax
 Utilities :: type {
@@ -103,22 +103,24 @@ Utilities :: type {
 `Utilities` owns the declaration, but invoking `Utilities.compare` evaluates no
 instance receiver and `_` is unavailable inside the body.
 
-`type of` preserves a bound prototype's receiver type without evaluating or
-capturing the instance expression:
+`type of` inspects the callable type without evaluating the instance expression:
 
 ```zax
 myValue : MyType
 BoundPrototype :: alias type type of myValue.process
 ```
 
-A function value with `BoundPrototype` still requires a receiver. Calling it as
-an ordinary receiverless value is a missing-receiver error. Future capture or
-receiver application may create a closed callable that stores or borrows one
-receiver; that generated value and its lifetime are not established here.
+The type query does not create a runtime value with an unfilled receiver. A
+member expression such as `myValue.process` forms the bound callable value.
+Receiver-capable varying storage may later replace it with another compatible
+unbound or bound implementation.
 
 Declaration defaults, `final` storage, and the `once final unbound` intent error
 are defined by
-[declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-prototypes).
+[declarations and bindings](declarations-and-bindings.md#bound-and-unbound-function-storage).
+Lambda-generated receivers, installed binding kinds, and receiver lifetime are
+defined by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-prototypes-and-storage).
 
 ### Default unavailable function values
 
@@ -129,6 +131,14 @@ defined by
 The compiler diagnoses an invocation it can prove still targets that default
 state. An otherwise unhandled invocation panics. It does not execute a no-op,
 manufacture arbitrary results, or invoke an unrelated overload.
+
+One deliberate exception is a zero-result `bound weak` callable. An unavailable
+slot and a failed temporary strong promotion both complete as no-ops rather than
+panicking. Explicit arguments, defaults, parameter construction, and other
+caller-side setup still occur under the visible prototype before no body runs.
+This is the declared weak callable contract, not ordinary unavailable-function
+behavior. Complete behavior belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#weak-invocation-is-conditionally-empty).
 
 Recognized function presence returns exactly `Boolean`. A known fixed `final`
 function is statically present; a varying function value may require a runtime
@@ -216,7 +226,7 @@ MyType.consume() // error when consume requires exact last receiver
 ```
 
 There is no runtime change from `last` to `copy`. Aliases, forwarding, and
-future closed callables must preserve whether they represent receiverless
+bound callable values preserve whether they represent receiverless
 lookup or an instance receiver.
 
 `_` is pointer-shaped, while `_.` supplies the dereferenced form. Mapping to an
@@ -2873,7 +2883,6 @@ Complete continuation and indentation behavior is defined by
 Invocation diagnostics should distinguish:
 
 - no callable found;
-- invocation of a bound function value without a receiver;
 - invocation of a provably unavailable function value;
 - a type-qualified call to a non-`once` function;
 - `?_` in a non-`once` bound function;
@@ -3038,8 +3047,8 @@ The following remain explicit future work:
 
 - the detailed precedence table for types, qualifications, indirection, `copy`,
   `move`, reference, pointer, and `last`;
-- complete closure layout, capture syntax, reassignment, recursive function
-  values, and raw function pointers;
+- complete closure layout, raw function-pointer ABI, and mutually recursive
+  callable-family forwarding;
 - generics, concepts, specialization, and generic result deduction;
 - variadics, partial application, composition, chaining, and split/combine
   transforms;

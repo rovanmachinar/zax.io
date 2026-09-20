@@ -6,7 +6,7 @@
 | Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
 | Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; pointer vacancy, presence, and ownership transitions; allocation/pointer costs and diagnostics |
+| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
 | Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; arena API/registration; or pointer-cast syntax |
 | Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
@@ -792,20 +792,23 @@ Every pointer supports `?`, but its guarantee depends on the pointer role:
 | --- | --- |
 | `unique` or `unique shareable` | This pointer currently owns a target |
 | `strong` | This pointer currently participates in live strong ownership |
-| `weak` | At the instant of this non-owning probe, strong ownership remained open |
+| `weak` | This pointer stores a weak relationship, even if strong ownership has closed |
 | Raw | The pointer value is non-vacant; no pointee-validity guarantee |
 
-Weak probing does not acquire ownership:
+Weak presence and liveness are separate:
 
 ```zax
 if ?observer {
-  // Strong ownership existed at this instant.
-  // observer is still weak and cannot be dereferenced as a strong owner.
+  // A weak relationship is stored.
 }
+
+liveNow := liveness probe observer
 ```
 
-A successful probe may become stale immediately. A failed probe is permanent
-for that ownership lifetime because weak ownership cannot resurrect a target.
+`liveness probe` reports whether strong ownership is open at that instant. It
+does not acquire ownership and may become stale immediately. A failed liveness
+probe is permanent for that ownership lifetime because weak ownership cannot
+resurrect a target.
 
 Actual acquisition uses ordinary destination-directed `copy`:
 
@@ -824,8 +827,9 @@ The operation:
 - produces an empty strong pointer on failure; and
 - pins the target until `owner` releases its strong participation.
 
-The presence test and strong increment are one indivisible ownership operation
-for an atomic weak pointer.
+For an atomic weak pointer, the liveness decision and strong increment performed
+by actual acquisition are one indivisible ownership operation. A separate
+liveness probe remains only a snapshot.
 
 ## Resetting a pointer
 
@@ -1045,6 +1049,171 @@ Lifetime and origin analysis still apply.
 
 Complete stance fallback and source state are defined by
 [Zax transfer stances](transfer-stances.md).
+
+## Type-erased ownership and observation
+
+Zax provides three opaque facilities for code that must retain a lifetime or
+access path without exposing an arbitrary “any” value:
+
+- `OpaqueOwner` owns or observes one allocation root.
+- `OpaqueObserver` stores one type-erased raw-pointer-like target and may be
+  vacant.
+- `OpaqueReferenceObserver` stores one type-erased fixed reference and cannot be
+  vacant.
+
+They retain private exact type, origin, and capability information needed for
+safe recovery. None provides member access or structural compatibility while
+erased.
+
+### `OpaqueOwner`
+
+`OpaqueOwner` exists only for managed allocation relationships:
+
+```zax
+exclusive : OpaqueOwner unique
+prepared : OpaqueOwner unique shareable
+shared : OpaqueOwner strong
+observer : OpaqueOwner weak
+atomicShared : OpaqueOwner strong atomic
+atomicObserver : OpaqueOwner weak atomic
+```
+
+An ordinary value, reference, borrowed raw pointer, or callable without active
+ownership cannot manufacture one.
+
+Erasing strong ownership copies participation:
+
+```zax
+typed : MyType * strong = @
+opaque : OpaqueOwner strong = typed
+```
+
+Erasing unique ownership transfers it:
+
+```zax
+typed : MyType * unique = @
+opaque : OpaqueOwner unique = typed as last
+```
+
+The opaque owner retains the allocation root, allocation record, destructor,
+arena and disposition, control-block participation, collection metadata, and a
+private exact type/capability witness. It exposes no pointer address or
+dereference.
+
+`?opaque` reports whether an ownership relationship is stored. For
+`OpaqueOwner weak`, this remains true after strong ownership closes;
+`liveness probe opaque` performs the nonacquiring momentary liveness observation.
+Weak-to-strong construction performs the real acquisition.
+
+`copy`, `move`, `last`, reset, weak acquisition, and atomic accounting follow
+their corresponding managed ownership roles. `deep` is unavailable.
+
+### Safe and unsafe owner recovery
+
+Safe recovery compares the exact canonical allocation-root type and requested
+ownership/capability profile:
+
+```zax
+typed : MyType * unique = opaque as last
+```
+
+Mismatch or an unavailable ownership transition produces a vacant typed
+destination. The opaque source retains ownership when the checked transition
+fails.
+
+`is type` probes exact identity without transfer:
+
+```zax
+if opaque is type MyType {
+  typed : MyType * unique = opaque as last
+}
+```
+
+Transparent aliases compare as their canonical target; identity types remain
+distinct. The probe does not establish liveness or ownership-transition
+success.
+
+Unsafe recovery deliberately bypasses the type-witness check:
+
+```zax
+typed : MyType * unique =
+  unsafe transfer (opaque as last)
+```
+
+This is not `unsafe cast`: it reconstructs typed ownership from allocation
+metadata rather than reinterpreting pointer bits. A known mismatch is still an
+error; a false assertion has undefined consequences.
+
+Erasing an anchored interior owner retains the enclosing allocation root, not
+the interior target. Recovery therefore returns only a compatible
+allocation-root pointer.
+
+### `OpaqueObserver`
+
+`OpaqueObserver` erases one raw-pointer-like target without adding ownership:
+
+```zax
+typed : MyType * = obtainPointer()
+opaque : OpaqueObserver = typed
+```
+
+It can be vacant and supports `?`/`!`. Non-vacancy proves neither target
+lifetime nor provenance. The observer may preserve an allocation root, member,
+global, stack place, or another pointer target and remains subject to ordinary
+raw-pointer lifetime analysis.
+
+A default observer has neither target nor hidden target type. Erasing a vacant
+typed pointer creates a vacant observer that still remembers that pointee type.
+
+Safe recovery produces a typed raw pointer and yields vacancy on mismatch:
+
+```zax
+typedAgain : MyType * = opaque
+```
+
+`opaque is type MyType` distinguishes hidden target identity from target
+vacancy. `vacate opaque` clears its address without disposition while preserving
+the hidden target type.
+
+`liveness probe` is unavailable: a raw observation has no ownership mechanism
+that can answer whether an arbitrary target remains alive.
+
+### `OpaqueReferenceObserver`
+
+`OpaqueReferenceObserver` erases one reference target:
+
+```zax
+typed : MyType & = value
+opaque : OpaqueReferenceObserver = typed
+```
+
+It always binds one fixed place, cannot be vacant, never rebinds, and has no
+`?`, `!`, reset, vacate, or liveness probe. Copying creates another observer of
+the same place and extends no lifetime.
+
+Direct recovery returns a reference and panics on type mismatch:
+
+```zax
+typedAgain : MyType & = opaque
+```
+
+Preflight with `is type` establishes a flow fact and avoids a repeated check:
+
+```zax
+if opaque is type MyType {
+  typedAgain : MyType & = opaque
+  use(typedAgain)
+}
+```
+
+Safe recovery from either observer preserves or reduces qualification and
+access authority. Erasure cannot turn readonly access into writable access,
+change final-place truth, or manufacture ownership.
+
+An `OpaqueOwner` and `OpaqueObserver` may be paired by a programmer-defined
+generic when code needs erased allocation lifetime plus an erased interior
+target. The wrapper must prove the origin/lifetime relationship; merely storing
+the two values together does not establish it.
 
 ## Anchored interior pointers
 
@@ -1363,6 +1532,9 @@ boundary requires narrow unsafe responsibility.
 | `strong` / `weak` | Local count updates, control-block storage, possible weak-retained block |
 | `strong atomic` / `weak atomic` | Synchronized count and acquisition operations |
 | Anchored pointer | Target address plus shared ownership anchor; same count cost as its strong/weak family |
+| `OpaqueOwner` | Managed relationship plus private type/capability witness; no typed access |
+| `OpaqueObserver` | Nonowning target plus private type/origin witness |
+| `OpaqueReferenceObserver` | Fixed nonowning target plus private type/origin witness |
 | Detached block | Additional allocation and another arena lifetime |
 | Attached lifespan | Delayed destruction and retained resources |
 | Deferred recovery | Prompt destruction but retained backing storage |
@@ -1386,6 +1558,11 @@ Representative diagnostics include:
 - pointee or destructor is thread-affine;
 - object or control-block arena would end while dependent pointers remain;
 - weak acquisition failed and produced an empty strong pointer;
+- opaque owner or observer recovery found another exact type;
+- opaque recovery requested unavailable ownership or stronger access;
+- unsafe opaque transfer contradicts a statically known type;
+- an opaque reference observer would outlive its fixed target;
+- liveness probing was requested for a nonowning opaque observer;
 - raw pointer was statically proved vacant at an access;
 - unchecked raw pointer access may reach Nothing backing;
 - raw pointer has no proved live pointee, provenance, alignment, or access

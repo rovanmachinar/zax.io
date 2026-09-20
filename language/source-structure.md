@@ -337,12 +337,24 @@ One bracket pair forms an array expression:
 ```zax
 values := [ 1, 2, 3 ]
 matrix := [ [ 1, 2 ], [ 3, 4 ] ]
+empty : Integer[0..] = []
+oneEmptyRow : Integer[0..][0..] = [ [] ]
 ```
 
-A contiguous double-bracket opener instead begins lambda capture:
+`[]` is the canonical zero-entry array expression. `[ ]` is a confusable-form
+intent error because its blank interior resembles an unfinished nonempty array.
+In nested source, `[ [] ]` contributes one empty inner array; it is not another
+spelling of a zero-entry outer array.
+
+A contiguous double-bracket opener instead begins lambda capture. `[[]]` is the
+canonical zero-capture form:
 
 ```zax
-callback := [[ values ]] : ()() = {
+emptyCallback := [[]] ()() {
+  doSomething()
+}
+
+callback := [[ values ]] ()() {
   use(values)
 }
 ```
@@ -350,7 +362,10 @@ callback := [[ values ]] : ()() = {
 This is a mandatory intent boundary:
 
 - `[ [` and `] ]` present nested array source;
-- `[[ ... ]]` presents capture;
+- `[[]]` presents zero capture;
+- a nonempty single-line capture uses `[[ ... ]]` with interior spaces;
+- multiline capture uses a newline after `[[` and before `]]`;
+- compact nonempty `[[value]]` is a confusable-form error;
 - compact nested-array `[[1, 2], [3, 4]]` is a confusable-form error;
 - `]]` has capture-closing meaning only in the corresponding capture context;
   and
@@ -465,7 +480,9 @@ slices.
 
 Complete array identity, inference, endpoint normalization, capture meaning,
 and operation behavior belongs to
-[Zax arrays and slices](arrays-and-slices.md#array-expressions).
+[Zax arrays and slices](arrays-and-slices.md#array-expressions). Complete lambda
+capture meaning belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md).
 
 ### Compiler-directive enclosure
 
@@ -1943,6 +1960,9 @@ Layout and separator diagnostics additionally distinguish:
   region;
 - a body-opening `{` separated onto the next physical line;
 - a scope-opening `{` without whitespace on both sides;
+- spaced `[ ]` where an empty array requires `[]`;
+- spaced `[[ ]]` where an empty capture requires `[[]]`;
+- compact nonempty `[[value]]` where capture entries require interior spacing;
 - compact nested-array `[[...]]` where contiguous `[[` presents lambda capture;
 - malformed or mismatched `[[ ... ]]` capture delimiters;
 - malformed or mismatched `[< ... >]` compiler-directive delimiters;

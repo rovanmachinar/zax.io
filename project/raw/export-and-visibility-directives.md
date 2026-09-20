@@ -27,9 +27,9 @@ them.
 
 ## Syntax pressure
 
-Legacy material proposed `[[export]]`. Current source reserves `[[ ... ]]` for
-lambda capture and uses `[< ... >]` for compiler directives. Future export
-syntax therefore starts from:
+Legacy material proposed export controls. Current source reserves `[[ ... ]]`
+for lambda capture and uses `[<...>]` for compiler directives. Future export
+syntax therefore starts from the current enclosure:
 
 ```zax
 // Illustrative export directive; exact export behavior is not accepted here.

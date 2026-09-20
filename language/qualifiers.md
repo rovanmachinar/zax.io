@@ -833,8 +833,10 @@ generic result resolution remains later function design.
 Captures preserve or strengthen the captured source qualifications and never
 inherit pliability implicitly. A reference capture behaves like an alias and
 does not silently inherit a destructive `move` or `last` declaration stance.
-By-value capture stance, repeated invocation, and exact syntax remain future
-lambda work.
+The source stance used to construct a capture and the completed capture
+declaration's ordinary future stance are independent. Complete examples belong
+to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#source-stance-and-capture-stance-are-separate).
 
 Declaration-side replacement permission survives parameter binding, result
 routing, and capture. A declaration-final argument cannot regain replacement
@@ -851,6 +853,12 @@ The invocation owner applies these qualification truths to parameter binding,
 result routing, expected-result matching, compatible prototype adaptation, and
 partial-order candidate preference. See
 [Zax function invocation](function-invocation.md#declaration-side-replacement-permission).
+
+`OpaqueObserver` and `OpaqueReferenceObserver` erase target identity without
+erasing authority. Safe typed recovery may preserve or reduce qualifications
+but cannot regain writable access, mutability, or replacement permission lost
+before erasure. See
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 Changing the labels, defaults, or result-acknowledgement policy of a compatible
 visible prototype does not permit its ordered implementation slots to gain

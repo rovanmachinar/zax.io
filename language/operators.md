@@ -835,10 +835,20 @@ obligation is owned by
 
 The protected `?` form also returns exactly `Boolean` for:
 
-- a pointer, using its ownership-role-specific presence guarantee;
-- a function value, reporting whether it is callable; and
+- a pointer, reporting whether its immediate relationship is non-vacant;
+- a function value, reporting whether an implementation is assigned; and
 - `_` inside a `once bound` function, reporting whether the call supplied an
   ordinary receiver source.
+
+For a weak pointer or weak-capable callable, presence does not prove that strong
+ownership remains open. `liveness probe value` is the protected nonacquiring
+snapshot query. Actual weak-to-strong construction is the operation that pins
+the target.
+
+`binding kind of callback` reports the implementation/receiver mode currently
+installed in receiver-capable callable storage. Complete callable behavior is
+defined by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#presence-liveness-and-installed-binding-kind).
 
 `?_` in a non-`once` bound function is a non-acknowledgeable intent error.
 Postfix access still binds first, so `?_.` dereferences `_` and applies ordinary
@@ -881,6 +891,17 @@ source does not require an exact phrase fence.
 Complete `copy`/`deep`/`move`/`last` meaning, fallback, declaration stance,
 receiver behavior, and source state are defined by
 [Zax transfer stances](transfer-stances.md).
+
+### Opaque type probes and transfer
+
+`opaque is type MyType` is a protected exact-type probe for `OpaqueOwner`,
+`OpaqueObserver`, and `OpaqueReferenceObserver`. It creates no pointer or
+reference, transfers nothing, and grants no liveness proof.
+
+`unsafe transfer (opaqueOwner as last)` is the protected unchecked ownership
+recovery form. It reconstructs typed ownership from allocation metadata rather
+than reinterpreting pointer bits. Complete behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 ### Protected structural forms
 
@@ -972,6 +993,34 @@ instrumentation may detect a violation and panic without making that check a
 language guarantee. Complete optional state, construction, qualification,
 nesting, and transfer behavior is defined by
 [Zax optional values](optional-values.md).
+
+## Callable composition and chaining
+
+`>>` constructs a callable without invoking it:
+
+```zax
+combined := first >> second
+```
+
+Compatible result/input slots map positionally. A reshape supplies explicit
+no-storage remapping:
+
+```zax
+combined := first >> MyMapping >> second
+```
+
+The three-part form is one composition operation, not two calls and not an
+intermediate reshape value.
+
+`|>` invokes immediately:
+
+```zax
+result := source |> first() |> second()
+```
+
+Complete partial capture, mapping order, defaults, evaluation, and cost behavior
+belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#compose-functions-for-later-use).
 
 ## Branch-specific selection
 

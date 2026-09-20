@@ -122,20 +122,25 @@ Two generative declarations remain distinct even when every reflected field
 other than module-instance provenance appears equal. Compatibility posture may
 describe a relationship without merging identity.
 
-### Bound prototype versus captured receiver
+### Callable storage and installed receiver
 
-`type of myValue.memberFunction` returns a bound prototype with a receiver type
-but does not evaluate or capture `myValue`. Reflection must distinguish:
+`type of myValue.memberFunction` inspects callable type information without
+evaluating `myValue`. The member expression itself forms the bound callable when
+evaluated. Reflection must distinguish:
 
-- `bound` versus `unbound` prototype;
-- receiver type and qualifications;
+- bound versus unbound implementation;
+- final versus varying storage;
+- static receiver-lifetime capacity;
+- installed unbound, borrowed, unique, strong, atomic, or weak binding kind;
+- erased receiver type and qualifications where visibility permits;
 - a receiverless type-call route using the type's Nothing instance;
-- one fixed `final` implementation;
-- one `once varying` shared function slot; and
-- a future generated closed callable that stores or borrows a receiver.
+- lambda capture receiver identity and declarations; and
+- visible prototype versus minted implementation.
 
-The future closed callable must report capture lifetime and provenance without
-pretending the original prototype contained that instance.
+Reflection must not present a runtime callable as an unfilled receiver slot or
+merge static storage capacity with its current installed mode. Current callable
+behavior belongs to
+[Zax lambdas and callable composition](../../language/lambdas-and-callable-composition.md).
 
 ### Nothing-instance metadata
 
@@ -242,6 +247,13 @@ Future reflection must expose enough information to distinguish:
 - allocation records versus ownership control blocks;
 - the operation currently holding final disposition authority; and
 - a protected `reset` from its destructor and storage-recovery components.
+
+Opaque allocation and observation add separate private type-witness pressure.
+Reflection must distinguish `OpaqueOwner`, `OpaqueObserver`, and
+`OpaqueReferenceObserver`; allocation-root ownership from an interior
+observation; exact hidden type from current vacancy/liveness; and safe recovery
+authority from raw representation exposure. No general source form is accepted
+here.
 
 Source reflection must preserve an explicit `@{...}` enclosure and applicable
 intent acknowledgement even when every stated value equals the effective

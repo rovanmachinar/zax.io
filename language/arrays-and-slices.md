@@ -142,6 +142,15 @@ An empty expression cannot supply an element type:
 ```zax
 empty := [] // error: no element type can be inferred
 typedEmpty : Integer[0] = []
+openEmpty : Integer[0..] = []
+```
+
+`[]` is the explicit zero-entry array expression. `[ ]` is not an alternate
+empty spelling. In nested source, `[ [] ]` contains one empty inner array:
+
+```zax
+zeroRows : Integer[0..][0..] = []
+oneEmptyRow : Integer[0..][0..] = [ [] ]
 ```
 
 Omitted storage resolves through the declaration's applicable default storage
@@ -179,16 +188,18 @@ matrix := [ [ 1, 2 ], [ 3, 4 ] ]
 // Integer[2][2] using the resolved default storage profile
 ```
 
-The spaces in `[ [` and `] ]` are meaningful. Contiguous `[[ ... ]]` is lambda
-capture:
+The spaces in `[ [` and `] ]` are meaningful. Contiguous `[[]]` is an empty
+lambda capture and nonempty capture requires interior spacing:
 
 ```zax
-callback := [[ matrix ]] : ()() = {
+callback := [[ matrix ]] ()() {
   print(matrix[0][0])
 }
 ```
 
-Compact `[[1, 2], [3, 4]]` is therefore not an array spelling.
+Compact `[[matrix]]` is not a legal capture, and compact
+`[[1, 2], [3, 4]]` is not an array spelling. Complete capture behavior belongs
+to [Zax lambdas and callable composition](lambdas-and-callable-composition.md).
 
 Rows of different sizes need an explicit type:
 
@@ -1517,6 +1528,9 @@ The reusable proof and category model belongs to
 [safety and analysis](safety-and-analysis.md).
 
 ## Diagnostics
+
+Source presentation rejects spaced `[ ]` where the zero-entry form is `[]` and
+compact nested-array spelling where contiguous `[[` begins lambda capture.
 
 Intrinsic array source rejects a known:
 

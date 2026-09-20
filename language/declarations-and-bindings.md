@@ -472,9 +472,11 @@ lexically and materialized when the function value is constructed. A function's
 self-reference cannot be an ordinary by-value copy of a function value that does
 not yet exist.
 
-Exact capture representation, recursive-function `forward` requirements,
-mutually recursive functions, and behavior after reassigning a non-`final`
-recursive function remain later function design.
+A bound lambda instead uses its generated receiver for direct self-recursion:
+`_.(...)` calls the same lambda receiver and minted implementation. Complete
+capture and recursion behavior is defined by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#self-recursion-uses-the-lambda-receiver).
+Mutually recursive `forward` requirements remain later callable work.
 
 ### Default function values
 
@@ -764,13 +766,10 @@ label abstract : String final // valid: `final` qualifies String
 The complete publication, projection, routing, fulfillment, and collision rules
 are defined by [Zax composition](composition.md).
 
-### Bound and unbound function prototypes
+### Bound and unbound function storage
 
-A function prototype records whether invocation has a receiver slot:
-
-- `bound` means the prototype has one receiver slot of a known type and `_` is
-  available in the implementation;
-- `unbound` means the prototype has no receiver slot and `_` is unavailable.
+`bound` means an implementation has a receiver available through `_`.
+`unbound` means it has no receiver and `_` is unavailable.
 
 Free functions are implicitly `unbound`. Functions declared directly in a type
 are implicitly `bound` to that type. Either word may be stated explicitly when
@@ -789,31 +788,46 @@ Utilities :: type {
 The type owns and qualifies `Utilities.compare`, but no `Utilities` instance is
 passed to it.
 
-`type of` preserves the prototype's receiver type without evaluating or
-capturing an instance:
+`type of` inspects callable type information without evaluating an instance:
 
 ```zax
 myValue : MyType
 BoundPrototype :: alias type type of myValue.process
 ```
 
-A variable declared with `BoundPrototype` may implement `_` under the known
-`MyType` receiver type, but it cannot be invoked until a receiver is supplied.
-Future receiver capture/application remains function-composition work.
+The type operation does not itself create a runtime callable waiting for a
+receiver. The expression `myValue.process` creates the actual bound callable
+value when one is needed.
 
 Every `final` function has one fixed implementation and no replaceable
 function-value slot per instance or type:
 
-- `final bound` requires an instance receiver;
+- `final bound` uses the receiver supplied by its instance-qualified call;
 - `final once bound` also permits a receiverless type call using the containing
   type's Nothing instance;
 - `final unbound` is one fixed receiverless implementation owned by its
   declaration path;
 - `varying unbound` has ordinary per-instance replaceable storage when declared
   directly in a type;
+- `varying bound` has replaceable receiver-capable storage and may install a
+  compatible unbound, borrowed-bound, or ownership-backed implementation;
 - `once varying unbound` has one replaceable slot for the complete type; and
 - `once final unbound` adds neither storage sharing nor another call form and is
   a non-acknowledgeable intent error.
+
+Receiver-capable storage may additionally state `unique`, `strong`,
+`strong atomic`, `weak`, or `weak atomic`. These words describe the maximum
+receiver-lifetime relationship the slot can store; an installed unbound or
+borrowed target remains unbound or borrowed.
+
+For new direct storage, declaration-side `final` resolves the omitted type-side
+place stance to final. A `final` and an otherwise defaulted varying callable
+therefore have different storage types even when their explicit result/input
+prototype is the same.
+
+Complete lambda expressions, callable storage capacity, installed binding kind,
+and replacement behavior are taught by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-prototypes-and-storage).
 
 ### Type-callable `once` functions
 
@@ -2100,7 +2114,7 @@ Diagnostics should distinguish:
   supplied by the source;
 - an alias property profile that an actual source cannot satisfy;
 - an exact `alias variable` from a compatible visible callable wrapper;
-- a bound callable invoked without a receiver;
+- assignment whose installed callable binding exceeds the destination capacity;
 - `once final unbound`, whose `once` has no remaining effect;
 - direct infinitely recursive type layout;
 - use of an incomplete type where completed layout is required;
@@ -2152,8 +2166,8 @@ It establishes constraints that later work must preserve:
   reference/pointer layer; an inferred value may adopt its producer's transfer
   stance, but stance does not imply reference shape, and `: & =` remains the
   explicit way to request a reference at the current conceptual depth;
-- functions and captures may refine recursive bindings without allowing
-  executable ordinary self-initialization;
+- named functions and bound lambdas may use their defined recursive binding or
+  self receiver without allowing executable ordinary self-initialization;
 - function invocation may use declarations as inputs and result destinations
   without changing when a declared binding becomes visible;
 - ordinary anonymous declarations with a missing name or explicit `#` retain
