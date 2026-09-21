@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing instance lifetimes, life paths, instance places, references, reference origin, escape, and synchronous borrowing; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references, including receiver-origin `self`; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
-| Does Not Own | Lambda expression/capture syntax and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); how construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
+| Does Not Own | Lambda expression/capture syntax and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); how construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); complete [variant behavior](variants.md) or unmanaged [union behavior](unions.md); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy pointer, function-capture, scope, construction, and global-lifecycle evidence reconciled with current qualifier, invocation, optional, identity, and transfer design |
 | Supersedes | Reference and lifetime teaching formerly distributed through root legacy pages |
 
@@ -82,7 +82,7 @@ ending:
 document varying :
   Document immutable writable varying = makeDocument("one")
 
-document = makeDocument("two")
+document .= makeDocument("two")
 ```
 
 The first immutable `Document` is destroyed and a successor is constructed in
@@ -111,7 +111,7 @@ The same model applies across Zax:
 | Lambda capture | A capturing lambda owns a capture path tied to the lambda instance |
 | Expression temporary | A temporary path survives through the complete use or transfer that required it |
 | Optional | A present optional owns one nested boxed path; reset ends that path |
-| Managed variant | Exactly one active alternative path is resident; changing alternatives ends one path and begins another |
+| Managed variant | Zero or one named alternative path is resident; selecting or resetting ends the old path and may begin another |
 | Array or collection | A collection owns one or more element paths whose stability depends on its operation contract |
 | Dynamic allocation | An arena supplies storage for a separately owned path |
 
@@ -262,7 +262,7 @@ value varying :
 view final :
   MyValue immutable readonly varying & = value
 
-value = makeValue("second")
+value .= makeValue("second")
 inspect(view) // observes the completely established successor
 ```
 
@@ -292,7 +292,7 @@ Complete replacement of `record` renews every member resident instance:
 record varying : MyRecord immutable writable varying
 countView : Integer readonly & = record.count
 
-record = makeReplacement()
+record .= makeReplacement()
 inspect(countView) // error: the referenced member was renewed
 ```
 
@@ -431,6 +431,32 @@ view : MyValue readonly & ?
 Reset destroys the stored reference, not the referent. Later presence may
 construct a new reference bound to a different place; that is a new reference
 lifetime rather than rebinding.
+
+### Variant payloads and union lenses
+
+A [variant](variants.md) owns one wrapper path and zero or one named payload
+path. A reference obtained from an active alternative names that exact
+conditional path:
+
+```zax
+choice.text .= "first"
+textView : String readonly & = choice.text
+
+choice.text .= "second"
+use(textView) // error: reselection ended the first text path
+```
+
+Selecting the same name still renews its payload. Selecting another name,
+resetting the wrapper, complete wrapper replacement, and destruction likewise
+end the old path. The reference never follows a successor payload merely
+because storage is reused.
+
+An unmanaged [union](unions.md) is different. It has one union resident
+instance and several typed lenses, not several member life paths. A reference
+formed from a plain-union lens remains tied to the common backing and observes
+later safe writes through another lens. In `union unsafe`, reference formation
+requires lens-validity proof, and a later overlay write can invalidate typed use
+even while the numeric address remains unchanged.
 
 ### Arrays and collections
 
@@ -858,7 +884,8 @@ Still deferred:
 - exact compiler proof algorithms;
 - opaque callable origin metadata;
 - runtime-fixed array and multidimensional block-view lifetime contracts;
-- variant and unmanaged-union design;
+- formal proof algorithms for unsafe-union lens references and variant checked
+  access;
 - async suspension and cancellation;
 - formal grammar, ABI, layout, and lowering.
 

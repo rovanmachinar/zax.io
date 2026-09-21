@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [028: Types, unions, and variants](work/028-types-unions-and-variants.md) |
-| Next work number | `029` |
+| Active work item | [029: Except result-flow control](work/029-except.md) |
+| Next work number | `030` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

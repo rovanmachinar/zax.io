@@ -260,6 +260,51 @@ provenance claim. `unsafe via` and `unsafe outer cast` accept responsibility for
 an unproved relationship at the exact forwarding or outer-cast site. A false
 claim has the unsafe consequences defined by the composition operation.
 
+### Unsafe union lens validity
+
+A plain [union](unions.md) admits only passive, all-bit-pattern-valid lenses, so
+every lens remains safe after every write.
+
+`union unsafe` admits passive representations with restricted value domains.
+The selected language contract may prove one lens valid from zero-fill, a
+preceding write, exact representation facts, or preserved flow. When it cannot,
+interpreting the backing through that lens uses the exact unsafe category
+`union-lens-validity`.
+
+The category asserts:
+
+> The current union backing is a valid ordinary value representation for this
+> requested lens.
+
+It neither converts the bits nor starts a lens lifetime. A false claim has
+undefined consequences. Known-invalid representation remains an error.
+
+Private compiler analysis may optimize or advise, but it does not silently
+change portable assertion requirements. Stronger source validity belongs to a
+selected contract as described under
+[language contracts and compiler analysis](#language-contracts-and-compiler-analysis).
+
+### Checked variant access
+
+Named [variant](variants.md) access has a runtime-checkable selection condition:
+
+- proved active removes the check;
+- proved inactive is an error;
+- unresolved selection performs the registered
+  `inactive-variant-access` check and panics on mismatch; and
+- disabling that category promises the requested name is active, with undefined
+  consequences if the promise is false.
+
+Disabling the check never suppresses a statically proved mismatch and does not
+affect `.=` or switch routing, which establish selection through their own
+operations.
+
+This supplies a concrete distinction among proved invalid source,
+runtime-checkable uncertainty, an uncheckable proof gap, and high-confidence
+compiler suspicion. Warning policy for the last category remains future
+analysis-control work; source validity does not vary with an implementation's
+confidence heuristic.
+
 ### Enum raw-admission permission
 
 ```zax

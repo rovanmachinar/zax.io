@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing qualifier behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Place-replacement, value-mutability, and access qualifiers; type-side truth versus declaration-side replacement permission; qualifier attachment, defaults, inheritance, restatement, type-alias property overlay validation, ordering, ordinary promise strengthening, explicit unsafe weakening, deep immutability, semantic-indirection qualification boundaries, unsafe pliability, varying immutable places, reconstructive replacement at the depth required by qualifiers, receiver-operand constraints, and immediate construction, destruction, indirection, concurrency, and structural-typing boundaries |
-| Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and arenas](pointers-and-arenas.md) |
+| Does Not Own | Complete transfer behavior ([transfer stances](transfer-stances.md)); declaration/binding behavior ([declarations and bindings](declarations-and-bindings.md)); invocation/result preference ([function invocation](function-invocation.md)); lifecycle behavior ([construction and destruction](construction-and-destruction.md)); complete [optional behavior](optional-values.md), [variant behavior](variants.md), or [union behavior](unions.md); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and arenas](pointers-and-arenas.md) |
 
 ## Mental model
 
@@ -105,7 +105,7 @@ restricted final : MyType mutable writable varying & = source
 
 reader.member = replacement     // error: readonly path
 restricted.member = replacement // legal: mutable value and writable path
-restricted = makeMyType()       // error: declaration-side final
+restricted .= makeMyType()      // error: declaration-side final
 ```
 
 That is why `final`/`varying` needs both positions while `readonly`/`writable`
@@ -174,23 +174,24 @@ replacer varying :
 restricted final :
   MyType immutable writable varying & = value
 
-replacer = makeMyType()   // reconstructive replacement
-restricted = makeMyType() // error: this declaration lacks replacement authority
+replacer .= makeMyType()  // reconstructive replacement
+restricted .= makeMyType() // error: this declaration lacks replacement authority
 ```
 
 The underlying place can undergo compiler-recognized reconstructive replacement,
 ending one immutable lifetime and beginning another. `observer` and `restricted`
 must understand that `replacer` may do so. `restricted` remains writable for
 operations that do not require whole-value replacement, but its declaration-side
-`final` prevents it from initiating reconstructive replacement.
+`final` prevents it from initiating reconstructive replacement. An ordinary
+`restricted = ...` expression may still select a viable in-lifetime operator,
+but it receives no lifecycle authority.
 
 Effective whole-value replacement through one path therefore requires:
 
 - underlying type/place stance `varying`;
 - declaration/access replacement permission `varying`;
 - writable access;
-- a viable replacement operation; and
-- for reconstructive replacement, the applicable immutable-lifetime conditions.
+- a viable replacement operation.
 
 ### Inspecting the stance
 
@@ -232,7 +233,7 @@ varying referent may not be presented as final; declaration-side `final` or
 ```zax
 config final : Config mutable = makeConfig()
 
-config = makeOtherConfig() // error: config is final
+config .= makeOtherConfig() // error: config is final
 config.refresh()           // legal when this access is writable
 ```
 
@@ -279,7 +280,7 @@ The axes combine when deciding whether a change is available:
 | Operation | Required qualifications |
 | --- | --- |
 | Mutate the current value lifetime's contents | `mutable` + `writable` |
-| Use generated reconstructive replacement for an immutable value | `immutable` + type-side `varying` + declaration-side `varying` + `writable` |
+| Use complete `.=` reconstruction | Type-side `varying` + declaration-side `varying` + `writable`; the old value may be mutable or immutable |
 | Observe a stable immutable place | `immutable` + `readonly` + `final` |
 | Observe successive immutable lifetimes in one replaceable place | `immutable` + `readonly` + type-side `varying`, explicit or inherited |
 
@@ -297,7 +298,7 @@ replacer varying :
   Message immutable writable varying & = message
 
 display(observer)                 // "first"
-replacer = makeMessage("second")  // reconstructive replacement
+replacer .= makeMessage("second") // reconstructive replacement
 display(observer)                 // "second"
 ```
 
@@ -565,7 +566,7 @@ visibility, and syntax remain future work.
 
 Immutability is recursively deep over direct structural containment. Semantic
 indirection boundaries retain independently stated qualifications. Pointer,
-reference, and optional layers therefore do not silently rewrite the
+reference, optional, and variant layers therefore do not silently rewrite the
 qualifications of their pointee, referent, or boxed value:
 
 ```zax
@@ -594,20 +595,30 @@ escaped construction-time aliases are defined or bounded by
 
 ## Reconstructive replacement
 
-`=` has one compiler-recognized lifetime scenario in addition to arbitrary
-domain-specific operator candidates. When an existing destination is immutable
-and type-side varying, the current declaration has declaration-side varying
-replacement permission, and the current path is writable, the compiler may select
-a generated **reconstructive replacement** candidate.
+Protected `.=` requests complete reconstructive replacement. It is available
+when the existing destination is type-side varying, this declaration has
+declaration-side varying replacement permission, and the current path is
+writable.
 
-A mutable, varying destination uses ordinary operator selection. It does not
-receive this generated immutable-value lifecycle transition merely because its
-place is varying.
+The old value may be mutable or immutable:
 
-The generated candidate ends one enclosing immutable value lifetime and
-establishes another in the same storage. Its lifecycle skeleton is
-compiler-owned and cannot be replaced by an ordinary user-defined `=` body. A
-type customizes the transition with a
+```zax
+mutableValue .= replacement
+immutableValue .= replacement
+```
+
+For a mutable value, ordinary `=` may instead select an in-lifetime assignment.
+For an immutable value, ordinary `=` retains immutable receiver authority and
+cannot change represented state. It never silently gains lifecycle authority.
+
+Type-side `final`, declaration-side `final`, and readonly access each block
+complete `.=` reconstruction at that layer. `writable` alone cannot overcome a
+final place, and `varying` alone cannot overcome readonly access.
+
+The protected operation ends one complete value lifetime and establishes
+another in the same storage. Its lifecycle skeleton is compiler-owned and cannot
+be replaced by an ordinary user-defined `=` or `.=` body. A type customizes the
+transition with a
 [replacement constructor](terms.md#replacement-constructor):
 
 ```zax
@@ -882,11 +893,10 @@ invalid and may be unchecked. Complete behavior belongs to
 [Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
 
 No operator, including `=` or `+=`, receives conventional qualifier behavior
-merely because of traditional meaning. The reconstructive `=` scenario is
-special only because the compiler recognizes an immutable value in an existing
-varying place through a writable path. A domain-specific operator may still
-accept a final, readonly, or immutable receiver operand when its declaration is
-compatible.
+merely because of traditional meaning. A domain-specific `=` may accept a final,
+readonly, or immutable receiver when its declared behavior is compatible, but
+it gains no lifecycle or replacement authority. Complete replacement is the
+separate protected `.=` operation.
 
 ```zax
 MyType :: type {
@@ -912,10 +922,10 @@ implementation receives that authority, but ordinary nested uses of `_` and its
 members return to `copy` stance unless explicitly renewed. Qualifier authority
 never increases merely because a transfer stance was accepted.
 
-The generated reconstructive candidate requires immutable, type-side varying,
-declaration-side varying, and writable. It is unavailable for a mutable value,
-through a readonly receiver operand, or through a declaration-side final path
-even when the underlying place is varying.
+Complete `.=` reconstruction requires type-side varying, declaration-side
+varying, and writable. It may replace a mutable or immutable resident. It is
+unavailable through a readonly receiver or declaration-side final path, and a
+type-side final place cannot receive a successor lifetime.
 
 A temporary supplies the qualifications of its resolved result and
 compiler-managed temporary place. An operation through a pointer or reference
@@ -962,7 +972,8 @@ content mutation but not ordinary place replacement.
 
 Mixfix punctuation grants no authority. A user mixfix that consumes `=` does not
 acquire the compiler-owned reconstructive-replacement lifecycle skeleton.
-Complete tree matching and protected barriers are defined by
+Protected `.=` is not a user-consumable mixfix component. Complete tree matching
+and protected barriers are defined by
 [mixfix operators](mixfix-operators.md).
 
 ## Optional qualification layers
@@ -1017,8 +1028,8 @@ optional final : Payload? mutable final = value
 
 reset optional
 reset optional
-optional = [{}]
-optional = anotherOptional // error: complete wrapper place is final
+optional .= [{}]
+optional .= anotherOptional // error: complete wrapper place is final
 ```
 
 An immutable varying wrapper cannot change presence within its current lifetime,
@@ -1029,8 +1040,8 @@ optional varying :
   Payload? immutable writable varying = first
 
 reset optional    // error: current wrapper is immutable
-optional = [{}]   // error: current wrapper is immutable
-optional = second // replace the complete wrapper lifetime
+optional .= [{}]  // error: current wrapper is immutable
+optional .= second // reconstruct the complete wrapper lifetime
 ```
 
 Boxed `readonly`, `immutable`, or `final` does not prevent the mutable/writable
@@ -1040,14 +1051,73 @@ wrapper owner from ending that conditional lifetime:
 optional : Payload immutable readonly final? mutable writable
 
 reset optional
-optional = [{}]
+optional .= [{}]
 ```
 
 Those operations remove and create boxed places. They do not mutate or
 independently replace the old payload through postfix access.
 
+Wrapper-owned `.=` does not select `replacement +++` at a final wrapper or
+payload layer. It keeps the mutable wrapper lifetime and performs fresh payload
+construction. To invoke the active payload's complete replacement, postfix
+access must reach a payload place that is itself varying and writable:
+
+```zax
+wrapper final :
+  Payload immutable writable varying? mutable writable final
+
+wrapper .= replacement
+// Legal wrapper-owned fresh payload construction; wrapper remains final.
+
+if ?wrapper
+  wrapper. .= replacement
+  // Legal complete Payload reconstruction; the payload place is varying.
+```
+
+A readonly or final payload path rejects the second form. A wrapper that is
+immutable rejects the first form because contained selection would mutate that
+wrapper lifetime.
+
 Complete optional operations, nested optional layers, and transfer effects are
 defined by [Zax optional values](optional-values.md).
+
+## Variant and union qualification
+
+A variant wrapper has the same capability-versus-permission distinction for its
+selection state:
+
+- mutable + writable wrapper access may reset, use contained `.=` or perform
+  ordinary same-type `=` while retaining one wrapper lifetime;
+- an immutable wrapper keeps absence or the selected name stable during that
+  lifetime;
+- complete-wrapper `.=` additionally requires a type-side varying place,
+  declaration-side varying permission, and writable access; and
+- active payload access carries the alternative type's independently resolved
+  qualifications.
+
+```zax
+choice final : MyChoice mutable final
+
+choice.text .= "ready" // legal: mutate selection within this wrapper
+choice = otherChoice   // legal: assign state within this wrapper lifetime
+choice .= otherChoice  // error: complete wrapper place is final
+```
+
+Ending an immutable or readonly payload through authorized wrapper mutation is
+not mutation through payload access; it ends the conditional path. Complete
+behavior belongs to [Zax variants](variants.md#wrapper-and-payload-qualifications-are-separate).
+
+A union lens instead derives qualifications from the path to the complete
+union. It cannot increase mutability, writability, or replacement authority:
+
+```zax
+reader : MyBits readonly & = bits
+reader.raw = 1 // error: readonly union path
+```
+
+Lenses are alternate views of one backing value, not independently qualified
+member lifetimes. Complete admissibility and lens behavior belongs to
+[Zax unions](unions.md#lens-access-qualification-and-references).
 
 ## Array and slice qualification
 
@@ -1059,7 +1129,7 @@ myArray varying :
 
 myArray[0] = 10   // error: mutates the immutable array
 myArray.resize(6) // error: mutates the immutable array
-myArray = replacement
+myArray .= replacement
 // valid reconstructive replacement when the contracts match
 ```
 
@@ -1256,8 +1326,8 @@ costs:
 - readonly aliases do not prevent mutation through other paths;
 - explicitly varying references may observe successive value lifetimes in one
   place;
-- immutable reconstructive replacement introduces constructor, lifetime, and
-  alias constraints;
+- complete `.=` reconstruction introduces constructor, lifetime, and alias
+  constraints for mutable or immutable values;
 - `unsafe pliable` can invalidate invariants and optimization assumptions relied
   upon elsewhere; and
 - qualifier-sensitive overload selection can make candidate sets more complex.
@@ -1280,7 +1350,7 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - same-place aliases preserving the referent's actual type-side final/varying
   stance while being free to narrow their own replacement permission;
 - mutation requiring mutable + writable;
-- generated reconstructive replacement requiring immutable + type-side varying +
+- complete `.=` reconstruction requiring type-side varying +
   declaration-side varying + writable;
 - deep immutability across direct structural containment while optional,
   pointer, and reference indirection layers retain independently written

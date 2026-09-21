@@ -165,8 +165,9 @@ value := first +
   second
 ```
 
-This applies to assignment/initializer `=`, inferred declaration `:=`, ordinary
-symbolic binary operators, and symbolic components such as `??` and `;;`:
+This applies to assignment/initializer `=`, inferred declaration `:=`,
+contained reconstruction `.=` and ordinary symbolic binary operators, plus
+symbolic components such as `??` and `;;`:
 
 ```zax
 result : MyType? =
@@ -220,6 +221,32 @@ existing valid source.
 
 The rule applies to ordinary symbolic unary operations. Call, index, projection,
 and other grammar-recognized postfix forms retain their own chaining rules.
+
+### Dot-equals is distinct from postfix access then assignment
+
+`.=` is one longest-match protected binary token at assignment precedence:
+
+```zax
+value .= [{ constructorInputs }]
+optional .= value
+variant.text .= value
+```
+
+Whitespace separates postfix payload access followed by ordinary assignment:
+
+```zax
+optional. = value
+optional. .= [{ replacementInputs }]
+```
+
+Postfix `.` first accesses an optional payload; the following `.=` then targets
+complete replacement of that payload rather than wrapper-owned contained
+reconstruction.
+
+These forms have different lifecycle meaning and a formatter must preserve the
+distinction. `.=`, like another binary operator, requires whitespace on both
+sides. It cannot be split into postfix `.` and `=` without changing source
+meaning.
 
 ### Allocation-token attachment
 
@@ -300,6 +327,21 @@ compact : MyType?? // error: `??` is not two optional markers
 The space acknowledges two independently qualified wrapper layers and must not
 be removed by formatting.
 
+One optional marker attaches directly to the complete qualified inner type:
+
+```zax
+plain : MyType?
+qualified :
+  MyType immutable readonly final? mutable writable varying
+
+spaced :
+  MyType immutable readonly final ? mutable writable varying
+// error: the optional marker must attach to the inner type layer
+```
+
+Whitespace after an earlier optional marker remains required only when another
+optional layer follows, as in `MyType? ?`.
+
 `[{}]` is the one contiguous zero-entry
 [construction packet](terms.md#construction-packet):
 
@@ -326,6 +368,24 @@ result : MyType? ? =
 result : MyType? ? =
   condition ?? (: MyType? ? = [{ inner }]) ;; (: MyType? ?)
 ```
+
+For a variant destination, a dotted packet entry names one alternative rather
+than an ordinary direct member:
+
+```zax
+choice : MyChoice = [{
+  .text = "ready"
+}]
+```
+
+The packet contains zero such entries for absent default construction or
+exactly one for presence. An unmanaged union accepts no construction packet;
+its lenses are not constructed members.
+
+For complete reconstructive `value .= [{...}]`, positional and named
+constructor inputs are available. Direct `.member = ...` entries are rejected
+because the selected `replacement +++` owns old-member recycling and successor
+member establishment.
 
 Complete optional depth and construction behavior is defined by
 [Zax optional values](optional-values.md#nested-optionals).
@@ -1203,6 +1263,38 @@ transfer-only case, and default consumes one required effective body statement.
 A comma continues a case-test list, while `;;` separates a test list or testless
 clause from its post.
 
+When the selector type is a variant, the same clause region accepts
+alternative-routing entries:
+
+```zax
+switch choice {
+  case text {
+    use(text)
+  }
+
+  case number,
+    alternateNumber bind selectedNumber {
+    use(selectedNumber)
+  }
+
+  case ! {
+    handleAbsent()
+  }
+}
+```
+
+The optional clause label still follows `case` first:
+
+```zax
+case retry: number, alternateNumber bind selectedNumber {
+}
+```
+
+`bind` follows the complete comma-separated alternative list. It introduces one
+ordinary body-local binding; the flow label remains a separate switch-wide label
+category. `case ? bind value` uses the same placement. Bare `case ?`, `case !`,
+and `default` introduce no payload binding.
+
 Transfer-only cases may appear anywhere and are skipped by ordinary testing.
 Several positional defaults may likewise appear; their runtime search behavior
 belongs to the selection owner.
@@ -1213,6 +1305,8 @@ bodyless tested case cannot borrow the body of a following clause.
 Cases have no initializer section. Complete selector, test, post, and transfer
 semantics belong to
 [switch, case, and default](switch.md#cases-bodies-and-posts).
+Variant routing and binding belong to
+[switch, case, and default](switch.md#variant-alternative-selection).
 
 ### Header continuation
 
@@ -1929,6 +2023,8 @@ Layout and separator diagnostics additionally distinguish:
 - whitespace before `;` or missing whitespace after it;
 - missing whitespace around `;;` or `??`;
 - symbolic pre/post/binary whitespace that contradicts the recognized fixity;
+- `.=` split into postfix `.` and ordinary `=`, or `optional. =` joined into
+  contained reconstruction, when that changes lifecycle intent;
 - adjacent independent unary applications without grouping;
 - an unknown contiguous symbolic token where no catalog form exists;
 - a phrase-whitespace presentation error in a selected component;
@@ -1950,6 +2046,8 @@ Layout and separator diagnostics additionally distinguish:
 - a body beginning more than one structural level deeper than its header;
 - sibling header operands or sections at conflicting continuation levels;
 - a malformed case-test comma list or clause post separator;
+- variant `bind` before the complete alternative list, without a binding name,
+  or after the body has begun;
 - missing `using` resource-list parentheses or a malformed resource mapping
   group;
 - a `using` header containing `;;`;
@@ -1972,8 +2070,13 @@ Layout and separator diagnostics additionally distinguish:
 - bare default-remainder `..` outside a valid final array-entry position;
 - `..<` without a written end;
 - compact `T??` where two optional type layers require `T? ?`;
+- whitespace before a type-layer `?` instead of attachment to the complete
+  qualified inner type;
 - spaced `[{ }]` where a zero-entry construction packet requires `[{}]`;
 - a bare construction packet in an expression position without a destination;
+- a variant packet naming several alternatives or supplying wrapper-level
+  constructor arguments;
+- a construction packet targeting an unmanaged union;
 - a multiline closing `}` at the wrong structural level;
 - an `else` separated from a preceding `}` by a newline, preceded by a blank
   line, or placed at a level other than its owning `if`;

@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, callable binding-kind and composition/chaining forms, opaque type probe/transfer, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, complete and wrapper-owned reconstruction `.=` forms, callable binding-kind and composition/chaining forms, opaque type probe/transfer, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -43,7 +43,7 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
-| Presence and lifecycle | `?value`, `value.`, `liveness probe value`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
+| Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
@@ -83,7 +83,7 @@ Higher levels bind first:
 | Logical XOR | `^^`, `logical xnor` | Left |
 | Logical OR | `\|\|`, `logical nor`, `logical or not` | Left |
 | Conditional | `condition ?? trueValue ;; falseValue` | Right-nesting |
-| Assignment/compound | `=`, compounds including `<+>=`, exact phrase mutations | Right |
+| Assignment/compound | `=`, protected `.=` complete/contained reconstruction, compounds including `<+>=`, exact phrase mutations | Right |
 | Swap | `<<>>` | Left |
 
 Every newly declared phrase uses ordinary phrase precedence. A language-defined
@@ -557,17 +557,21 @@ result := source as move as copy
 This is legal but normally pointless: no consumer observes the intermediate
 `move`, so `as copy` replaces it without any transfer occurring.
 
-## Optional, pointer, and function lifecycle forms
+## Replacement, optional, pointer, and function lifecycle forms
 
 These exact forms are protected for their recognized operand domains:
 
 | Form | Fixity/level | Result role |
 | --- | --- | --- |
-| `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, pointer, function, or `once` receiver domains |
+| `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, variant, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
+| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `replacement +++` or ordinary `---`/`+++` fallback; forward declared replacement results |
+| `wrapper .= source` / `wrapper .= [{...}]` | Protected binary at assignment precedence | Re-deliver direct or packet construction inputs to an optional payload; return fresh payload access |
+| `variant.name .= source` / `variant.name .= [{...}]` | Protected binary at assignment precedence | Select and reconstruct the named variant payload; return fresh payload access |
+| `variant .= [{...}]` | Protected binary at assignment precedence | Reconstruct absent or one named-present variant state; return wrapper access |
 | `liveness probe value` | Pre-unary phrase at ordinary phrase level | Observe momentary weak-target liveness without acquiring ownership |
 | `binding kind of value` | Pre-unary phrase at ordinary phrase level | Report the installed callable target mode |
-| `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
+| `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional or variant absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
 | `vacate value` | Pre-unary phrase at ordinary phrase level | Discard a proved non-owning raw pointer address without disposition and leave vacancy |
 | `unsafe vacate value` | Pre-unary phrase at ordinary phrase level | Accept responsibility for an opaque but potentially valid raw-pointer disposition relationship; never available to managed pointers or a proved guaranteed leak |
 | `last value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type, offer `last`, and schedule optional payload cleanup at consumer completion |
@@ -575,7 +579,10 @@ These exact forms are protected for their recognized operand domains:
 
 Protected optional forms are distinct from generic post-unary stance
 restatement. Complete optional behavior and source consequences are defined by
-[Zax optional values](optional-values.md). Pointer `reset` is defined by
+[Zax optional values](optional-values.md). Complete `.=` replacement is defined
+by [construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
+Variant `.=` and reset behavior is defined by [Zax variants](variants.md).
+Pointer `reset` is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
 Pointer `vacate`, function presence/reset, and receiver-presence behavior are
 defined by [Zax Nothing instances](nothing-instances.md).
@@ -795,9 +802,32 @@ It is left-associative.
 Protected integer behavior belongs to the
 [integer operator catalog](integer-operator-catalog.md). Lifecycle-specific
 assignment/replacement remains with its lifecycle owner. Optional `T? = T?`
-replaces the complete wrapper lifetime, while `T? = [{...}]` is a distinct
-packet-construction boundary; see
+assigns state within a mutable continuing wrapper; `T? .= T?` reconstructs the
+complete wrapper lifetime; and `T? .= T` or `T? .= [{...}]` reconstructs its
+payload within the continuing wrapper. See
 [Zax optional values](optional-values.md#construction-wrapper-replacement-and-boxed-assignment).
+
+Complete and contained reconstruction use the same protected form at different
+designated lifetime layers:
+
+```zax
+value .= [{ constructorInputs }]
+optional .= value
+variant.text .= value
+variant .= [{ .text = value }]
+```
+
+`.=` is right-associative at assignment precedence and cannot be overloaded.
+An ordinary live varying place designates complete resident reconstruction. A
+wrapper owner may instead recognize an optional payload, named variant
+alternative, or complete variant selection packet. Delayed `unsafe ???` storage
+uses explicit `+++` because no old live value is being replaced. Union
+whole-value operations retain their protected all-bit-copy behavior.
+
+Protection is required because an overloaded body retains ordinary receiver
+qualifications. It cannot shed immutability, end its own resident lifetime, or
+gain transitional construction authority. `replacement +++` is the explicit
+hook inside the compiler-owned `.=` lifecycle skeleton.
 
 ## Allocation initializers
 
@@ -962,6 +992,8 @@ Tooling needs to expose:
 - eager versus short-circuit behavior;
 - operand evaluation and immediate binding;
 - copies, moves, references, temporaries, and mutation;
+- wrapper-versus-contained lifecycle selection for `=`, `.=` and postfix
+  access followed by `=`;
 - selected type-specific policy/result owner;
 - fallback negation;
 - branch-specific selection;
@@ -978,6 +1010,10 @@ Diagnostics distinguish:
 - protected-signature conflict;
 - grouping-required comparison;
 - confusable source;
+- complete `.=` without a writable varying destination, replacement permission,
+  or viable replacement/fallback constructor;
+- wrapper-owned `.=` with an invalid optional/variant target shape;
+- a variant wrapper `.=` value with no named alternative;
 - invalid shift count; and
 - type-specific failure routed to the applicable concept owner.
 

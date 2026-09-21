@@ -5,8 +5,8 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
 | Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
-| Owns | Preservation of construction-derived categories, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
-| Does Not Own | Current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
+| Owns | Preservation of construction-derived category behavior, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
+| Does Not Own | The centralized provisional category inventory ([analysis-control registry](analysis-control-registry.md)); current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
 | Source / Provenance | Work items `005`, `006`, `007`, `012`, and `015`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, and panic-category pressure |
 
 ## Reading posture
@@ -23,6 +23,12 @@ below preserve candidate categories and source forms, not a competing current
 definition.
 
 It is not required for ordinary construction or qualifier use.
+
+Provisional names, unnamed registry obligations, live occurrences, and legacy
+panic identifiers are centralized in the
+[raw analysis-control registry](analysis-control-registry.md). This file retains
+the reasoning and examples that give those entries meaning; it is not a second
+registry.
 
 ## Semantic controls are not broad unsafe mode
 
@@ -113,7 +119,7 @@ The future mechanism must distinguish:
 A warning-suppression mechanism is insufficient because these claims may change
 generated code or the compiler's semantic state.
 
-## Known construction-derived categories
+## Known construction-derived category pressure
 
 | Provisional identifier | Claim or permission |
 | --- | --- |
@@ -144,7 +150,9 @@ Ordinary defined reuse after accepted `last` is an intent error and uses
 `intent<terminal-source-reuse>{...}`. Unsafe analysis control is needed only
 when a required valid lifetime, alias, or operation property cannot be proved.
 
-These names identify future-work concerns. They are not accepted keywords.
+These names identify future-work concerns. They are not accepted keywords. Their
+central maturity and occurrence inventory is maintained in the
+[raw analysis-control registry](analysis-control-registry.md#unsafe-category-inventory).
 
 `unsafe ???` already supplies the unsafe acknowledgment for delayed
 construction. Calling `+++` later does not need a second unsafe category merely
@@ -409,6 +417,8 @@ Every defined runtime panic condition needs a stable registry entry rather than
 an ad hoc feature-local switch. Language-owned and programmer/library-owned
 categories need collision-free provenance. Tooling and reproducible build
 metadata must expose the effective enabled/disabled state of each category.
+The centralized provisional inventory is the
+[raw analysis-control registry](analysis-control-registry.md#panic-category-inventory).
 
 Current [arrays and slices](../../language/arrays-and-slices.md) require
 provisional registry entries for:

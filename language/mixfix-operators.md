@@ -364,8 +364,9 @@ Receiver and hole qualifications participate in viability. A writable mixfix is
 nonviable through readonly access; mutation still requires mutable value state
 and writable access.
 
-Compiler-owned reconstructive replacement remains compiler-owned. Consuming a
-written `=` does not grant a user mixfix the replacement lifecycle skeleton.
+Compiler-owned reconstructive replacement remains compiler-owned. Ordinary `=`
+is only an in-lifetime component, while protected `.=` is not consumable by a
+user mixfix and cannot grant the replacement lifecycle skeleton.
 
 User mixfixes cannot be anchored on closed intrinsic receivers. A custom receiver
 may accept intrinsic values in other holes.

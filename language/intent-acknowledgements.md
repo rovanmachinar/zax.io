@@ -218,6 +218,7 @@ copying a diagnostic message.
 | `empty-selection` | Deliberately retain a runtime switch containing no clauses | [Switch, case, and default](switch.md#empty-selection) |
 | `outer-target-through-ineligible-label` | Deliberately select an eligible outer target through a nearer same-named label that is ineligible for the written transfer keyword | [Core flow control](core-flow-control.md#label-namespace-and-shadow-permission) |
 | `partial-enum-selection` | Deliberately omit one or more distinct declared enum member values from explicit switch coverage | [Enums](enums.md#selection-with-enum-values) |
+| `partial-variant-selection` | Deliberately omit one or more declared variant alternatives from explicit named or `case ?` coverage | [Variants](variants.md#coverage-and-partial-selection) |
 | `duplicate-resource-enrollment` | Deliberately enroll a place already known to be enrolled by an earlier `using` entry | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `repeated-resource-expression` | Deliberately repeat a resource-producing expression as a later `using` entry while preserving every evaluation | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `same-prefix-literal-join` | Deliberately invoke the same resolved literal declaration twice and join its concrete results rather than merge the payload for one invocation | [Literal source and operators](literal-source-and-operators.md#same-declaration-requires-intent-acknowledgement) |
@@ -441,6 +442,35 @@ switch.
 Complete enum-domain rules belong to
 [Zax enums](enums.md#selection-with-enum-values); per-search-entry behavior
 belongs to [switch, case, and default](switch.md#enum-coverage-has-two-dimensions).
+
+### Partial variant selection
+
+A variant switch audits every declared alternative separately from coverage of
+absence:
+
+```zax
+intent<partial-variant-selection>{
+  switch message {
+    case text
+      handleText(text)
+    default
+      handleOtherState()
+  }
+}
+```
+
+`default` can receive omitted present alternatives and absence, but it does not
+silently count as explicit alternative coverage. The acknowledgement permits
+the omitted names without binding their payloads, changing case order, or
+changing fallback behavior.
+
+An unacknowledged complete switch names every alternative or uses `case ?`.
+Adding a new alternative therefore requires review unless a polymorphic
+`case ?` deliberately accepts it and its new specialization succeeds.
+
+Complete behavior belongs to
+[Zax variants](variants.md#coverage-and-partial-selection) and
+[switch, case, and default](switch.md#variant-alternative-selection).
 
 ### Implicit stance at terminal use
 

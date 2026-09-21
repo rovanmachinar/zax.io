@@ -175,13 +175,43 @@ They may have the same flattened leaf shape and layout: three consecutive
 `Integer` leaves named `x`, `y`, and `z`.
 
 Flattening never descends through a pointer, reference, optional, union,
-tracking component, or another semantic-indirection boundary. Such a value can
-participate as one atomic leaf when its complete type and qualifications match.
+variant, tracking component, or another semantic-indirection boundary. Such a
+value can participate as one atomic leaf when its complete type and
+qualifications match.
 
 A type with custom copy, ownership, construction, replacement, or destruction
 behavior also remains atomic by default. Flattening through it could bypass the
 operation that preserves its resources or invariants. A future type-owned bridge
 may grant that stronger relationship deliberately.
+
+### Unions and variants remain semantic leaves
+
+An unmanaged union has one backing representation and several offset-zero
+lenses. Those lenses are not direct stored members that structural flattening
+may gather independently. Whole-union compatibility compares the complete union
+identity and representation contract; explicit lens access selects a local
+interpretation. Complete behavior belongs to [Zax unions](unions.md).
+
+A managed variant has a wrapper and zero or one conditional payload path.
+Structural conversion cannot choose an active name, manufacture absence, or
+flatten every alternative into simultaneous members. The complete variant is
+one leaf unless a future explicit variant-aware transformation defines another
+relationship. See [Zax variants](variants.md).
+
+A variant alternative is not an anchorable resident path:
+
+```zax
+choice anchor .text // error: text is a conditional alternative
+```
+
+A physical member whose complete value is a variant can be an anchor:
+
+```zax
+container anchor .choice
+```
+
+That selects the complete wrapper as one atomic leaf. It does not enter or
+select an active payload.
 
 ## Compatibility posture
 
@@ -606,7 +636,7 @@ c final :
     a as flattened layout C & anchor .coord.x
 
 c.y = 10      // content mutation is permitted
-c = makeC()   // error: this subregion is not independently varying
+c .= makeC()  // error: this subregion is not independently varying
 ```
 
 If `a` is immutable, deep immutability applies to its composed values:
@@ -619,9 +649,10 @@ c final :
     a as flattened layout C & anchor .coord.x
 ```
 
-The outer `A` place can undergo complete reconstructive replacement through
-`a`, but the interior view cannot gain mutable or varying authority. Replacing
-`a` invalidates `c`; it does not make `c` observe a renewed interior.
+The outer `A` place can undergo complete `.=` reconstructive replacement through
+`a`, but the interior view cannot gain mutable or varying authority.
+Reconstructing `a` invalidates `c`; it does not make `c` observe a renewed
+interior.
 
 ### Whole-root varying views require full compatibility
 
@@ -1075,12 +1106,20 @@ created : Record =
 record =
   -<>- coordinates
 // A complete transformed Record is constructed, then assigned to record.
+
+immutableRecord varying :
+  Record immutable writable varying
+
+immutableRecord .=
+  -<>- coordinates
+// Construct a complete transformed Record, then reconstruct the varying place.
 ```
 
-The second form constructs a complete transformed `Record` and then uses
-ordinary assignment or reconstructive replacement. Every required member must
-be mapped or established by an ordinary destination default; old unmapped
-destination members are not retained.
+Both destination-hole forms construct a complete transformed `Record`.
+Ordinary `=` then selects in-lifetime assignment; protected `.=` explicitly
+selects reconstructive replacement. Every required member must be mapped or
+established by an ordinary destination default; old unmapped destination
+members are not retained.
 
 Panic never rolls transformation back or returns partial state. A matching
 helper repairs the blocked operation and lets it resume; otherwise the process

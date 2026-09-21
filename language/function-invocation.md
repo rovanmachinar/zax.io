@@ -287,7 +287,7 @@ call result or proxy; the complete mixfix owns the final result shape.
 Exact default timing across a flattened mixfix, variadics, result forwarding,
 lambda/generated callable types, construction-like call syntax, and indexing
 details remain future integration. Complete tree behavior is defined by
-[mixfix operators](mixfix-operators.md#call-and-index-components).
+[mixfix operators](mixfix-operators.md#call-index-and-splice-components).
 
 ## Parameters, arguments, and type arguments
 

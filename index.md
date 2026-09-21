@@ -21,6 +21,18 @@ producing them.
 - Read [Zax declarations and bindings](language/declarations-and-bindings.md) for
   declaration, initialization, binding visibility, qualifiers, and assignment
   boundaries.
+- Read [Zax type definitions](language/type-definitions.md) for named and
+  anonymous identity, stored members, type-body organization, self-reference,
+  completion, lifecycle handoffs, and `outer tracked` integration.
+- Read [Zax unions](language/unions.md) for untagged offset-zero lenses,
+  passive/all-bit-safe overlays, jagged storage, and explicit unsafe lens
+  responsibility.
+- Read [Zax variants](language/variants.md) for absent or named-present managed
+  payloads, contained reconstruction with `.=` and reset, checked access,
+  transfer, and alternative selection.
+- Read [Zax optional values](language/optional-values.md) for absent or present
+  single-payload wrappers, proven postfix access, contained reconstruction,
+  reset, nested layers, and wrapper-versus-payload qualification.
 - Read [Zax namespaces and modules](language/namespaces-and-modules.md) for
   module-local roots, namespace declaration and lookup, generative imports,
   injection, collisions, and the visibility/export baseline.
@@ -129,6 +141,9 @@ producing them.
 - [Language principles](language/principles.md)
 - [Source structure](language/source-structure.md)
 - [Declarations and bindings](language/declarations-and-bindings.md)
+- [Type definitions](language/type-definitions.md)
+- [Unions](language/unions.md)
+- [Variants](language/variants.md)
 - [Namespaces and modules](language/namespaces-and-modules.md)
 - [Composition](language/composition.md)
 - [Identity types](language/identity-types.md)
@@ -176,7 +191,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
   owned by [Zax integers](language/integers.md),
   [literal source and operators](language/literal-source-and-operators.md), and
   [strings and characters](language/strings-and-characters.md)
-- [Type definition](type-definition.md)
 - [Variadic functions](variadic.md)
 - [Flow control](flow-control.md) — legacy value-polymorphism input;
   current ordinary flow and runtime selection are owned by

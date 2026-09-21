@@ -681,6 +681,28 @@ specialization. They must not infer a guarantee from hidden allocation history.
 - public signedness pairs are declared relationally rather than inferred from
   names.
 
+### Generic type, union, and variant completion
+
+Current [type definitions](../../language/type-definitions.md),
+[unions](../../language/unions.md), and
+[variants](../../language/variants.md) require one complete concrete definition
+before representation- or lifecycle-dependent checks finalize.
+
+Future generic work must ensure that each concrete specialization closes before
+the compiler decides:
+
+- direct and recursive stored layout;
+- generated construction, replacement, transfer, and destruction families;
+- union-admissible and all-bit-pattern-valid status;
+- maximum union lens extent and alignment;
+- variant alternative extent, alignment, transfer availability, and
+  discriminant needs; and
+- variant switch alternative coverage.
+
+An open generic declaration cannot defer those questions to runtime. Exact
+constraints may express them statically, but current concepts do not reserve a
+particular constraint syntax.
+
 ### Legacy string termination policies
 
 Current string design defines conceptual concrete specializations:

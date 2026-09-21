@@ -7,7 +7,7 @@
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The transfer-stance mental model; declaration, type-alias overlay, and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
-| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
+| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
 ## Why transfer stance exists
@@ -1238,6 +1238,44 @@ The `move source` adapter forwards `move` inward without scheduling absence.
 The complete wrapper, nested-state, cleanup, and optional swap behavior is
 defined by [Zax optional values](optional-values.md).
 
+## Variants and unions
+
+A whole variant preserves absence or its active name while forwarding the
+accepted stance to the payload:
+
+- `copy` leaves the source unchanged;
+- `deep` requires the exact payload-independent-copy contract;
+- `move` leaves the source present with a moved-from payload; and
+- `last` leaves the source present with a terminal but destruction-valid
+  payload.
+
+`last` does not silently reset the wrapper. Reset, `.=` selection, complete
+wrapper replacement, or ordinary destruction later ends the source payload.
+Complete behavior belongs to
+[Zax variants](variants.md#copy-deep-move-and-last).
+
+A case binding is reference-shaped projection rather than a copy. It preserves
+the stance offered through the retained variant selector, and binding alone
+transfers nothing:
+
+```zax
+choice : MyChoice move
+
+switch choice {
+  case owner
+    consume(owner) // offers the projected move stance
+}
+```
+
+The selected consumer determines source state normally.
+
+An unmanaged union owns no transferable payload resources. Whole-union `copy`
+copies every backing bit. `move` and `last` use their normal fallback to that
+copy and leave the source unchanged. `deep` remains unavailable because an
+unsafe union may contain passive raw pointers or similar representations whose
+copied bits do not establish independent resources. See
+[Zax unions](unions.md#whole-union-operations).
+
 ## Arrays and slices
 
 Copying an owning array creates another array with its own element places and
@@ -1350,9 +1388,10 @@ destruction are defined by
 Same-object source is not categorically invalid:
 
 ```zax
-value = value
-value = value as move
-value = value as last
+value = value         // ordinary in-lifetime assignment
+value .= value        // complete reconstructive replacement
+value .= value as move
+value .= value as last
 ```
 
 The selected operation owns its same-object behavior. A numeric operation may be
@@ -1362,7 +1401,7 @@ postconditions.
 Interior aliases create additional pressure:
 
 ```zax
-owner = owner.payload as move
+owner .= owner.payload as move
 ```
 
 A replacement cannot end `owner.payload` and then continue using a reference to

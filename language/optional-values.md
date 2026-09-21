@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Optional type formation, absence and presence, boxed construction and lifetime, reset, transfer effects, proven access, nested optionals, qualification, and related diagnostics; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The programmer-facing optional wrapper and boxed-value model; default absence; present and packet construction; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
+| Owns | The programmer-facing optional wrapper and boxed-value model; default absence; direct present construction; contained reconstruction with protected `.=`; optional reset; complete-wrapper replacement; optional `copy`/`deep`/`move`/`last` effects; protected `move`/`last` adapters and terminal cleanup; optional swap; proven postfix access; nested optional depth; wrapper-versus-boxed qualification; optional-specific costs, source stability, and diagnostics |
 | Does Not Own | General transfer meaning and fallback ([transfer stances](transfer-stances.md)); general constructor mechanics ([construction, replacement, and destruction](construction-and-destruction.md)); [reference lifetime](lifetimes-and-references.md); pointer vacancy, ownership, and Nothing behavior ([Nothing instances](nothing-instances.md), [pointers and arenas](pointers-and-arenas.md)); complete `using` enrollment and disposal ([Zax `using`](using.md)); complete runtime `switch` behavior ([switch, case, and default](switch.md)); function availability; pattern matching; async cancellation; numeric conversion policy; formal layout, ABI, or reflection |
 | Source / Provenance | Retired legacy optional design input, refined against current construction, qualifier, operator, invocation, flow, integer, and identity design |
 
@@ -171,14 +171,15 @@ The spaced form looks like the programmer opened a nonempty packet but forgot
 its arguments. Contiguous `[{}]` explicitly acknowledges that zero constructor
 inputs are intended.
 
-### Construction packets and an existing wrapper
+### Contained reconstruction on an existing wrapper
 
-A packet on an existing optional explicitly requests a fresh boxed lifetime:
+Protected `.=` explicitly requests a fresh boxed lifetime while retaining the
+same optional wrapper:
 
 ```zax
 connection : MyConnection?
 
-connection = [{
+connection .= [{
   endpoint,
   mode: selectedMode
 }]
@@ -194,6 +195,23 @@ This operation:
 
 It always constructs. It never changes to boxed assignment or boxed replacement
 because the wrapper happened to be present.
+
+One direct source is the corresponding single-source construction form:
+
+```zax
+connection .= existingConnection
+```
+
+The direct and packet forms parallel ordinary declaration construction:
+
+```zax
+created : MyConnection = existingConnection
+createdFromPacket : MyConnection = [{ endpoint, mode: selectedMode }]
+```
+
+`.=` re-delivers those construction inputs one semantic containment layer
+inside the existing wrapper. It returns access to the freshly constructed
+payload.
 
 Construction failure is an error or panic, not absence:
 
@@ -215,7 +233,7 @@ merely because it was evaluated first:
 
 ```zax
 if ?connection
-  connection = [{ connection. }]
+  connection .= connection.
   // error when the selected constructor would use this reference after the old
   // boxed lifetime ends
 ```
@@ -235,8 +253,9 @@ otherOptional : MyValue?
 
 // ...
 
-optional = [{ value }] // construct a fresh boxed value in this wrapper
-optional = otherOptional // replace the complete optional wrapper
+optional .= value // construct a fresh boxed value in this wrapper
+optional = otherOptional  // assign wrapper state within this lifetime
+optional .= otherOptional // reconstruct the complete optional wrapper
 
 if ?optional
   optional. = value    // operate on the proven-live boxed value
@@ -266,10 +285,10 @@ yet several plausible readings have very different consequences:
 Write the intended operation:
 
 ```zax
-optional = [{ value }] // fresh boxed construction
+optional .= value      // fresh boxed construction
 
 if ?optional
-  optional. = value    // boxed assignment or replacement
+  optional. = value    // ordinary in-lifetime boxed assignment
 ```
 
 A declaration does not have this ambiguity because it is direct construction:
@@ -278,9 +297,27 @@ A declaration does not have this ambiguity because it is direct construction:
 newOptional : MyValue? = value
 ```
 
-### Complete optional-wrapper replacement
+`optional = [{...}]` is a non-acknowledgeable intent error. Construction
+packets for contained reconstruction use `.=`:
 
-Same-type optional `=` replaces the complete destination wrapper lifetime:
+```zax
+optional .= [{ constructorArguments }]
+```
+
+### Same-type wrapper assignment and complete reconstruction
+
+Same-type optional `=` assigns wrapper state while retaining the destination
+wrapper lifetime:
+
+```zax
+destinationOptional = sourceOptional
+```
+
+It requires a mutable wrapper through writable access. The wrapper place may be
+final or varying.
+
+Same-type optional `.=` instead reconstructs the complete destination wrapper
+lifetime:
 
 ```zax
 destinationOptional : MyValue?
@@ -288,19 +325,36 @@ sourceOptional : MyValue?
 
 // ...
 
-destinationOptional = sourceOptional
+destinationOptional .= sourceOptional
 ```
 
-| Old destination | Source optional | New wrapper |
+Both operations produce the source absence/presence state:
+
+| Old destination | Source optional | New wrapper state |
 | --- | --- | --- |
 | Absent | Absent | Absent |
 | Present | Absent | Destroy the old payload and construct an absent wrapper |
 | Absent | Present | Construct a present wrapper and payload |
 | Present | Present | Destroy the old payload and construct a present wrapper and fresh payload |
 
-The destination place must be type-side `varying`, reached through a writable
-path whose declaration has replacement permission. The source transfer stance
-selects `copy`, `move`, terminal transfer, or another compatible construction.
+Complete `.=` requires a type-side varying destination reached through a
+writable path whose declaration has replacement permission. Ordinary `=` does
+not. The source transfer stance selects `copy`, `move`, terminal transfer, or
+another compatible construction.
+
+Resolved source depth decides the target:
+
+- a source of boxed type `T`, or a bare constructor packet, requests
+  wrapper-owned payload reconstruction and requires a mutable wrapper;
+- a source of complete type `T?` requests complete wrapper reconstruction and
+  requires a varying wrapper place.
+
+Construct an explicitly typed `T?` source when absence or complete-wrapper
+intent must be stated:
+
+```zax
+optional .= (: MyValue?) // reconstruct complete wrapper to absence
+```
 
 ### Assignment through postfix access
 
@@ -312,8 +366,18 @@ if ?optional
 ```
 
 This selects the boxed type's own operation. It leaves the wrapper present.
-Ordinary assignment may retain the boxed lifetime; reconstructive boxed
-replacement may end it and begin another while presence remains true.
+Ordinary assignment retains the current resident lifetime.
+
+Complete payload replacement is explicit:
+
+```zax
+if ?optional
+  optional. .= [{ replacementInputs }]
+```
+
+This requires the boxed place itself to be varying and reached through writable,
+declaration-side varying access. It may select the boxed type's
+`replacement +++` while the optional wrapper remains present.
 
 Any reference tied to an ended boxed lifetime becomes invalid even when the
 wrapper stays present.
@@ -331,7 +395,7 @@ reset optional // harmless no-op
 It returns a reference to the same wrapper, never the old boxed value:
 
 ```zax
-(reset optional) = [{ replacementInput }]
+(reset optional) .= replacementInput
 ```
 
 The returned path preserves the source qualifications. It cannot gain writable
@@ -374,7 +438,8 @@ use(optional.)
 Earlier control flow or another recognized presence contract may provide the
 same fact. An arbitrary user-defined Boolean-returning `?` does not.
 
-The proof is tied to one boxed lifetime. Reset, packet construction,
+The proof is tied to one boxed lifetime. Reset, contained reconstruction with
+`.=`,
 complete-wrapper replacement, terminal transfer, or another lifetime-ending
 operation invalidates it:
 
@@ -818,6 +883,25 @@ The first has a wrapper with ordinary defaults but exposes a readonly boxed
 value. The second exposes a readonly wrapper but does not rewrite the boxed
 qualifications.
 
+The optional marker attaches directly to the complete qualified inner type:
+
+```zax
+simple : MyValue?
+qualified :
+  MyValue immutable readonly final? mutable writable varying
+
+spaced :
+  MyValue immutable readonly final ? mutable writable varying
+// error: `?` must attach to the inner type layer
+```
+
+Nested optional layers remain visibly separated because compact `??` is the
+conditional token:
+
+```zax
+nested : MyValue? ?
+```
+
 After proven `optional.`, wrapper qualifications are gone from view. The result
 has the boxed qualifications.
 
@@ -859,8 +943,9 @@ optional final : MyValue? mutable final = value
 
 reset optional
 reset optional
-optional = [{}]
-optional = otherOptional // error: complete wrapper place is final
+optional .= [{}]
+optional = otherOptional  // legal: assign state within final wrapper lifetime
+optional .= otherOptional // error: complete wrapper place is final
 ```
 
 An immutable varying wrapper has the opposite boundary:
@@ -870,8 +955,36 @@ optional varying :
   MyValue? immutable writable varying = first
 
 reset optional    // error: would mutate this immutable wrapper
-optional = [{}]   // error: would mutate this immutable wrapper
-optional = second // legal: replace the complete wrapper lifetime
+optional .= [{}]  // error: would mutate this immutable wrapper
+optional = second // error: would mutate this immutable wrapper
+optional .= second // legal: reconstruct the complete wrapper lifetime
+```
+
+A fully qualified example keeps the two target layers visible:
+
+```zax
+myOptional :
+  MyType immutable readonly final? immutable writable varying
+
+replacementOptional :
+  MyType immutable readonly final? immutable = makeReplacementOptional()
+
+myOptional .= newValue
+// error: payload-source `.=` would mutate this immutable wrapper lifetime
+
+myOptional .= [{ newValue }]
+// error: same contained-reconstruction boundary
+
+myOptional = replacementOptional
+// error: ordinary `=` would mutate this immutable wrapper lifetime
+
+myOptional .= replacementOptional
+// legal: reconstruct the complete varying wrapper lifetime
+
+if ?myOptional {
+  myOptional. = newValue  // error: payload is immutable and readonly
+  myOptional. .= newValue // error: payload path is readonly and final
+}
 ```
 
 ### Ending qualified boxed lifetimes
@@ -883,8 +996,13 @@ authorized wrapper owner from ending the conditional lifetime:
 optional : MyValue immutable readonly final? mutable writable
 
 reset optional
-optional = [{}]
+optional .= [{}]
 ```
+
+Here wrapper-owned `.=` is legal even though the payload is immutable,
+readonly, and final. The mutable/writable wrapper owns ending that entire
+conditional path. Direct postfix assignment or replacement through the payload
+remains unavailable.
 
 Those operations structurally remove and create boxed places. They do not
 mutate or independently replace the old boxed value through postfix access.
@@ -900,10 +1018,12 @@ available. `S` means proof or selected transfer behavior decides it.
 | `?value` | Live readable wrapper | - | - | T | None | None |
 | `value.` | Live readable wrapper | - | Preserve boxed qualifications | S | None | Produce access with presence proof |
 | `reset value` | `mutable` + `writable` | `final` or `varying` | - | T | Same wrapper becomes/remains absent; return wrapper reference | Destroy once when present |
-| `value = [{...}]` | `mutable` + `writable` | `final` or `varying` | Applicable constructor | T | Same wrapper becomes present | End old lifetime if present; construct fresh payload |
-| `value = otherOptional` | Writable destination | Type-side and declaration-side `varying` | Compatible optional transfer | T | Replace complete wrapper lifetime | Old payload ends; new state comes from source |
-| `value = valueOfT` | - | - | - | N | - | Intent error; use a packet |
+| `value .= sourceOfT` or `value .= [{...}]` | `mutable` + `writable` | `final` or `varying` | Applicable constructor | T | Same wrapper becomes present; return payload access | End old lifetime if present; construct fresh payload |
+| `value = otherOptional` | `mutable` + `writable` | `final` or `varying` | Compatible optional transfer | T | Retain wrapper lifetime; assign absence/presence state | End old payload if needed; establish assigned payload state |
+| `value .= otherOptional` | Writable destination | Type-side and declaration-side `varying` | Compatible optional transfer | T | Reconstruct complete wrapper lifetime | Old payload ends; new state comes from source |
+| `value = valueOfT` | - | - | - | N | - | Intent error; use `value .= valueOfT` |
 | `value. = source` | Wrapper readable; presence proven | - | Selected boxed operation accepts effective qualifications | S | Presence remains true | Operate on existing boxed value |
+| `value. .= source` or `value. .= [{...}]` | Wrapper readable; presence proven | Boxed place type-side and declaration-side `varying` + writable | Applicable replacement/fallback construction | S | Presence remains true | End boxed resident; construct successor; may select boxed `replacement +++` |
 | `value.---()` | - | - | - | N | Would not update presence | Always rejected |
 
 ### Transfer stance reference
@@ -1039,7 +1159,7 @@ Even a zero-storage boxed type requires a semantic presence distinction.
 Transfer stance attaches once to the complete optional source:
 
 ```zax
-MyValue readonly ? writable * immutable * varying deep
+MyValue readonly? writable * immutable * varying deep
 ```
 
 The optional layer owns presence and conditional payload lifetime. When its
@@ -1116,11 +1236,13 @@ presence, and nested states; exact text remains unsettled.
 
 Diagnostics should identify both the failure and the deciding distinction:
 
-- `optional = value`: fresh construction needs a packet; boxed assignment needs
-  postfix `.`;
+- `optional = value`: fresh contained construction uses `.=`; boxed assignment
+  needs postfix `.`;
 - `[{ }]`: the blank packet looks like omitted intended arguments; use `[{}]`
   to acknowledge zero inputs;
 - `T??`: `??` is one conditional token; use `T? ?`;
+- whitespace before a type-layer `?`: attach the marker to the complete
+  qualified inner type, such as `T immutable readonly final?`;
 - `outer : T? ? = inner`: adding optional depth requires a packet;
 - a bare packet: constructor inputs need a typed destination;
 - `optional.`: prove the exact boxed lifetime present;
@@ -1153,8 +1275,8 @@ Later work must preserve:
 - absence as a valid wrapper state with no live boxed value;
 - default absence and explicit present construction;
 - construction failure as error or panic rather than absence;
-- the distinction among packet construction, complete-wrapper replacement, and
-  boxed assignment;
+- the distinction among contained reconstruction with `.=`; complete-wrapper
+  replacement; and boxed assignment;
 - idempotent reset returning the same wrapper;
 - transfer-qualified expressions having no effect until consumed;
 - the optional source-state consequences of `copy`, `move`, and `last`;

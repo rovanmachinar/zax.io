@@ -200,6 +200,20 @@ The completed type must then be re-evaluated under
 partial/import order cannot select shape, posture, anchor validity, or reshape
 mapping.
 
+Current type/union/variant review strengthens this into a completion boundary:
+
+- every authorized fragment that can add direct stored members, union lenses,
+  variant alternatives, hidden components, or lifecycle operations must merge
+  into one reproducible order-independent definition before completion;
+- union admissibility, all-bit-pattern validity, maximum extent/alignment,
+  variant payload storage, generated operation families, and exhaustive
+  selection are checked only after that merge; and
+- a later partial cannot add shape- or lifecycle-affecting material after those
+  checks finalize.
+
+This does not decide whether future partials may add such declarations. It
+constrains any mechanism that chooses to permit them.
+
 Current composition publication and exposure, exact fences, and family fences
 belong to [Zax composition](../../language/composition.md), not to `partial`.
 An authorized partial remains add-only: it cannot retroactively suppress an

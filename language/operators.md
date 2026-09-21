@@ -812,7 +812,7 @@ if : Boolean = ?value
 The typed declaration supplies result context that an ordinary condition does
 not.
 
-### Optional presence operation
+### Optional and variant presence
 
 For an optional value, `?value` is the recognized presence operation and returns
 `Boolean`:
@@ -830,6 +830,20 @@ An arbitrary user-defined Boolean-returning `?` does not prove storage live. The
 optional-presence contract must be recognized by the analyzer. The lifetime
 obligation is owned by
 [construction, replacement, and destruction](construction-and-destruction.md#conditionally-live-storage-and-access-proof).
+
+For a [variant](variants.md), `?value` returns whether any named alternative is
+active:
+
+```zax
+if ?message
+  print("some alternative is present")
+```
+
+Presence does not identify the active name and therefore does not by itself
+prove `message.text` available. Named access uses the variant's checked-access
+contract, while variant `switch` routes and binds an exact alternative.
+Complete behavior belongs to
+[Zax variants](variants.md#presence-and-named-access-answer-different-questions).
 
 ### Pointer, function, and receiver presence
 
@@ -929,7 +943,7 @@ wrapper:
 
 ```zax
 reset optionalValue
-(reset optionalValue) = [{}]
+(reset optionalValue) .= [{}]
 ```
 
 For a pointer, `reset` releases the allocation, ownership, observation, or
@@ -1064,14 +1078,19 @@ value operation and assignment:
 ```zax
 counter += delta
 counter = counter + delta
+counter .= counter + delta
 ```
 
-The second form may select two operations, create a temporary, and invoke
-reconstructive replacement. The first evaluates its destination once and invokes
-its own candidate.
+The second form may select two operations and create a temporary before ordinary
+in-lifetime assignment. The first evaluates its destination once and invokes
+its own direct candidate. The third explicitly requests complete reconstructive
+replacement.
 
-Immutable varying replacement remains the compiler-owned lifecycle operation
-defined by [construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
+`.=` is protected rather than overloadable. An ordinary operator body retains
+its receiver qualifications and cannot grant itself transitional construction
+authority. Complete replacement, including immutable varying replacement,
+remains the compiler-owned lifecycle operation defined by
+[construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
 
 ## Costs
 

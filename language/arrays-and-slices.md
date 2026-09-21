@@ -632,14 +632,14 @@ resizing, capacity changes, suggestion changes, and storage changes cannot
 mutate that lifetime.
 
 The place itself is varying, this declaration retains replacement permission,
-and the access path is writable. A compatible whole-array assignment may
+and the access path is writable. Compatible whole-array `.=` reconstruction may
 therefore end the old immutable array and construct another immutable array in
 the same place:
 
 ```zax
 myArray[0] = 10      // error: mutates the current immutable array
 myArray.resize(6)    // error: mutates the current immutable array
-myArray = replacement
+myArray .= replacement
 // valid when replacement satisfies the array and storage contracts
 ```
 
@@ -903,7 +903,8 @@ from an exposed provider capability.
 
 Moving an element into unused fresh storage uses construction. The old element
 is offered as `last`, allowing `last -> move -> copy` fallback. Shifting into an
-already live destination uses assignment or reconstructive replacement.
+already live destination uses ordinary assignment or protected `.=` complete
+reconstruction as required by the selected element contract.
 
 If an element type cannot perform the required construction, transfer, or
 replacement, the array operation is unavailable.

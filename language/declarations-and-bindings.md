@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
-| Does Not Own | Complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -997,6 +997,8 @@ Alias declarations add names without constructing runtime values:
 
 ```zax
 MyReadView :: alias type MyType immutable readonly final &
+MyUnionAlias :: alias union MyUnion
+MyVariantAlias :: alias variant MyVariant
 activeHandler :: alias variable handler
 Tools :: alias namespace Module.SharedTools
 MyMapping :: alias reshape ExistingMapping
@@ -1004,7 +1006,11 @@ MyMapping :: alias reshape ExistingMapping
 
 Each category preserves its target:
 
-- `alias type` preserves canonical type identity;
+- `alias type` preserves an ordinary type's canonical identity;
+- `alias union` preserves a union's canonical identity and declaration
+  category;
+- `alias variant` preserves a variant's canonical identity and declaration
+  category;
 - `alias variable` denotes the same variable or approved polymorphic variable
   family, including the same varying function slot;
 - `alias namespace` denotes the same namespace without granting reopening
@@ -1023,9 +1029,9 @@ activeHandler = secondHandler
 // handler now denotes the same replaced slot.
 ```
 
-A type alias may state every property accepted where a type is explicitly
-declared, including qualification, indirection, transfer stance, and
-compatibility posture:
+A type, union, or variant alias may state every property accepted where that
+identity is explicitly used, including qualification, indirection, transfer
+stance, and compatibility posture:
 
 ```zax
 DeepView :: alias type MyType readonly & deep
@@ -1562,17 +1568,17 @@ first = second = third
 Its exact qualifier-complete signature family and returned `_` are defined by
 [construction, replacement, and destruction](construction-and-destruction.md#generated-copy-construction-and-assignment).
 
-Generated operators participate in ordinary candidate selection with qualifier
-requirements. The compiler-recognized reconstructive `=` scenario requires an
-immutable value in a type-side varying destination, declaration-side varying
-replacement permission, and a writable path. It is unavailable for a mutable
-value, a final place, a declaration-side final path, or readonly access.
+Generated and declared `=` operators participate in ordinary candidate
+selection with their qualifier requirements. They operate within the current
+resident lifetime and gain no replacement authority merely from the token.
 
-The reconstructive candidate has a compiler-owned lifetime skeleton and may
-select a contextual [`replacement +++` constructor](construction-and-destruction.md#custom-replacement).
-User-defined code does not replace that skeleton with an ordinary `=` body.
-Complete fallback, result, resource-retention, and alias behavior is defined by
-[Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
+Complete replacement uses protected `.=` instead. It requires a type-side
+varying destination, declaration-side varying replacement permission, and a
+writable path. The old value may be mutable or immutable. The compiler-owned
+lifecycle skeleton may select a contextual
+[`replacement +++` constructor](construction-and-destruction.md#custom-replacement)
+or use ordinary destruction/construction fallback. User-defined code cannot
+overload `.=` or replace that skeleton with an ordinary operator body.
 
 A domain-specific `=` candidate that accepts a final or readonly left operand
 may remain selectable because the token itself is not assigned conventional
@@ -1605,8 +1611,9 @@ failure are defined by
 
 Replacement-constructor result forwarding is defined by the construction owner.
 Exact results for other built-in operators, expression value categories,
-overload ranking, conversion, reconstructive-candidate priority, and generated
-operator sets remain later operator design.
+overload ranking, conversion, replacement-hook input selection, and generated
+operator sets remain later operator design. Protected `.=` does not compete with
+ordinary `=` overloads.
 
 ## Non-value definitions
 
@@ -1614,8 +1621,16 @@ operator sets remain later operator design.
 
 ```zax
 Point :: type { }
+MyBits :: union {
+  raw : U32
+}
+MyChoice :: variant {
+  value : U32
+}
 Fruit :: enum { }
 FriendlyName :: alias type ExistingType
+MyUnionAlias :: alias union ExistingUnion
+MyVariantAlias :: alias variant ExistingVariant
 activeHandler :: alias variable handler
 Tools :: alias namespace Module.SharedTools
 MyMappingAlias :: alias reshape MyMapping
@@ -1626,6 +1641,8 @@ MyMapping :: reshape {
 }
 ModuleName :: import Module.Definition
 TypeName :: forward type
+UnionName :: forward union
+VariantName :: forward variant
 EnumName :: forward enum
 valueName :: forward variable
 NamespaceName :: forward namespace
@@ -1647,6 +1664,18 @@ Node :: type {
 }
 ```
 
+`type`, `union`, and `variant` introduce different body models while sharing the
+non-value definition boundary:
+
+- ordinary [type definitions](type-definitions.md) contain direct stored members
+  plus behavior and metadata;
+- [unions](unions.md) begin with untagged offset-zero lens declarations; and
+- [variants](variants.md) begin with named managed alternatives.
+
+The specialized owners define body organization, storage, lifecycle, and
+validity. `::` only establishes that these are definitions rather than runtime
+value declarations.
+
 The self-name resolves and pointer representation is finite. Operations
 requiring the completed size, layout, or member set remain pending until the
 definition completes.
@@ -1658,9 +1687,24 @@ callback final : FunctionType = { }
 value final : :: type {
   member : Integer
 }
+
+bits : :: union {
+  byte : U8
+  word : U32
+}
+
+choice : :: variant {
+  text : String
+  number : U32
+}
 ```
 
-`alias type` introduces another name for one identity. `identity ... type`
+Each anonymous `type`, `union`, or `variant` declaration creates one stable
+compile-time identity. `type of` can give that identity a transparent alias.
+Anonymous recursive self-syntax is not established.
+
+`alias type`, `alias union`, and `alias variant` introduce another name for one
+identity while preserving its declaration category. `identity ... type`
 introduces a new identity represented by an existing type. Identity declarations
 write one admission keyword (`admit` or `restricted`) and one surface keyword
 (`expose` or `opaque`) before `type`; neither axis has an omission default.
@@ -1688,6 +1732,8 @@ The available categories are:
 
 ```zax
 TypeName :: forward type
+UnionName :: forward union
+VariantName :: forward variant
 EnumName :: forward enum
 valueName :: forward variable
 NamespaceName :: forward namespace
@@ -1698,8 +1744,10 @@ x :: forward operator literal
 
 `forward variable` includes one function variable or approved polymorphic
 function family. Enum members need no separate forward because they can remain
-pending suffixes below a forwarded enum. Receiver-owned nonliteral operators
-need no forward because their receiver type is the root anchor.
+pending suffixes below a forwarded enum. Union lenses and variant alternatives
+likewise remain pending below their category-specific root anchors.
+Receiver-owned nonliteral operators need no forward because their receiver type
+is the root anchor.
 
 The forward supplies no body, value, layout, member set, function prototype,
 mapping, module instance, or initialization state. Dependent checks remain
@@ -1707,6 +1755,11 @@ pending. The matching completion must have the same scope, name, and category
 and may be either a direct declaration or exact alias. `forward module`
 completes through one import. Partial declarations add to an already completed
 owner; they do not complete a forward.
+
+`forward union` and `forward variant` preserve their specialized categories.
+`alias union` and `alias variant` may respectively complete them. An ordinary
+`type`, `alias type`, enum, or alias to another category is a completion
+mismatch.
 
 Every forward must complete exactly once before module finalization. A matching
 forward is legal even when no intervening source needed it; tooling may lint
@@ -1800,8 +1853,9 @@ never makes an already selected root retry lexical lookup.
 
 ### Anonymous recursive type syntax
 
-Named types use their own incomplete names for self-reference. Anonymous
-recursive type syntax is not established by this design.
+Named types, unions, and variants use their own incomplete names for
+self-reference. Anonymous recursive syntax for any of those categories is not
+established by this design.
 
 Anonymous recursive types, recursive-type identity, and dependency algorithms
 remain later type work. Namespace/module completion and visibility are defined
@@ -1937,6 +1991,12 @@ A stored-member initializer runs once per actual containing instance. A storage
 qualifier such as `once` may change how many storage instances exist and when the
 one instance is initialized. It does not make an ordinary member initializer run
 once merely because it appears once in a type definition.
+
+An ordinary type body's storage, fixed behavior, varying callable slots,
+type-owned declarations, and no-storage metadata are distinguished by
+[Zax type definitions](type-definitions.md#what-a-type-body-can-contribute).
+Union lenses are not ordinary stored members, while variant alternative
+declarations create conditionally resident payload paths.
 
 ### Default parameters
 

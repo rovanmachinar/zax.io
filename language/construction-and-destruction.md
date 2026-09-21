@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; immutable reconstructive replacement; replacement constructors, resource retention, and results; construction/destruction authority; optional construction and complete-wrapper replacement integration at the shared lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; the programmer-visible obligation to prove a live value before access through conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
 
@@ -34,8 +34,8 @@ complete value and its remaining member lifetimes. Deallocation is a separate
 responsibility of the applicable storage or ownership policy.
 
 Reconstructive replacement reuses the outer storage while recycling the
-previous representation and resources into a new complete immutable value
-lifetime.
+previous representation and resources into a new complete mutable or immutable
+value lifetime.
 
 ### Nothing preparation is not ordinary construction
 
@@ -321,6 +321,26 @@ constructor arguments, and stored-member initializers:
 
 The categories are explicit. A named argument never falls back to a stored
 member, and a stored-member entry never falls back to a parameter.
+
+For a variant destination, `.alternativeName = expression` instead selects and
+directly constructs that named payload:
+
+```zax
+choice : MyChoice = [{
+  .text = "ready"
+}]
+```
+
+A variant wrapper packet has zero alternative entries for absent default
+construction or exactly one for presence. It accepts no wrapper-level
+positional or named constructor arguments because the protected wrapper has no
+programmer constructor. A nested typed declaration can supply a packet to the
+selected payload. Complete behavior belongs to
+[Zax variants](variants.md#default-and-direct-construction).
+
+An unmanaged union has no construction-packet form; it zero-fills and receives
+ordinary lens writes. See
+[Zax unions](unions.md#forming-an-immutable-or-compile-time-union).
 
 The packet syntax is current conceptual design and should be used in
 construction examples. Its formal grammar may be refined if later concrete
@@ -807,8 +827,8 @@ conceptually supplies exact source-place variants:
 The source parameter is compiler-anonymous. Construction has no receiver stance
 because no destination lifetime exists yet.
 
-A corresponding immutable value shape may receive immutable source variants.
-Ordinarily `mutable` and `immutable` qualify the same representation. Future
+A corresponding immutable value shape may receive immutable source constructor
+variants. Ordinarily `mutable` and `immutable` qualify the same representation. Future
 mutability-indexed type-family design may instead permit independently defined
 shapes; each such concrete shape still receives only its appropriate
 constructors.
@@ -844,38 +864,29 @@ The `final`-source and `varying`-source forms are different declarations.
 
 A `final` receiver promises that its place continues to hold the same value
 lifetime. It may still mutate the contents of a mutable value through eligible
-member functions or member assignments, but canonical whole-value assignment is
-unavailable:
+member functions, member assignments, or a domain-specific in-lifetime `=`, but
+the current generated whole-value assignment family remains unavailable:
 
 ```zax
 stable final : MyValue mutable final
 
 stable.member = replacement // may mutate the current value
-stable = anotherValue       // error: canonical whole-value assignment needs a varying place
+stable .= anotherValue      // error: complete reconstruction needs a varying place
 ```
 
 A domain-specific `=` may explicitly accept a `final` receiver when it defines
 coherent in-lifetime behavior rather than replacing the complete value.
 
-An immutable value cannot use an ordinary assignment that mutates its contents.
-When it occupies a `varying` place, the compiler-owned reconstructive `=`
-skeleton may instead construct a new immutable value, disposition the old one,
-end the old lifetime, and establish the new lifetime in the same place. That
-reconstructive family preserves:
-
-- immutable receiver truth;
-- type-side varying capability;
-- declaration-side varying replacement permission;
-- writable access;
-- exact source qualification;
-- readonly `copy` access to the new current receiver lifetime; and
-- exactly-once old-resource disposition.
+An immutable value cannot use an ordinary `=` body to mutate its contents.
+When its place is varying and the path has writable replacement authority,
+protected `.=` can instead end the complete resident lifetime and establish a
+successor. Mutable values may also choose `.=` when explicit lifetime renewal is
+intended.
 
 One concrete value shape is `mutable` or `immutable`, never both. There is no
 runtime branch over mutability or place stance inside one generated declaration.
 An independently defined immutable shape receives constructors but no ordinary
-mutating assignment; reconstructive `=` remains a separate compiler-owned
-lifecycle process.
+mutating assignment.
 
 Generation is suppressed or replaced only by the exact generated shape. A
 nearly matching programmer declaration may coexist with the generated
@@ -886,24 +897,58 @@ generated signature and the mismatching layer.
 
 ### Why replacement exists
 
-Generated reconstructive replacement is the whole-value transition for an
-`immutable` destination whose place is type-side `varying`, reached through a
-`writable` path whose declaration carries `varying` replacement permission:
-
-- `immutable` prevents mutation within one complete value lifetime;
-- type-side `varying` means the place may receive another complete value
-  lifetime;
-- `writable` permits the current access path to change anything at all; and
-- declaration-side `varying` permits *this* path to initiate a whole-value
-  replacement.
+Protected `.=` is the whole-value transition that ends one complete resident
+lifetime and establishes a successor in the same place:
 
 ```zax
-message varying : Message immutable writable varying = makeMessage("first")
+message varying :
+  Message immutable writable varying = makeMessage("first")
+
 message = makeMessage("second")
+// Ordinary `=` has no lifecycle authority and cannot mutate Message.
+
+message .= makeMessage("second")
+// The first immutable lifetime ends; a successor begins.
 ```
 
-Neither immutable instance mutates. The old lifetime shuts down and a new
-immutable lifetime begins in the same outer storage.
+The distinction is visible for mutable values too:
+
+```zax
+mutableMessage varying :
+  Message mutable writable varying = makeMessage("first")
+
+mutableMessage = makeMessage("assigned")
+// Ordinary in-lifetime assignment when a viable `=` exists.
+
+mutableMessage .= makeMessage("reconstructed")
+// Explicit complete lifetime renewal.
+```
+
+Complete reconstruction requires:
+
+- type-side `varying`, because the place receives a successor lifetime;
+- declaration-side `varying`, because this path initiates replacement;
+- writable access;
+- a suitable same-storage representation;
+- a viable replacement hook or ordinary fallback; and
+- no exact prohibition.
+
+It does not require the old value to be mutable. Construction authority
+establishes the successor's mutable or immutable state.
+
+Type-side `final`, declaration-side `final`, and readonly access independently
+block `.=`:
+
+```zax
+stable final :
+  Message immutable writable final = makeMessage("stable")
+
+reader :
+  Message immutable readonly varying & = message
+
+stable .= makeMessage("blocked") // error: final place
+reader .= makeMessage("blocked") // error: readonly path
+```
 
 A restricted same-place path observes that transition without being able to
 initiate it:
@@ -915,10 +960,10 @@ observer final :
 restricted final :
   Message immutable writable varying & = message
 
-restricted = makeMessage("third")
+restricted .= makeMessage("third")
 // error: this declaration lacks replacement permission
 
-message = makeMessage("third") // legal through the varying declaration
+message .= makeMessage("third") // legal through the varying declaration
 display(observer)              // "third"
 ```
 
@@ -928,13 +973,48 @@ replace the referent. Type-side capability versus declaration-side permission is
 owned by
 [Zax qualifiers](qualifiers.md#type-side-truth-versus-declaration-side-permission).
 
-A `mutable`, `writable`, `varying` destination uses ordinary assignment
-selection. It does not receive this generated immutable-value replacement
-facility merely because its place is varying.
+The compiler owns the protected reconstructive `.=` lifecycle skeleton. It
+cannot be overloaded. User-defined code may provide a replacement constructor
+hook but does not replace the skeleton with an ordinary operator body.
 
-The compiler owns the generated reconstructive `=` lifecycle skeleton.
-User-defined code may provide a replacement constructor but does not replace the
-skeleton with an ordinary operator body.
+An ordinary `operator binary '='` retains the receiver's qualifications and has
+no transitional construction authority:
+
+```zax
+operator binary '=' final : ()(
+  newValue : Message
+) immutable writable varying = {
+  _.text = newValue.text // error: `_` is immutable
+  audit(newValue)        // legal external effect
+}
+```
+
+This is why the customization point is `replacement +++`, not an overloaded
+`=` or `.=` body.
+
+### Replacement inputs and packets
+
+One direct source or a positional/named construction packet can supply the
+successor:
+
+```zax
+value .= source
+
+value .= [{
+  firstInput,
+  mode: selectedMode
+}]
+```
+
+The compiler evaluates and binds every input before the old lifetime ends. It
+then selects one matching `replacement +++` or applies the ordinary fallback
+with the same inputs.
+
+Direct call-site `.member = ...` entries are unavailable for complete
+replacement packets. Such entries would compete with the replacement hook's
+authority to retain, renew, reconstruct, or disposition old members. A
+type-owned replacement hook receives constructor parameters and owns the member
+transition itself.
 
 ### Generated fallback
 
@@ -974,6 +1054,12 @@ Registration :: type {
     _.settings = settings
   }
 }
+
+registration varying :
+  Registration immutable writable varying = makeRegistration()
+
+registration .= [{ nextSettings }]
+// Selects replacement +++ and can retain the registration id.
 ```
 
 When selected, the replacement constructor:
@@ -1034,10 +1120,10 @@ BufferOwner :: type {
   }
 }
 
-retained := owner = newFormat
+retained := owner .= [{ newFormat }]
 ```
 
-The generated reconstructive `=` expression forwards the literal results
+The protected reconstructive `.=` expression forwards the literal results
 returned by the selected replacement constructor. It does not synthesize,
 adapt, or infer an arbitrary result.
 
@@ -1069,10 +1155,11 @@ declaration boundaries defined by
 
 ### Candidate selection
 
-Being generated does not make a candidate automatically win or lose. Generated
-reconstructive `=` and declared domain-specific `=` candidates participate in
-ordinary selection according to their declarations and qualifications. An
-unresolved equal match is an error.
+Replacement-constructor overloads use ordinary parameter mapping, viability,
+qualification, and preference for the direct source or packet inputs. An
+unresolved best replacement hook is an error. Ordinary domain-specific `=`
+declarations do not compete because complete reconstruction uses the distinct
+protected `.=` form.
 
 Direct compound and mixfix operations remain separate:
 
@@ -1087,8 +1174,8 @@ is automatically rewritten through a value operation followed by `=`.
 
 A user mixfix that consumes a written `=` component does not acquire the
 compiler-owned reconstructive lifecycle skeleton. If its body mutates a current
-value, ordinary mutable/writable authority applies. Reconstructing an immutable
-varying place remains this document's compiler-owned operation.
+value, ordinary mutable/writable authority applies. Protected `.=` is not a
+user-consumable mixfix component.
 
 See [Zax mixfix operators](mixfix-operators.md#qualifications-and-lifecycle) for
 tree matching and the
@@ -1137,7 +1224,7 @@ Document :: type {
 }
 
 document varying : Document immutable writable varying
-document = document.stringViewFrom()
+document .= document.stringViewFrom()
 ```
 
 `source` may alias `_.text`. Delegating to `String`'s selected `=` lets `String`
@@ -1146,9 +1233,9 @@ own exact self-alias handling, but it does not remove the general pressure.
 The same issue appears in:
 
 ```zax
-value = value
-value = viewOf(value)
-value = makeReplacementUsing(value)
+value .= value
+value .= viewOf(value)
+value .= makeReplacementUsing(value)
 ```
 
 Safe cases may include:
@@ -1193,13 +1280,16 @@ same-storage replacement viable. A different representation may require
 separately suitable storage and a construction, `copy`, or consuming
 transformation.
 
-Unions and overlapping storage likewise need future active-member transition
-rules before generated replacement can operate on them safely.
+An unmanaged [union](unions.md) has no active-member transition. Its complete
+same-type operation copies every backing bit and invokes no lens lifecycle hook.
+A managed [variant](variants.md) instead owns zero or one conditional payload
+path and dispatches wrapper operations through the active alternative.
 
-### Optional complete-wrapper replacement
+### Optional same-type assignment and complete-wrapper replacement
 
-Same-type optional `=` replaces the complete wrapper lifetime rather than
-assigning or conditionally constructing only its boxed value:
+Same-type optional `=` assigns absence/presence state while retaining one
+mutable wrapper lifetime. Same-type optional `.=` instead reconstructs the
+complete wrapper lifetime:
 
 ```zax
 destinationOptional : MyType?
@@ -1207,19 +1297,24 @@ sourceOptional : MyType?
 
 // ...
 
-destinationOptional = sourceOptional
+destinationOptional .= sourceOptional
 ```
 
-It requires a type-side varying wrapper place, declaration-side replacement
+Complete `.=` requires a type-side varying wrapper place, declaration-side replacement
 permission, writable access, and a compatible optional source transfer. The old
 wrapper and any present payload end; a new absent or present wrapper is directly
 constructed from the source state.
 
-This is distinct from packet construction, which retains one mutable wrapper
+Ordinary `=` requires a mutable wrapper through writable access. Its wrapper
+place may be final or varying because the current wrapper lifetime continues,
+although its old payload path may end.
+
+Resolved source depth distinguishes complete-wrapper reconstruction from
+wrapper-owned contained reconstruction, which retains one mutable wrapper
 lifetime while ending and constructing boxed lifetimes:
 
 ```zax
-destination = [{ sourceValue }]
+destination .= sourceValue
 ```
 
 It is also distinct from an operation selected after proven boxed access:
@@ -1229,11 +1324,93 @@ if ?destination
   destination. = sourceValue
 ```
 
-The optional family therefore exposes a protected whole-wrapper lifecycle
-operation even when the wrapper is mutable; it does not turn ordinary
-value-shaped `T? = T` source into construction. Complete state, qualification,
-intent, and transfer behavior is owned by
+Complete-wrapper `.=` requires a varying wrapper place, declaration-side
+replacement permission, and writable access. Payload-source `.=` instead
+requires a mutable wrapper through writable access; that wrapper place may be
+final because its own lifetime continues.
+
+The optional family does not turn ordinary value-shaped `T? = T` source into
+construction. Complete state, qualification, intent, and transfer behavior is
+owned by
 [Zax optional values](optional-values.md#construction-wrapper-replacement-and-boxed-assignment).
+
+## Wrapper-owned contained reconstruction with dot-equals
+
+Optional and variant wrappers specialize protected `.=` to keep one wrapper
+lifetime while ending and constructing their contained state:
+
+```zax
+optional .= value
+optional .= [{ constructorArguments }]
+
+variant.text .= value
+variant.text .= [{ constructorArguments }]
+```
+
+The operation:
+
+1. evaluates the wrapper and contained target designator once;
+2. evaluates and binds every direct source or packet input;
+3. proves those inputs survive the transition;
+4. destroys the old payload when present;
+5. constructs the requested payload; and
+6. publishes presence or the active alternative only after construction
+   completes.
+
+The wrapper must be mutable and the current path writable. Its place may be
+final or varying because this operation does not replace the complete wrapper
+lifetime. Type-side `final` at the wrapper layer therefore does not select or
+permit `replacement +++`; no complete wrapper replacement occurs.
+
+Optional and named-variant payload forms return access to the newly constructed
+payload. A packet targeting the complete variant wrapper returns wrapper access,
+because a zero-entry packet constructs absence and has no payload:
+
+```zax
+variant .= [{}]
+variant .= [{ .text = "ready" }]
+```
+
+The wrapper-packet form accepts zero or one named alternative entry. A bare
+variant `variant .= value` cannot infer an alternative from payload type.
+
+The right side is secured before the old payload ends. A source reference into
+that old payload remains an alias hazard even when evaluated first:
+
+```zax
+if ?optional
+  optional .= optional. // error when construction needs the ended payload
+```
+
+The selected construction must make an independent snapshot, consume the alias
+before renewal, deliberately support the relationship, or use the applicable
+`replacement-alias` unsafe responsibility.
+
+A panic leaves the same contained-reconstruction operation blocked. It does not
+publish a partial payload, restore the old payload, or continue ordinary
+execution through absence.
+
+Wrapper-owned `.=` performs fresh ordinary payload construction. It does not
+select the old payload type's `replacement +++`. To replace an already active
+payload as a complete varying value, first access or bind that payload and then
+apply complete `.=` reconstruction:
+
+```zax
+if ?optional
+  optional. .= [{ replacementInput }]
+
+switch variant {
+  case replaceable
+    replaceable .= [{ replacementInput }]
+}
+```
+
+Those target payload places must themselves be varying and writable. A final or
+readonly payload path cannot select `replacement +++`.
+
+`.=` remains protected and cannot be overloaded. Complete optional and variant
+behavior belongs to [optional values](optional-values.md) and
+[variants](variants.md).
 
 ## Destruction
 
@@ -1421,11 +1598,12 @@ explained by [Zax integer literals and realization](integer-literals.md#optional
 
 ### Access proof
 
-Some storage may or may not hold a live value on a given path. Access through
-such storage requires proof that a live value exists on that path:
+Some storage may or may not hold a live value on a given path. Ordinary direct
+access requires proof that a live value exists unless the feature defines an
+explicit checked access:
 
 > Access through storage whose value lifetime may not be active requires proof
-> that a live value exists on that path.
+> or a feature-defined checked operation before the value is used.
 
 The concern is whether a value lifetime is active, not how a particular feature
 spells its presence test. It covers conditionally live versus merely
@@ -1446,7 +1624,7 @@ Test presence first and dereference inside the proven body. A compound proof suc
 as `?optionalValue && ?optionalValue.` proves nothing unless the right expression
 is unambiguously exactly `Boolean`, because only then does the protected
 short-circuit operation skip the dereference; see
-[operators](operators.md#optional-presence-operation).
+[operators](operators.md#optional-and-variant-presence).
 
 The proof need not be immediately adjacent. Construction, earlier control flow, a
 preceding presence test, or another recognized presence contract may establish
@@ -1458,6 +1636,13 @@ Once proof permits `optional.`, the resulting path carries the boxed
 qualifications. Any operation ending that exact boxed lifetime invalidates the
 proof and every reference tied to it; see
 [Zax optional values](optional-values.md#presence-proof-and-postfix-access).
+
+Named variant access is the checked application. A proved active name removes
+the check, a proved inactive name is an error, and unresolved selection performs
+the registered `inactive-variant-access` check and panics on mismatch. A variant
+switch route establishes proof and binding without another check. Complete
+behavior is defined by
+[Zax variants](variants.md#presence-and-named-access-answer-different-questions).
 
 The presence operation `?value` itself is owned by [operators](operators.md), and
 condition placement is owned by [core flow control](core-flow-control.md). This
@@ -1637,6 +1822,8 @@ Programmers must be able to discover:
 - temporaries retained while a construction packet evaluates;
 - declared constructor defaults evaluated after explicit packet inputs;
 - `copy`, `move`, `last`, and reference binding performed for packet entries;
+- right-side capture, old-payload destruction, and new-payload construction
+  performed by contained `.=` reconstruction;
 - generated fallback replacement as `---` followed by `+++`;
 - resources retained or reconstructed by custom replacement;
 - copies or snapshots required to avoid alias hazards;
@@ -1655,6 +1842,8 @@ Diagnostics should distinguish:
 
 - no viable ordinary or replacement constructor;
 - missing, duplicate, unknown, or ambiguously mapped packet entries;
+- a direct `.member = ...` entry in a complete replacement packet, where the
+  replacement hook owns member transition;
 - a positional entry with no current positional cursor;
 - omission of a parameter that has no declared default;
 - label-versus-declaration intent that is unclear;
@@ -1672,6 +1861,10 @@ Diagnostics should distinguish:
 - a transfer path that bypasses required construction or destruction, or repeats
   a lifecycle transition without establishing a valid intervening state;
 - possible self or interior alias conflict during replacement;
+- contained reconstruction whose source aliases the payload it ends;
+- complete `.=` without writable varying replacement authority or a viable
+  replacement/fallback constructor;
+- wrapper-owned `.=` with an invalid optional or variant target shape;
 - partial-instance access or escape requiring a future unsafe control; and
 - an inapplicable or unsupported future unsafe semantic assertion.
 
@@ -1724,7 +1917,8 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - packet multiple-result forwarding remaining distinct from structural packing;
 - ordinary constructors remaining resultless;
 - demand-driven generated/existing/default/forbidden resolution;
-- immutable + writable + varying generated reconstructive replacement;
+- protected complete `.=` reconstruction requiring writable varying replacement
+  authority for mutable or immutable values;
 - custom replacement recycling old representation without enclosing `---` or
   `+++`;
 - complete replacement on every normal return, including resultful replacement;
@@ -1734,8 +1928,9 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - known pointer and alias hazards remaining visible;
 - async, concurrency, ownership, and formal unsafe-control mechanisms remaining
   separate concerns until their focused reviews;
-- differently represented variants requiring suitable storage rather than
-  assuming family-name compatibility;
-- unions and overlapping storage awaiting active-member transition rules; and
+- differently represented type-family variants requiring suitable storage
+  rather than assuming family-name compatibility;
+- unmanaged unions retaining passive all-bit copy without member lifecycle;
+- managed variants retaining wrapper-owned conditional payload lifecycle; and
 - global and `once` initialization, retry, and teardown ordering remaining
   future lifecycle work.

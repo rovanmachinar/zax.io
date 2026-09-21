@@ -230,6 +230,34 @@ deliberately reports the resolved type-use or referent-place truth, so a program
 currently has no way to ask whether *this* declaration may exercise
 replacement.
 
+## Type, union, and variant metadata
+
+Current [type definitions](../../language/type-definitions.md),
+[unions](../../language/unions.md), and
+[variants](../../language/variants.md) add categories that future reflection
+must not collapse:
+
+- a physical direct stored member;
+- a fixed implementation with no per-instance slot;
+- a varying per-instance callable slot;
+- a type-owned `once` declaration;
+- an unmanaged union lens rather than an ordinary resident member;
+- union-admissible and all-bit-pattern-valid status;
+- plain versus unsafe union declaration and each lens's extent/alignment;
+- flow-sensitive validity of one unsafe-union value, which is a value fact
+  rather than canonical union type identity;
+- a variant alternative declaration and its payload type;
+- absent versus one named active alternative on one runtime value;
+- generated/protected variant wrapper lifecycle operations;
+- contained-reconstruction `.=` source presentation;
+- hidden discriminant or niche facts without promising one representation; and
+- language-generated versus programmer-defined body declarations.
+
+Runtime active selection is not canonical variant identity. Likewise, proving
+one unsafe-union lens valid does not change the union's type. Exact metadata
+types, source forms, privacy, and compile-time/runtime availability remain
+future work.
+
 ## Allocation reflection
 
 Current allocation behavior is defined by
@@ -265,7 +293,7 @@ default.
 qualified repeated wrapper layers:
 
 ```zax
-MyType readonly ? writable ? immutable
+MyType readonly? writable? immutable
 ```
 
 Reflection must preserve:

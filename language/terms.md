@@ -36,6 +36,15 @@ Scalars.Fixed.I16F8
 Scalars.Floating.Binary32
 ```
 
+## All-bit-pattern-valid
+
+A type is **all-bit-pattern-valid** when every possible pattern in its complete
+storage envelope represents an ordinary valid value. Padding and non-value bits
+are ignored by that type and may have any contents.
+
+Plain union lenses must be both union-admissible and all-bit-pattern-valid. See
+[Zax unions](unions.md#every-bit-pattern-is-valid-in-a-plain-union).
+
 ## Access path
 
 An **access path** is one particular route through which code observes or acts
@@ -353,6 +362,22 @@ construction. See
 `[{}]` is the canonical zero-entry construction packet. A packet supplies
 construction inputs at a destination; it is not independently a value or an
 anonymous structure.
+
+## Contained reconstruction
+
+**Contained reconstruction** keeps one semantic wrapper lifetime while ending
+and constructing fresh contained state. Protected `.=` re-delivers direct or
+packet construction inputs to an optional payload or variant payload/selection:
+
+```zax
+optional .= value
+variant.text .= value
+variant .= [{ .text = value }]
+```
+
+It is distinct from complete-value `.=` replacement and ordinary assignment
+through an already live payload. See
+[construction, replacement, and destruction](construction-and-destruction.md#wrapper-owned-contained-reconstruction-with-dot-equals).
 
 ## Contextual keyword
 
@@ -1105,16 +1130,16 @@ order, and reversing a map requires another declaration. See
 
 ## Reconstructive replacement
 
-**Reconstructive replacement** is the compiler-recognized generated `=`
-transition that ends one immutable value lifetime and establishes another in the
+**Reconstructive replacement** is the protected `.=` transition that ends one
+complete mutable or immutable value lifetime and establishes a successor in the
 same storage.
 
 The compiler owns the complete lifecycle skeleton. It selects a replacement
 constructor when a viable customization exists; otherwise it uses the generated
 fallback of enclosing `---` followed by ordinary `+++`.
 
-It requires an immutable value in a varying place through a writable access
-path. See
+It requires a varying place through a declaration-side varying, writable access
+path. A final place or readonly path cannot select it. See
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement)
 and [Zax qualifiers](qualifiers.md#reconstructive-replacement).
 
@@ -1126,7 +1151,8 @@ within the compiler-owned reconstructive-replacement operation.
 It is written with contextual `replacement +++`. When selected, it runs instead
 of the generated fallback's enclosing `---` followed by ordinary `+++` and may
 recycle the previous representation and resources while establishing the
-complete replacement instance. Complete behavior is defined by
+complete replacement instance. Protected `.=` supplies its direct or
+positional/named packet inputs. Complete behavior is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#custom-replacement).
 The qualification boundary is defined by
 [Zax qualifiers](qualifiers.md#reconstructive-replacement).
@@ -1241,6 +1267,16 @@ several scalars while being displayed as one perceived character. It is not one
 `Rune`, and Zax strings do not implicitly normalize or validate grapheme
 presentation. See [Zax strings and characters](strings-and-characters.md).
 
+## Union-admissible type and union lens
+
+A **union-admissible type** has passive storage that may be overwritten, copied
+as part of complete union backing, and abandoned without bypassing required
+lifecycle, ownership, reference-binding, or placement work.
+
+A **union lens** is one named offset-zero typed interpretation of complete
+untagged union backing. It is not an independently constructed resident member
+and does not become active. See [Zax unions](unions.md).
+
 ## Symbolic operator
 
 A **symbolic operator** is an operator whose recognized source form is written
@@ -1310,7 +1346,9 @@ See [Zax transfer stances](transfer-stances.md).
 A **transparent alias** is another source name for the same canonical type
 identity. A concrete alias may overlay requested qualifications, stance,
 indirection, and compatibility posture without converting a value or creating
-another identity. It creates no conversion or overload domain. See
+another identity. `alias type`, `alias union`, and `alias variant` preserve
+their respective declaration categories. An alias creates no conversion or
+overload domain. See
 [Zax identity types](identity-types.md#transparent-aliases).
 
 An **exact variable alias** similarly adds another declaration name for the same
@@ -1402,6 +1440,16 @@ myComplement := ~1 // error: signed and unsigned results differ
 This test decides whether the operation may run before a concrete integer width
 is selected. See
 [Zax integer literals and realization](integer-literals.md#which-calculations-need-an-integer-width).
+
+## Variant wrapper and active alternative
+
+A **variant wrapper** is one live variant value whose state is absent or names
+exactly one active alternative.
+
+An **active alternative** owns the conditional payload life path selected by
+that name. Reset, contained reconstruction, complete wrapper replacement, or
+destruction ends it. Alternative names remain distinct even when their payload
+types match. See [Zax variants](variants.md).
 
 ## Value
 

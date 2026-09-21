@@ -5,7 +5,7 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work reviewing patterns, destructuring, scoped projection, guards, or selected payload binding |
 | Applies To | Selection and scoped access shapes that cannot be expressed as current Boolean case tests, ordinary proven access, or type-member composition |
-| Owns | Preservation of generalized-pattern pressure, recursive destructuring, scoped projection, variant payload binding, guarded patterns, binding convergence, and interaction with direct body entry |
+| Owns | Preservation of generalized-pattern pressure, recursive destructuring, scoped projection, nested selected-payload binding, guarded patterns, binding convergence, and interaction with direct body entry |
 | Does Not Own | Current runtime `switch` behavior, accepted variant syntax, or current optional access |
 | Source / Provenance | Former raw selection input consumed by runtime-selection review; work item `018`; raw variants/unions and optional matching pressure |
 
@@ -29,14 +29,17 @@ Current cases can:
 - establish recognized path facts such as optional presence; and
 - use ordinary nested selection and postfix access.
 
-They cannot:
+Ordinary Boolean cases cannot:
 
 - destructure a selected value;
 - declare names in a case header;
-- bind a variant payload;
 - recursively match nested shapes;
 - attach a guard that resumes later patterns when false; or
 - guarantee one binding shape across structurally different alternatives.
+
+Variant-specific cases are the narrow exception: they route and bind one
+top-level active payload under the current variant owner. They still do not
+destructure that payload or provide general patterns.
 
 Future pattern syntax must remain visibly distinct from current Boolean case
 tests. It must not silently reinterpret existing source such as:
@@ -91,30 +94,32 @@ Any accepted form must preserve:
   operation ends that boxed lifetime; and
 - no treatment of a construction packet as an anonymous value.
 
-## Variant and union pressure
+## Variant routing is current; destructuring remains future
 
-Managed variants need active-alternative testing and may need payload binding.
-The declaration, storage, replacement, and lifetime model remains in
-[raw variants and unions](variants-and-unions.md).
-
-Illustrative pattern source:
+Current [Zax variants](../../language/variants.md) and
+[switch](../../language/switch.md#variant-alternative-selection) now define
+finite named-alternative routing, reference-shaped payload binding,
+polymorphic `bind`, absence/presence cases, coverage, and direct-entry
+restrictions:
 
 ```zax
 switch event {
-  case MessageEvent(message : Message &) // illustrative future pattern
+  case message
     handle(message)
-  case ClosedEvent // illustrative future pattern
-    handleClosed()
+  case closed
+    handleClosed(closed)
+  case !
+    handleAbsent()
 }
 ```
 
-Future work must decide how active-alternative proof, payload qualifications,
-replacement, destruction, exhaustive coverage, and unnamed or unknown
-alternatives interact. Current enum member cases do not provide a variant model.
+That accepted form is not generalized pattern matching. This file retains only
+pressure to destructure a selected payload recursively, bind nested parts, add
+guards, or converge more elaborate binding shapes.
 
-Unmanaged unions additionally require explicit active-lifetime or unsafe
-responsibility. Pattern syntax cannot make several overlaid resident instances
-simultaneously live.
+Unmanaged unions have no active lens or selection state and therefore provide
+no union pattern route. Future pattern syntax cannot manufacture an
+active-member model for their overlapping representation.
 
 ## Guards and resumption
 
@@ -195,10 +200,9 @@ permission to extend current composition syntax.
 Activate this input when a concrete use case requires:
 
 - destructuring rather than Boolean testing;
-- a selected payload binding;
+- nested binding inside an already selected payload;
 - guarded patterns;
 - recursive shape matching;
-- variant active-alternative binding;
 - bounded local member projection or destructuring; or
 - pattern-aware value-producing selection.
 

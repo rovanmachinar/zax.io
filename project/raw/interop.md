@@ -36,6 +36,28 @@ The general pressure is:
 > Zax supports selected foreign representations and calling conventions without
 > importing the foreign language's complete semantic model.
 
+## Union and variant ABI pressure
+
+Current [Zax unions](../../language/unions.md) define zero-filled, offset-zero,
+possibly jagged lenses with passive/all-bit-safe admission and local unsafe lens
+proof. Similarity to a C or C++ union does not establish:
+
+- foreign active-member or aliasing rules;
+- exact size, padding, alignment, or bit-field behavior;
+- pointer or callable representation;
+- scalar profile agreement;
+- calling-convention classification; or
+- stable layout across tools and language versions.
+
+A named foreign-union contract may deliberately choose compatible layout and
+unsafe responsibilities. Otherwise use an adapter or explicit low-level view.
+
+Current [Zax variants](../../language/variants.md) define absence plus one named
+managed payload without promising a tag width, niche, payload offset, or calling
+convention. Future interop must define how foreign tagged unions map names,
+unknown tags, absence, payload lifecycle, transfer, destruction, and layout.
+Representation coincidence on one target is insufficient.
+
 ## Optional representation and ABI pressure
 
 [Zax optional values](../../language/optional-values.md) defines semantic states

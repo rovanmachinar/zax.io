@@ -6,8 +6,8 @@
 | Audience | Human developers selecting runtime behavior from one value |
 | Applies To | Programmer-facing `switch`, `case`, and `default` behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Runtime selector capture; ordered case testing; direct, equality, and pre-unary case interpretation; comma-separated alternatives; case and switch posts; switch and case labels; switch-specific `break`, `continue`, `next`, and `goto` behavior; `default`, incomplete selection, exhaustiveness, overlap, reachability, costs, diagnostics, formatting, and source stability |
-| Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); ordinary operator selection ([operators](operators.md)); complete optional behavior ([optional values](optional-values.md)); enum reachable domains ([enums](enums.md)); general source layout ([source structure](source-structure.md)); or generalized pattern matching |
+| Owns | Runtime selector capture; ordinary ordered case testing; direct, equality, and pre-unary case interpretation; variant-specific alternative routing and payload binding; comma-separated alternatives; case and switch posts; switch and case labels; switch-specific `break`, `continue`, `next`, and `goto` behavior; `default`, incomplete selection, exhaustiveness, overlap, reachability, costs, diagnostics, formatting, and source stability |
+| Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); ordinary operator selection ([operators](operators.md)); complete optional behavior ([optional values](optional-values.md)); complete managed-alternative lifecycle ([variants](variants.md)); enum reachable domains ([enums](enums.md)); general source layout ([source structure](source-structure.md)); or generalized pattern matching |
 | Source / Provenance | Current flow, operator, enum, optional, lifetime, source, and intent designs, incorporating reviewed legacy switch evidence |
 | Supersedes | Legacy switch sections formerly preserved on [flow control](../flow-control.md) |
 
@@ -229,9 +229,13 @@ fallback for the ordered search that reaches it. Its body must explicitly
 
 ## How one case test is interpreted
 
-Every comma-separated alternative must ultimately produce exactly `Boolean`.
-The case supplies the retained selector as an omitted operand through three
-ordered interpretations.
+For an ordinary non-variant selector, every comma-separated alternative must
+ultimately produce exactly `Boolean`. The case supplies the retained selector as
+an omitted operand through three ordered interpretations.
+
+A variant selector instead uses the dedicated
+[alternative-routing mode](#variant-alternative-selection); its case names are
+not expressions passed through these interpretations.
 
 ### 1. Try a direct selector-relative operation
 
@@ -1020,6 +1024,149 @@ switch optionalValue {
 Complete wrapper state, per-layer proof, and boxed lifetime behavior belongs to
 [optional values](optional-values.md).
 
+## Variant alternative selection
+
+When the retained selector has [variant](variants.md) type, `case` enters a
+dedicated alternative-routing mode. Case entries name alternatives rather than
+ordinary expressions or Boolean operations:
+
+```zax
+switch message {
+  case text {
+    print(text)
+  }
+
+  case number, alternateNumber bind selectedNumber {
+    print(selectedNumber)
+  }
+
+  case ! {
+    handleAbsent()
+  }
+}
+```
+
+### Names route and bind payloads
+
+`case text` resolves `text` only in the selector variant's alternative
+namespace. A successful route introduces clause-local reference-shaped payload
+access under that same name.
+
+Several alternatives may share one body. `bind` gives them one common local:
+
+```zax
+case number, alternateNumber bind selectedNumber {
+  print(selectedNumber)
+}
+```
+
+The body is checked independently for every alternative that can route to it.
+It is valid only when every specialization succeeds. A diagnostic identifies
+the failing alternative, its payload type, and the unavailable operation.
+
+A several-name entry without `bind` only routes control and introduces no
+payload local. This lets several states share behavior that does not inspect the
+payload.
+
+The binding performs no copy. It preserves payload origin, qualifications, and
+the transfer stance projected from the retained selector. An accepted later
+consumer performs any move or terminal transfer.
+
+Ordinary local shadowing rules apply. Rename a same-name alternative when
+needed:
+
+```zax
+case text bind selectedText {
+  print(selectedText)
+}
+```
+
+### Presence and absence entries
+
+Variant mode reserves:
+
+```zax
+case ? bind selected
+  handlePresent(selected)
+
+case !
+  handleAbsent()
+```
+
+`case ?` selects any present alternative that reaches it. With `bind`, its body
+is specialized for every such payload type. Bare `case ?` introduces no payload
+binding. `case !` selects absence and introduces none.
+
+Ordering remains visible. Specific names can appear before the present catch-all:
+
+```zax
+switch message {
+  case text
+    handleText(text)
+  case ? bind other
+    handleOtherPresent(other)
+  case !
+    handleAbsent()
+}
+```
+
+`default` retains its ordinary positional fallback meaning. It can receive
+absence and any present alternative not selected earlier. It does not
+intrinsically mean absence.
+
+### Coverage has two dimensions
+
+Variant selection audits:
+
+1. **Alternative coverage:** every declared name is handled by a named case or
+   `case ?`.
+2. **State coverage:** absence reaches `case !` or `default`.
+
+`default` satisfies fallback state coverage but does not silently count as
+explicit handling of omitted alternative names. Deliberately partial source
+uses:
+
+```zax
+intent<partial-variant-selection>{
+  switch message {
+    case text
+      handleText(text)
+    default
+      handleOtherState()
+  }
+}
+```
+
+The acknowledgement permits omitted names without changing order, fallback, or
+payload binding. Adding an alternative makes a named-complete switch incomplete.
+`case ?` deliberately accepts later alternatives when its new body
+specialization succeeds.
+
+Coverage is assessed for every reachable ordered-search entry, just as enum
+coverage is. A direct body entry bypasses the route and contributes no
+alternative coverage.
+
+### Transfers and binding establishment
+
+A payload-bound clause body cannot be a `goto` target: direct entry would
+bypass routing and could not construct its local binding.
+
+`continue case_label:` may target a routed variant clause because it starts at
+that clause's route entry. It enters the body only after matching the current
+selection and establishing the binding; if it does not match, search continues.
+
+Bare `case ?`, `case !`, `default`, and transfer-only clauses create no payload
+binding. An otherwise eligible `goto` may enter such a body, but that path
+inherits no presence or absence fact from the bypassed route. The body remains
+valid only under facts common to every incoming path.
+
+`next`, `break`, clause and switch posts, scope destruction, and outward
+transfer retain their ordinary behavior.
+
+This finite variant mode is not generalized pattern matching. It provides no
+recursive destructuring, structural pattern, guard, or optional-payload
+flattening.
+
 ## Empty selection
 
 A switch containing no clauses still evaluates its initializer and selector and
@@ -1050,6 +1197,11 @@ There is no constant-time dispatch promise. User-defined operations, runtime
 case expressions, mixed operators, mutation, and observable effects may require
 ordered testing.
 
+Variant mode tests the represented active name or absence rather than invoking
+ordinary case operators. A polymorphic `bind` body adds compile-time checking
+and potentially generated code for each routed payload type; ordinary
+optimization may merge equivalent specializations without changing behavior.
+
 ## Diagnostics
 
 Diagnostics should distinguish:
@@ -1068,6 +1220,12 @@ Diagnostics should distinguish:
   `intent<unreachable-selection-clause>{...}`;
 - omitted declared enum members requiring
   `intent<partial-enum-selection>{...}`;
+- an unknown variant alternative name or a lexical expression used where
+  variant mode requires an alternative;
+- a polymorphic variant body that fails for one routed alternative;
+- omitted variant alternatives requiring
+  `intent<partial-variant-selection>{...}`;
+- a variant `goto` target whose payload binding cannot be established;
 - empty selection requiring `intent<empty-selection>{...}`;
 - outer-target reach-through requiring
   `intent<outer-target-through-ineligible-label>{...}`;
@@ -1083,8 +1241,9 @@ Diagnostics should distinguish:
 - redundant switch-targeting tail `break`; and
 - legacy `case continue` or another unsupported combined spelling.
 
-`unreachable-selection-clause`, `partial-enum-selection`, `empty-selection`,
-and `outer-target-through-ineligible-label` are acknowledgement-required intent
+`unreachable-selection-clause`, `partial-enum-selection`,
+`partial-variant-selection`, `empty-selection`, and
+`outer-target-through-ineligible-label` are acknowledgement-required intent
 errors with the enclosure shapes shown above.
 
 Redundant tail `break` is non-acknowledgeable. It must be removed unless it
@@ -1105,6 +1264,8 @@ spelling.
   post or body.
 - A comma has no preceding whitespace and requires following whitespace.
 - A comma continues the test list across a following indented line.
+- In variant mode, `bind` follows the complete alternative list and precedes
+  its body or post.
 - `;;` has whitespace on both sides.
 - A simple or composed body begins on the following line one level deeper.
 - A braced body opens on the final physical clause-header line.
@@ -1130,6 +1291,9 @@ Complete token, continuation, indentation, separator, and brace rules belong to
 - Adding an enum member makes a previously member-complete switch incomplete
   unless it already acknowledges partial enum selection; `default` continues to
   cover the applicable unnamed domain rather than the omitted declaration.
+- Adding a variant alternative makes a named-complete switch incomplete.
+  `case ?` deliberately accepts the new alternative only when its additional
+  body specialization succeeds.
 - Improved analysis may identify a language-defined unreachable clause and
   require its existing acknowledgement; it cannot reorder observable tests.
 - Formatting and source-preserving tools retain phrase fences, grouping,
@@ -1144,9 +1308,9 @@ specification.
 Still future:
 
 - generalized or recursive patterns;
-- case payload binding and destructuring;
+- payload destructuring beyond the accepted variant binding;
 - pattern guards;
-- managed variant and union alternatives;
+- unmanaged-union selection, which has no active-lens state;
 - value-producing selection and result convergence;
 - mixfix or other multi-hole case tests;
 - compile-time selection and dispatch;
