@@ -182,12 +182,21 @@ that value. See [Zax declarations and bindings](declarations-and-bindings.md).
 ## Call completion
 
 **Call completion** is the synchronous boundary after the selected callable has
-bound all parameters, executed its body, completed its declared results, and
-mapped those results into the surrounding context.
+bound all parameters, executed its body, completed one declared outcome, and
+mapped that outcome into the surrounding context.
 
 An argument or result temporary required by the call remains live through the
 part of this boundary that uses it. Async suspension requires a broader future
 completion model. See [Zax function invocation](function-invocation.md).
+
+## Completion outcome
+
+A callable **completion outcome** is either its complete ordinary success shape
+or one named exceptional result. One invocation selects exactly one.
+
+Success publishes every ordinary result. An exceptional outcome publishes only
+its declared `except` payload. See
+[Zax exceptional result flow](except.md#callable-completion-outcomes).
 
 ## Callable
 
@@ -1102,8 +1111,9 @@ The producer executes once. See
 
 ## Result shape
 
-A **result shape** is the ordered sequence of zero or more result slots declared
-by a callable prototype.
+A **result shape** is one ordered sequence of zero or more result slots declared
+by a callable prototype. The ordinary success outcome has its complete ordinary
+result shape; each exceptional outcome has its one named payload shape.
 
 Several results are not implicitly one tuple or structural value. See
 [Zax function invocation](function-invocation.md#result-slots).
@@ -1113,19 +1123,33 @@ Several results are not implicitly one tuple or structural value. See
 A **result slot** is one ordered output position declared by a callable
 prototype.
 
-The slot begins as an output obligation and must contain one complete value on
-every normal exit. A result initializer may opt into construction before body
-entry; that constructed/unconstructed entry state participates in compatible
-prototype behavior. See
+An ordinary slot begins as an output obligation and must contain one complete
+value whenever success is selected. A result initializer may opt into
+construction before body entry; that constructed/unconstructed entry state
+participates in compatible prototype behavior. An exceptional slot begins
+unconstructed and is constructed only when its outcome is selected. See
 [Zax function invocation](function-invocation.md#result-slots).
+
+## Provisional result
+
+A **provisional result** is a live result instance whose completion outcome has
+not yet committed it to an outer destination. Its current provisional owner
+must destroy it if another outcome is selected.
+
+Successful mapping transfers that cleanup responsibility outward, including
+when several calls elide into final destination storage. See
+[Zax exceptional result flow](except.md#conditional-result-elision).
 
 ## Reshape
 
 A **reshape** is a no-storage, directional declaration mapping source member
-paths to destination member paths for `-<>-` transformation.
+paths to destination member paths for `-<>-` transformation, callable results
+to inputs, or exceptional outcome labels to other exceptional labels.
 
 It has no runtime instance or anchor. Explicit entries use source-to-destination
-order, and reversing a map requires another declaration. See
+order, and reversing a map requires another declaration. A use accepts one
+inline mapping or one named/anonymous reshape declaration; reshape entries never
+use commas. See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#reusable-mapping-with-reshape).
 
 ## Reconstructive replacement

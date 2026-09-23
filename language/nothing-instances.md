@@ -513,12 +513,14 @@ panics through signature-compatible behavior. It does not execute a no-op,
 invent results, rely on an invalid instruction address, throw an exception, or
 unwind.
 
-A zero-result `bound weak` callable is a separate conditional-call contract.
-Invocation performs no body work when its slot is unavailable or when temporary
-strong promotion fails. Caller-side argument/default evaluation and setup still
-occur. An assigned weak relationship remains present after ownership closes,
-while an unavailable slot is absent; neither condition makes invocation panic
-under this callable mode. Complete weak callable behavior belongs to
+A `bound weak` callable with no ordinary or exceptional results is a separate
+conditional-call contract. Any `except` result is a result and makes weak
+storage unavailable. Invocation performs no body work when a valid resultless
+weak slot is unavailable or when temporary strong promotion fails. Caller-side
+argument/default evaluation and setup still occur. An assigned weak relationship
+remains present after ownership closes, while an unavailable slot is absent;
+neither condition makes invocation panic under this callable mode. Complete weak
+callable behavior belongs to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#weak-invocation-is-conditionally-empty).
 
 Reset releases any callable representation and captures, then restores the

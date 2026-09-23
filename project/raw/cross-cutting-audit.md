@@ -175,28 +175,6 @@ Each entry preserves:
   work may not be a current owner's source of meaning.
 - **Disposition.** Open.
 
-### Legacy claims contradicted by promoted behavior
-
-- **Concern.** Legacy pages contain condition, error-exit, and operator claims
-  contradicted by the promoted exact-`Boolean`, presence-proof, and exit model.
-- **Representative example.** Captured-error conditions and prose implying that
-  `&&` and `||` are globally `Boolean`-only rather than ordinary eager overloads
-  outside the protected exact `Boolean`/`Boolean` operations.
-- **Why local review misses it.** Remaining contradictions span core flow,
-  optional, and error-handling surfaces.
-- **Likely owners.** [Except error handling](../../except.md) and its future
-  review.
-- **Resolution.** Every contradicted legacy claim is corrected or routed to a
-  current owner.
-- **Activation pressure.** Each affected page's focused review, or a reported
-  contradiction.
-- **Current constraints.** The dedicated legacy operator and optional pages have
-  been retired to historical disposition paths. Current operator and
-  [optional](../../language/optional-values.md) owners distinguish protected
-  exact Boolean/presence behavior from eager custom shapes. Remaining
-  error-handling claims stay tracked here.
-- **Disposition.** Open.
-
 ### Example prerequisite and placement audit
 
 - **Concern.** Each current owner must read correctly top to bottom for a new
@@ -323,19 +301,19 @@ Each entry preserves:
   infix form at physical line end as sufficient continuation intent and rejects
   redundant `\`. Explicitly legacy pages still preserve older examples using
   `&& \` or `= \`.
-- **Representative example.** `meta-functions.md` line 112 and `except.md` lines
-  373, 379, and 384 retain the old form.
+- **Representative example.** `meta-functions.md` line 112 retains the old
+  form.
 - **Why local review misses it.** Those pages are outside ordinary current
   language reading and contain broader unreviewed legacy syntax. Mechanically
   rewriting one continuation token could make the remaining example appear
   current.
-- **Likely owners.** Future meta-function and error-handling reviews, with
+- **Likely owners.** Future meta-function review, with
   [source structure](../../language/source-structure.md) retaining the current
   continuation rule.
 - **Resolution.** Each focused legacy review either updates the complete example
   to current source or preserves it as explicitly marked historical evidence.
-- **Activation pressure.** Focused review or promotion of `meta-functions.md` or
-  `except.md`, or a repository-wide retirement of legacy example source.
+- **Activation pressure.** Focused review or promotion of `meta-functions.md`,
+  or a repository-wide retirement of legacy example source.
 - **Current constraints.** New current and raw examples use trailing symbolic
   continuation without redundant `\`; arbitrary incomplete expressions and
   phrase operators do not continue.

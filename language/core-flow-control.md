@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, and `return` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
-| Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); or whole-function result completion ([function invocation](function-invocation.md)) |
+| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, `return`, and producer/forwarding `except` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
+| Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); whole-function result completion ([function invocation](function-invocation.md)); or the cohesive [exceptional result-flow model](except.md) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
 ## Mental model
@@ -837,14 +837,31 @@ behavior are owned by
 ### `return` as a flow exit
 
 `return` exits the complete function rather than selecting a flow label. It
-unwinds every applicable scope and must satisfy the complete declared result
-shape. A value-bearing return supplies every result position; a bare return or
-fallthrough is valid only when every result slot is already complete; and
-`return #` occupies one result position while preserving or default-completing
-that slot. Complete return and result behavior, including `return #`, is owned by
+leaves every applicable scope and must satisfy the complete ordinary success
+shape. A value-bearing return supplies every ordinary result position; a bare
+return or fallthrough is valid only when every ordinary result slot is already
+complete; and `return #` occupies one ordinary result position while preserving
+or default-completing that slot. Complete return and result behavior, including
+`return #`, is owned by
 [function invocation](function-invocation.md#return-and-completion). Core flow
-treats `return` as an exit that unwinds scopes and never runs enclosing post
+treats `return` as an exit that leaves scopes and never runs enclosing post
 operations.
+
+### `except` as a flow exit
+
+Producer `except` and forwarding `except` likewise exit the complete function,
+but select one declared exceptional completion outcome:
+
+```zax
+if failed()
+  except failure: makeFailure()
+```
+
+They skip enclosing post operations and perform the same ordinary scope exit,
+destruction, and `using` crossing behavior as `return`. They do not search for
+an outer handler or initiate exception stack unwinding. The immediate caller
+handles or forwards the selected named outcome under
+[Zax exceptional result flow](except.md).
 
 ## Conditional expression and branch convergence
 
@@ -1063,7 +1080,9 @@ cancellation remain separate future design.
 - `next` pays post cost; `continue` deliberately skips it.
 - `goto` skips post and test/progression cost but pays the target body's work.
 - `break`, `continue`, `next`, `goto`, and `return` pay destruction cost for
-  every scope they unwind.
+  every scope they leave.
+- producer or forwarding `except` pays the same crossed-scope destruction and
+  resource-disposal costs as `return`;
 - A transfer crossing `using` also pays its selected disposal-call costs; an
   explicit `break` targeting that `using` is the visible bypass.
 - A normal-completion post operation may perform substantial ordinary work and is
@@ -1181,8 +1200,9 @@ The following remain explicit future work and are not established here:
   [Zax `using`](using.md); core `scope` here remains an
   explicit flow target, not a resource construct;
 - runtime value-polymorphic declarations and stored branch-dependent types;
-- `except`, `catch`, and specialized error-result propagation, which must
-  preserve ordinary exit and result-completion rules ([except](../except.md));
+- specialized exceptional result production, handling, and forwarding, which
+  preserves these ordinary exit rules and is owned by
+  [Zax exceptional result flow](except.md);
 - complete function capture and closure representation, including callable-like
   scope capture;
 - async suspension, cancellation, executors, and concurrent flow;

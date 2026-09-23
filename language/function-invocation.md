@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; result slots, stance, completion, destination ordering, elision, and the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, and transforming groups; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | Complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | The cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -42,8 +42,9 @@ A synchronous call proceeds in understandable phases:
    prototype's parameter order.
 5. Initialize any result slots that opt into pre-body construction.
 6. Execute the body.
-7. Complete every declared result on every normal exit.
-8. Map or transfer the results into the surrounding context.
+7. Select and complete either the ordinary success shape or one declared
+   exceptional outcome.
+8. Map or transfer only that selected outcome into the surrounding context.
 
 The body cannot observe a partially bound parameter list. Every parameter is
 complete before body entry.
@@ -57,8 +58,10 @@ This applies the broader
 and [Preference must be defensible, not guessed](principles.md#preference-must-be-defensible-not-guessed)
 principles.
 
-Inputs may be selected, labeled, omitted, or defaulted flexibly. Every normal
-call still completes the callable's full declared result shape.
+Inputs may be selected, labeled, omitted, or defaulted flexibly. Every
+invocation completes one full declared outcome: all ordinary success results or
+one named exceptional result. The programmer-facing model is taught by
+[Zax exceptional result flow](except.md).
 
 ## Callable prototypes and visible contracts
 
@@ -132,12 +135,14 @@ The compiler diagnoses an invocation it can prove still targets that default
 state. An otherwise unhandled invocation panics. It does not execute a no-op,
 manufacture arbitrary results, or invoke an unrelated overload.
 
-One deliberate exception is a zero-result `bound weak` callable. An unavailable
-slot and a failed temporary strong promotion both complete as no-ops rather than
-panicking. Explicit arguments, defaults, parameter construction, and other
-caller-side setup still occur under the visible prototype before no body runs.
-This is the declared weak callable contract, not ordinary unavailable-function
-behavior. Complete behavior belongs to
+One deliberate exception is a `bound weak` callable whose complete result
+contract is empty: it has neither ordinary nor exceptional results. An
+unavailable slot and a failed temporary strong promotion both complete as no-ops
+rather than panicking. Any `except` result makes the callable resultful and
+therefore ineligible for weak storage. Explicit arguments, defaults, parameter
+construction, and other caller-side setup still occur under the visible
+prototype before no body runs. This is the declared weak callable contract, not
+ordinary unavailable-function behavior. Complete behavior belongs to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#weak-invocation-is-conditionally-empty).
 
 Recognized function presence returns exactly `Boolean`. A known fixed `final`
@@ -952,22 +957,47 @@ Use a managed pointer parameter when ownership must transfer into the callee.
 
 ## Result slots
 
-A selected prototype declares an ordered result shape:
+A selected prototype declares an ordered ordinary result shape:
 
 - `()` has zero results;
 - `(value : T)` has one result; and
 - `(first : A, second : B)` has two results.
 
-Each result declaration establishes:
+An `except` result instead declares one named exceptional completion shape:
+
+```zax
+read final : (
+  value : MyValue,
+  failure except : MyFailure
+)() = {
+  // ...
+}
+```
+
+One invocation publishes either ordinary `value` or exceptional `failure`,
+never both. A callable with several `except` results has one separate completion
+shape for each. Complete declaration, handling, forwarding, reshape, and
+acknowledgement behavior is taught by
+[Zax exceptional result flow](except.md).
+
+At the current conceptual depth, exceptional outcomes belong to ordinary
+function and call-syntax callable prototypes. Constructor, destructor,
+replacement-constructor, and non-call operator result shapes cannot declare
+`except`; their available results remain ordinary shapes.
+
+Each ordinary result declaration establishes:
 
 - an ordered result slot;
 - a source-facing label, type, and qualifications; and
 - a transfer stance that becomes active after construction; and
-- an obligation to contain one complete value on every normal exit.
+- an obligation to contain one complete value whenever the success outcome is
+  selected.
 
 The result place is available before body execution. Its resident instance may
 be established before body entry when the prototype declares an initializer, or
-the body may remain responsible for constructing it.
+the body may remain responsible for constructing it. An exceptional result
+accepts no initializer and may not be manually constructed early; producer
+`except` or explicit forwarding constructs it when selecting that outcome.
 
 An ordinary result slot begins unconstructed:
 
@@ -1196,9 +1226,10 @@ when an exact deep-capable consumer exists and never implies built-in raw-pointe
 cloning. Only `last` ordinarily transfers a scheduled raw result's disposition
 responsibility.
 
-For result declarations, non-reporting `@` and `@<` also promise a non-vacant
-pointer on every normal exit. The body may temporarily reset or replace the
-result but must restore presence. `@!` and `@!<` permit a normally vacant result.
+For ordinary result declarations, non-reporting `@` and `@<` also promise a
+non-vacant pointer whenever success is selected. The body may temporarily reset
+or replace the result but must restore presence. `@!` and `@!<` permit a vacant
+success result.
 
 | Result initializer | Body-entry state | Normal-exit guarantee |
 | --- | --- | --- |
@@ -1212,11 +1243,11 @@ An opaque operation may use narrow unsafe responsibility to assert a
 presence fact that analysis cannot prove. A path proved to return vacancy
 cannot satisfy a non-reporting contract through unsafe assertion.
 
-Current result syntax cannot express a delayed-construction contract that leaves
-an owning, raw, or optional result unconstructed on body entry while promising
-presence on every normal exit. `= @` provides the promise by allocating before
-body entry; an uninitialized pointer or optional result permits delayed
-construction but exposes no presence guarantee to callers.
+Current ordinary-result syntax cannot express a delayed-construction contract
+that leaves an owning, raw, or optional result unconstructed on body entry while
+promising presence whenever success is selected. `= @` provides the promise by
+allocating before body entry; an uninitialized pointer or optional result
+permits delayed construction but exposes no presence guarantee to callers.
 
 References provide borrowed inputs with no independent vacancy state, but do
 not preserve pointer ownership or rebinding. Unchecked pointer dereference may
@@ -1255,7 +1286,7 @@ requires a live destination and performs ordinary operator selection.
 
 ## Return and completion
 
-A value-bearing return supplies the complete result shape:
+A value-bearing return supplies the complete ordinary success shape:
 
 ```zax
 return makeFirst(), makeSecond()
@@ -1270,7 +1301,7 @@ A bare return supplies no expressions:
 return
 ```
 
-It is valid only when every result slot is already complete.
+It is valid only when every ordinary success result slot is already complete.
 
 Falling through the closing brace is equivalent to a bare return:
 
@@ -1297,11 +1328,31 @@ make final : (
 }
 ```
 
-Partial value-bearing result lists are unavailable. Either:
+Partial value-bearing success-result lists are unavailable. Either:
 
-- the return list supplies the complete result shape; or
-- every named result slot is already complete and the path uses bare return or
-  fallthrough.
+- the return list supplies the complete ordinary success shape; or
+- every named ordinary result slot is already complete and the path uses bare
+  return or fallthrough.
+
+Producer `except` is the distinct completion form for one exceptional result:
+
+```zax
+read final : (
+  value : MyValue,
+  failure except : MyFailure
+)() = {
+  if cannotRead()
+    except failure: makeFailure()
+
+  return makeValue()
+}
+```
+
+It constructs exactly the named exceptional slot, performs ordinary function
+exit cleanup, and publishes no ordinary result. Every live provisional result
+outside the selected shape must be destroyed by its current owner before
+completion. Exact cleanup and handling order is defined by
+[Zax exceptional result flow](except.md#exact-exceptional-completion-order).
 
 `return result` is not the completion form for a result slot that already denotes
 the output. Use bare return or fallthrough rather than suggesting a transfer from
@@ -1341,8 +1392,9 @@ foobar final : (
 }
 ```
 
-Because `#` occupies a result position, the complete-result-shape rule still
-holds: a `#` slot is completed, not omitted. Across result contexts, `#`
+Because `#` occupies an ordinary success-result position, the complete-shape
+rule still holds: a `#` slot is completed, not omitted. Across ordinary result
+contexts, `#`
 explicitly declines an accessible value or destination at that position while
 the surrounding construct determines the lifetime consequence:
 
@@ -1353,9 +1405,12 @@ the surrounding construct determines the lifetime consequence:
   suppressing body access and disposal; and
 - return lists use `#` to preserve or default-complete the corresponding slot.
 
+An exceptional outcome cannot be marked, mapped, or omitted with `#`; it must
+be handled or forwarded explicitly.
+
 `return #` differs materially from a bare return: `return #` may default-complete
-an unconstructed slot, while a bare return requires every slot to be complete
-already. Local, type, and memory-policy uses of `#` remain
+an unconstructed ordinary slot, while a bare return requires every ordinary
+success slot to be complete already. Local, type, and memory-policy uses of `#` remain
 [legacy discard](../discard.md) input.
 
 ## Result labels and acknowledgement
@@ -1420,6 +1475,53 @@ routed, or explicitly discarded.
 
 A short capture consumes a prefix. Every unmentioned trailing result must permit
 omission.
+
+### Exceptional outcome clauses
+
+`catch`, forwarding `except`, and outcome `reshape` attach to the complete
+evaluation of the immediately preceding invocation: receiver, explicit
+arguments, nested calls, and selected outer callable.
+
+```zax
+result := transform(makeValue()) catch failure {
+  return
+}
+```
+
+The handler may receive `failure` from `makeValue` before `transform` starts or
+from `transform` after its body runs. Equal-label sources create one
+branch-specialized handler mapping. An explicit typed handler destination must
+accept every specialization.
+
+```zax
+result := transform(
+  makeValue() reshape failure: makeFailure:
+) catch failure {
+  return
+} catch makeFailure {
+  return
+}
+```
+
+Clauses run before the invocation's ordinary success results map into an
+enclosing call, operator, declaration, packet, `return`, or `using` entry.
+Consequently, an exceptional outcome publishes none of those success
+destinations.
+
+Handler and forwarding destinations reuse ordinary source-to-destination
+mapping:
+
+```zax
+call() catch failure: localFailure: {
+  return
+}
+
+call() except failure: outerFailure:
+```
+
+`catch failure` and `except failure` are same-name shorthands. Complete behavior
+and the no-discard requirement are taught by
+[Zax exceptional result flow](except.md).
 
 ## Expression mode and result-mapping mode
 
@@ -2497,6 +2599,12 @@ The new prototype may:
 - expose a scheduled raw result as open-ended, or an open-ended minted result as
   scheduled, while preserving the minted body's internal cleanup behavior.
 
+Relabeling may explicitly rename a corresponding exceptional outcome. The
+visible prototype must otherwise preserve each result's
+ordinary-versus-exceptional category, the number of exceptional outcomes, their
+payload contracts, and body-entry constructedness. It cannot merge several
+outcomes under one non-polymorphic result slot.
+
 It may not:
 
 - reorder values;
@@ -2508,6 +2616,7 @@ It may not:
   under a definitely present result;
 - promise callers a definitely present result when the minted implementation
   may produce vacancy; or
+- add, remove, discard, or change the category of an exceptional outcome; or
 - change operations already selected inside the body.
 
 For allocated raw results, presence and outward cleanup are separate:
@@ -2677,8 +2786,8 @@ The synchronous completion boundary includes:
 3. omitted-default evaluation and binding;
 4. opted-in result initialization;
 5. body execution;
-6. production of all results; and
-7. result mapping into the surrounding context.
+6. production of one complete success or exceptional outcome; and
+7. mapping of only that selected outcome into the surrounding context.
 
 A temporary bound to a reference parameter survives through that boundary:
 
@@ -2734,6 +2843,31 @@ value-bearing return expressions evaluate left to right. A rebound body and
 visible prototype must agree on which result slots are already constructed at
 body entry. Selecting results in another order does not rewrite any of these
 construction effects.
+
+Exceptional result slots are the narrow exception to prototype-controlled
+pre-body initialization: they accept no initializer and may be constructed only
+when producer `except` or forwarding selects them.
+
+#### Conditional destination publication
+
+Elision may reserve an outer destination's storage through several nested calls
+without publishing an instance there. The destination binding and lifetime
+become caller-visible only when the selected success or exceptional outcome
+contains that result.
+
+If another outcome is selected:
+
+- raw reserved storage needs no destruction;
+- a body-constructed nonselected provisional result is destroyed by the callee;
+  and
+- a prototype-preinitialized nonselected ordinary result is destroyed by
+  caller-side invocation machinery.
+
+Successful inner completion transfers provisional cleanup responsibility
+outward. An enclosing function that later selects another outcome destroys the
+live provisional value even when it occupies its caller's reserved storage.
+Complete examples are in
+[Zax exceptional result flow](except.md#conditional-result-elision).
 
 #### Caller-visible destination order
 
@@ -2816,7 +2950,7 @@ reach destruction. It changes which resources remain owned by those values at
 that point. Each temporary is destroyed once at its ordinary completion
 boundary.
 
-After body-local scope exit and complete result mapping:
+After body-local scope exit and complete selected-outcome mapping:
 
 1. distinct source result slots are destroyed in reverse result declaration
    order;
@@ -2900,6 +3034,10 @@ Invocation diagnostics should distinguish:
 - several mandatory results forced into one expression;
 - parenthesized expression mode where mapping was intended;
 - unconsumed required results;
+- an unhandled or multiply handled exceptional outcome;
+- exceptional result initialization before producer `except` or forwarding;
+- exceptional outcome discard through `#`;
+- a handler destination invalid for one nested source specialization;
 - incomplete or duplicate result construction;
 - a `return #` slot whose type cannot be default-constructed;
 - result context without a complete declaration;
@@ -2934,6 +3072,10 @@ Programmers must be able to discover:
 - instance-qualified `once` calls with ordinary once-only receiver evaluation;
 - environments retained for closures or default expressions;
 - result construction, remapping, omission, and discard;
+- selection and mapping of success versus exceptional completion shapes;
+- branch-specialized handler mapping for nested equal-label outcomes;
+- destruction of nonselected provisional results;
+- conditional publication of elided destinations;
 - source-slot completion, caller-owned destination order, and any lifetime or
   destruction-order change caused by result elision;
 - a `return #` slot preserved, declaration-initialized, or type-default
@@ -2960,6 +3102,7 @@ Canonical formatting preserves:
 - source-result selectors before destination selectors;
 - bare positional destinations, anonymous typed destinations, and `#` discard;
 - `using` resource-list mapping boundaries;
+- explicit catch, forwarding, and outcome-reshape clauses;
 - explicit transfer intent;
 - comma-list continuation; and
 - one continuation reason per physical newline.
@@ -2990,6 +3133,8 @@ Even deterministic selection cannot prevent every API evolution hazard:
 - renaming a parameter or result label breaks labeled callers;
 - reordering parameters or results changes positional cursors;
 - changing result arity or discardability changes mappings;
+- adding, removing, renaming, or reclassifying an exceptional outcome changes
+  every affected call-site disposition;
 - replacing a routed bare positional destination with `#` leaves that
   destination unsupplied;
 - reordering explicit destination introductions changes their later destruction
@@ -3022,12 +3167,13 @@ Later work must preserve:
 - omitted defaults after explicit inputs in selected-callee prototype order;
 - visible labels, defaults, and result acknowledgement;
 - result slots without mandatory default-construction cost;
-- all-results-or-no-results normal completion;
+- complete ordinary-success or one-exceptional-outcome completion;
 - the distinction between one expression and a result sequence;
 - explicit result mapping and deterministic cursors;
 - visible-prototype-controlled pre-body result construction,
   implementation-controlled body and return construction, caller-visible
-  destination ordering, and elision-driven lifetime unification;
+  destination ordering, conditional destination publication, and
+  elision-driven lifetime unification;
 - narrow complete-declaration result selection;
 - position-specific `return #` preservation or default-completion within the
   complete-result-shape rule;

@@ -6,8 +6,8 @@
 | Audience | Human developers defining, converting, routing, or inspecting structurally related values |
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, and callable result/input reshape mapping; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
-| Does Not Own | Complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
+| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, callable result/input reshape mapping, and callable exceptional-outcome reshape; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
+| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
 
 ## Start with distinct identities
 
@@ -1237,6 +1237,58 @@ is an error until an explicit entry states another route.
 Complete callable construction and invocation are defined by
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#remap-with-reshape).
 
+### Outcome reshape
+
+A callable-surface reshape may rename ordinary success results and exceptional
+outcomes without invoking, handling, or forwarding:
+
+```zax
+FailureNames :: reshape {
+  value: producedValue:
+  failure: parseFailure:
+}
+
+renamedParse := parse reshape FailureNames
+```
+
+One inline mapping can be local to one invocation:
+
+```zax
+parse(source) reshape failure: parseFailure:
+```
+
+Several mappings use one named or local anonymous reshape declaration:
+
+```zax
+parse(source) reshape {
+  tree: parsedTree:
+  notes: parseNotes:
+  failure: parseFailure:
+}
+```
+
+Every entry remains source-to-destination. Reshape entries are separate
+declarations and never use commas. One application accepts either one inline
+mapping or one reshape declaration; it does not accept several inline pairs.
+
+Callable-surface reshape:
+
+- preserves the exceptional category;
+- keeps ordinary mappings in the success shape;
+- preserves payload type, qualifications, stance, origin, and constructedness;
+- creates no runtime value, storage, constructor, or control transfer;
+- cannot map an ordinary result to an exceptional outcome or the reverse; and
+- rejects duplicate destination labels.
+
+Explicit entries apply before equal-label outcomes remain exposed. Applying a
+named reshape to a callable adapts its visible outcome labels without invoking
+it. This lets a retained composition establish unique outcome names before
+`>>` combines stage contracts.
+
+An invocation-level reshape affects only the selected invocation's exposed
+outcome surface. Complete branch-polymorphic catch and forwarding behavior is
+defined by [Zax exceptional result flow](except.md#nested-calls-expose-their-outcomes).
+
 An existing destination can be updated directly through the same declaration:
 
 ```zax
@@ -1335,8 +1387,9 @@ status: = produceParts()
 ```
 
 The first side is always the selected source result and the final side is its
-destination, matching ordinary `<source>: <destination>:` routing. No use-site
-`reshape` keyword exists.
+destination, matching ordinary `<source>: <destination>:` routing. Structural
+value transformation has no use-site `reshape` keyword; the contextual
+use-site keyword is reserved for callable outcome relabeling described above.
 
 The group never uses `= -<>- produceParts()`: that would incorrectly imply that
 every result transforms. The transformed entries also do not combine several
@@ -1479,6 +1532,10 @@ Diagnostics should distinguish:
 - a same-storage view requesting unavailable replacement authority;
 - positional decomposition intent where only name mapping exists;
 - missing, duplicate, inaccessible, or multiply consumed reshape paths;
+- outcome reshape whose source label is absent, destination label collides, or
+  mapping crosses the ordinary/exceptional category boundary;
+- comma-separated reshape entries or several inline mappings where one
+  declaration is required;
 - required results left unconsumed;
 - overlap capture unavailable for the required transfer;
 - pointer-copy lifetime proof deferred to another owner;
@@ -1494,6 +1551,8 @@ tracking components, and selected transfer operations.
 These changes can alter source validity or behavior:
 
 - renaming or reordering a stored member;
+- renaming an exceptional outcome used by catch, forwarding, or retained
+  composition;
 - adding or removing a direct or flattened leaf;
 - changing member identity or qualification;
 - changing scalar width, sign, encoding, fractional position, or endian role;

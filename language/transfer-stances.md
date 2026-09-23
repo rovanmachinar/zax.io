@@ -7,7 +7,7 @@
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | The transfer-stance mental model; declaration, type-alias overlay, and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
-| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
+| Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
 ## Why transfer stance exists
@@ -1058,6 +1058,27 @@ Forwarding crosses two declarations:
 Result construction, mapping, and completion are defined by
 [function invocation](function-invocation.md).
 
+Exceptional handling and forwarding use exactly this rule:
+
+```zax
+value := operation() catch failure: localFailure: {
+  report(localFailure)
+  return
+}
+
+value := operation() except failure: outerFailure:
+```
+
+No implicit `move` or `last` is added. The producer exceptional result stance
+controls transfer into `localFailure` or `outerFailure`; an outer exceptional
+result declaration then controls what its caller receives. Move-only and owning
+payloads therefore state a viable result stance in their callable prototypes.
+
+Conditional elision may construct directly in the handler or outer exceptional
+destination. Provisional cleanup responsibility transfers outward only after
+that mapping succeeds. Complete exceptional behavior is taught by
+[Zax exceptional result flow](except.md#transfer-ownership-and-references).
+
 ### Terminal opportunity when mapping a result
 
 A function result exposes the stance written in its producer prototype.
@@ -1449,6 +1470,8 @@ Diagnostics should identify the deciding contract, including:
 - terminal opportunity requiring explicit intent;
 - terminal-source reuse;
 - a source or result consumed more than once;
+- exceptional handler or forwarding mapping whose source stance cannot satisfy
+  its destination;
 - an exact generated declaration that failed to match;
 - a member path blocking generated transfer;
 - unsupported same-object behavior;
@@ -1468,6 +1491,8 @@ member operation.
   user body.
 - Adding a stance variant may create a loud ambiguity but never wins by
   declaration, import, source, or discovery order.
+- Exceptional handling and forwarding never gain a stronger stance merely
+  because the source result is temporary or the outcome exits a function.
 - Generated availability is exact-shape and demand-driven.
 - Formatters and source-preserving tools retain every stance and intent
   acknowledgement.

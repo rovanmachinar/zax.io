@@ -69,6 +69,9 @@ producing them.
   and lint boundaries.
 - Read [Zax function invocation](language/function-invocation.md) for ordinary
   calls, arguments, defaults, results, result routing, and callable selection.
+- Read [Zax exceptional result flow](language/except.md) for success versus
+  named exceptional outcomes, local handling, explicit forwarding, cleanup,
+  and conditional result elision.
 - Read [Zax lambdas and callable composition](language/lambdas-and-callable-composition.md)
   for lambda expressions, captures, callable storage and receiver lifetime,
   partial application, composition, reshape mapping, chaining, reset, and weak
@@ -157,6 +160,7 @@ producing them.
 - [Execution context](language/execution-context.md)
 - [Safety and analysis](language/safety-and-analysis.md)
 - [Function invocation](language/function-invocation.md)
+- [Exceptional result flow](language/except.md)
 - [Lambdas and callable composition](language/lambdas-and-callable-composition.md)
 - [Intent acknowledgements](language/intent-acknowledgements.md)
 - [Optional values](language/optional-values.md)
@@ -225,9 +229,8 @@ semantics remain non-authoritative until individually reviewed and promoted.
   namespace, import, injection, visibility-baseline, alias, and forwarding
   integration
 
-### Execution, errors, and concurrency
+### Execution and concurrency
 
-- [Except error handling](except.md)
 - [Lazy functions](lazy.md)
 - [Concurrency](concurrency.md)
 - [Compiler warnings and errors](warnings-errors.md)

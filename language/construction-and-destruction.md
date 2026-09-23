@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
-| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
+| Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
 
@@ -1123,6 +1123,12 @@ BufferOwner :: type {
 retained := owner .= [{ newFormat }]
 ```
 
+Replacement-constructor results are ordinary results only. Constructors,
+replacement constructors, and destructors cannot declare or produce
+exceptional outcomes. A lifecycle body calling an exception-producing function
+must handle every outcome locally and still complete its lifecycle obligation;
+it cannot forward through `except`.
+
 The protected reconstructive `.=` expression forwards the literal results
 returned by the selected replacement constructor. It does not synthesize,
 adapt, or infer an arbitrary result.
@@ -1519,6 +1525,21 @@ For construction and destruction, the important consequences are:
 - every incoming, repeated, and exiting path must preserve required construction
   and destruction state.
 
+Exceptional function completion applies the same lifecycle foundation while
+selecting another declared result shape. Before the selected outcome maps:
+
+- body locals and crossed resource scopes complete ordinary exit cleanup;
+- the callee destroys every live body-constructed provisional result outside
+  the selected outcome; and
+- caller-side invocation machinery destroys every live
+  prototype-preinitialized ordinary result outside that outcome.
+
+An exceptional result has no prototype initializer and cannot be constructed
+early. Producer `except` or forwarding constructs it exactly when selecting
+that outcome. The exact cross-boundary order, handler lifetime, and
+conditional-elision consequences are defined by
+[Zax exceptional result flow](except.md#exact-exceptional-completion-order).
+
 A `using` body adds a disposal phase between its body-local and owned-header
 destruction:
 
@@ -1828,6 +1849,8 @@ Programmers must be able to discover:
 - resources retained or reconstructed by custom replacement;
 - copies or snapshots required to avoid alias hazards;
 - scope-exit destruction of local and header bindings on normal and abrupt exits;
+- destruction of live provisional results excluded by a selected exceptional
+  outcome;
 - body-local destruction followed by complete reverse disposal and then reverse
   owned-entry destruction for `using`;
 - post operations run on `next` and normal completion but skipped on `break`,
@@ -1858,6 +1881,10 @@ Diagnostics should distinguish:
   dereference, without proof that a live value exists on that path;
 - missing or duplicate lifecycle transitions on normal paths;
 - normal completion with an incomplete instance or result;
+- exceptional completion with a live nonselected provisional result that its
+  current owner did not destroy;
+- an exceptional result initialized or manually constructed before its
+  selecting `except`;
 - a transfer path that bypasses required construction or destruction, or repeats
   a lifecycle transition without establishing a valid intervening state;
 - possible self or interior alias conflict during replacement;

@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition, postfix `_` keyword-role escape, and strict tree-transparent `bare{...}` neutralization; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
-| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization ([integer literals and realization](integer-literals.md)); literal declarations, payload meaning, merge results, and joining ([literal source and operators](literal-source-and-operators.md)); string/character identities ([strings and characters](strings-and-characters.md)); flow semantics ([core flow control](core-flow-control.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; exceptional `catch`, forwarding `except`, and outcome-`reshape` clause attachment and layout; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition, postfix `_` keyword-role escape, and strict tree-transparent `bare{...}` neutralization; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization ([integer literals and realization](integer-literals.md)); literal declarations, payload meaning, merge results, and joining ([literal source and operators](literal-source-and-operators.md)); string/character identities ([strings and characters](strings-and-characters.md)); flow semantics ([core flow control](core-flow-control.md)); exceptional result semantics ([exceptional result flow](except.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
 
@@ -905,6 +905,107 @@ using ((acquirePair())) {
 The first form preserves a bare result sequence. Complete enrollment behavior is
 owned by [Zax `using`](using.md#multiple-results-and-names).
 
+## Exceptional outcome clauses
+
+`catch` and forwarding `except` are contextual postfix clauses on one complete
+invocation. They cover the receiver, argument evaluation, nested invocations,
+and selected outer callable represented by that invocation. Outcome `reshape`
+may qualify that same invocation or a complete callable-valued expression whose
+visible outcome contract is being adapted.
+
+```zax
+value := operation() catch failure {
+  return
+}
+
+value := operation() except failure: outerFailure:
+
+value := operation() reshape failure: localFailure:
+```
+
+The first clause remains on the invocation's logical statement. `catch` always
+uses a braced effective body whose `{` is on the clause header's final physical
+line. A following clause attaches on the same physical line as the preceding
+handler's `}`:
+
+```zax
+value := operation() catch firstFailure {
+  return
+} catch secondFailure {
+  return
+} except thirdFailure: outerFailure:
+```
+
+The braced handler owns its ordinary body scope. A source-to-destination pair
+uses adjacent result labels:
+
+```zax
+catch failure: localFailure: {
+  return
+}
+```
+
+A typed destination keeps declaration spacing:
+
+```zax
+catch failure: report : MyFailureReport {
+  return
+}
+```
+
+Same-name handling and forwarding omit the destination label:
+
+```zax
+catch failure {
+  return
+}
+
+except failure
+```
+
+Outcome reshape accepts one inline source/destination mapping or one named or
+local anonymous `reshape` declaration:
+
+```zax
+makeValue() reshape failure: makeFailure:
+makeValue() reshape MyFailureNames
+parse reshape MyFailureNames
+
+makeValue() reshape {
+  value: producedValue:
+  failure: makeFailure:
+}
+```
+
+The inline source form does not create an anonymous structural value or invoke a
+runtime operator. A reshape body writes one mapping per declaration and never
+uses commas. One application cannot list several inline mapping pairs; use a
+named or anonymous reshape declaration instead. Complete no-storage mapping and
+outcome behavior is owned by
+[structural shapes and compatibility](structural-shapes-and-compatibility.md#outcome-reshape)
+and [exceptional result flow](except.md#reshape-an-exposed-outcome-label).
+
+Inside an open call, packet, or `using` delimiter, ordinary delimiter layout
+permits multiline source. Outside an open construct, moving an outcome clause to
+another physical line requires the ordinary explicit `\` continuation; the
+completed invocation alone does not continue its statement:
+
+```zax
+value := operation() \
+  catch failure {
+    return
+  }
+```
+
+Grouping fixes the invocation or expression that a clause follows. A handler on
+an outer invocation can receive outcomes exposed by nested calls; a handler
+written directly on a nested call handles that outcome before outer invocation
+begins.
+
+Formatters preserve clause order, source/destination label order, handler
+bodies, explicit continuation, and grouping. They do not move a clause across
+an invocation or add/remove a reshape.
+
 ## Statements, blocks, and bodies
 
 Zax distinguishes these source forms:
@@ -1658,6 +1759,11 @@ concept owner that shows a likely confusion should link here instead of
 restating the rule. The term itself is defined by
 [language-design terms](terms.md#contextual-keyword).
 
+`catch`, forwarding or producer `except`, and use-site outcome `reshape`
+likewise have keyword roles only in their established result-flow positions.
+Elsewhere the same spellings remain subject to ordinary identifier or phrase
+interpretation.
+
 ### Postfix `_` keyword escape
 
 A single postfix `_` forces one word through non-keyword grammar and is removed
@@ -2066,6 +2172,14 @@ Layout and separator diagnostics additionally distinguish:
 - malformed or mismatched `[< ... >]` compiler-directive delimiters;
 - a compiler-directive enclosure in a source position that accepts no
   directive attachment;
+- an outcome clause detached from the invocation it qualifies;
+- an unbraced `catch` body;
+- a following `catch`, forwarding `except`, or outcome `reshape` clause
+  physically detached from the preceding handler;
+- exceptional source/destination labels whose adjacency or declaration spacing
+  presents another mapping;
+- comma-separated reshape entries or several inline reshape mappings where one
+  reshape declaration is required;
 - an array-entry `from` without a complete iterable source;
 - bare default-remainder `..` outside a valid final array-entry position;
 - `..<` without a written end;

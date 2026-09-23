@@ -6,8 +6,8 @@
 | Audience | Human developers defining, storing, composing, and invoking callable values |
 | Applies To | Lambda expressions, captures, callable storage and receiver lifetime, partial application, composition, and chaining; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | Lambda expression and capture behavior; generated lambda receivers; fixed/varying and bound/unbound callable storage integration; receiver-lifetime modes; installed binding kind and weak callable invocation; callable transfer, reset, recursion, and repeated capture state; partial argument capture; positional and reshape composition; immediate chaining; callable-specific costs and diagnostics |
-| Does Not Own | General declaration rules ([declarations and bindings](declarations-and-bindings.md)); call phases and result routing ([function invocation](function-invocation.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); reference lifetime ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and opaque lifetime facilities ([pointers and arenas](pointers-and-arenas.md)); exact operator registration ([operator catalog](operator-catalog.md)); or complete generics, variadics, async, reflection, FFI, ABI, and lowering |
+| Owns | Lambda expression and capture behavior; generated lambda receivers; fixed/varying and bound/unbound callable storage integration; receiver-lifetime modes; installed binding kind and weak callable invocation; callable transfer, reset, recursion, and repeated capture state; partial argument capture; positional and reshape composition; preservation and relabeling of exceptional outcomes through retained composition; immediate chaining; callable-specific costs and diagnostics |
+| Does Not Own | General declaration rules ([declarations and bindings](declarations-and-bindings.md)); call phases and result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete transfer meaning ([transfer stances](transfer-stances.md)); reference lifetime ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and opaque lifetime facilities ([pointers and arenas](pointers-and-arenas.md)); exact operator registration ([operator catalog](operator-catalog.md)); or complete generics, variadics, async, reflection, FFI, ABI, and lowering |
 | Source / Provenance | Maintainer-supplied lambda design, legacy function composition evidence, and current declaration, invocation, lifetime, transfer, Nothing, source, and operator design |
 | Supersedes | Current-purpose lambda, capture, callable-storage, composition, and chaining material formerly distributed through root legacy function pages and raw project input |
 
@@ -59,6 +59,31 @@ doubleLater := [[]] (
 capture uses interior spaces, as in `[[ factor ]]`; multiline captures place the
 entries on indented lines. Complete token and spacing rules are in
 [source structure](source-structure.md#array-expressions-capture-delimiters-and-slicing).
+
+### Lambdas may declare exceptional outcomes
+
+A lambda uses the same completion contract as a named function:
+
+```zax
+reader := [[ source ]] (
+  value : MyValue,
+  failure except : MyFailure
+)() {
+  if cannotRead(source)
+    except failure: makeFailure(source)
+
+  return readValue(source)
+}
+```
+
+The exceptional outcome is part of the minted callable prototype. Invocation,
+storage, catch, forwarding, outcome reshape, and composition preserve it under
+ordinary callable rules.
+
+Selecting `failure` ends one invocation. It does not destroy or reset `reader`
+or its capture receiver. A reference exceptional payload projected from
+captured state retains that capture origin and cannot outlive the receiver
+relationship that keeps it valid.
 
 ## Capture values, references, and producer results
 
@@ -207,6 +232,20 @@ Four independent choices describe a callable:
 
 Receiver-lifetime words require `bound`: an unbound implementation has no
 receiver lifetime to retain.
+
+A callback is a callable used through a parameter or stored value rather than a
+separate callable category. Its visible prototype includes every ordinary and
+exceptional result:
+
+- every installed callback implementation must satisfy that outcome contract;
+- the invoker handles or forwards outcomes at the callback call site;
+- an implementation with additional outcomes cannot enter a slot that omits
+  them; and
+- a wrapper lambda may handle or reshape outcomes to expose another explicit
+  callback contract.
+
+Runtime callback selection therefore performs no handler discovery. The static
+prototype already determines every possible completion outcome.
 
 ### Fixed and varying examples
 
@@ -405,8 +444,10 @@ namespace and any root alias remain deferred library-surface placement.
 
 ### Weak invocation is conditionally empty
 
-A `bound weak` callable permits only zero results and never panics merely because
-its slot or observed receiver is unavailable.
+A `bound weak` callable permits only a truly empty result contract: no ordinary
+results and no exceptional results. An `except` result is a result and therefore
+makes weak storage unavailable. A valid zero-result weak callable never panics
+merely because its slot or observed receiver is unavailable.
 
 Invocation keeps ordinary caller-side setup:
 
@@ -422,9 +463,10 @@ Argument effects, defaults, construction, temporary lifetimes, and destruction
 still occur when no body runs. This makes absence change only body invocation,
 not caller-side evaluation.
 
-No fake result can be manufactured, so resultful weak callable prototypes are
-unavailable. `?callback` remains false for an unavailable slot and true when any
-target is assigned; callers need not guard invocation merely to avoid panic.
+No ordinary or exceptional result can be manufactured, so every resultful weak
+callable prototype is unavailable. `?callback` remains false for an unavailable
+slot and true when any target is assigned; callers need not guard a valid
+zero-result weak invocation merely to avoid panic.
 
 ## Callable transfer, reset, and recursion
 
@@ -575,6 +617,39 @@ and creates no intermediate aggregate. Mapping proceeds deterministically:
 An incompatible equal-label pair is an error rather than a reason to guess
 another positional mapping.
 
+### Exceptional outcomes in retained composition
+
+`>>` exposes the union of its stages' exceptional outcomes. A later stage runs
+only after every prior stage selected success:
+
+```zax
+pipeline := parse >> render
+```
+
+If `parse` selects an exceptional outcome, `render` is not invoked. Calling
+`pipeline` must handle or forward that parse outcome. An exceptional outcome
+from `render` remains independently exposed.
+
+A retained callable prototype requires unique exceptional labels. Reshape a
+collision before composition:
+
+```zax
+ParseFailureNames :: reshape {
+  failure: parseFailure:
+}
+
+renamedParse := parse reshape ParseFailureNames
+pipeline := renamedParse >> render
+```
+
+Applying the reshape adapts `parse`'s visible outcome label without invoking it.
+The composed callable preserves payload type, qualifications, transfer stance,
+origin, and ordinary-versus-exceptional category. It never merges same-typed
+failures or chooses a destination by type.
+
+Complete outcome production, catch, forwarding, and conditional elision are
+taught by [Zax exceptional result flow](except.md).
+
 ## Chain calls immediately
 
 `|>` performs calls now:
@@ -589,6 +664,21 @@ for later invocation.
 
 Named and several-result chaining use the same explicit routing principles as
 composition.
+
+Each reached stage's exceptional outcomes remain exposed to a trailing handler.
+An exceptional stage skips every later stage. Equal-label stage outcomes may
+share one branch-specialized catch at that immediate use or be distinguished by
+outcome reshape:
+
+```zax
+result := source |>
+  parse() reshape failure: parseFailure: |>
+  render() catch parseFailure {
+    return
+  } catch failure {
+    return
+  }
+```
 
 ## Optional callable values
 
@@ -615,13 +705,16 @@ Programmers and tools must expose:
 - unique/strong/weak and local/atomic accounting;
 - liveness probes and weak promotion;
 - composition call sequence and mapping;
+- retained outcome sets, exceptional-label reshape, and skipped later stages;
 - reset/replacement work and panic paths; and
 - static lifetime, origin, transfer, and repeated-state analysis.
 
 Diagnostics should distinguish malformed capture presentation, unavailable
 capture copy, reference escape, binding/storage mismatch, missing ownership
 capacity, resultful weak storage, failed composition mapping, repeated invalid
-capture use, unavailable invocation, and ineligible reset.
+capture use, unavailable invocation, ineligible reset, colliding retained
+exceptional labels, and outcome reshape that changes result category or cannot
+find its source.
 
 ## Boundaries and maturity
 

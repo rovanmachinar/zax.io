@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
-| Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
+| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
 
@@ -819,6 +819,12 @@ Receiver-capable storage may additionally state `unique`, `strong`,
 `strong atomic`, `weak`, or `weak atomic`. These words describe the maximum
 receiver-lifetime relationship the slot can store; an installed unbound or
 borrowed target remains unbound or borrowed.
+
+`weak` and `weak atomic` require a completely empty callable result contract.
+Neither ordinary nor exceptional results are permitted because failed weak
+promotion cannot manufacture a result. Complete invocation behavior is defined
+by
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#weak-invocation-is-conditionally-empty).
 
 For new direct storage, declaration-side `final` resolves the omitted type-side
 place stance to final. A `final` and an otherwise defaulted varying callable
@@ -2048,6 +2054,27 @@ make final : (
 }
 ```
 
+An exceptional result places `except` on the result declaration:
+
+```zax
+read final : (
+  value : MyValue,
+  failure except : MyFailure
+)() = {
+  // ...
+}
+```
+
+`except` belongs to this callable result declaration, not to `MyFailure`.
+Success publishes the ordinary `value` result; producer `except` or forwarding
+constructs and publishes `failure` instead.
+
+Exceptional results accept no declaration initializer and may not be manually
+constructed before selection. Their one construction point remains visible in
+producer `except` or explicit forwarding. Complete outcome, handling, and
+cleanup behavior is defined by
+[Zax exceptional result flow](except.md).
+
 A result's initializer decides how that slot is constructed. Once the result
 exists, the stance written on the result declaration decides how later consumers
 see it:
@@ -2125,6 +2152,18 @@ apply. Complete result labels, routing, omission, construction order, and
 completion are defined by
 [Zax function invocation](function-invocation.md#result-labels-and-acknowledgement).
 
+A `catch` destination is an ordinary declaration scoped to its handler body:
+
+```zax
+value := operation() catch failure: localFailure: {
+  report(localFailure)
+  return
+}
+```
+
+The enclosing success declaration becomes visible only after the success
+initializer completes, so it is unavailable in its exceptional handler.
+
 `using` applies these rules in a mapping-capable resource list. It permits
 same-name source-label capture and an explicit source/destination pair, including
 a complete typed destination declaration, but rejects positional introduction
@@ -2186,6 +2225,11 @@ Diagnostics should distinguish:
 - positional introduction of several named `using` results where source-result
   labels are required;
 - use of an unconstructed result slot as a live value;
+- an `except` marker outside a callable result declaration;
+- an exceptional result with a prototype initializer or manual early
+  construction;
+- a success declaration used from its exceptional handler before initialization
+  completed;
 - an identity declaration missing either its admission or surface keyword; and
 - conflicting `admit`/`restricted` or `expose`/`opaque` intent;
 - a type-qualified call to a function that is not `once`; and

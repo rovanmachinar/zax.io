@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing instance lifetimes, life paths, instance places, references, reference origin, escape, and synchronous borrowing; not a formal specification |
 | Implementation State | Not established by this repository |
 | Owns | Life paths; instance places and resident instances; reference binding and origin; references across mutation and replacement; member and nested-place consequences; synchronous parameter and temporary borrowing; returned references, including receiver-origin `self`; reference capture and storage; reference-facing diagnostics, costs, and unsafe boundaries |
-| Does Not Own | Lambda expression/capture syntax and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); how construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); complete [variant behavior](variants.md) or unmanaged [union behavior](unions.md); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
+| Does Not Own | Lambda expression/capture syntax and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); how construction and destruction perform lifecycle transitions ([construction and destruction](construction-and-destruction.md)); cohesive [exceptional result flow](except.md); complete [variant behavior](variants.md) or unmanaged [union behavior](unions.md); composition publication, forwarding, and outer-cast forms ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); complete qualifier meaning ([qualifiers](qualifiers.md)); pointer ownership, arenas, and allocation disposition ([pointers and arenas](pointers-and-arenas.md)); transfer stances ([transfer stances](transfer-stances.md)); or general safety-contract behavior ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy pointer, function-capture, scope, construction, and global-lifecycle evidence reconciled with current qualifier, invocation, optional, identity, and transfer design |
 | Supersedes | Reference and lifetime teaching formerly distributed through root legacy pages |
 
@@ -107,7 +107,7 @@ The same model applies across Zax:
 | Namespace | A module/namespace declaration introduces a path within global execution and ends before the containing unnamed global path; namespaces are not function-, block-, or type-local lifetime containers |
 | Flow scope | Blocks, clauses, loops, and explicit `scope` create bounded paths destroyed when control leaves them |
 | Type instance | Composition creates contained member places and nested paths bounded by the containing instance |
-| Function invocation | Parameters, result slots, and invocation temporaries live through the complete synchronous call and result-mapping boundary |
+| Function invocation | Parameters, selected result slots, and invocation temporaries live through the complete synchronous call and selected-outcome mapping boundary |
 | Lambda capture | A capturing lambda owns a capture path tied to the lambda instance |
 | Expression temporary | A temporary path survives through the complete use or transfer that required it |
 | Optional | A present optional owns one nested boxed path; reset ends that path |
@@ -643,10 +643,37 @@ which life path owns the unified value. Complete result-slot, destination-order,
 and elision behavior is defined by
 [Zax function invocation](function-invocation.md#result-slots-destinations-and-elision).
 
+An exceptional outcome makes that unification conditional. Outer storage may be
+reserved and passed through nested calls before any value lifetime begins. The
+destination life path becomes caller-visible only when the selected success or
+exceptional outcome publishes that result.
+
+If another outcome is selected, raw reserved storage has no instance to destroy.
+If a provisional instance was already constructed, its current owner destroys
+it before propagation. Successful inner completion transfers provisional
+cleanup responsibility outward until the final destination binding is
+published.
+
+This permits deep result elision without letting an exceptional path observe,
+use, or destroy a success destination whose lifetime never committed. Complete
+flow examples are in
+[Zax exceptional result flow](except.md#conditional-result-elision).
+
 ## Returned references
 
 A reference result owns only an access path. Result-slot destruction does not
 make the referent terminal and does not extend its life path.
+
+The same rule applies to an exceptional reference result. Selecting its named
+outcome supplies the control distinction but grants no target lifetime:
+
+```zax
+failure except : MyError readonly &
+```
+
+Its origin must survive the complete handler or forwarding consumer. `catch`
+does not extend the referent life path, and outcome reshape preserves rather
+than erases origin.
 
 The compiler tracks the returned target place and its origin:
 

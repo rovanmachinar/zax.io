@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing `using` resource entries, lifetime extension, structural disposal, exit behavior, ordering, costs, and diagnostics; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | The complete `using` operation; resource-entry enrollment; structural recognition of the ordinary `dispose` phrase; disposal compatibility; disposal and destruction order; using-specific flow eligibility and bypass; duplicate-enrollment intent; scoped-resource costs, diagnostics, formatting, and source stability |
-| Does Not Own | General result mapping ([function invocation](function-invocation.md)); declaration behavior ([declarations and bindings](declarations-and-bindings.md)); ordinary reference semantics ([lifetimes and references](lifetimes-and-references.md)); optional presence and boxed lifetime ([optional values](optional-values.md)); operator-phrase declaration and selection ([operator phrases](operator-phrases.md)); qualification meaning ([qualifiers](qualifiers.md)); terminal destruction ([construction and destruction](construction-and-destruction.md)); general label and transfer lookup ([core flow control](core-flow-control.md)); general intent acknowledgement ([intent acknowledgements](intent-acknowledgements.md)); generic cleanup hooks; async cancellation; or compiler lowering |
+| Does Not Own | General result mapping ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); declaration behavior ([declarations and bindings](declarations-and-bindings.md)); ordinary reference semantics ([lifetimes and references](lifetimes-and-references.md)); optional presence and boxed lifetime ([optional values](optional-values.md)); operator-phrase declaration and selection ([operator phrases](operator-phrases.md)); qualification meaning ([qualifiers](qualifiers.md)); terminal destruction ([construction and destruction](construction-and-destruction.md)); general label and transfer lookup ([core flow control](core-flow-control.md)); general intent acknowledgement ([intent acknowledgements](intent-acknowledgements.md)); generic cleanup hooks; async cancellation; or compiler lowering |
 | Source / Provenance | Legacy [flow-control](../flow-control.md) resource-lifetime intent, reconciled with current flow, invocation, lifetime, operator, and destruction design |
 
 ## Mental model
@@ -133,6 +133,30 @@ provides the required operation.
 ## Resource entries
 
 Each resource entry is evaluated once in visible source order.
+
+An entry becomes enrolled only after its producer selects success and completes
+the mapped resource destination:
+
+```zax
+using (
+  connection := connect(),
+  grant := acquireGrant(connection) catch failure {
+    return
+  }
+) {
+  use(connection, grant)
+}
+```
+
+If grant acquisition selects `failure`, no `grant` instance becomes enrolled,
+disposed, or destroyed. The earlier `connection` entry is already enrolled, so
+the handler's outward transfer performs ordinary reverse disposal and
+destruction for `connection` before continuing.
+
+A catch handler cannot fall through into a body that requires an unconstructed
+resource. Forwarding `except` has the same partial-header cleanup consequence.
+Outcome handling and forwarding are defined by
+[Zax exceptional result flow](except.md#acquisition-inside-using).
 
 ### Named owned values
 
@@ -696,9 +720,11 @@ using (attempt := tryAcquire()) {
 }
 ```
 
-A producer that returns normally completes its entire declared result shape
-before those results are enrolled. Earlier list-entry effects remain observable
-if a later entry cannot complete normally.
+A producer selecting success completes its entire ordinary result shape before
+those results are enrolled. A selected exceptional outcome enrolls no success
+result from that producer. Earlier entries remain enrolled and receive ordinary
+cleanup when the handler or forwarding transfer exits the partially established
+`using`.
 
 An unresolved panic is fatal rather than an ordinary unwinding path. `using`
 does not promise that remaining disposal calls or destruction complete after a
@@ -740,6 +766,9 @@ Diagnostics should distinguish:
 - an invalid or incompatible typed result destination;
 - an expression grouped into one-value mode when it has several mandatory
   results;
+- an exceptional acquisition outcome that is neither caught nor forwarded;
+- a catch handler that falls through while its resource destination remains
+  unconstructed;
 - an optional whose possible immediate payload exposes an incompatible
   `dispose`;
 - a borrowed place that cannot remain valid through disposal;
@@ -799,6 +828,8 @@ The following changes are source- or behavior-visible:
   implementation-defined construction;
 - changing a result between value and reference changes ownership and
   destruction;
+- adding or changing an acquisition's exceptional outcomes changes which
+  resource-list paths complete and which earlier entries require exit cleanup;
 - changing optional depth changes which payload, if any, participates;
 - changing anonymous `:` enrollment to `#` suppresses disposal without changing
   the entry lifetime or destruction position;
