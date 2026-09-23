@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations and explicit discard names; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
 | Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -181,6 +181,92 @@ pointer : * = original
 
 The complete inference algorithm and exact set of partially explicit qualifiers
 remain later design.
+
+`#` in the name position, as in `# : Resource`, introduces no name. `#` between
+a name and its type keeps the name and is the unread-binding marker described
+next.
+
+### Names the body may leave unread
+
+A binding can exist because it is constructed, required by a signature, or
+stored for its lifetime, while this scope never reads the name. Put `#` between
+the name and the type:
+
+```zax
+{
+  lock # : MyLock = mutex
+  work()
+}
+```
+
+`lock` is an ordinary binding. The marker says this scope may finish without
+reading it. `MyLock` is still constructed at entry and destroyed at block exit.
+
+The same marker on a parameter does not remove the argument from the call. The
+body is excused from reading the name; the caller still supplies it. The marker
+is not part of the callable contract, so another implementation of the same
+prototype may read the parameter:
+
+```zax
+ignore final : ()(
+  input # : Integer
+) = {
+}
+```
+
+Leave the marker off, and an unread named binding is an intent error. The name
+looks forgotten:
+
+```zax
+{
+  lock : MyLock = mutex // error: lock is never used
+  work()
+}
+```
+
+This is not an `intent<...>` acknowledgement. An intent enclosure confirms a
+suspicious operation that is present in the source. An unread binding has no
+such operation. The `#` marker is the acknowledgement, and it belongs on the
+declaration.
+
+When the name is unnecessary, use the anonymous form from the previous section
+instead of marking the type:
+
+```zax
+{
+  : MyLock = mutex
+  work()
+}
+```
+
+A result uses the same marker position for a different permission. In
+`diagnostic # : String`, `#` lets the caller omit that result. The function
+still produces it. Caller acknowledgement is taught by
+[function invocation](function-invocation.md#required-and-discardable-results).
+
+A name this body did not declare is acknowledged where it is already in scope:
+
+```zax
+value #
+```
+
+`value #` is a complete statement. It does not declare `value`. A declaration
+continues with `:` or `:=`. The statement is legal only for a binding that
+already exists. An inherited lambda parameter is the ordinary case;
+[lambdas](lambdas-and-callable-composition.md#inherit-a-complete-prototype)
+show it on a complete callback.
+
+Attached `#` is a different operation. It reads the value:
+
+```zax
+myBits : U8 = 16
+count := #myBits
+```
+
+`#myBits` is population count. The
+[integer operator catalog](integer-operator-catalog.md#counts-and-reductions)
+owns that family. A spaced prefix such as `# value` is not an unread-name
+acknowledgement.
 
 ### Direct initialization
 
@@ -473,7 +559,7 @@ self-reference cannot be an ordinary by-value copy of a function value that does
 not yet exist.
 
 A bound lambda instead uses its generated receiver for direct self-recursion:
-`_.(...)` calls the same lambda receiver and minted implementation. Complete
+`_(...)` calls that receiver. Complete
 capture and recursion behavior is defined by
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#self-recursion-uses-the-lambda-receiver).
 Mutually recursive `forward` requirements remain later callable work.
@@ -1367,6 +1453,10 @@ value # : Value           // binding exists; unused use is intentional
 DestinationType : type    // concrete type argument; no runtime value
 ```
 
+The middle form is the unread-name marker from
+[names the body may leave unread](#names-the-body-may-leave-unread). It does not
+change `DestinationType` into a runtime value.
+
 A value receiver may accept a type argument without that argument contributing
 receiver discovery:
 
@@ -2218,7 +2308,8 @@ Diagnostics should distinguish:
 - direct infinitely recursive type layout;
 - use of an incomplete type where completed layout is required;
 - ambiguous multi-result mapping;
-- implicit instance-member access without `_.`; and
+- implicit instance-member access without `_.`;
+- an unread named binding that was not acknowledged with `#`;
 - a declaration form used in a source position that does not accept it;
 - declaration-like spacing that conflicts with label intent;
 - duplicate bindings introduced by a result-routing construct; and
@@ -2252,7 +2343,9 @@ MyCount :: identity admit expose type U32
 
 A formatter may canonicalize `name : =` to `name :=`. It must preserve a
 missing anonymous name versus an explicit `#`, even though those ordinary
-declarations have the same value behavior. It must also preserve the separation
+declarations have the same value behavior. It must also preserve `#` between a
+name and its type, and a statement `name #`, because those acknowledge an
+unread binding rather than removing its name. It must also preserve the separation
 among binding, value, access, and referent-place qualifiers and must not silently
 resolve contradictory source intent. It may normalize qualifier ordering and
 spacing but must not add or remove explicit qualifiers.
@@ -2276,6 +2369,10 @@ It establishes constraints that later work must preserve:
   without changing when a declared binding becomes visible;
 - ordinary anonymous declarations with a missing name or explicit `#` retain
   equivalent value behavior outside mapping-specific contexts;
+- `name # : Type` lets that scope leave the binding unread, while result `#`
+  remains the caller's permission to omit a result;
+- a statement `name #` acknowledges an existing binding this body did not
+  declare and does not introduce a declaration;
 - result slots may delay construction as a specialized output obligation without
   creating an initialize-later form for ordinary local declarations;
 - named non-value definitions may expose incomplete self-names without making

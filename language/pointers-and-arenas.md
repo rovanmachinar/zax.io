@@ -1413,10 +1413,6 @@ metadata remain dormant until it enters `strong` or `strong atomic` ownership.
 | Collected deferred recovery | Prompt at closure or cycle eviction | Arena teardown/reset | Enabled |
 | Collected attached | Attached policy after closure or eviction | Arena teardown/reset | Enabled |
 
-**Deferred-recovery allocation** is the accepted concept. Legacy material used
-`discard`, which is superseded. A unique or strong allocation may both select
-prompt destruction with arena-delayed recovery.
-
 ## Allocation failure
 
 The underlying arena request may fail and produce no allocation. `@` and `@!`

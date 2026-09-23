@@ -7,7 +7,7 @@
 | Applies To | Cross-file global construction, dependency ordering, circular initialization, `once`, teardown, and concurrency |
 | Owns | Preserved legacy ordering and failure pressure, activation pressure, and retirement criteria |
 | Does Not Own | The current process life-path mental model |
-| Source / Provenance | Legacy `ctor-dtor.md`, `basics.md`, and work item `014` |
+| Source / Provenance | Former constructor page, removed from the tree and retained in git history; `basics.md`; work item `014` |
 
 ## Current boundary
 
@@ -34,6 +34,29 @@ Legacy design proposed:
 - reverse destruction order;
 - lazy `once` construction interleaved with global construction history; and
 - thread-aware initialization for `once`.
+
+The intended value mechanism is a lazy unique instance for one declared place.
+The legacy spelling is illustrative; it is not current declaration syntax:
+
+```zax
+// Illustrative legacy form for a future once value.
+uniqueId final : (result : Integer)() = {
+  value once : Atomic$(Integer)
+  return ++value
+}
+```
+
+The claims attached to that example are the direction future lifecycle work
+must preserve while it resolves the open ordering questions below:
+
+- the instance is constructed on first access, not at every call;
+- concurrent first access constructs it once;
+- allocation uses the accessing thread's context allocator; and
+- destruction is interleaved with global destruction in reverse construction
+  order.
+
+A `once` function is not this value. Type-callable `once` functions already
+have a current call rule and do not memoize a returned instance.
 
 Future work must reconcile those proposals with:
 

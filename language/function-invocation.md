@@ -1399,19 +1399,23 @@ explicitly declines an accessible value or destination at that position while
 the surrounding construct determines the lifetime consequence:
 
 - result declarations use `#` to permit caller omission;
+- a parameter, local, or other non-result declaration uses `#` so this scope
+  may leave that name unread, as taught by
+  [declarations and bindings](declarations-and-bindings.md#names-the-body-may-leave-unread);
 - ordinary caller mapping uses `#` to consume a produced result without exposing
   a destination;
 - a `using` mapping keeps that result as an anonymous owned entry while
   suppressing body access and disposal; and
 - return lists use `#` to preserve or default-complete the corresponding slot.
 
-An exceptional outcome cannot be marked, mapped, or omitted with `#`; it must
-be handled or forwarded explicitly.
+An exceptional outcome cannot be declared or omitted with `#`. The caller
+handles or forwards it. A `catch` may still map the payload destination to
+`#`, which handles the outcome and introduces no payload name. That form is
+taught by [exceptional result flow](except.md#handler-destinations-use-result-mapping).
 
 `return #` differs materially from a bare return: `return #` may default-complete
 an unconstructed ordinary slot, while a bare return requires every ordinary
-success slot to be complete already. Local, type, and memory-policy uses of `#` remain
-[legacy discard](../discard.md) input.
+success slot to be complete already.
 
 ## Result labels and acknowledgement
 

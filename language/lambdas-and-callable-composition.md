@@ -147,6 +147,36 @@ report := [[ sourceCount: : MyCount ]] ()() {
 }
 ```
 
+A `#` destination stores the capture and introduces no body name:
+
+```zax
+keeper := [[
+  source: # : StoredResource,
+  visible: kept:
+]] ()() {
+  use(kept)
+}
+```
+
+`source` is constructed as `StoredResource` when `keeper` is created and
+destroyed with `keeper`'s receiver. The body cannot name it. `source: #`
+without a type copies the source the same way and likewise introduces no name.
+The empty-name form above is different: `sourceCount: : MyCount` still binds
+`sourceCount`.
+
+The bare destination name and the receiver member are the same capture:
+
+```zax
+report := [[ sourceCount: capturedCount: ]] ()() {
+  print(capturedCount)
+  print(_.capturedCount)
+}
+```
+
+The capture list inserts `capturedCount` as a body binding for that receiver
+member. A read of either spelling uses the capture. A `#` destination has no
+member name, so the discarded `source` above has no `_.source`.
+
 ### Explicit reference capture borrows
 
 ```zax
@@ -335,7 +365,7 @@ recursive := [[]] ()(
   value : Integer
 ) bound {
   if value > 0
-    _.(value - 1)
+    _(value - 1)
 }
 
 localCapture := [[ value ]] ()() {
@@ -360,7 +390,7 @@ observer : ()() bound weak = sharedCallback
 ```
 
 A noncapturing lambda may be unbound. It may instead be bound when it needs its
-self receiver, including recursion through `_.(...)`. Capturing necessarily
+self receiver, including recursion through `_(...)`. Capturing necessarily
 creates a generated bound receiver.
 
 Plain `bound` erasure borrows `localCapture`; its lifetime must remain valid.
@@ -384,6 +414,23 @@ callback : MyCallback = [[ value ]] {
 Prototype inheritance is all-or-nothing. The destination supplies results,
 inputs, labels, defaults, qualifications, binding category, and lifetime
 capacity together. An inferred declaration writes the complete prototype.
+
+An inherited parameter is in scope even though this lambda did not write it.
+Leaving it unread is the same intent error as any other unread name. Acknowledge
+it with the trailing marker:
+
+```zax
+MyHandler :: alias type ()(
+  value : Integer
+) bound strong
+
+handler : MyHandler = [[]] {
+  value #
+}
+```
+
+`value #` does not declare `value`. The declaration rule is taught by
+[declarations and bindings](declarations-and-bindings.md#names-the-body-may-leave-unread).
 
 A `>>` target may similarly supply the complete remaining prototype when target
 selection is unambiguous.
@@ -512,11 +559,13 @@ countDown := [[]] ()(
   value : Integer
 ) bound {
   if value > 0
-    _.(value - 1)
+    _(value - 1)
 }
 ```
 
-`_.(...)` invokes the same receiver and minted implementation. Replacing a slot
+`_(...)` calls this receiver and its minted implementation. The parentheses are
+the call, as in `myValue(...)`. The dot is member access, as in
+`_.capturedCount`, not part of the call. Replacing a slot
 through which this lambda was reached does not redirect self-recursion. An
 unbound lambda has no `_`.
 
@@ -709,12 +758,22 @@ Programmers and tools must expose:
 - reset/replacement work and panic paths; and
 - static lifetime, origin, transfer, and repeated-state analysis.
 
-Diagnostics should distinguish malformed capture presentation, unavailable
-capture copy, reference escape, binding/storage mismatch, missing ownership
-capacity, resultful weak storage, failed composition mapping, repeated invalid
-capture use, unavailable invocation, ineligible reset, colliding retained
-exceptional labels, and outcome reshape that changes result category or cannot
-find its source.
+Diagnostics should distinguish:
+
+- malformed capture presentation;
+- unavailable capture copy;
+- reference escape;
+- binding or storage mismatch;
+- missing ownership capacity;
+- an unread capture name, unless a `#` destination stored it without a name or
+  the body read the bare name or `_.name`;
+- resultful weak storage;
+- failed composition mapping;
+- repeated invalid capture use;
+- unavailable invocation;
+- ineligible reset;
+- colliding retained exceptional labels; and
+- outcome reshape that changes result category or cannot find its source.
 
 ## Boundaries and maturity
 

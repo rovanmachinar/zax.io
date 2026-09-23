@@ -285,8 +285,10 @@ The following are registered warnings, default states, and their meaning:
     * a declaration was found to not follow standard naming conventions for the language
 * `result-not-captured` (error)
     * every return result needs to be captured (unless marked with `#`)
-* `variable-declared-but-not-used` (error)
-    * every declared variable must be used (unless marked with `#`)
+* `variable-declared-but-not-used` (legacy; superseded)
+    * an unread named binding is an intent error unless the declaration or an
+      inherited name acknowledges it with `#`; current behavior is taught by
+      [declarations and bindings](language/declarations-and-bindings.md#names-the-body-may-leave-unread)
 * `type-mutability-qualifier-not-supported`
     * a specific `type` mutability qualifier was selected which is not supported
 * `specifier-ignored` (always)

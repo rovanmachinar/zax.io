@@ -217,8 +217,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
   life-path and non-owning reference design
 - [Pointers, allocation, and arenas](language/pointers-and-arenas.md) — current
   dynamic allocation, ownership, disposition, and arena design
-- [Constructors and destructors](ctor-dtor.md)
-- [Discard operator](discard.md)
 
 ### Build-time programming and modules
 

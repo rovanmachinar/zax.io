@@ -201,6 +201,21 @@ value := operation() catch failure: \
 }
 ```
 
+A discarded destination handles the outcome and introduces no payload name:
+
+```zax
+value := operation() catch failure: # {
+  return
+}
+```
+
+The payload is still constructed for the handler and destroyed when the handler
+exits. The body cannot read it. A value-producing call still cannot fall
+through into the success continuation; `return` or another transfer leaves the
+handler. `#` does not omit the outcome. Omitting the outcome remains an error,
+as [every exposed outcome](#every-exposed-outcome-is-handled-or-forwarded)
+requires `catch` or `except`.
+
 The producer result stance controls transfer into the handler destination.
 Mapping may copy, move, convert, allocate, bind a reference, or be elided under
 the ordinary result-routing rules. A typed destination must be viable for every
@@ -279,8 +294,10 @@ value := load() catch missing {
 ```
 
 Every exposed exceptional outcome must have one disposition. An exceptional
-outcome cannot be omitted or discarded because its branch has no success values
-with which ordinary execution could continue.
+outcome cannot be omitted or discarded in place of `catch` or `except`, because
+its branch has no success values with which ordinary execution could continue.
+A handler that does run may still map its payload to `#` and give the body no
+name for that payload.
 
 Adding an exceptional result to a callable therefore requires review of every
 call site.

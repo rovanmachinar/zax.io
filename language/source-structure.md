@@ -953,6 +953,14 @@ catch failure: report : MyFailureReport {
 }
 ```
 
+A discarded payload destination uses `#` and still handles the outcome:
+
+```zax
+catch failure: # {
+  return
+}
+```
+
 Same-name handling and forwarding omit the destination label:
 
 ```zax
@@ -1044,6 +1052,17 @@ including destruction and scope-exit behavior, is owned by
 [core flow control](core-flow-control.md) and
 [construction, replacement, and destruction](construction-and-destruction.md).
 Braces do not make body-local names escape.
+
+An identifier followed by `#`, with no `:` or `:=`, is one complete statement.
+It acknowledges a binding that is already in scope:
+
+```zax
+value #
+```
+
+`value # : Type` is the declaration form, which introduces the binding and
+permits this scope to leave it unread. Both meanings are taught by
+[declarations and bindings](declarations-and-bindings.md#names-the-body-may-leave-unread).
 
 ## Semicolon composition
 
