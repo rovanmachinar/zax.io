@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [029: Except result-flow control](work/029-except.md) |
-| Next work number | `030` |
+| Active work item | [030: Legacy lifecycle and discard audit](work/030-lifecycle-and-discard.md) |
+| Next work number | `031` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

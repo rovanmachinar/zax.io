@@ -2,18 +2,18 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Active working material / non-normative / under review |
+| Status | Historical working record / non-normative / audit-only |
 | Work Item | `029` |
 | Created | 2026-09-21 |
-| Owns | The bounded review defined by the fixed initiating input |
-| Does Not Own | C++-style exceptions, catch/throw semantics, stack unwinding, panic recovery, or compiler implementation except where distinguishing them constrains programmer-visible `except` behavior |
+| Completed | 2026-09-22 |
+| Owns | Historical evidence and dispositions from the completed bounded review |
+| Does Not Own | Current Zax language design; see `language/except.md` and its integrated current owners |
 
 ## Non-authority notice
 
-This file is a collaborative working record. Existing statements, new
-observations, candidate wording, and aligned findings remain non-authoritative
-until a separately discussed, aligned, and explicitly authorized promotion
-incorporates them into their lasting owners.
+This file is a historical audit record. It is non-authoritative and excluded
+from ordinary onboarding. Current language meaning lives in the promoted
+`language/` owners rather than this discussion history.
 
 ## Fixed initiating input
 
@@ -1972,3 +1972,24 @@ wrapper that handles every outcome internally.
 These findings were promoted directly into the current exceptional-flow,
 invocation, declaration, lifecycle, structural-reshape, source-structure, and
 callable-composition owners under the maintainer's explicit authorization.
+
+## Closure
+
+Work item `029` is complete.
+
+- The aligned model is promoted to `language/except.md` and integrated with
+  invocation, declarations, core flow, lifecycle, lifetimes, transfer,
+  structural reshape, source structure, callable composition, `using`,
+  Nothing/weak callable behavior, terminology, and navigation.
+- Rejected and superseded alternatives remain only in this historical record;
+  current owners teach the positive model without anti-teaching them.
+- Root legacy `except.md` was consumed and deleted.
+- `project/raw/except-maintainer-notes.md` was fully dispositioned and may be
+  removed with its raw-index entry.
+- The exception-specific cross-cutting audit concern was consumed.
+- No accepted meaning depends on this record after archival.
+
+The next bounded concern is the by-value mining and disposition of legacy
+constructor/destructor and discard material. Its fixed initiating input and
+reading scope are created separately as work item `030`; this record performs
+no analysis of that material.
