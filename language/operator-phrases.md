@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, declaring, or evaluating word-spelled Zax operations |
 | Applies To | The programmer-facing operator phrase feature; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type-qualified discovery, and reserved transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
+| Owns | The operator phrase mental model; exact finite phrase words and word sequences; natural source as the ordinary use form; phrase pre-unary, post-unary, and binary fixity; the operator declaration as the phrase's only declaration; receiver ownership and the absence of global custom phrases; how type arguments, type-qualified discovery, and protected transfer-stance phrases are recognized; phrase candidate-tree formation, pruning, and ambiguity teaching; bottom-up outward results and the expected-result limit as phrases experience it; public and private phrase eligibility; natural, grouped, and fenced source; phrase-specific physical presentation validated after selection; keyword words in phrase roles; phrase enclosure boundaries; eager, protected, short-circuit, and mixfix interaction as phrases experience it; phrase costs, diagnostics, formatter obligations, and source stability |
 | Does Not Own | The general operator/selection model ([operators](operators.md), [function invocation](function-invocation.md)); attached literal phrases, payloads, declarations, merge, and join ([literal source and operators](literal-source-and-operators.md)); runtime case-test interpretation ([switch, case, and default](switch.md)); structural recognition of `dispose` by [Zax `using`](using.md); exact forms and precedence ([operator catalog](operator-catalog.md)); or source token/layout behavior ([source structure](source-structure.md)) |
 | Source / Provenance | Legacy [basics](../basics.md) operator-phrase evidence, refined against the current operator, source-structure, declaration, and mixfix owners |
 
@@ -37,7 +37,8 @@ Three sentences carry most of the model:
 
 Phrase forms are open:
 
-- the language defines phrases with protected or reserved behavior where needed;
+- the language defines protected forms and protected intrinsic signatures where
+  needed;
 - user types may declare their own phrase forms;
 - user-defined phrase implementations are receiver-owned rather than global;
 - natural source is the ordinary use form;
@@ -250,9 +251,9 @@ type-callable `once` are general declaration and invocation concerns owned by
 [declarations and bindings](declarations-and-bindings.md#type-qualified-operators)
 and [function invocation](function-invocation.md#type-and-instance-calls-to-once-functions).
 
-### Reserved transfer-stance phrases
+### Protected transfer-stance phrases
 
-These exact post-unary phrases are language-reserved:
+These exact post-unary phrases are protected forms:
 
 ```zax
 source as copy
@@ -273,10 +274,10 @@ converted := source as DestinationType
 moved := source as move
 ```
 
-Candidate formation uses the grammar and exact reserved forms:
+Candidate formation uses the grammar and exact protected forms:
 
 - a concrete destination type completes binary `as`;
-- the exact stance word completes one post-unary reserved phrase;
+- the exact stance word completes one post-unary protected phrase;
 - expected results do not choose between source structures;
 - and natural source needs no exact phrase fence.
 
@@ -653,7 +654,9 @@ and continuation mechanics remain with
 
 Words inside a declared or fenced phrase carry phrase roles rather than keyword
 roles, so a custom phrase may use a contextual-keyword spelling unless the exact
-form is language-reserved.
+form is a protected form. For example, a programmer type may declare a phrase
+named `unsafe as`; `unsafe` is an ordinary phrase word there and grants no unsafe
+authority.
 
 Natural source considers every complete keyword and phrase interpretation. The
 compiler does not warn merely because a spelling might theoretically be confused;
@@ -768,8 +771,8 @@ Precedence belongs to the form rather than to the receiver, so an eager custom
 `logical nor` retains logical OR precedence even though its evaluation and
 barrier behavior differ from the protected exact Boolean signature.
 
-A **reserved phrase form** is an exact form that user code cannot declare at all.
-Exact forms, their precedence levels, the reserved set, and protected
+A **protected form** is an exact form that user code cannot declare at all.
+Exact forms, their precedence levels, the protected forms, and protected
 availability are owned by the
 [operator catalog](operator-catalog.md#operator-forms).
 
@@ -797,7 +800,7 @@ Diagnostics should distinguish:
 - ambiguity among implementations of one tree;
 - a private phrase form ineligible in the caller's context;
 - an eligible uniquely best implementation that is unavailable;
-- a reserved-form declaration;
+- a declaration that claims a protected form;
 - a phrase-word spelling violation;
 - a phrase-whitespace presentation error;
 - a selected phrase component spanning a physical line;

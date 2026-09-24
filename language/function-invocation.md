@@ -1264,21 +1264,60 @@ paired with a prototype that already constructed it. Compatible prototypes may
 change initializer expressions only when they establish the same per-result
 entry state required by the body.
 
-An initially unconstructed result may instead be constructed later:
+An initially unconstructed result may instead be constructed later. The
+ordinary spelling is `.=`, which makes a place hold a newly constructed value:
 
 ```zax
 make final : (
   result : Item
 )() = {
-  result.+++(source)
-  return
+  result .= [{
+    .name = "example"
+  }]
 }
 ```
+
+On a result slot that is not constructed yet, `.=` constructs it and means
+exactly what the same source would mean as a declaration initializer:
+
+```zax
+result .= source        // like `result : Item = source`
+result .= [{ first, second }]
+result .= [{}]          // zero-input construction; for an optional, a present payload
+```
+
+The expression produces access to the newly constructed result. Explicit
+construction through `result.+++(source)` remains available and means the same
+thing.
+
+This first construction needs no replacement permission, so a `final`, readonly,
+or immutable result can be constructed this way. Once the result is live, `.=`
+is [reconstructive replacement](construction-and-destruction.md#reconstructive-replacement)
+with its usual requirements; a second `.=` on a `final` result is therefore an
+error.
+
+Ordinary `=` never constructs:
+
+```zax
+make final : (
+  result : Item
+)() = {
+  result.name = "example" // error: result is not constructed yet
+}
+```
+
+Construct the result first, or request pre-body construction with `= :` when
+every implementation of the prototype should receive a live result. That
+initializer is part of the prototype, not a local convenience.
 
 The compiler tracks construction through control flow. It rejects:
 
 - use before result construction;
-- construction of one still-live result slot twice; and
+- a `.=` or `+++` where the compiler cannot tell whether the result is already
+  constructed, such as inside a loop or after paths that disagree; construct it
+  outside that region instead;
+- a second `+++` on one still-live result slot;
+- a value-bearing `return` into a result that is already constructed; and
 - normal completion with an incomplete result.
 
 Ordinary `=` never changes into construction according to tracked state. It

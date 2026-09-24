@@ -515,9 +515,9 @@ the pointer value but does not retarget `pointerView`.
 `pointeeView` targets the pointee's place. Repointing `owner.pointer` does not
 retarget `pointeeView` and does not prove that its old pointee remains alive.
 
-An [anchored owning pointer](pointers-and-arenas.md#anchored-interior-pointers)
-is a distinct mechanism that keeps an enclosing allocation alive while
-targeting a direct member place.
+An [interior pointer](pointers-and-arenas.md#interior-pointers) is a distinct
+owning mechanism: a `strong` or `weak` pointer that keeps an enclosing
+allocation alive while targeting a direct member place.
 
 ### Same-storage identity views
 

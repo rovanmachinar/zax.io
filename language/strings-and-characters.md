@@ -8,7 +8,7 @@
 | Implementation State | Not established by this repository |
 | Owns | Explicit string code-unit backing; `Byte`, `U8`, `AsciiChar`, `Ucs2`, and `Rune` distinctions as used by text; `String`, ASCII, UCS-2, UTF-8/16/32, MBCS, and legacy native string identities; direct, escaped, raw-unit, RFC, XML, and code-page literal catalogs; Unicode scalar/grapheme boundaries; policy-selected legacy termination; left-owned compile-time joining; literal-time validation, costs, diagnostics, and source stability |
 | Does Not Own | General literal source/declarations ([literal source and operators](literal-source-and-operators.md)); intrinsic array and slice behavior ([arrays and slices](arrays-and-slices.md)); runtime string storage representation, allocation, mutation, slicing, conversion, normalization, grapheme/presentation APIs, locale, formatting, foreign ABI, exact code-page tables, contiguous ordinary-string access, or exact generic MBCS/termination-policy syntax |
-| Source / Provenance | Legacy string and casting material in [basics](../basics.md) and [casting](../casting.md), refined against current integer, identity, literal, source, operator, and scalar design |
+| Source / Provenance | Legacy string material in [basics](../basics.md) and the retired root casting page, refined against current integer, identity, literal, source, operator, and scalar design |
 
 ## Choose bytes, characters, or validated text
 

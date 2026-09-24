@@ -6,7 +6,7 @@
 | Audience | Human developers building types from stored components and choosing which component surfaces the container presents |
 | Applies To | Named containment; independent `own`, `preferred`, and `expose`; semantic-indirection boundaries; published data paths; singular and family composition routing and filtering; abstract roles and fulfillment; outer casting and exact-origin proof; costs, diagnostics, formatting, and source stability; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast`, and composition-specific exact-origin proof |
+| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast` (including role-preserving outer casts of managed pointers and their operand-shaped failure), and composition-specific exact-origin proof |
 | Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); complete semantic-wrapper behavior ([optional values](optional-values.md), [variants](variants.md), and [unions](unions.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy composition intent, reconciled with current declaration, invocation, operator, transfer, lifetime, construction, identity, and safety design |
 | Supersedes | Legacy composition design formerly published at the repository root |
@@ -1354,11 +1354,45 @@ tracking metadata nor a runtime relationship check. If that contract does not
 establish the proof at this site, the declaration is rejected rather than
 silently changing result type or runtime mechanism.
 
-`tracked outer cast` is the checked runtime form. It requires the member type to
-be declared `outer tracked`, validates one immediate relationship through that
-placement capability, and returns an optional result. It remains an optional
-tracked operation even when static analysis happens to know that the result is
-present.
+`tracked outer cast` is the checked runtime form. It validates one immediate
+relationship at runtime and reports failure in the shape of its operand:
+
+```zax
+checked : Car & ? = engineReference tracked outer cast Car.engine       // reference in, optional out
+checkedOwner : Car * strong = engineOwner tracked outer cast Car.engine  // pointer in, vacant on failure
+```
+
+- A reference operand produces an optional reference, because a reference
+  cannot be vacant.
+- A pointer operand produces a pointer of the same role that is vacant on
+  failure, like a failed ownership claim or weak acquisition.
+
+The check needs a way to know where the member lives. Ordinarily the member type
+supplies it by being declared `outer tracked`. A managed pointer whose outward
+step reaches its allocation root needs no such declaration: its control block
+already knows the root and its type, so the check compares the target with the
+root's member offset.
+
+The operation remains a tracked, checked operation even when static analysis
+happens to know that the result is present.
+
+### Managed pointers keep their role
+
+An outer cast on a `strong` or `weak` pointer produces a pointer of the same
+role that shares the operand's control block:
+
+```zax
+car : Car * strong = makeCar()
+engine : Engine * strong = inner car.engine
+
+sameCar : Car * strong = engine outer cast Car.engine   // one more strong owner of the same Car
+```
+
+This is how an [interior pointer](pointers-and-arenas.md#interior-pointers)
+returns to its container without losing ownership. The proved, tracked, and
+unsafe forms keep their usual meaning. A false `unsafe outer cast` assertion
+cannot corrupt ownership accounting, because the result shares the operand's
+real control block; only its target place would be wrong.
 
 Temporaries and references whose origin has expired are ineligible for all
 forms. No outer cast revives an ended resident instance.
@@ -1414,9 +1448,9 @@ finished formal algorithm. Source validity follows the selected contract:
 | Situation | `outer cast` | `tracked outer cast` | `unsafe outer cast` |
 | --- | --- | --- | --- |
 | Selected-contract exact-origin proof succeeds | Produces the non-optional container reference | Requires `intent<redundant-outer-tracking>` to retain the optional tracked operation | Redundant assertion is an error |
-| Selected contract does not mandate or establish that proof | Error | Performs the checked optional operation | Retains the required programmer assertion |
+| Selected contract does not mandate or establish that proof | Error | Performs the checked operation | Retains the required programmer assertion |
 | Source selects a stronger extension contract whose proof succeeds | Produces the non-optional result under that selected contract | Requires the same intent acknowledgement | Redundant assertion is an error under that contract |
-| The exact relationship is proved false | Error | Produces absence under its checked semantics | Error; unsafe cannot contradict a known fact |
+| The exact relationship is proved false | Error | Produces absence or vacancy under its checked semantics | Error; unsafe cannot contradict a known fact |
 
 A compiler may use extra private analysis to optimize or advise. Without a
 selected contract that makes the proof part of source semantics, it cannot make
@@ -1599,7 +1633,9 @@ Required composition diagnostics include:
 - a plain `outer cast` for which the selected contract does not establish
   exact-origin proof;
 - `tracked outer cast` or `tracked via` without the required `outer tracked`
-  capability or optional result shape;
+  capability, or with a result shape that does not match its operand (an
+  optional reference for a reference operand, a same-role pointer for a pointer
+  operand);
 - selected-contract proof making `tracked outer cast` or `tracked via`
   redundant without `intent<redundant-outer-tracking>`;
 - redundant `unsafe` when selected-contract proof requires the safe form;

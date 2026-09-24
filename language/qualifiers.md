@@ -195,7 +195,7 @@ Effective whole-value replacement through one path therefore requires:
 
 ### Inspecting the stance
 
-The reserved `is final` query inspects the resolved type-use or referent-place
+The protected `is final` query inspects the resolved type-use or referent-place
 truth, not this declaration's replacement permission:
 
 ```zax
@@ -540,9 +540,21 @@ copy final : Payload = source
 
 ## Unsafe casts and new values
 
-An explicit unsafe cast may weaken qualification, including producing mutable
-or writable pointer/reference access from immutable or readonly input. The
-complete cast lattice and exact cast syntax remain later casting design.
+An explicit `unsafe cast` may change qualification in either direction. Its
+written destination type states the complete result qualification, so it can
+produce mutable or writable pointer or reference access from immutable or
+readonly input, or add an `immutable` promise that a mutable value cannot make
+through an ordinary view:
+
+```zax
+source : Payload immutable = makePayload()
+writableView := source unsafe cast Payload mutable writable &
+```
+
+For a qualification change on the same type, prefer
+[`unsafe pliable`](#unsafe-pliable), which keeps the recorded qualifications and
+bypasses them locally. Complete `unsafe cast` behavior is defined by
+[Zax conversions and casts](casting.md#qualification).
 
 An ordinary mutable alias cannot safely become an immutable alias. Other mutable
 aliases may still change the same value. Mutable-to-readonly access is safe
@@ -1191,10 +1203,10 @@ pointee:
 ```zax
 sole : MyValue * unique
 shared : MyValue * strong atomic
-member : Member * strong anchored
+member : Member * weak
 ```
 
-`unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic`
+`unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic`
 do not rewrite `MyValue` or `Member` qualifications. Their complete ownership
 and ordering grammar is defined by the pointer owner.
 

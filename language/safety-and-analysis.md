@@ -208,7 +208,7 @@ intent<terminal-source-reuse>{
 This confirms defined terminal-source behavior. It does not grant lifetime,
 ownership, mutation, or alias authority.
 
-An anchored pointer may require intent because replacement will make it observe
+An interior pointer may require intent because replacement will make it observe
 a successor member resident instance. The operation is defined; the
 acknowledgement confirms that surprising meaning.
 
@@ -647,7 +647,7 @@ Diagnostics should distinguish:
 - compiler nonconformance with a selected contract.
 
 Do not report a vague “unsafe” or “lifetime” error when the actual issue is an
-ended member path, missing ownership anchor, possible callback escape, unknown
+ended member path, missing allocation root, possible callback escape, unknown
 presence, duplicate disposition, or another precise fact.
 
 ## Costs

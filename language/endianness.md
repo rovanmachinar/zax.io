@@ -117,9 +117,10 @@ myReinterpreted :=
     Scalars.Integers.Big.U32 &
 ```
 
-Complete conversion, representation-adoption, coercion, and `unsafe cast`
-boundaries are defined by the applicable scalar owner and
-[structural shapes and compatibility](structural-shapes-and-compatibility.md).
+Complete conversion, representation-adoption, and coercion boundaries are
+defined by the applicable scalar owner and
+[structural shapes and compatibility](structural-shapes-and-compatibility.md);
+`unsafe cast` is defined by [conversions and casts](casting.md).
 
 ## Native, compiler-host, and target endianness
 

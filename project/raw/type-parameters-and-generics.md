@@ -132,6 +132,43 @@ declaration may state a result type in terms of its own type parameters, how suc
 a result participates in narrow expected-result selection, and where inference
 stops.
 
+### Restricting which types a slot accepts
+
+A programmer-declared `as` is written for one intended destination, but nothing
+yet restricts the type argument:
+
+```zax
+Celsius :: type {
+  degrees : Binary64
+
+  operator binary 'as' final : (
+    result : DestinationType
+  )(
+    DestinationType : type
+  ) readonly = {
+    result .= [{
+      .degrees = degrees * 9.0 / 5.0 + 32.0
+    }]
+  }
+}
+
+display := boiling as Fahrenheit   // intended
+other := boiling as Kelvin         // also selected; fails only if Kelvin lacks `degrees`
+```
+
+[Zax conversions and casts](../../language/casting.md#writing-your-own-as)
+currently teaches "one declaration, one intended destination" without inventing
+constraint syntax. Constraints on type parameter slots, or exact type-argument
+overloads, must let a type state which destinations each declaration accepts.
+
+### Generic protected numeric conversion
+
+Integer, fixed-point, and floating-point conversions are protected intrinsic
+signatures supplied by the language, for example integer-to-float `as`. Generic
+numeric code will need to express those protected conversions over generic
+integer and floating families, such as converting a generic integer to a generic
+float, without programmer declarations on the intrinsic types.
+
 ## Computed type results
 
 A general computed or runtime-dependent type result is **not** assumed:
@@ -141,8 +178,8 @@ A general computed or runtime-dependent type result is **not** assumed:
 Selected :: selectType(condition)
 ```
 
-The mechanically determined reserved type results, such as `as default` and
-`type of`, do not authorize arbitrary user-defined runtime-dependent type-result
+The mechanically determined protected type results, such as `type of`, do not
+authorize arbitrary user-defined runtime-dependent type-result
 functions. Future work must decide whether a compile-time function may return a
 type identity, what identity such a result has, and how it interacts with
 overload selection and reflection.
@@ -436,8 +473,10 @@ Named role identities require an explicit relational pair:
 ```text
 Small <-> USmall
 FastI16 <-> FastU16
-IPointer <-> UPointer
 ```
+
+`UPointer` has no signed counterpart role; pointer differences use
+`PointerDelta`, its `delta type`.
 
 The integer factory or another validated generic mechanism should define both
 identities together:

@@ -8,7 +8,7 @@
 | Implementation State | Not established by this repository |
 | Owns | Integer choice and mental model; the `F = 0` intrinsic-family branch; exact and profile-selected families; canonical names and namespaces; logical width, range, signed representation, concrete endianness, storage, padding, and alignment; software emulation; integer identity types and conversion relationships; count/storage/counterpart/delta/distance associated types; arithmetic build contracts; costs, diagnostics, portability, and source stability |
 | Does Not Own | Fixed-point `F > 0` behavior ([fixed-point scalars](fixed-point-scalars.md)); cross-family endian operations ([endianness](endianness.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal prefix and raw-pattern source ([literal source and operators](literal-source-and-operators.md)); string/character identity and encoding behavior ([strings and characters](strings-and-characters.md)); general identity declarations ([identity types](identity-types.md)); enum members and policies ([enums](enums.md)); complete integer operations ([integer operator catalog](integer-operator-catalog.md)); general forms and precedence ([operator catalog](operator-catalog.md)); shared operator selection ([operators](operators.md)); or deferred generic-factory and CPU-profile mechanisms |
-| Source / Provenance | Legacy [basics](../basics.md) and [casting](../casting.md) integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
+| Source / Provenance | Legacy [basics](../basics.md) and retired root casting-page integer evidence, refined against current operator, endian, qualifier, declaration, and identity design |
 
 ## Choosing an integer says what the value is for
 
@@ -371,15 +371,19 @@ identity and is a language-version compatibility event.
 
 ### Pointer-representation integer roles
 
-| Domain | Signed | Unsigned | Exact-difference role |
-| --- | --- | --- | --- |
-| Near | `Near.IPointer` | `Near.UPointer` | `Near.PointerDelta` |
-| Ordinary | `IPointer` | `UPointer` | `PointerDelta` |
-| Far | `Far.IPointer` | `Far.UPointer` | `Far.PointerDelta` |
+| Domain | Address role | Exact-difference role |
+| --- | --- | --- |
+| Near | `Near.UPointer` | `Near.PointerDelta` |
+| Ordinary | `UPointer` | `PointerDelta` |
+| Far | `Far.UPointer` | `Far.PointerDelta` |
 
 These are integer capacity types, not pointer objects. Numeric fit does not
 establish pointer validity, provenance, permissions, segment/tag meaning, arena,
 or lifetime.
+
+Each `PointerDelta` is its domain's `UPointer delta type`, so it holds the exact
+difference between any two addresses of that domain, positive or negative. No
+separate signed address role is needed.
 
 Profiles satisfy:
 
@@ -387,8 +391,9 @@ Profiles satisfy:
 Near pointer capacity <= ordinary pointer capacity <= Far pointer capacity
 ```
 
-Mirrored representations retain distinct identities. Actual pointer-object
-transfer remains future pointer/lifetime work.
+Mirrored representations retain distinct identities. Conversion between a
+pointer and its domain's `UPointer` is defined by
+[Zax conversions and casts](casting.md#pointers-and-integers).
 
 ### Counts, sizes, and indexes
 
@@ -599,13 +604,12 @@ another validated generic mechanism:
 ```text
 Small <-> USmall
 FastI16 <-> FastU16
-IPointer <-> UPointer
 ```
 
 The compiler does not infer relationships from names. Both identities share one
 selector except for signedness and are recorded as unique mutual counterparts.
 
-One-sided roles such as `Word`, `Byte`, and `BitCount` return an unnamed exact
+One-sided roles such as `Word`, `Byte`, `BitCount`, and `UPointer` return an unnamed exact
 intrinsic counterpart and intentionally leave the role identity. Regaining the
 role requires explicit admission.
 

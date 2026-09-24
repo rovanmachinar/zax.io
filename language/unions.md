@@ -106,7 +106,8 @@ These categories cannot appear even in `union unsafe`:
 - arrays, including arrays using contiguous `Flat` storage;
 - references, whose fixed binding and referent lifetime cannot be overwritten
   as bits;
-- managed `unique`, `strong`, `weak`, anchored, or atomic pointer forms;
+- managed `unique`, `unique shareable`, `strong`, `weak`, or atomic pointer
+  forms, including interior pointers;
 - callables carrying a bound receiver lifetime;
 - `outer tracked` values, whose hidden placement state requires repair; and
 - any ordinary type whose required lifecycle hooks or recursively contained

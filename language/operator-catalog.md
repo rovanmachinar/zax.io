@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, complete and wrapper-owned reconstruction `.=` forms, callable binding-kind and composition/chaining forms, opaque type probe/transfer, cursor protocol, array capacity queries, iterable count, and outer-cast forms; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; form reservation; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, complete and wrapper-owned reconstruction `.=` forms, callable binding-kind and composition/chaining forms, opaque type probe/transfer, strong-count and allocation-root queries, cursor protocol, array capacity queries, iterable count, outer-cast and `inner` forms, `unsafe cast` source roles, and pointer-to-integer conversion; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; protected-form classification; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -18,8 +18,8 @@ This catalog answers:
 - What fixity does it have?
 - How tightly does it bind?
 - How does it associate?
-- Is the form open, protected for a domain, reserved, custom-only, or
-  unavailable?
+- Is the form open, a protected form, a protected intrinsic signature for a
+  domain, custom-only, or unavailable?
 - Which concept owner defines its selected type-specific behavior?
 
 It does not say that every overload has the behavior suggested by a familiar
@@ -43,9 +43,11 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
-| Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
-| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `outer cast`, `tracked outer cast`, `unsafe outer cast` |
-| Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor`, `unsafe cast` |
+| Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `strong count probe value`, `value is allocation root`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
+| Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `pointer as UPointer` |
+| Container and member navigation | `outer cast`, `tracked outer cast`, `unsafe outer cast`, `inner` |
+| Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor` |
+| Unchecked reinterpretation | `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
 | Callable flow | Composition `>>`, reshape composition `>> reshape >>`, and immediate chaining `|>` |
@@ -73,7 +75,7 @@ Higher levels bind first:
 | Additive | `+`, `-`, accepted policy variants, `delta`, `distance` | Left |
 | Literal join | `<+>` | Left for join chains; group when mixed with another value-operator level pending final placement |
 | Shift/rotate/composition | `<<`, `>>`, `>>>`, `<<<`, `<<%`, `>>%`, modulo-count phrases, multiword operations | Left |
-| Ordinary phrase | Conversion/admission forms, reserved language phrases, newly declared phrases | Left |
+| Ordinary phrase | Conversion/admission forms, protected phrase forms, newly declared phrases | Left |
 | Relational | `<`, `<=`, `>`, `>=`, `<=>` | Ungrouped chaining is an intent error |
 | Equality | `==`, `!=` | Ungrouped chaining is an intent error |
 | Bitwise AND | `&`, `&~`, `bitwise nand` | Left |
@@ -162,7 +164,7 @@ intrinsic family, whether or not Zax currently supplies that exact operation.
 | Pointer-representation integers | Follow the applicable integer identity; pointer objects remain separate |
 | Floating point | Protected format-specific behavior is owned by [floating-point scalars](floating-point-scalars.md) |
 | Fixed-point | Protected coefficient/scale behavior is owned by [fixed-point scalars](fixed-point-scalars.md) |
-| Unbounded numeric types | Domain reserved pending focused numeric review |
+| Unbounded numeric types | Domain held for the language pending focused numeric review |
 | Other closed intrinsic families | Reserved where focused type work has not established behavior |
 | Extensible library families | Library-owned; recognition does not by itself close a type such as `String` |
 
@@ -363,7 +365,7 @@ integer operation.
 
 ### Multiword and arrangement concepts
 
-The following concepts are reserved for future numeric work:
+The following concepts are held for future numeric work:
 
 - multiword logical/arithmetic/zero-fill shifts;
 - multiword rotations;
@@ -391,8 +393,9 @@ myUnchecked := MyIdentity unchecked from mySource
 myUnsafe := MyIdentity unsafe from mySource
 ```
 
-`as`, `narrowing as`, and `unsafe as` use the left value for receiver discovery.
-The right operand is a complete type argument.
+`as` and `narrowing as` use the left value for receiver discovery. The right
+operand is a complete type argument. Programmer-declared `as` conversion is
+taught by [Zax conversions and casts](casting.md#writing-your-own-as).
 
 Plain `as` may declare that type argument as a contextual anchor when the left
 side is an uncommitted integer:
@@ -412,7 +415,20 @@ Integer-specific behavior belongs to the
 [integer operator catalog](integer-operator-catalog.md). General identity
 admission/projection belongs to [Zax identity types](identity-types.md).
 
-User-defined words do not independently grant unsafe authority.
+A pointer converts to its memory domain's pointer-representation integer
+through a protected intrinsic signature:
+
+```zax
+myAddress : UPointer = myPointer as UPointer
+```
+
+The reverse direction is the integer source role of `unsafe cast`, listed
+below. Both are defined by
+[Zax conversions and casts](casting.md#pointers-and-integers).
+
+User-defined words do not independently grant unsafe authority. A programmer
+phrase may contain the word `unsafe`, such as `unsafe as`, but it is an ordinary
+phrase word there.
 
 ### Structural compatibility forms
 
@@ -444,8 +460,8 @@ begins:
 | Written destination | `<source> as layout <DestinationType> anchor <source-path>` |
 | Destination supplied by context | `<source> anchor <source-path>` |
 
-`anchor` is not the numeric contextual type anchor, mixfix receiver anchor, or
-pointer ownership anchor.
+`anchor` is not the numeric contextual type anchor or the mixfix receiver
+anchor.
 
 Coercive forms remain local and produce reference views:
 
@@ -465,15 +481,19 @@ a declarable posture or grants qualification authority. Complete behavior
 belongs to
 [structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-reference-views).
 
-View-shaped raw casting is separate:
+Unchecked reinterpretation is the separate protected form `unsafe cast`:
 
 | Source role | Exact source pattern |
 | --- | --- |
 | Pointer | `<pointer> unsafe cast <DestinationType> *` |
 | Value place | `<value> unsafe cast <DestinationType> &` |
 | Reference | `<reference> unsafe cast <DestinationType> &` |
+| Pointer-representation integer | `<address> unsafe cast <DestinationType> *` |
 
-There is no bare by-value `<value> unsafe cast <DestinationType>` form.
+There is no bare by-value `<value> unsafe cast <DestinationType>` form. The
+destination may be any pointer role; only the pointee type changes. Complete
+behavior belongs to
+[Zax conversions and casts](casting.md#unchecked-reinterpretation-with-unsafe-cast).
 
 The mapping-bound protected forms are:
 
@@ -512,20 +532,40 @@ asserted : Container & =
   assertedMemberReference unsafe outer cast Container.member
 ```
 
-The right operand is an exact resident stored-member path, not a type. User code
-cannot overload any form. Plain `outer cast` requires selected-contract static
-proof that every origin reaching this site is the exact path and produces a
-non-optional result without tracking. `tracked outer cast` explicitly uses the
-`outer tracked` placement capability and returns an optional result. If the
-selected contract also proves that tracked operation's exact origin, retaining
-it requires `intent<redundant-outer-tracking>`; compiler-private proof does not.
-`unsafe outer cast` trusts the programmer's provenance assertion instead.
+The right operand is an exact resident stored-member path, not a type. These are
+protected forms: user code cannot declare any of them. Plain `outer cast`
+requires selected-contract static proof that every origin reaching this site is
+the exact path and produces a non-optional result without tracking.
+`tracked outer cast` checks the relationship at runtime, using the
+`outer tracked` placement capability or, for a managed pointer whose outward
+step reaches its allocation root, its control block. A reference operand
+produces an optional reference; a pointer operand produces a same-role pointer
+that is vacant on failure. If the selected contract also proves that tracked
+operation's exact origin, retaining it requires
+`intent<redundant-outer-tracking>`; compiler-private proof does not.
+`unsafe outer cast` trusts the programmer's provenance assertion instead. An
+outer cast of a `strong` or `weak` pointer keeps its role and control block.
 Complete behavior belongs to
 [Zax composition](composition.md#outer-casting-to-an-immediate-container).
 
+### Interior-pointer form
+
+`inner` is a pre-unary phrase whose operand is a member path starting at a
+pointer:
+
+```zax
+engine : Engine * strong = inner car.engine
+```
+
+The language owns `inner` through a protected intrinsic signature on
+pointer-rooted member paths; a programmer type may declare its own `inner` for
+other operands. It binds at ordinary phrase precedence, and its path operand is
+recognized as a path rather than evaluated as a value. Complete behavior belongs
+to [Zax pointers, allocation, and arenas](pointers-and-arenas.md#interior-pointers).
+
 ## Transfer-stance forms
 
-These exact forms are reserved post-unary phrases at ordinary phrase precedence:
+These exact post-unary phrases are protected forms at ordinary phrase precedence:
 
 | Form | Result role |
 | --- | --- |
@@ -559,17 +599,20 @@ This is legal but normally pointless: no consumer observes the intermediate
 
 ## Replacement, optional, pointer, and function lifecycle forms
 
-These exact forms are protected for their recognized operand domains:
+These exact forms are protected intrinsic signatures for their recognized
+operand domains:
 
 | Form | Fixity/level | Result role |
 | --- | --- | --- |
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, variant, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
-| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `replacement +++` or ordinary `---`/`+++` fallback; forward declared replacement results |
+| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `replacement +++` or ordinary `---`/`+++` fallback, and forward declared replacement results; on a function result slot not yet constructed, perform its first construction and return access to it |
 | `wrapper .= source` / `wrapper .= [{...}]` | Protected binary at assignment precedence | Re-deliver direct or packet construction inputs to an optional payload; return fresh payload access |
 | `variant.name .= source` / `variant.name .= [{...}]` | Protected binary at assignment precedence | Select and reconstruct the named variant payload; return fresh payload access |
 | `variant .= [{...}]` | Protected binary at assignment precedence | Reconstruct absent or one named-present variant state; return wrapper access |
 | `liveness probe value` | Pre-unary phrase at ordinary phrase level | Observe momentary weak-target liveness without acquiring ownership |
+| `strong count probe value` | Pre-unary phrase at ordinary phrase level | Observe the momentary strong-owner count of a managed pointer |
+| `value is allocation root` | Post-unary phrase at ordinary phrase level | Return exactly `Boolean`: whether a pointer currently targets its allocation root |
 | `binding kind of value` | Pre-unary phrase at ordinary phrase level | Report the installed callable target mode |
 | `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional or variant absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
 | `vacate value` | Pre-unary phrase at ordinary phrase level | Discard a proved non-owning raw pointer address without disposition and leave vacancy |
@@ -584,6 +627,9 @@ by [construction, replacement, and destruction](construction-and-destruction.md#
 Variant `.=` and reset behavior is defined by [Zax variants](variants.md).
 Pointer `reset` is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
+`strong count probe` and `is allocation root` are defined by the same owner's
+[presence](pointers-and-arenas.md#presence-and-weak-acquisition) and
+[shared-to-unique](pointers-and-arenas.md#shared-to-unique) sections.
 Pointer `vacate`, function presence/reset, and receiver-presence behavior are
 defined by [Zax Nothing instances](nothing-instances.md).
 
@@ -608,13 +654,19 @@ zero-entry construction packet; neither form is an independently overloadable
 operator. Their source boundaries are owned by
 [Zax source structure](source-structure.md#optional-layers-and-empty-construction-packets).
 
-## Reserved phrase forms
+## Protected forms
 
-A reserved phrase form cannot be declared by user code.
+A **protected form** is an exact form that user code cannot declare for any
+receiver. By contrast, a protected intrinsic signature reserves only the
+language's operand domain and leaves the same spelling open for programmer
+types.
+
+The transfer-stance forms, structural compatibility and coercion forms,
+`anchor`, `unsafe cast`, and the outer-cast forms listed above are protected
+forms. So are these query forms:
 
 | Exact form | Receiver/shape | Broad behavior | Deferred refinement |
 | --- | --- | --- | --- |
-| `as default` | Post-unary type identity or value | Default-qualified type identity or compatible default-type value | Complete qualifier defaults, transfer, generics |
 | `type of` | Pre-unary expression | Concrete selected static type without execution | Anonymous/qualified identity, reflection |
 | `size of` | Pre-unary type-identity operand | Byte size in active execution environment | Complete layout/context |
 | `alignment of` | Pre-unary type-identity operand | Required alignment in active environment | Complete layout/context |
@@ -624,8 +676,8 @@ A reserved phrase form cannot be declared by user code.
 | `is immutable` | Post-unary value/type-use query | Value-lifetime mutability truth | Qualifier reflection |
 | `is readonly` | Post-unary access/type-use query | Access capability truth | Qualifier reflection |
 
-A type-information operation is reserved in concept but has no exact words yet.
-It returns immutable, readonly, final metadata about a concrete type identity.
+A type-information operation is planned but has no exact words yet. It will
+return immutable, readonly, final metadata about a concrete type identity.
 
 ## Generated underlying and enum forms
 
@@ -1002,7 +1054,7 @@ Tooling needs to expose:
 
 Diagnostics distinguish:
 
-- unrecognized/reserved form;
+- unrecognized form, or a declaration that claims a protected form;
 - unsupported fixity;
 - incomplete source;
 - tree or implementation ambiguity;

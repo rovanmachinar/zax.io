@@ -1011,7 +1011,9 @@ type. That pointer:
 - does not point to array elements;
 - owns no provider lifetime;
 - gives no contiguity guarantee; and
-- uses ordinary pointer `unsafe cast` responsibility.
+- uses ordinary pointer
+  [`unsafe cast`](casting.md#unchecked-reinterpretation-with-unsafe-cast)
+  responsibility.
 
 A discontiguous provider has no universal raw element pointer. Unsafe source
 cannot manufacture one.

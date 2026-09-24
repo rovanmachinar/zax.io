@@ -37,7 +37,6 @@ Keywords are simple words that a compiler will intrinsically understands. Keywor
 ````zax
 alias
 alias type
-anchored
 atomic
 await
 break
@@ -111,8 +110,9 @@ yield suspend
 ````
 
 This remains a legacy keyword inventory rather than an authoritative catalog.
-Current pointer ownership uses `unique`, `shareable`, `strong`, `weak`,
-`anchored`, and pointer-layer `atomic`. The former pointer meanings of `own`,
+Current pointer ownership uses `unique`, `shareable`, `strong`, `weak`, and
+pointer-layer `atomic`; interior pointers are ordinary `strong` or `weak`
+pointers formed with `inner`. The former pointer meanings of `own`,
 `handle`, `hint`, `lease`, and `collect` are superseded; any future `own` use for
 composition is a separate unresolved concept.
 
@@ -187,40 +187,14 @@ Operator phrases are current design and taught by
 [Zax operator phrases](language/operator-phrases.md). Exact forms and precedence
 are in the [operator catalog](language/operator-catalog.md#operator-forms).
 
-The list below retains only unresolved pointer, lifetime, allocation,
-function-representation, and variadic proposals. Their exact words are not
-reserved because those domains have not established their prototypes.
+The list below retains only the unresolved variadic proposal. Its exact words
+are not protected because variadic functions have not established their
+prototypes. Current container/member navigation, interior ownership, and pointer
+queries are owned by [Zax composition](language/composition.md) and
+[Zax pointers, allocation, and arenas](language/pointers-and-arenas.md).
 
 ````
-outer of             // binary outer type instance of operator (convert from
-                     // contained `type` pointer to container `type` pointer
-                     // safely via a managed type's RTTI)
-lifetime of          // shared lifetime operator (binds a raw pointer to an
-                     // existing `strong` or `handle` pointer and safely checks
-                     // if the pointer to a type points to memory within the
-                     // allocated `strong` or `handle` pointer)
-unsafe outer of      // binary unsafe outer type casting operator (convert from
-                     // contained type pointer to container type pointer)
-unsafe copy as       // binary unsafe `Unknown` copy casting of a function
-                     // pointer (treat an `Unknown` pointer as pointing to an
-                     // instance of a casted function `type` and make a copy of
-                     // captured function contents)
-unsafe lifetime of   // binary unsafe shared lifetime casting operator (converts
-                     // a raw pointer to share a lifetime with an existing
-                     // `strong` or `handle` pointer)
 count of             // pre-unary count of a variadic expression
-count of             // pre-unary count of a type
-overhead count of    // pre-unary overhead count operator (returns the total
-                     // reference count for a `handle` / `hint`, or
-                     // `strong` / `weak` pointer)
-overhead as          // pre-unary overhead operator (obtains a pointer to the
-                     // overhead information for a pointer, `own`, `handle`,
-                     // `hint`, `strong`, or `weak` pointer or optional type)
-overhead size of     // pre-unary overhead sizing operator (return the number of
-                     // bytes overhead is needed for this type i.e. typically
-                     // the size of a control block)
-allocator of         // pre-unary allocator operator (returns the allocator
-                     // instance used to allocate an instance)
 ````
 
 A compiler has both a host and a target for compilation. Any compile-time code that evaluates on a compiler's host system may have different value sizing and alignments than that of a compiler's target system. For example, a host may operate on a 64-bit system but target may compile for a 32-bit compilation.
@@ -446,10 +420,12 @@ MyType :: type {
 > [Zax strings and characters](language/strings-and-characters.md).
 
 ````zax
-unknown : Unknown   // used as a generic pointer type to an `Unknown` type
-void : Void         // an alias of the `Unknown` type
 boolean : Boolean   // A value representing `true` or `false` literals
 ````
+
+Type-erased pointers use `OpaqueObserver`, `OpaqueReferenceObserver`, and
+`OpaqueOwner`, defined by
+[Zax pointers, allocation, and arenas](language/pointers-and-arenas.md#type-erased-ownership-and-observation).
 
 There is no universal `Nothing` type. Per-type Nothing instances and vacant
 pointers are defined by

@@ -11,9 +11,9 @@
 
 ## Why this input exists
 
-Current documentation reserves a small, deliberately bounded set of reflection
-concepts and defers everything else. See the
-[operator catalog](../../language/operator-catalog.md#reserved-phrase-forms).
+Current documentation protects a small, deliberately bounded set of reflection
+query forms and defers everything else. See the
+[operator catalog](../../language/operator-catalog.md#protected-forms).
 
 Reserved now:
 

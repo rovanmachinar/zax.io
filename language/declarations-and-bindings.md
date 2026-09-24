@@ -1260,7 +1260,7 @@ misreport the place as final. See
 [Zax qualifiers](qualifiers.md#varying-places-with-immutable-lifetimes) and
 [Zax lifetimes and references](lifetimes-and-references.md#references-never-rebind).
 
-The reserved `is final` query reports the resolved type-use or referent-place
+The protected `is final` query reports the resolved type-use or referent-place
 truth, not this declaration's replacement permission.
 
 A pointer may be repointed according to its pointer contract. A reference never
@@ -1311,9 +1311,10 @@ the declaration-name side may narrow that alias's own replacement permission. A
 new by-value destination, constructed result, `copy`, or `move` destination resolves
 its own independent place stance.
 
-The complete cast lattice, unsafe conversions, reference projection, and capture
-projection remain later design. They must preserve the constraints established
-by [Zax qualifiers](qualifiers.md).
+Unsafe qualification changes through `unsafe cast` are defined by
+[Zax conversions and casts](casting.md#qualification). Reference projection and
+capture projection remain later design. They must preserve the constraints
+established by [Zax qualifiers](qualifiers.md).
 
 ### Declaration transfer stance
 

@@ -6,8 +6,8 @@
 | Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
 | Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, `anchored`, and pointer-layer `atomic` behavior; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
-| Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); pointee operation thread safety; arena API/registration; or pointer-cast syntax |
+| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic` behavior; interior pointers and `inner`; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, `strong count probe`, `is allocation root`, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
+| Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); `unsafe cast` and pointer/integer conversion ([conversions and casts](casting.md)); outer-cast mechanics ([composition](composition.md)); pointee operation thread safety; or arena API/registration |
 | Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
 
@@ -478,20 +478,20 @@ decide whether another owner preserves the target, the operation is unavailable,
 or local unsafe responsibility is required. Slicing itself does not create a
 second pointer model.
 
-View-shaped raw casting uses protected `unsafe cast`:
+Reinterpreting a pointer as another pointee type uses protected `unsafe cast`:
 
 ```zax
 otherPointer := pointer unsafe cast OtherType *
 ```
 
-It preserves the address while providing no pointee identity, provenance,
-alignment, lifetime, or qualification guarantee. Complete source forms and the
-distinction from checked-layout coercion belong to
-[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#view-shaped-unsafe-cast).
-It also preserves a vacant source's raw representation rather than remapping it
-to the destination type's Nothing representation. A false claim has undefined
-consequences; coincidental sentinel equality is not portable.
-Deeper pointer-copy and provenance policy remains indexed future pointer work.
+It keeps a non-vacant address while providing no pointee identity, provenance,
+alignment, lifetime, or qualification guarantee. A vacant source produces a
+vacant destination. For managed pointers, only the pointee type changes: the
+ownership role, stance, and lifetime rules are those of the ordinary transition.
+Complete behavior, including conversion between pointers and
+pointer-representation integers, belongs to
+[Zax conversions and casts](casting.md#unchecked-reinterpretation-with-unsafe-cast).
+Deeper pointer-copy and provenance policy remains future pointer work.
 
 #### Scheduled raw allocations
 
@@ -632,7 +632,7 @@ The distinction determines:
 - which allocation record applies;
 - whether a pointer may become `unique`;
 - whether raw `reset` may disposition the allocation; and
-- what an anchored pointer keeps alive.
+- what an interior pointer keeps alive.
 
 When the array object itself is dynamically allocated, the complete array place
 is that allocation's root; no element is an independent root merely because a
@@ -748,6 +748,13 @@ Detached block storage can be released. An inline block can be logically
 retired, but its coallocated bytes normally remain until the object allocation
 ends.
 
+A blockless `unique` records only one address. Without a control block, nothing
+records where an allocation root begins, so a complete allocation behind an
+[interior pointer](#interior-pointers) cannot be found or disposed. That is why a
+blockless `unique` never holds an interior pointer, and why shedding a control
+block requires a pointer to target its allocation root. Shedding from an interior
+target fails like a failed claim: the `unique` destination is vacant.
+
 ### Strong ownership
 
 ```zax
@@ -765,7 +772,10 @@ The owned allocation remains available while at least one strong owner exists.
 When strong ownership closes, weak pointers cannot reopen it.
 
 `strong` uses local shared accounting. Copies must not cross thread boundaries
-without first passing through unique ownership.
+without first passing through unique ownership: `unique` for a pointer that
+targets its allocation root, or `unique shareable` for an
+[interior pointer](#interior-pointers), which can never become blockless
+`unique`. Atomic roles cross directly.
 
 ### Weak observation
 
@@ -810,6 +820,16 @@ does not acquire ownership and may become stale immediately. A failed liveness
 probe is permanent for that ownership lifetime because weak ownership cannot
 resurrect a target.
 
+`strong count probe` reports how many strong owners exist at that instant:
+
+```zax
+ownersNow := strong count probe observer
+```
+
+It is the same kind of snapshot: another owner may appear or release before the
+next statement runs. Use it for diagnostics and heuristics, not as proof that a
+later claim will succeed.
+
 Actual acquisition uses ordinary destination-directed `copy`:
 
 ```zax
@@ -851,10 +871,10 @@ reset pointer
 | `weak` | Release this weak observation and any final retained block |
 | Already vacant | No-op |
 
-An anchored strong or weak pointer follows its shared ownership role: reset
-releases participation in the enclosing allocation's control block and leaves
-the anchored pointer vacant. It does not destroy the targeted member as an
-independent allocation.
+An interior strong or weak pointer follows the same rule: reset releases
+participation in the enclosing allocation's control block and leaves the
+pointer vacant. It does not destroy the targeted member as an independent
+allocation.
 
 For raw pointers, safe reset requires proof that the pointer identifies the
 allocation root and that no competing authority will disposition it. An opaque
@@ -918,8 +938,8 @@ Managed and self-accounting pointer roles never support `vacate`:
 unsafe vacate owner // error: unique ownership must be released or transferred
 ```
 
-The same applies to `strong`, `weak`, `anchored`, and future managed roles.
-Unsafe source may assert an opaque but potentially valid raw relationship; it
+The same applies to `strong`, `weak`, and future managed roles, including
+interior pointers. Unsafe source may assert an opaque but potentially valid raw relationship; it
 cannot legalize a guaranteed leak or corrupt ownership accounting.
 
 ## Pointer-layer `atomic`
@@ -1023,8 +1043,11 @@ The claim succeeds only when:
 
 - exactly one strong owner remains;
 - no weak observers remain;
-- the pointer targets the control block's allocation root; and
-- an atomic source can claim that state atomically.
+- an atomic source can claim that state atomically; and
+- for a `unique` destination, the pointer targets its allocation root.
+
+A `unique shareable` destination keeps the control block, so it may hold an
+[interior pointer](#interior-pointers). A blockless `unique` destination cannot.
 
 On success:
 
@@ -1041,6 +1064,21 @@ On failure:
 
 The empty pointer is the failure result; no optional wrapper is needed.
 
+A failed claim under `as last` leaves the source usable only for destruction, so
+check the conditions that can be checked first. Whether a pointer targets its
+allocation root never races with other threads, so it can be asked directly:
+
+```zax
+if sharedOwner is allocation root {
+  plain : MyValue * unique = sharedOwner as last
+  // may still fail on remaining owners or observers, but not on root-ness
+}
+```
+
+`is allocation root` depends only on which place the pointer currently targets.
+A compiler that proves a claim targets an interior place reports an error
+instead of producing a runtime failure.
+
 ### Transfer state and lifetime are independent
 
 An explicit stance can select or forward ownership authority. It does not prove
@@ -1055,7 +1093,8 @@ Complete stance fallback and source state are defined by
 Zax provides three opaque facilities for code that must retain a lifetime or
 access path without exposing an arbitrary “any” value:
 
-- `OpaqueOwner` owns or observes one allocation root.
+- `OpaqueOwner` owns or observes one managed allocation, including a pointer's
+  interior target.
 - `OpaqueObserver` stores one type-erased raw-pointer-like target and may be
   vacant.
 - `OpaqueReferenceObserver` stores one type-erased fixed reference and cannot be
@@ -1095,10 +1134,10 @@ typed : MyType * unique = @
 opaque : OpaqueOwner unique = typed as last
 ```
 
-The opaque owner retains the allocation root, allocation record, destructor,
-arena and disposition, control-block participation, collection metadata, and a
-private exact type/capability witness. It exposes no pointer address or
-dereference.
+The opaque owner retains the target place, allocation root, allocation record,
+destructor, arena and disposition, control-block participation, collection
+metadata, and a private exact type/capability witness for the target. It exposes
+no pointer address or dereference.
 
 `?opaque` reports whether an ownership relationship is stored. For
 `OpaqueOwner weak`, this remains true after strong ownership closes;
@@ -1110,7 +1149,7 @@ their corresponding managed ownership roles. `deep` is unavailable.
 
 ### Safe and unsafe owner recovery
 
-Safe recovery compares the exact canonical allocation-root type and requested
+Safe recovery compares the exact canonical target type and requested
 ownership/capability profile:
 
 ```zax
@@ -1144,9 +1183,20 @@ This is not `unsafe cast`: it reconstructs typed ownership from allocation
 metadata rather than reinterpreting pointer bits. A known mismatch is still an
 error; a false assertion has undefined consequences.
 
-Erasing an anchored interior owner retains the enclosing allocation root, not
-the interior target. Recovery therefore returns only a compatible
-allocation-root pointer.
+Erasing an [interior pointer](#interior-pointers) keeps its interior target, so
+recovery returns the same pointer:
+
+```zax
+engine : Engine * strong = inner car.engine
+opaque : OpaqueOwner strong = engine
+
+engineAgain : Engine * strong = opaque                        // same target, same control block
+carAgain : Car * strong = engineAgain outer cast Car.engine   // reach the root explicitly
+```
+
+Code that receives an erased owner never needs to know whether it was interior.
+The opaque owner's physical layout is not specified; it may need more storage
+than a root-only owner to remember the target.
 
 ### `OpaqueObserver`
 
@@ -1215,97 +1265,181 @@ generic when code needs erased allocation lifetime plus an erased interior
 target. The wrapper must prove the origin/lifetime relationship; merely storing
 the two values together does not establish it.
 
-## Anchored interior pointers
+## Interior pointers
 
-Sometimes code needs an owning pointer to a direct member while keeping the
-complete containing allocation alive:
+Sometimes code needs to own a member of a shared allocation: keep the whole
+allocation alive, but hand out a pointer to just one part of it. That pointer
+should work anywhere an ordinary `strong` pointer is accepted:
 
 ```zax
-container : Container * strong = ...
+Engine :: type {
+  rpm : Integer
+}
 
-member : Item * strong anchored =
-  container.item anchored by container
+Car :: type {
+  engine : Engine
+}
+
+inspectEngine final : ()(engine : Engine * strong) = {
+  use(engine.rpm)
+}
+
+car : Car * strong = makeCar()
+
+engine : Engine * strong = inner car.engine
+inspectEngine(engine)
 ```
 
-The anchored pointer has:
+`engine` is an **interior pointer**: an ordinary `Engine * strong` whose target
+is a member of `car`'s allocation. It shares `car`'s control block and strong
+count. The whole `Car` stays alive while either pointer owns it, and releasing
+the last owner disposes the complete `Car` according to its allocation
+contract. `inspectEngine` cannot tell, and does not need to know, that its
+argument is interior.
 
-```text
-target place:       container.item
-ownership anchor:   container's allocation root
-control block:      container's control block
+Plain member access does not create ownership:
+
+```zax
+engine : Engine * strong = car.engine // error: a member place is not an owner
 ```
 
-Creating it increments the same strong count as `container`. Releasing the last
-anchored owner disposes the complete container according to the allocation
-contract, because the control block still owns the container root.
+### `inner` takes a path
 
-### Direct containment only
+`inner` is a special operation. Its operand is a **path**, the pointer
+followed by the members it walks through, not a value computed first and then
+passed in. Only a few Zax operations take paths, including `inner`, the
+[outer-cast forms](composition.md#outer-casting-to-an-immediate-container), and
+`offset of`. Programmers cannot write operators that take paths.
 
-Ordinary `anchored by` requires a statically recognized direct member. It cannot
-cross:
+The path starts at a pointer and continues through direct resident members:
 
-- optional payloads;
-- pointer or reference dereferences;
-- variant alternatives;
-- dynamic array elements;
-- unmanaged overlays; or
-- separately allocated members.
+```zax
+wheel : Wheel * strong = inner car.axle.wheel      // a chain of direct members
+```
 
-Those paths may disappear, relocate, or belong to another life path while the
-proposed ownership anchor remains alive.
+It cannot cross:
+
+- a pointer or reference;
+- an optional payload;
+- a variant alternative;
+- a dynamic array element;
+- an unmanaged overlay; or
+- a separately allocated member.
+
+Those places can disappear, relocate, or belong to another life path while the
+allocation itself stays alive. Rejecting them also keeps refactoring safe: if
+`Car` later stores `engine` as an `Engine * strong` member, `inner car.engine`
+becomes an error instead of quietly copying that member pointer.
+
+```zax
+driver : Driver * strong = inner car.driver
+// error when `driver` is a pointer member: the path crosses a pointer
+```
 
 An ordinary slice does not change this boundary. It borrows array element
 places and cannot keep a relocated element alive merely by retaining the
-array's allocation. Owning or allocation-anchored slices remain explicit future
-array/pointer design.
+array's allocation. Owning or allocation-anchored slices remain future
+array and pointer design.
 
-Whether one uninterrupted chain of direct composition may be anchored in one
-operation remains deferred. Unsafe ownership anchoring also remains future work.
+`inner` is otherwise an ordinary operator word. The language owns it only when
+its operand is a member path that starts at a pointer; a programmer type may
+declare its own `inner` for other operands. Every pointer root selects the
+language operation, including roots it then rejects, so changing `car` to a raw
+pointer produces an error rather than silently choosing a different `inner`.
 
-### Replacement intent
+### What the root allows
 
-An anchored pointer names the stable direct-member place. Complete replacement
-of the container renews that member's resident instance while the allocation and
-place continue.
+| Root | Result |
+| --- | --- |
+| `strong` or `strong atomic` | The same role, sharing the root's control block and strong count |
+| `weak` or `weak atomic` | The same role, observing without ownership |
+| `unique` or `unique shareable` | Error: a second owner of a uniquely owned allocation |
+| Raw | Error: there is no control block to share |
 
-Creating such a pointer causes an intent error when the target or an enclosing
-direct place may be replaced:
+The root may itself be an interior pointer. `inner engine.crankshaft` shares the
+same control block as `engine` and `car`.
+
+Weak acquisition keeps the interior target:
 
 ```zax
+observer : Engine * weak = engine
+restored : Engine * strong = observer   // targets car.engine again, or is empty once ownership closed
+```
+
+### Returning to the container
+
+An [outer cast](composition.md#outer-casting-to-an-immediate-container) on a
+managed pointer keeps its role and control block:
+
+```zax
+sameCar : Car * strong = engine outer cast Car.engine
+// sameCar is allocation root: true
+```
+
+Each outer cast crosses one immediate boundary, so returning from
+`inner car.axle.wheel` takes two casts. Composition owns the proved, tracked,
+and unsafe forms.
+
+### Interior pointers never become blockless `unique`
+
+A blockless `unique` pointer records only its target. It has nowhere to
+remember the allocation root it would have to dispose, so a claim to `unique`
+requires the allocation root:
+
+```zax
+exclusive : Engine * unique = engine as last
+// error when the compiler proves `engine` is interior; otherwise a vacant result
+```
+
+A `unique shareable` destination keeps the control block and may hold an
+interior target. To claim `unique` after working with an interior pointer,
+return to the root and release the other owners, including the interior ones:
+
+```zax
+reset engine
+reset car
+exclusive : Car * unique = sameCar as last   // succeeds if sameCar is now the only owner
+```
+
+See [shared to unique](#shared-to-unique) for the complete claim conditions and
+`is allocation root`.
+
+### When the container can be replaced
+
+Completely replacing a container ends every member's resident instance and
+builds successors in the same places. An interior pointer names its member
+place, so after replacement it reaches the new member:
+
+```zax
+car : Car * strong = makeCar()          // the Car pointee place is replaceable
+
 // Illustrative category identifier; exact name remains unsettled.
-intent<anchored-pointer-tracks-replacement>{
-  member : Item * strong anchored =
-    container.item anchored by container
+intent<inner-pointer-tracks-replacement>{
+  engine : Engine * strong = inner car.engine
 }
+
+car. .= makeCar()      // the old engine ends; a new engine is built in the same place
+use(engine.rpm)        // reads the new engine, not the one that existed when `engine` was created
 ```
 
-The acknowledgement confirms that later access may observe a completely
-established successor member. It is not unsafe permission, and ordinary access
-still cannot observe a half-complete transition.
+An owning pointer that silently comes to designate a different, newly built
+instance is surprising, so creating one requires an intent acknowledgement
+whenever the target or an enclosing direct place may be completely replaced. A
+container that cannot be replaced needs no acknowledgement.
 
-The category identifier shown above is provisional pending the ordinary
-intent-category review.
+The behavior itself is defined: access always reaches a completely established
+member, never a half-built or ended one. That is why this is an intent
+acknowledgement and not `unsafe`. By contrast, a plain
+[member reference](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary)
+used after the same replacement is an error, because a reference is checked at
+each use while an interior owner lives too long for that.
 
-### Anchored weak pointers
+### Cost
 
-```zax
-observer : Item * weak anchored = member
-restored : Item * strong anchored = observer
-```
-
-Weak acquisition reconstructs the same member target and ownership anchor. It
-produces an empty anchored strong pointer after ownership closes.
-
-### Anchored pointers are never unique
-
-```zax
-owner : Item * unique = member as last
-// error: the pointer target is not the control block's allocation root
-```
-
-This conversion is statically unavailable rather than conditionally empty.
-`Item * unique` would otherwise appear to own an independently destructible
-`Item` while its control block actually disposes a `Container`.
+Every `strong`, `weak`, and `unique shareable` pointer records its target and
+its control block separately, so an interior pointer costs the same as any other
+managed shared pointer. Blockless `unique` stays a single address, which is why
+it cannot be interior.
 
 ## Arenas
 
@@ -1527,7 +1661,7 @@ boundary requires narrow unsafe responsibility.
 | `unique shareable` | Reserved inline or detached control block |
 | `strong` / `weak` | Local count updates, control-block storage, possible weak-retained block |
 | `strong atomic` / `weak atomic` | Synchronized count and acquisition operations |
-| Anchored pointer | Target address plus shared ownership anchor; same count cost as its strong/weak family |
+| Interior pointer | Same as its `strong` or `weak` role; managed shared pointers record target and control block separately |
 | `OpaqueOwner` | Managed relationship plus private type/capability witness; no typed access |
 | `OpaqueObserver` | Nonowning target plus private type/origin witness |
 | `OpaqueReferenceObserver` | Fixed nonowning target plus private type/origin witness |
@@ -1547,9 +1681,13 @@ Representative diagnostics include:
 - blockless `unique` cannot enter shared ownership without allocating a control
   block;
 - shared-to-unique claim failed and produced an empty destination;
-- anchored pointer cannot become unique;
-- `anchored by` target is not a permitted direct member;
-- replacement-tracking anchored pointer requires intent acknowledgement;
+- interior pointer cannot become blockless `unique`;
+- claim to `unique` from a pointer that is not the allocation root;
+- `inner` path crosses a pointer, reference, optional payload, variant
+  alternative, dynamic array element, unmanaged overlay, or separate allocation;
+- `inner` from a raw, `unique`, or `unique shareable` root;
+- plain member access used where an owning pointer is required;
+- replacement-tracking interior pointer requires intent acknowledgement;
 - local shared ownership cannot cross this thread boundary;
 - pointee or destructor is thread-affine;
 - object or control-block arena would end while dependent pointers remain;
@@ -1587,7 +1725,7 @@ Diagnostics should distinguish:
 
 - ownership role;
 - target place;
-- ownership anchor;
+- allocation root, when the target is interior;
 - object arena;
 - control-block arena;
 - allocation disposition;
@@ -1606,7 +1744,9 @@ history.
   physically unrecoverable retired bytes.
 - `unique shareable` proves that a suitable dormant block exists.
 - `strong` and `weak` prove active or observable shared ownership.
-- `anchored` proves that target and ownership root differ.
+- An interior pointer is an ordinary `strong` or `weak` pointer, so code that
+  accepts those roles accepts it without change.
+- `is allocation root` depends only on the pointer's current target.
 - pointer-layer `atomic` states the shared accounting contract.
 
 Allocation disposition may remain metadata rather than a pointer qualifier, but
@@ -1627,9 +1767,10 @@ Still deferred:
 
 - custom arena and control-block interfaces;
 - custom control-block implementations;
-- deeper or unsafe ownership anchoring;
-- pointer representation and tagging;
-- complete casts, arithmetic, and provenance;
+- unsafe interior ownership beyond direct member paths;
+- pointer representation and tagging, including the layout of managed pointers
+  and `OpaqueOwner`;
+- pointer arithmetic and provenance;
 - exact pointer sentinel/tag ABI and target representation;
 - exact process-wide collection trigger spelling, cycle-root discovery,
   traversal, and concurrent coordination;

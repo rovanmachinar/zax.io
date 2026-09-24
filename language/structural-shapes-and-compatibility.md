@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, callable result/input reshape mapping, and callable exceptional-outcome reshape; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
-| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, general casting outside the forms integrated here, or compiler lowering |
+| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, complete `unsafe cast` behavior and general casting ([conversions and casts](casting.md)), or compiler lowering |
 
 ## Start with distinct identities
 
@@ -830,35 +830,24 @@ construction, replacement, or destruction invariants.
 
 ### View-shaped `unsafe cast`
 
-`unsafe cast` performs unchecked reinterpretation outside the compatibility
-family:
+When no compatibility posture, anchor, or coercion can establish a
+relationship, `unsafe cast` remains available as unchecked reinterpretation
+outside the compatibility family:
 
 ```zax
-pointer unsafe cast Destination *
-value unsafe cast Destination &
-reference unsafe cast Destination &
+view : Destination & = value unsafe cast Destination &
 ```
 
-It verifies no compatibility, qualification, invariant, lifetime, bounds, or
-target-layout guarantee.
+It verifies no shape, layout, posture, anchor, qualification, invariant,
+lifetime, bounds, or target-layout guarantee, and it produces only views. To
+obtain a new structural value, form the view and construct the destination from
+it. Prefer the protected compatibility and coercion forms whenever they apply:
+they state and check the relationship that `unsafe cast` leaves to the
+programmer.
 
-A bare by-value result is intentionally unavailable:
-
-```zax
-copy := value unsafe cast Destination // error
-```
-
-That spelling cannot distinguish raw lifetime creation, arbitrary byte copying,
-destination copy construction, truncation, overread, or invalid placement
-metadata. Form an unsafe view and request construction explicitly:
-
-```zax
-copy : Destination =
-  value unsafe cast Destination &
-```
-
-The cast owns unchecked reinterpretation. Destination construction owns copying,
-resources, tracking repair, and the new value lifetime.
+Complete `unsafe cast` behavior, including by-value construction, vacancy,
+qualification, and pointer roles, is owned by
+[Zax conversions and casts](casting.md#unchecked-reinterpretation-with-unsafe-cast).
 
 ## Scalar compatibility
 

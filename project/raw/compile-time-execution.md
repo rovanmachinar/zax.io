@@ -137,9 +137,9 @@ active, never an unspecified build machine.
 
 ## Context-sensitive layout and constant queries
 
-The reserved forms `size of`, `alignment of`, `offset of`, and `is constant`
+The protected forms `size of`, `alignment of`, `offset of`, and `is constant`
 return a result "in the active execution context". See the
-[operator catalog](../../language/operator-catalog.md#reserved-phrase-forms).
+[operator catalog](../../language/operator-catalog.md#protected-forms).
 
 Future work must decide:
 

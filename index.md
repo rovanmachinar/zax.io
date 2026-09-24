@@ -45,6 +45,10 @@ producing them.
 - Read [Zax structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
   for identity-versus-shape, compatibility postures, anchored recasting,
   same-storage views, decomposition, recomposition, and transformation.
+- Read [Zax conversions and casts](language/casting.md) to choose among
+  conversion, stance restatement, compatibility, container navigation, and
+  unchecked reinterpretation, and for programmer-declared `as`, `unsafe cast`,
+  and pointer/integer conversion.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
@@ -151,6 +155,7 @@ producing them.
 - [Composition](language/composition.md)
 - [Identity types](language/identity-types.md)
 - [Structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
+- [Conversions and casts](language/casting.md)
 - [Enums](language/enums.md)
 - [Qualifiers](language/qualifiers.md)
 - [Transfer stances](language/transfer-stances.md)
@@ -206,10 +211,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
 - [Optional values](language/optional-values.md) — current optional wrapper,
   construction, transfer, qualification, and proven-access design
 - [Partial types](partial.md)
-- [Casting](casting.md) — legacy general casting input; current integer
-  conversion is owned by [Zax integers](language/integers.md), while current
-  string identities and compile-time joins are owned by
-  [strings and characters](language/strings-and-characters.md)
 
 ### Memory and lifetime
 

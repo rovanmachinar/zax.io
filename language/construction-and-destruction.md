@@ -936,6 +936,11 @@ Complete reconstruction requires:
 It does not require the old value to be mutable. Construction authority
 establishes the successor's mutable or immutable state.
 
+These requirements apply only to a live place. On a function result slot that is
+not constructed yet, `.=` performs its first construction instead and needs no
+replacement permission; see
+[Zax function invocation](function-invocation.md#opt-in-result-initialization).
+
 Type-side `final`, declaration-side `final`, and readonly access independently
 block `.=`:
 
@@ -1271,8 +1276,8 @@ Same-storage replacement does not categorically invalidate every raw pointer.
 
 Raw pointers carry no ownership or intrinsic lifetime guarantee. A use is safe
 when analysis proves its required origin and lifetime facts; otherwise it needs
-narrow unsafe responsibility. Managed ownership, including direct-member
-anchored pointers, is defined by
+narrow unsafe responsibility. Managed ownership, including interior pointers to
+direct members, is defined by
 [pointers and arenas](pointers-and-arenas.md).
 
 ### Representation boundary

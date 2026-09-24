@@ -64,6 +64,28 @@ MyIntrinsicExtension :: partial U32 {
 }
 ```
 
+## Conversion pressure on protected and declared types
+
+Programmer code cannot add `as` to the language's scalar types, so a scalar
+cannot be the receiver of a conversion into a programmer type:
+
+```zax
+myTally := myInt as MyTally   // unavailable: no programmer declaration can live on the integer type
+myTally : MyTally = [{
+  .count = myInt              // current route: construction
+}]
+```
+
+An owner-authorized partial mechanism could add such `as` operators to a
+protected domain. See
+[Zax conversions and casts](../../language/casting.md#your-types-and-the-languages-scalars).
+
+A second, weaker pressure is a partial extension wanting to *disable* an `as`
+operator that the original type declared. Maintainer review found this feels
+wrong: nothing in Zax generates default `as` operators, so disabling would only
+override the defining type's own decision. Record it only so a future partial
+design can reject it explicitly.
+
 ## Universal receiver ownership removes global operators
 
 Current [operator design](../../language/operators.md#discovery) now requires
@@ -119,7 +141,7 @@ Whatever partial mechanism is adopted, it must permanently preserve
 [protected intrinsic signatures](../../language/operators.md#protected-intrinsic-domains)
 and the protected language-provided phrase signatures. An extension may not claim
 a signature whose every operand belongs to a closed intrinsic family, and it may
-not replace a reserved phrase form.
+not replace a protected form.
 
 ## Adopted-versus-reserved phrase conflict
 

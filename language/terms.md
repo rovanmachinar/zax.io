@@ -93,15 +93,6 @@ can target it.
 See
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-roots-and-records).
 
-## Anchored pointer
-
-An **anchored pointer** targets a direct contained-member place while its
-ownership is kept by the control block for the enclosing allocation root.
-
-`strong anchored` and `weak anchored` are never unique owners of the member they
-target. See
-[Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
-
 ## Array expression
 
 An **array expression** is `[ ... ]` source that constructs one owning intrinsic
@@ -254,8 +245,7 @@ A **compatibility anchor** is a source-relative resident-storage path that
 selects where one contiguous compatible region begins. The expected destination
 supplies the region's required extent and resulting type.
 
-It is distinct from a mixfix receiver anchor, numeric type anchor, and pointer
-ownership anchor. See
+It is distinct from a mixfix receiver anchor and a numeric type anchor. See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#select-one-contiguous-region-with-anchor).
 
 ## Compatibility posture
@@ -280,7 +270,7 @@ destination validity and, for writable access, preservation of source validity.
 `unsafe as coercive` instead accepts an unproved validity precondition or a
 restoration obligation after a write. Both forms are local reference views,
 preserve available qualification authority, and remain distinct from unchecked
-`unsafe cast`. See
+[`unsafe cast`](casting.md#unchecked-reinterpretation-with-unsafe-cast). See
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#coercive-reference-views).
 
 ## Compiler-directive enclosure
@@ -593,6 +583,19 @@ directly in the selected type.
 It is not conversion from a hidden `Integer` and introduces no runtime range
 check. See [Zax integer literals and realization](integer-literals.md).
 
+## Interior pointer
+
+An **interior pointer** is an ordinary `strong` or `weak` pointer whose target is
+a direct member of a managed allocation rather than its root:
+
+```zax
+engine : Engine * strong = inner car.engine
+```
+
+It shares the allocation's control block and keeps the whole allocation alive.
+It can never become blockless `unique`. See
+[Zax pointers and arenas](pointers-and-arenas.md#interior-pointers).
+
 ## Intent acknowledgement
 
 An **intent acknowledgement** confirms that the compiler's defined but
@@ -887,14 +890,17 @@ interpretations for the fenced words. It does not group, add a precedence
 boundary, or select an implementation. See
 [Zax operator phrases](operator-phrases.md#exact-phrase-fencing).
 
-## Reserved phrase form
+## Protected form
 
-A **reserved phrase form** is an exact operator phrase that user code cannot
-declare. Reserving a form holds it for the language even when some of its domain
+A **protected form** is an exact operator form that user code cannot declare for
+any receiver, such as `as move`, `size of`, `unsafe cast`, or `outer cast`.
+Protecting a form holds it for the language even when some of its domain
 behavior remains future work.
 
-The current reserved set is listed by the
-[operator catalog](operator-catalog.md#reserved-phrase-forms).
+A protected form differs from a
+[protected intrinsic signature](#protected-intrinsic-signature), which leaves the
+same spelling open for programmer types. The protected forms are listed by the
+[operator catalog](operator-catalog.md#protected-forms).
 
 ## Operator-attachment intent error
 
@@ -1003,15 +1009,6 @@ Both paths reach the same place and therefore the same resident instance,
 lifetime, and qualifications. See
 [Zax composition](composition.md#publishing-stored-data-with-own).
 
-## Ownership anchor
-
-An **ownership anchor** is the allocation root and control block that an
-anchored strong or weak pointer uses to keep storage alive while targeting a
-direct contained-member place.
-
-The target place and ownership anchor are intentionally different. See
-[Zax pointers and arenas](pointers-and-arenas.md#anchored-interior-pointers).
-
 ## Outer cast
 
 An **outer cast** starts with a reference or pointer to a stored member and
@@ -1025,9 +1022,11 @@ possibleCar : Car & ? = engine tracked outer cast Car.engine
 
 Plain `outer cast` requires a proof mandated by the selected language contract
 and returns a non-optional reference without runtime tracking.
-`tracked outer cast` explicitly uses an `outer tracked` member type's placement
-capability and returns an optional reference. `unsafe outer cast` instead
-asserts that the placement is correct. The exact path matters when a container
+`tracked outer cast` checks the placement at runtime; a reference operand
+produces an optional reference, and a pointer operand produces a same-role
+pointer that is vacant on failure. `unsafe outer cast` instead asserts that the
+placement is correct. An outer cast of a `strong` or `weak` pointer keeps its
+ownership role. The exact path matters when a container
 stores several members of the same type.
 
 The word `outer` has a separate contextual type use inside an abstract
@@ -1044,7 +1043,10 @@ it or claim a currently unavailable all-intrinsic combination.
 
 Protection preserves predictable primitive behavior and future language
 evolution. A mixed signature containing a custom operand remains extensible.
-See [Zax operators](operators.md#protected-intrinsic-domains).
+Examples include exact `Boolean` logical phrases, scalar arithmetic and
+conversion, pointer queries such as `liveness probe`, and `inner` applied to a
+pointer-rooted member path. See
+[Zax operators](operators.md#protected-intrinsic-domains).
 
 ## Receiver anchor
 
@@ -1163,7 +1165,9 @@ constructor when a viable customization exists; otherwise it uses the generated
 fallback of enclosing `---` followed by ordinary `+++`.
 
 It requires a varying place through a declaration-side varying, writable access
-path. A final place or readonly path cannot select it. See
+path. A final place or readonly path cannot select it. On a function result slot
+that is not constructed yet, `.=` instead performs first construction, which
+needs none of those permissions. See
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement)
 and [Zax qualifiers](qualifiers.md#reconstructive-replacement).
 

@@ -223,10 +223,10 @@ copying a diagnostic message.
 | `repeated-resource-expression` | Deliberately repeat a resource-producing expression as a later `using` entry while preserving every evaluation | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `same-prefix-literal-join` | Deliberately invoke the same resolved literal declaration twice and join its concrete results rather than merge the payload for one invocation | [Literal source and operators](literal-source-and-operators.md#same-declaration-requires-intent-acknowledgement) |
 
-Anchored owning pointers also require intent acknowledgement when replacement
-of their target or an enclosing direct place can renew the resident member
-instance. That behavior is defined by
-[pointers and arenas](pointers-and-arenas.md#replacement-intent). Its exact
+Interior pointers also require intent acknowledgement when replacement of their
+target or an enclosing direct place can renew the resident member instance.
+That behavior is defined by
+[pointers and arenas](pointers-and-arenas.md#when-the-container-can-be-replaced). Its exact
 category identifier remains unsettled and examples mark the spelling
 provisional rather than adding it to this accepted registry prematurely.
 

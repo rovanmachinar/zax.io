@@ -214,8 +214,9 @@ Panic-category obligations without a current registry occur in:
 - `project/raw/safety.md`.
 
 The accepted intent registry covers current accepted intent names. One live
-pointer example uses provisional
-`intent<anchored-pointer-tracks-replacement>{...}` while explicitly stating that
+interior-pointer example uses provisional
+`intent<inner-pointer-tracks-replacement>{...}` (formerly
+`anchored-pointer-tracks-replacement`) while explicitly stating that
 its exact category identifier remains unsettled. That occurrence is intentional
 future intent-registry pressure, not an accepted entry and not an unsafe or panic
 category.

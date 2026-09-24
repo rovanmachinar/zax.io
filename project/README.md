@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [031: Casting](work/031-casting.md) |
-| Next work number | `032` |
+| Active work item | [032: Construction with `.=`](work/032-dot-equals-construction.md) |
+| Next work number | `033` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

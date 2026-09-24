@@ -631,18 +631,18 @@ When a language-recognized pointer conversion receives a vacant source, it
 produces the destination pointer type's own vacant state. The source and
 destination need not use the same sentinel bits.
 
-`unsafe cast` is lower level: it preserves the raw bits instead of translating
-vacancy:
+`unsafe cast` follows the same vacancy rule even though it checks nothing else:
 
 ```zax
 barPointer : Bar *
 fooPointer : Foo * = barPointer unsafe cast Foo *
+// ?fooPointer is false: still vacant
 ```
 
-If `barPointer` carries a `Bar` Nothing representation that is not valid as a
-`Foo` pointer, later use has undefined consequences. The cast does not silently
-repair it. It may appear to work when the two representations happen to match,
-but source cannot rely on that coincidence.
+A non-vacant address is reinterpreted unchanged. Code that needs a vacant
+pointer's exact raw representation converts through a pointer-representation
+integer, which does not preserve vacancy. See
+[Zax conversions and casts](casting.md#vacant-pointers-stay-vacant).
 
 Pointer arithmetic that requires an ordinary target may perform its own
 category-specific check and panic. Disabling that check promises the pointer is
@@ -698,7 +698,7 @@ anotherOwner : MyValue * unique = @
 unsafe vacate anotherOwner // error: ownership must be released or transferred
 ```
 
-The same applies to strong, weak, anchored, and other managed roles. Unsafe
+The same applies to strong, weak, interior, and other managed pointers. Unsafe
 source may assert an opaque but potentially valid raw relationship; it cannot
 legalize a guaranteed leak or corrupt ownership accounting.
 

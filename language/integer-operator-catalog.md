@@ -26,7 +26,7 @@ The [general operator catalog](operator-catalog.md) remains authoritative for:
 - recognized symbolic and phrase forms;
 - fixity;
 - precedence and association;
-- reserved versus open forms; and
+- protected versus open forms; and
 - source-tree formation.
 
 Custom overloads may assign domain-specific behavior and result shapes where the

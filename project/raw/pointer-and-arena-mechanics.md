@@ -5,9 +5,9 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining complete pointer provenance, arena interfaces, custom control blocks, collector algorithms, recovery internals, or affinity |
 | Applies To | Mechanics deferred by current lifetime and pointer design |
-| Owns | Preservation of unresolved arena interfaces, custom control-block implementation, deeper/unsafe ownership anchoring, pointer provenance and casts, pointer-layer presence mechanics, cycle-tracing algorithms, recovery implementation, prompt-disposition generic pressure, and thread-affine release |
-| Does Not Own | Current reference lifetime, pointer ownership semantics, or the programmer-facing Nothing-instance model |
-| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; work items `014` and `015` |
+| Owns | Preservation of unresolved arena interfaces, custom control-block implementation, unsafe interior ownership, pointer provenance, raw-memory byte views, allocator and control-block metadata queries, managed-pointer and `OpaqueOwner` layout, pointer-layer presence mechanics, cycle-tracing algorithms, recovery implementation, prompt-disposition generic pressure, and thread-affine release |
+| Does Not Own | Current reference lifetime, pointer ownership semantics, `unsafe cast` and pointer/integer conversion ([conversions and casts](../../language/casting.md)), or the programmer-facing Nothing-instance model |
+| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; legacy `basics.md` pointer operator list; work items `014`, `015`, and `031` |
 
 ## Current constraints
 
@@ -15,13 +15,15 @@ Current behavior is owned by:
 
 - [Zax lifetimes and references](../../language/lifetimes-and-references.md);
 - [Zax pointers and arenas](../../language/pointers-and-arenas.md);
-- [Zax transfer stances](../../language/transfer-stances.md); and
+- [Zax transfer stances](../../language/transfer-stances.md);
+- [Zax conversions and casts](../../language/casting.md); and
 - [Zax safety and analysis](../../language/safety-and-analysis.md).
 
 Future work must preserve:
 
 - permanent reference binding;
-- raw, `unique`, `unique shareable`, `strong`, `weak`, and anchored pointer roles;
+- raw, `unique`, `unique shareable`, `strong`, and `weak` pointer roles, with
+  interior pointers as ordinary `strong` or `weak` pointers;
 - pointer-layer `atomic` as shared lifetime accounting rather than pointee thread
   safety;
 - arena-backed dynamic allocation;
@@ -33,8 +35,9 @@ Future work must preserve:
 - destination-directed ownership transitions;
 - weak probing without acquisition;
 - weak-to-strong `copy`;
-- direct-member `anchored by`;
-- and no anchored-to-`unique` conversion.
+- `inner` over direct member paths, and role-preserving `outer cast`;
+- no interior-to-blockless-`unique` conversion; and
+- vacancy-preserving `unsafe cast` that changes only the pointee type.
 
 ## Custom shareability implementation
 
@@ -61,50 +64,93 @@ Shedding a detached block may recover its allocation. Shedding an inline block
 retires its semantic role but normally cannot recover its bytes without
 relocating the instance.
 
-## Deeper and unsafe ownership anchoring
+## Unsafe interior ownership
 
-Current `anchored by` accepts a statically recognized direct member:
-
-```zax
-member : Item * strong anchored =
-  container.item anchored by container
-```
-
-Future work must decide whether one uninterrupted chain of direct composition is
-also safe:
+Current `inner` accepts a direct member path, including an uninterrupted chain of
+direct members, and rejects paths that cross a pointer, reference, optional
+payload, variant alternative, dynamic array element, unmanaged overlay, or
+separate allocation:
 
 ```zax
-leaf : Leaf * strong anchored =
-  container.branch.leaf anchored by container
+wheel : Wheel * strong = inner car.axle.wheel
 ```
-
-The path must not cross optional presence, pointer/reference dereference,
-variant activity, dynamic-array relocation, unmanaged overlay state, or another
-allocation.
 
 Legacy `unsafe lifetime of` preserved arbitrary adoption of another pointer's
 ownership control block. If an unsafe successor exists, it must state the exact
 relationship being claimed:
 
-- target lies within the ownership anchor's allocation;
-- target instance place remains valid for every use;
+- the target lies within the root pointer's allocation;
+- the target instance place remains valid for every use;
 - replacement or relocation behavior is intentional;
 - representation and alignment are suitable; and
-- the anchored target cannot become a unique allocation root.
+- the interior target cannot become a blockless `unique` allocation root.
 
 Illustrative future source:
 
 ```zax
-/// myTarget is a stable direct subplace of owner despite opaque projection.
-myTarget unsafe anchored by owner
+// Illustrative only; the spelling is not accepted.
+/// myTarget is a stable subplace of owner despite opaque projection.
+target : Target * strong = unsafe inner owner with myTarget
 ```
 
-The spelling is not accepted.
+## Managed-pointer and `OpaqueOwner` layout
+
+Current design requires `strong`, `weak`, and `unique shareable` pointers to
+record their target and control block separately, and requires `OpaqueOwner` to
+remember an interior target and its type so erasure round-trips exactly.
+Blockless `unique` stays a single address.
+
+Future work must define the physical layout. `OpaqueOwner` may need more storage
+than a root-only owner; that is acceptable if no better representation is found.
+Activate when pointer representation, ABI, or opaque-owner storage is designed.
+
+## Blockless `unique` disposal information
+
+A blockless `unique` must target its allocation root, and current
+[conversions and casts](../../language/casting.md#pointer-ownership-roles)
+permits `unsafe cast` to change its pointee type under programmer
+responsibility. Because the target is always the root, the root allocation could
+record basic destructor information for the constructed type, so that a retyped
+blockless `unique` still disposes the real type. Future work must decide whether
+that record exists and therefore which type a retyped blockless `unique`
+destroys. This joins the open question below of how a blockless `unique`
+retains its object arena, disposition, destructor, size, and alignment.
+
+## Allocator and control-block queries
+
+Legacy `basics.md` proposed operators that observe allocation metadata. Their
+surviving direction:
+
+```zax
+// Illustrative only; exact words and result types are not accepted.
+arena := allocator of myValue           // requires proof of a known allocation
+arena := unsafe allocator of myValue    // programmer asserts a known allocation
+block := overhead as myShared           // protected access to a control-block description
+bytes := overhead size of MyValue * strong
+```
+
+- `allocator of` returns the arena by reference, because both forms are
+  non-failing. Until an arena interface exists, a placeholder such as
+  `OpaqueReferenceObserver`, recovered with `is type`, stands in for the result
+  type. A blockless `unique` qualifies only if it retains its arena.
+- `overhead as` would be protected and return a pointer to a yet-undefined
+  control-block description type.
+- `overhead size of` is design pressure only. The size varies by pointer role and
+  by compiler host versus target (see
+  [raw compile-time execution](compile-time-execution.md)). Custom control blocks
+  are considered unlikely and are not its motivation.
+- A `weak count probe` beside the current `strong count probe` may be added if
+  weak-count observation is needed.
+
+Activate when arena interfaces, control-block representation, or allocation
+reflection is designed.
 
 ## Pointer provenance and conversion
 
 Pointer-representation integer capacities are owned by
 [Zax integers](../../language/integers.md#pointer-representation-integer-roles).
+Conversion between pointers and `UPointer` is owned by
+[Zax conversions and casts](../../language/casting.md#pointers-and-integers).
 Numeric fit does not establish pointer validity.
 
 Future pointer work must define:
@@ -112,16 +158,23 @@ Future pointer work must define:
 - raw pointer creation and address-of behavior;
 - how a blockless unique pointer retains or recovers its object arena,
   disposition, destructor, size, and alignment without a shared control block;
-- pointer-to-integer and integer-to-pointer conversion;
+- provenance carried, lost, or asserted across pointer/integer conversion;
 - provenance preservation;
 - alignment;
 - segment or address-space identity;
 - comparability and ordering;
 - pointer subtraction and `PointerDelta`;
 - one-past and range boundaries;
-- casts among pointer layers;
-- ownership-preserving versus ownership-losing conversions;
+- ownership-preserving versus ownership-losing conversions beyond the current
+  role transitions;
 - and FFI adoption.
+
+A helper that views raw memory as an array or iterator of bytes is also
+pressure here. Raw pointers already reach bytes, but a bounded view would make
+serialization and FFI code clearer. Its shape touches
+[arrays and slices](../../language/arrays-and-slices.md). Viewing a pointer
+object through `unsafe cast UPointer &` is not such a view: it yields one integer,
+not bytes.
 
 Near, ordinary, and far representations may share machine layouts while
 retaining distinct source identities and intent.
@@ -146,8 +199,9 @@ Future pointer mechanics must define:
 - provenance and alignment attributed to a vacant representation;
 - arithmetic checks when an ordinary target is required;
 - safe type-aware conversion that remaps vacancy to the destination role;
-- view-shaped `unsafe cast`, which preserves the raw source representation and
-  does not remap a sentinel;
+- the vacancy test performed by `unsafe cast`, which remaps a vacant source to
+  the destination's vacancy, and when it can be elided;
+- the raw representation produced when a vacant pointer converts to `UPointer`;
 - same-type vacant equality and any permitted byte-level observation; and
 - interaction with foreign nullability, target protection, and debug
   instrumentation.
@@ -249,7 +303,7 @@ Future work must define:
 - process-wide coordination across object and control-block arenas;
 - how external roots are distinguished from strong edges inside a candidate
   cycle;
-- how anchored pointers participate;
+- how interior pointers participate;
 - whether custom types expose outgoing strong edges through reflection or
   generated traversal;
 - collector interaction with local versus atomic control blocks;
@@ -344,7 +398,7 @@ Future pointer work must decide whether copying `cursor` while excluding
 `payload` is:
 
 - safe because another proved owner preserves the target;
-- valid through a managed or anchored relationship;
+- valid through a managed or interior-pointer relationship;
 - unavailable because lifetime cannot be proved; or
 - permitted only through local unsafe responsibility.
 
@@ -355,7 +409,8 @@ invent another pointer model.
 ## Activation and retirement
 
 Activate this input when arena interfaces, control-block customization, unsafe
-anchoring, provenance, pointer casts, pointer-layer presence mechanics,
+interior ownership, provenance, raw-memory views, allocation metadata queries,
+pointer representation, pointer-layer presence mechanics,
 process-wide cycle-collection algorithms, memory recovery implementation, or
 thread-affine release is reviewed. Current allocation and pointer source is
 owned by

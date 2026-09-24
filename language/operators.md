@@ -327,8 +327,8 @@ evaluation boundary must remain visible; exact Boolean `logical nand`,
 `logical and not`, `logical nor`, and `logical or not` short-circuit and form
 [mixfix-consumption barriers](mixfix-operators.md#protected-barriers), while
 exact Boolean `logical xnor` is eager and consumable. Precedence belongs to the
-form rather than the receiver. A **reserved phrase form** is an exact form user
-code cannot declare at all; exact forms, precedence levels, and the reserved set
+form rather than the receiver. A **protected form** is an exact form user code
+cannot declare at all; exact forms, precedence levels, and the protected forms
 are in the [operator catalog](operator-catalog.md#operator-forms).
 
 ## Discovery
@@ -670,6 +670,14 @@ operator binary '+' final :
 }
 ```
 
+The test is whether a programmer type may still declare the same spelling. When
+it may, the language owns only its intrinsic signatures; when no receiver may
+declare it, the spelling is a **protected form**, listed by the
+[operator catalog](operator-catalog.md#protected-forms). `inner` is a protected
+intrinsic signature whose operand is a pointer-rooted member path rather than a
+value; see
+[interior pointers](pointers-and-arenas.md#interior-pointers).
+
 This reserves fundamental Boolean, integer, pointer-sized numeric, fixed-point,
 floating, and other closed domains for coherent language evolution. Exposed
 integer identities receive the identity-adjusted protected surface defined by
@@ -874,7 +882,7 @@ Complete Nothing-instance and unavailable-function behavior belongs to
 
 ### Transfer-stance source forms
 
-The reserved post-unary phrases:
+The protected post-unary phrase forms:
 
 ```zax
 source as copy
@@ -899,7 +907,7 @@ moved := source as move
 ```
 
 Candidate-tree formation recognizes a complete destination type argument for the
-binary form and one exact reserved post-unary phrase for the stance form. The
+binary form and one exact protected post-unary phrase for the stance form. The
 source does not require an exact phrase fence.
 
 Complete `copy`/`deep`/`move`/`last` meaning, fallback, declaration stance,
@@ -920,8 +928,8 @@ than reinterpreting pointer bits. Complete behavior belongs to
 ### Protected structural forms
 
 Compatibility posture restatement, source-relative `anchor`, safe structural
-`as`, safe and unsafe coercive `as`, and view-shaped `unsafe cast` are protected
-language forms. User declarations cannot replace them.
+`as`, safe and unsafe coercive `as`, and [`unsafe cast`](casting.md) are
+protected forms. User declarations cannot replace them.
 
 `>-`, `-<`, and `-<>-` are mapping-bound structural operators rather than
 ordinary overloadable arithmetic expressions. Their punctuation visually opens
@@ -930,8 +938,9 @@ Each source expression or producer evaluates once.
 
 Structural posture and safe conversion preserve complete qualifications.
 Coercive conversion may be safe when its representation relation is total and
-uses `unsafe` only for validity or writable-restoration responsibility. Raw
-casting remains explicitly unsafe. Exact source forms are listed by the
+uses `unsafe` only for validity or writable-restoration responsibility.
+Unchecked reinterpretation remains explicitly unsafe; see
+[Zax conversions and casts](casting.md). Exact source forms are listed by the
 [operator catalog](operator-catalog.md), and complete programmer behavior belongs to
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
 
@@ -1123,8 +1132,8 @@ such as the [integer operator catalog](integer-operator-catalog.md).
 
 Diagnostics should distinguish:
 
-- unrecognized or reserved form;
-- reserved-form declaration;
+- unrecognized form;
+- declaration that claims a protected form;
 - unsupported fixity or arity;
 - no discovered candidate;
 - incomplete or unattached source;

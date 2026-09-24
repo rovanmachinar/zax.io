@@ -520,9 +520,10 @@ access. An enclosing aggregate may still require `unsafe as coercive` when
 another participating scalar relation has value-dependent validity or writable
 invariant risk.
 
-Complete aggregate, anchor, qualification, same-storage view, and
-`unsafe cast` behavior is defined by
+Complete aggregate, anchor, qualification, and same-storage view behavior is
+defined by
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+`unsafe cast` is defined by [Zax conversions and casts](casting.md).
 
 ## Availability and cost
 

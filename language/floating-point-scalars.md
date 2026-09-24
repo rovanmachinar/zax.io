@@ -633,9 +633,10 @@ access authority. Existing mutable, writable, or varying authority may be
 preserved. After an unsafe write, the programmer must restore a valid original
 representation before using that original type again.
 
-Complete aggregate, anchor, qualification, same-storage view, and
-`unsafe cast` behavior is defined by
+Complete aggregate, anchor, qualification, and same-storage view behavior is
+defined by
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
+`unsafe cast` is defined by [Zax conversions and casts](casting.md).
 
 ## Legacy formats
 

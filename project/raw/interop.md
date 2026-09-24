@@ -101,6 +101,20 @@ No foreign null address is the universal Zax representation. A named ABI
 contract may select one representation for one boundary; adapters remain
 required where semantic states differ.
 
+## Untyped pointers and signed address integers
+
+Zax has no `Void` or `Unknown` pointee type; `OpaqueObserver`,
+`OpaqueReferenceObserver`, and `OpaqueOwner` erase pointer types inside Zax. A
+foreign `void *` still needs a boundary mapping, for example to `OpaqueObserver`,
+to a byte pointer, or to an adapter that records the expected type.
+
+Zax also has no signed pointer-representation role such as `IPointer`; addresses
+convert to `UPointer`, and differences use `PointerDelta`. C `intptr_t` and C++
+ABI signatures that use it need a workaround mapping, such as an equal-width
+signed integer at the boundary.
+
+Activate with FFI, binding, or ABI work.
+
 Current
 [Zax structural shape and compatibility](../../language/structural-shapes-and-compatibility.md)
 defines Zax-internal shape, layout, posture, anchor, and coercive relationships.
