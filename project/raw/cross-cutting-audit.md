@@ -346,6 +346,39 @@ Each entry preserves:
   must not expand into an unauthorized repository-wide cleanup.
 - **Disposition.** Open.
 
+### Word order after `+++` and other declaration keywords
+
+- **Concern.** Constructor variants now place every word after `+++`, but the
+  relative order of several words is not settled:
+
+  ```zax
+  +++ final : ()(source : Source) = { … }
+  +++ contextual final : ()(rhs : Integer) = { … }
+  +++ explicit final : ()(rhs : Integer) = { … }
+  +++ final once : ()() = { … }
+  +++ replacement final : ()(settings : Settings) = { … }
+  ```
+
+  `contextual`, `explicit`, and `replacement` precede `final`, while `once`
+  follows it. The construction owner states that the exact keyword position
+  remains future declaration and source integration.
+- **Why local review misses it.** Each owner introduced its word locally: work
+  item 032 moved `replacement` to the post position to match the others
+  without deciding their relative order. The inconsistency is visible only
+  when the variants are compared.
+- **Likely owners.** Construction, replacement, and destruction; declarations
+  and bindings (qualifier attachment); qualifiers; Nothing instances
+  (`+++ final once`); source structure; `terms.md`; and any other declaration
+  that stacks words after its keyword.
+- **Resolution.** One stated ordering rule for words after `+++`, and for
+  comparable declaration keywords where the same question arises, applied to
+  every live example.
+- **Activation pressure.** A new constructor or declaration word; a
+  declaration that combines two of these words; or formal grammar work.
+- **Current constraints.** Every word stays in the post position after `+++`.
+  Do not reorder existing examples until the rule is decided.
+- **Disposition.** Open.
+
 ## Activation and retirement
 
 Add an entry when a concrete concern crosses several owners, local review cannot
