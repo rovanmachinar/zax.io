@@ -111,25 +111,25 @@ operation.
 Symbolic whitespace presents fixity:
 
 ```zax
-!myValue
-myValue++
-myLeft + myRight
+isOff := !myValue            // pre-unary
+myPrevious := myValue++      // post-unary
+mySum := myLeft + myRight    // binary
 ```
 
 The longest recognized token wins. Separate unary applications require grouping:
 
 ```zax
---myValue
--(-myValue)
-!(!myValue)
+--myValue                    // one pre-decrement
+myNegated := -(-myValue)     // two negations
+myRestored := !(!myValue)    // two logical negations
 ```
 
 A phrase component uses pre-unary, post-unary, or binary fixity:
 
 ```zax
-type of myValue
-myBits trailing set bit position
-myLeft logical nand myRight
+MyValueType :: alias type type of myValue       // pre-unary phrase
+myPosition := myBits trailing set bit position  // post-unary phrase
+myReady := myLeft logical nand myRight          // binary phrase
 ```
 
 Recognition forms every structurally complete candidate rather than taking the
@@ -606,7 +606,7 @@ operand domains:
 | --- | --- | --- |
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, variant, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
-| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `+++ replacement` or ordinary `---`/`+++` fallback, and forward declared replacement results; on an empty result slot or an empty explicitly controlled constructor member, perform its first construction and return access to it |
+| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | On an empty result slot or an empty explicitly controlled constructor member, perform first construction; on a writable varying resident, completely reconstruct it, selecting `+++ replacement` or ordinary `---`/`+++` fallback; return discardable access to the place with the path's qualifications |
 | `<routing entries> .= <producer>` | Statement-level result-routing group | Apply `.=` to every existing destination (first construction or replacement) and construct every new declaration; never assigns; produces no expression value |
 | `wrapper .= source` / `wrapper .= [{...}]` | Protected binary at assignment precedence | Re-deliver direct or packet construction inputs to an optional payload; return fresh payload access |
 | `variant.name .= source` / `variant.name .= [{...}]` | Protected binary at assignment precedence | Select and reconstruct the named variant payload; return fresh payload access |
@@ -839,6 +839,10 @@ receiver, allowing:
 ```zax
 myFirst = mySecond = myThird
 ```
+
+Access returned by protected assignment forms is discardable, so each is also
+a complete statement; see
+[Zax operators](operators.md#discardable-access-from-assignment-forms).
 
 Custom assignment may declare another result shape. Exact generated signatures
 and reconstructive replacement belong to

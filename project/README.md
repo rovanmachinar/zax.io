@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | None; `033` awaits alignment |
-| Next work number | `033` |
+| Active work item | None; `034` awaits alignment |
+| Next work number | `034` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

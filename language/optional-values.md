@@ -337,9 +337,9 @@ Both operations produce the source absence/presence state:
 | Absent | Present | Construct a present wrapper and payload |
 | Present | Present | Destroy the old payload and construct a present wrapper and fresh payload |
 
-Complete `.=` requires a type-side varying destination reached through a
-writable path whose declaration has replacement permission. Ordinary `=` does
-not. The source transfer stance selects `copy`, `move`, terminal transfer, or
+Complete `.=` produces access to the new wrapper. It requires a type-side
+varying destination reached through a writable path whose declaration has
+replacement permission. Ordinary `=` does not. The source transfer stance selects `copy`, `move`, terminal transfer, or
 another compatible construction.
 
 Resolved source depth decides the target:

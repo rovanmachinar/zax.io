@@ -463,11 +463,10 @@ zero-input-constructed `Item`. For a non-optional `Item`, `item : Item` and
 See [Zax optional values](optional-values.md#empty-construction-packets).
 
 Default initialization may initialize contained values, execute constructors,
-allocate storage, or perform other visible work. Ordinary constructors and
-destructors do not report errors through return results, and Zax does not use
-exceptions. A replacement constructor may return additional results while still
-being required to complete the destination. Initialization may nevertheless
-encounter a panic such as allocation failure or stack exhaustion.
+allocate storage, or perform other visible work. Constructors, replacement
+constructors, and destructors return no results, and Zax does not use
+exceptions. Initialization may nevertheless encounter a panic such as
+allocation failure or stack exhaustion.
 
 A declaration followed by assignment performs two operations:
 
@@ -1659,7 +1658,10 @@ updated : Integer writable & = destination = source
 ```
 
 This supports right-associated assignment chains when each selected result binds
-to the next destination. Custom `=` overloads may return another result shape.
+to the next destination. The returned access is discardable, so
+`destination = source` is also a complete statement; see
+[Zax operators](operators.md#discardable-access-from-assignment-forms). Custom
+`=` overloads may return another result shape.
 
 Generated same-type `copy` assignment instead returns readonly `copy` access to
 the assignment receiver `_`. That is sufficient for right-associated assignment

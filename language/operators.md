@@ -1101,6 +1101,57 @@ authority. Complete replacement, including immutable varying replacement,
 remains the compiler-owned lifecycle operation defined by
 [construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement).
 
+### Discardable access from assignment forms
+
+Several protected forms return access to the place they changed, so the access
+can be used in a larger expression. That access is discardable, so each form
+is also a complete statement:
+
+```zax
+total = value        // returns writable access to total
+first = second       // generated copy assignment: readonly copy access
+counter += delta     // intrinsic compound: writable access to counter
+++counter            // intrinsic pre-increment: writable access to counter
+reset message        // access to the wrapper
+place .= source      // access to the place it constructed
+```
+
+The same choice is available to operator authors through the ordinary `#`
+result marker:
+
+```zax
+operator binary '+=' final : (
+  total # : MyValue writable &
+)(
+  rhs : MyValue
+) = { … }
+
+total += amount      // fine: the result is discardable
+
+operator binary '+' final : (
+  sum : MyValue
+)(
+  rhs : MyValue
+) readonly = { … }
+
+a + b                // error: the sum is required and unused
+```
+
+- For an operator that changes a place, such as `=` or `+=`, declare the result
+  with `#`. The change is the point, and the result is a convenience for
+  chaining.
+- For an operator whose result is meant to be used, such as `+` producing a new
+  value, leave the result required. A statement that computes the value and
+  drops it is almost always a mistake, and the required result diagnoses it.
+
+The intrinsic integer forms follow this pattern: pre-increment returns
+discardable access, while post-increment returns a required copy of the
+previous value and reporting forms return a required report. A type that
+declares its own `++` or reporting operators chooses its results the same way.
+
+Complete required-result rules are defined by
+[Zax function invocation](function-invocation.md#required-and-discardable-results).
+
 ## Costs
 
 Candidate-tree formation costs real compile time when several structurally

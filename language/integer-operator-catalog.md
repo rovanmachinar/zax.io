@@ -274,7 +274,18 @@ direct operation, not a rewrite through the value operator and `=`.
 Subtraction and multiplication use the same policy suffixes.
 
 Ordinary successful compounds return writable access to the updated destination.
-Specialized reporting forms return their report.
+That access is discardable, so `total += delta` is a complete statement; see
+[Zax operators](operators.md#discardable-access-from-assignment-forms).
+
+Specialized reporting forms return their report, and the report is required.
+Choosing a reporting form states that the code will inspect it. When no report
+is wanted, choose the policy directly:
+
+```zax
+overflowed := total +!%= delta   // wrap, and inspect whether it overflowed
+total +%= delta                  // wrap; no report wanted
+total +!%= delta                 // error: the report is required and unused
+```
 
 Division provides `/=` and `/?=`. Remainder provides `%=` and `%?=` with the
 same failure conditions as their value operations.
@@ -292,16 +303,21 @@ Required increment/decrement panics at the representable boundary and leaves the
 destination unchanged. Optional forms update only on success. Wrapping and
 saturating forms always write their policy result.
 
-Ordinary pre forms return writable access to the updated place:
+Ordinary pre forms return writable access to the updated place. That access is
+discardable, so `++myValue` is also a complete statement:
 
 ```zax
 myUpdated := ++myValue
 ```
 
-Ordinary post forms return the previous value by `copy`:
+Ordinary post forms return the previous value by `copy`, and that copy is
+required. A post form exists to capture the previous value; to change a value
+as a statement, use the pre form:
 
 ```zax
-myPrevious := myValue++
+myPrevious := myValue++   // capture the previous value
+++myValue                 // change the value as a statement
+myValue++                 // error: the previous value is required and unused
 ```
 
 Reporting forms return one transition report containing:
@@ -312,7 +328,8 @@ Reporting forms return one transition report containing:
 - `Boolean` overflow status.
 
 Specialized reports contain the previous value, selected policy value, and
-overflow status.
+overflow status. As with reporting compounds, the report is required; the
+non-reporting forms are the choice when no report is wanted.
 
 ## Comparison
 

@@ -132,11 +132,33 @@ they are declared. The compiler decides whether a particular `.=` constructs or
 replaces with the rule in
 [How the compiler decides first construction](#how-the-compiler-decides-first-construction).
 
-`.=` is compiler-owned and cannot be overloaded. The value a `.=` expression
-produces currently depends on its use: first construction produces access to
-the new value; payload construction produces access to the new payload, or to
-the wrapper for a complete variant packet; and replacement forwards only the
-results declared by the selected replacement constructor.
+`.=` is compiler-owned and cannot be overloaded. Every `.=` expression
+produces access to the place it constructed:
+
+```zax
++++ final : ()(first : Buffer, second : Buffer) = {
+  a := _.buffer .= first    // first construction: access to the buffer
+  b := _.buffer .= second   // replacement: access to the same buffer
+}
+
+payload := optional .= value                  // access to the new payload
+wrapper := variant .= [{ .text = "ready" }]   // access to the wrapper
+```
+
+A complete variant packet produces access to the wrapper, because its
+zero-entry form constructs absence and has no payload. Replacing a complete
+optional wrapper likewise produces access to the wrapper.
+
+The access carries the qualifications of the path used to reach the place and
+never more authority. A readonly result produces readonly access, and access
+to a `final` place cannot be used to replace it.
+
+Because the value does not depend on whether the place was empty or live,
+chains are predictable. `.=` is right-associative, so in `a .= b .= c`, `a` is
+always built from `b`.
+
+The access is discardable, so `place .= source` is a complete statement; see
+[Zax operators](operators.md#discardable-access-from-assignment-forms).
 
 ## Ordinary construction
 
@@ -1274,81 +1296,38 @@ value for every required member and exactly one disposition for every resource
 the transition ceased to retain. A carried resource counts as transferred into
 the successor member, not left undispositioned.
 
-### Replacement results
+### Replacement constructors have no results
 
-A replacement constructor may declare zero or more results:
+A replacement constructor declares no results, exactly like an ordinary
+constructor:
 
 ```zax
 BufferOwner :: type {
   buffer : Buffer
   format : Format
 
-  +++ replacement final :
-    (retainedCapacity : Boolean)(
-      nextFormat : Format
-    ) = {
-    capacityWasRetained := _.buffer.canReuseFor(nextFormat)
-
-    // Establish the complete replacement instance.
-
-    return capacityWasRetained
+  +++ replacement final : ()(nextFormat : Format) = {
+    // Establish the complete replacement instance, reusing the buffer's
+    // capacity when it can.
   }
 }
-
-retained := owner .= [{ newFormat }]
 ```
 
-Replacement-constructor results are ordinary results only. Constructors,
-replacement constructors, and destructors cannot declare or produce
-exceptional outcomes. A lifecycle body calling an exception-producing function
-must handle every outcome locally and still complete its lifecycle obligation;
-it cannot forward through `except`.
-
-The protected reconstructive `.=` expression forwards the literal results
-returned by the selected replacement constructor. It does not synthesize,
-adapt, or infer an arbitrary result.
-
-A resultless replacement declaration supplies no result:
+Keeping both lifecycle hooks resultless lets every `.=` produce the same value:
+access to the place it constructed, whether that `.=` constructed an empty
+place or replaced a live one. Code that needs to know something about a
+replacement asks before replacing:
 
 ```zax
-+++ replacement final : ()(rhs : Source) = {
-  // Complete replacement.
-}
+willReuse := owner.buffer.canReuseFor(newFormat)
+owner .= [{ newFormat }]
 ```
 
-The compiler does not implicitly return the reconstructed destination. A
-resultless generated fallback also supplies no expression result.
-
-Every normal return must complete:
-
-- the replacement instance; and
-- every declared result.
-
-A result may report resource reuse or another domain outcome. It cannot mean
-that the destination is half-constructed. The compiler cannot infer that
-programmer intent from a Boolean or name, so API design and documentation must
-make the distinction understandable.
-
-A replacement inside a
-[`.=` routing group](function-invocation.md#construct-existing-places-with-a-dot-equals-group)
-has nowhere to send the hook's results, because a routing group is not an
-expression. A required result makes that entry an error; a discardable result
-declared with `#` is dropped. Declare replacement results with `#` when callers
-may reasonably ignore them, and write the replacement as its own statement
-when the result is needed:
-
-```zax
-first: _.a, second: owner .= makeTwo()
-// error when owner's replacement constructor declares a required result
-
-retained := owner .= [{ newFormat }]
-// the result is received
-```
-
-Result references and pointers remain subject to ordinary lifetime and alias
-rules. Expected-result context participates only at the narrow complete
-declaration boundaries defined by
-[function invocation](function-invocation.md#narrow-expected-result-selection).
+Every normal return must complete the replacement instance. Constructors,
+replacement constructors, and destructors cannot produce exceptional outcomes
+either. A lifecycle body calling an exception-producing function must handle
+every outcome locally and still complete its lifecycle obligation; it cannot
+forward through `except`.
 
 ### Candidate selection
 
@@ -1396,8 +1375,8 @@ This type permits construction from `Source` while prohibiting replacement from
 `Source`.
 
 A separate domain-specific operator may return any result allowed by ordinary
-operator rules. That is distinct from a replacement constructor's declared
-results.
+operator rules. That is distinct from `.=`, which always produces access to
+the place it constructed.
 
 ### Self-aliasing and interior aliases
 
@@ -2064,7 +2043,7 @@ Diagnostics should distinguish:
   constructed yet;
 - an empty member passed to an operation without construction or an
   `opaque-construction` assertion;
-- a required replacement-constructor result dropped by a `.=` routing group;
+- a replacement constructor that declares results;
 - use before construction or after destruction where required analysis proves
   it;
 - an access through conditionally live storage, such as an optional stored-value
@@ -2132,22 +2111,21 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - constructor defaults after explicit packet inputs and before member
   construction;
 - packet multiple-result forwarding remaining distinct from structural packing;
-- ordinary constructors remaining resultless;
+- ordinary and replacement constructors remaining resultless;
 - demand-driven generated/existing/default/forbidden resolution;
 - protected complete `.=` reconstruction requiring writable varying replacement
   authority for mutable or immutable values;
 - custom replacement recycling old representation without enclosing `---` or
   `+++`;
-- complete replacement on every normal return, including resultful replacement;
-- resultless replacement producing no implicit destination result;
+- complete replacement on every normal return;
 - terminal destruction authority;
 - `.=` constructing into existing places, with first construction limited to
   empty result slots and explicitly controlled members, decided by the
   conservative first-construction rule;
 - construction by an opaque operation asserted at that operation, with no
   declaration form that leaves storage indeterminate;
-- the value produced by a `.=` expression, which currently differs by use;
-  unifying it is future work that must not change the rules above;
+- every `.=` expression producing discardable access to the place it
+  constructed, carrying the path's own qualifications;
 - known pointer and alias hazards remaining visible;
 - async, concurrency, ownership, and formal unsafe-control mechanisms remaining
   separate concerns until their focused reviews;

@@ -150,9 +150,9 @@ The [operator catalog](operator-catalog.md) fixes every recognized symbolic
 form. Whitespace presents its fixity:
 
 ```zax
-!value       // pre-unary: attached to the operand on its right
-value++      // post-unary: attached to the operand on its left
-left + right // binary: whitespace on both sides
+isOff := !value        // pre-unary: attached to the operand on its right
+previous := value++    // post-unary: attached to the operand on its left
+sum := left + right    // binary: whitespace on both sides
 ```
 
 A recognized symbolic infix operator or multi-part component that is the last

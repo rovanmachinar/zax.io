@@ -1287,9 +1287,10 @@ result .= [{ first, second }]
 result .= [{}]          // zero-input construction; for an optional, a present payload
 ```
 
-The expression produces access to the newly constructed result. Explicit
-construction through `result.+++(source)` remains available and means the same
-thing. A [`.=` routing group](#construct-existing-places-with-a-dot-equals-group)
+The expression produces access to the newly constructed result, with the
+result's own qualifications; a readonly result produces readonly access.
+Explicit construction through `result.+++(source)` remains available and means
+the same thing. A [`.=` routing group](#construct-existing-places-with-a-dot-equals-group)
 can construct several result slots from one multiple-result producer.
 
 First construction needs no replacement permission, so a `final`, readonly, or
@@ -1522,6 +1523,11 @@ routed, or explicitly discarded.
 
 A short capture consumes a prefix. Every unmentioned trailing result must permit
 omission.
+
+Protected assignment forms such as `a = b` and `place .= source` return access
+that is discardable in the same way, so each is a complete statement. Operator
+authors choose the same way for their own results; see
+[Zax operators](operators.md#discardable-access-from-assignment-forms).
 
 ### Exceptional outcome clauses
 
@@ -1855,9 +1861,6 @@ Rules:
   before the old lifetime ends, and alias hazards still apply.
 - A discarded `#` source result is still constructed by the producer and is
   destroyed when the mapping completes.
-- A replacement constructor's required result has nowhere to go, so that entry
-  is an error; see
-  [replacement results](construction-and-destruction.md#replacement-results).
 
 A `.=` group is a statement. The other routing contexts have no existing places
 to construct into:

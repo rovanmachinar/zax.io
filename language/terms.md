@@ -1188,8 +1188,9 @@ within the compiler-owned reconstructive-replacement operation.
 It is written with contextual `+++ replacement`. When selected, it runs instead
 of the generated fallback's enclosing `---` followed by ordinary `+++` and may
 recycle the previous representation and resources while establishing the
-complete replacement instance. Protected `.=` supplies its direct or
-positional/named packet inputs. Complete behavior is defined by
+complete replacement instance. Like an ordinary constructor, it declares no
+results; the `.=` expression produces access to the replaced place. Protected
+`.=` supplies its direct or positional/named packet inputs. Complete behavior is defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md#custom-replacement).
 The qualification boundary is defined by
 [Zax qualifiers](qualifiers.md#reconstructive-replacement).
