@@ -377,7 +377,7 @@ if ?optional
 
 This requires the boxed place itself to be varying and reached through writable,
 declaration-side varying access. It may select the boxed type's
-`replacement +++` while the optional wrapper remains present.
+`+++ replacement` while the optional wrapper remains present.
 
 Any reference tied to an ended boxed lifetime becomes invalid even when the
 wrapper stays present.
@@ -1023,7 +1023,7 @@ available. `S` means proof or selected transfer behavior decides it.
 | `value .= otherOptional` | Writable destination | Type-side and declaration-side `varying` | Compatible optional transfer | T | Reconstruct complete wrapper lifetime | Old payload ends; new state comes from source |
 | `value = valueOfT` | - | - | - | N | - | Intent error; use `value .= valueOfT` |
 | `value. = source` | Wrapper readable; presence proven | - | Selected boxed operation accepts effective qualifications | S | Presence remains true | Operate on existing boxed value |
-| `value. .= source` or `value. .= [{...}]` | Wrapper readable; presence proven | Boxed place type-side and declaration-side `varying` + writable | Applicable replacement/fallback construction | S | Presence remains true | End boxed resident; construct successor; may select boxed `replacement +++` |
+| `value. .= source` or `value. .= [{...}]` | Wrapper readable; presence proven | Boxed place type-side and declaration-side `varying` + writable | Applicable replacement/fallback construction | S | Presence remains true | End boxed resident; construct successor; may select boxed `+++ replacement` |
 | `value.---()` | - | - | - | N | Would not update presence | Always rejected |
 
 ### Transfer stance reference

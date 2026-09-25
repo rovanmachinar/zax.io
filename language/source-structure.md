@@ -248,6 +248,18 @@ distinction. `.=`, like another binary operator, requires whitespace on both
 sides. It cannot be split into postfix `.` and `=` without changing source
 meaning.
 
+`.=` may also end a statement-level result-routing group, in the same position
+where an `=` group places its `=`:
+
+```zax
+#, resultB: kept .= makeResults()
+```
+
+This is one routing group whose producer is `makeResults()`. It is not a
+`kept .= makeResults()` expression nested inside the second entry. Group
+behavior is defined by
+[Zax function invocation](function-invocation.md#construct-existing-places-with-a-dot-equals-group).
+
 ### Allocation-token attachment
 
 `@`, `@!`, `@<`, and `@!<` are exact longest-match allocation tokens. Their
@@ -384,7 +396,7 @@ its lenses are not constructed members.
 
 For complete reconstructive `value .= [{...}]`, positional and named
 constructor inputs are available. Direct `.member = ...` entries are rejected
-because the selected `replacement +++` owns old-member recycling and successor
+because the selected `+++ replacement` owns old-member recycling and successor
 member establishment.
 
 Complete optional depth and construction behavior is defined by

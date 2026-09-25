@@ -1008,6 +1008,23 @@ There is no automatic positional fallback. A candidate must obtain one complete
 deterministic mapping from names, explicit arguments, and declared defaults.
 “Most names matched” and “longest match” are not overload preferences.
 
+Decomposition exists to spread a value into call inputs. Into existing
+destinations, it assigns. It has no construction form, so construct members
+from a value's parts with one `.=` each:
+
+```zax
++++ final : ()(point : Point) = {
+  _.x .= point.x        // one operation per member: first construction
+  _.y .= point.y
+}
+
++++ final : ()(point : Point) = {
+  x: _.x, y: _.y >- point
+  // Two operations per member: automatic default construction, then assignment.
+  // Valid only when the member types can be default-constructed.
+}
+```
+
 An inaccessible member is ineligible. A pointer, reference, optional, or other
 semantic wrapper remains one atomic source member rather than being entered
 automatically.
@@ -1295,6 +1312,20 @@ renderPoint =
 
 Direct update keeps unmapped destination members. Constructed replacement uses
 ordinary defaults for them.
+
+The contextual form also works with `.=`, which constructs into an existing
+place instead of assigning:
+
+```zax
++++ final : ()(devicePoint : DevicePoint) = {
+  _.renderPoint .= -<>- DeviceToRender -<>- devicePoint
+  // The member starts empty: first construction, with elision possible.
+}
+```
+
+On a live place, the same `.=` form is replacement. Direct update requires a
+live destination, so it cannot construct an empty member or result slot. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construct-into-an-existing-place-with-dot-equals).
 
 ### Overlap is handled statically
 

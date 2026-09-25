@@ -76,9 +76,13 @@ cannot make any known violation valid. Detailed source-control and provenance
 questions are preserved in
 [raw analysis-control input](analysis-controls.md).
 
-`unsafe ???` already acknowledges bypassed initialization. It can satisfy a
-containing constructor through programmer responsibility and may later receive
-explicit `+++` without another unsafe marker.
+Zax has no declaration form that leaves storage indeterminate. Work item 032
+removed `unsafe ???`. Construction performed by an opaque operation is asserted
+at that operation with `unsafe<opaque-construction>{ ... }`, which also takes the
+named member out of automatic construction. See
+[construction by an opaque operation](../../language/construction-and-destruction.md#construction-by-an-opaque-operation).
+When the compiler cannot tell whether a place is constructed, the code must be
+restructured; there is no unsafe override for construction state.
 
 ## Invocation-derived safety pressure
 

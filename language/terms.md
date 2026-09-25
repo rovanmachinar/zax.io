@@ -522,6 +522,15 @@ the selected scalar type. Compiler capacity failure is distinct from hidden
 rounding in a compiler-host float. See
 [literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
 
+## First construction
+
+**First construction** is `.=` applied to a place that is declared but still
+empty: a result slot without an initializer, or a constructor member under
+explicit construction control. It means what the same source would mean as a
+declaration initializer and needs no replacement permission. A later `.=` on
+the now-live place is reconstructive replacement. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construct-into-an-existing-place-with-dot-equals).
+
 ## Flow label
 
 A **flow label** is a separately shaped name category that names eligible
@@ -646,7 +655,7 @@ It is generic specialization state, not an anonymous type or runtime value. See
 A **lifecycle operation** establishes, transitions, or ends a value or member
 lifetime.
 
-Ordinary `+++`, contextual `replacement +++`, `---`, and the compiler-owned
+Ordinary `+++`, contextual `+++ replacement`, `---`, and the compiler-owned
 generated replacement skeleton participate in lifecycle operations. An
 arbitrary operator is not a lifecycle operation merely because it uses `=`.
 See [Zax construction, replacement, and destruction](construction-and-destruction.md).
@@ -1165,9 +1174,9 @@ constructor when a viable customization exists; otherwise it uses the generated
 fallback of enclosing `---` followed by ordinary `+++`.
 
 It requires a varying place through a declaration-side varying, writable access
-path. A final place or readonly path cannot select it. On a function result slot
-that is not constructed yet, `.=` instead performs first construction, which
-needs none of those permissions. See
+path. A final place or readonly path cannot select it. On an empty result slot
+or an empty explicitly controlled constructor member, `.=` instead performs
+first construction, which needs none of those permissions. See
 [Zax construction, replacement, and destruction](construction-and-destruction.md#reconstructive-replacement)
 and [Zax qualifiers](qualifiers.md#reconstructive-replacement).
 
@@ -1176,7 +1185,7 @@ and [Zax qualifiers](qualifiers.md#reconstructive-replacement).
 A **replacement constructor** is an optional type-defined customization selected
 within the compiler-owned reconstructive-replacement operation.
 
-It is written with contextual `replacement +++`. When selected, it runs instead
+It is written with contextual `+++ replacement`. When selected, it runs instead
 of the generated fallback's enclosing `---` followed by ordinary `+++` and may
 recycle the previous representation and resources while establishing the
 complete replacement instance. Protected `.=` supplies its direct or

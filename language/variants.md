@@ -342,7 +342,7 @@ payload construction:
 choice.replaceable .= [{ newValue }]
 ```
 
-It does not select the old payload type's `replacement +++`. To reconstruct the
+It does not select the old payload type's `+++ replacement`. To reconstruct the
 active payload value itself, first establish a case binding or explicit
 reference:
 
@@ -350,7 +350,7 @@ reference:
 switch choice {
   case replaceable {
     replaceable .= [{ newValue }]
-    // Complete payload replacement; may select payload replacement +++.
+    // Complete payload replacement; may select payload +++ replacement.
   }
 }
 ```

@@ -100,21 +100,30 @@ documentation attachment, nesting, and source reflection.
 ## Lifecycle-state assertions
 
 An opaque operation may establish a member state that ordinary analysis cannot
-observe:
+observe. Work item 032 aligned one construction assertion, made at the
+establishing operation:
 
 ```zax
-opaqueInitialize(_.prop2)
-
-/// opaqueInitialize establishes prop2 on every normal path.
-unsafe <construction-path-complete> _.prop2
++++ final : ()() = {
+  unsafe<opaque-construction>{ opaqueInitialize(_.prop2) }
+}
 ```
 
-The future mechanism must distinguish:
+The enclosure both takes `prop2` out of automatic construction and asserts that
+the enclosed operation constructs it. Its category name is accepted for now and
+may be revised. The syntax by which the enclosure names the places it
+establishes is open: a call receiving two empty places must not silently
+establish both.
 
-- suppressing a generated lifecycle call;
-- asserting that an opaque operation established or ended a lifetime;
-- asserting completion on every normal path; and
-- asserting that apparently overlapping calls cannot affect one lifetime twice.
+For construction, the conservative first-construction rule has no unsafe
+override: when the compiler cannot tell whether a place is constructed, the
+code must be restructured. For destruction, the future mechanism must still
+distinguish:
+
+- suppressing a generated destruction;
+- asserting that an opaque operation ended a lifetime;
+- asserting destruction on every normal path; and
+- asserting that apparently overlapping calls cannot end one lifetime twice.
 
 A warning-suppression mechanism is insufficient because these claims may change
 generated code or the compiler's semantic state.
@@ -123,17 +132,21 @@ generated code or the compiler's semantic state.
 
 | Provisional identifier | Claim or permission |
 | --- | --- |
-| `manual-member-construction` | Suppress generated member construction because another operation establishes the member lifetime |
+| `opaque-construction` | Assert that the enclosed operation constructs the named empty member or result slot; the member receives no automatic construction |
 | `manual-member-destruction` | Suppress generated member destruction because another operation ends or transfers the member lifetime |
-| `construction-path-complete` | Treat a member as constructed on every applicable normal path despite incomplete proof |
 | `destruction-path-complete` | Treat a member as destroyed or dispositioned on every applicable path despite incomplete proof |
-| `construction-at-most-once` | Trust that apparently overlapping paths cannot construct one member lifetime twice |
 | `destruction-at-most-once` | Trust that apparently overlapping paths cannot end one member lifetime twice |
 | `partial-instance-access` | Permit bounded access to a current instance that is not fully constructed |
 | `partial-instance-escape` | Permit an incomplete current instance or access path to escape or become externally observable |
 | `lifetime-escape` | Permit an access path to cross a boundary whose lifetime cannot be proved sufficiently bounded |
 | `replacement-alias` | Permit replacement despite unresolved possible aliasing between the destination and a right-hand operand |
 | `terminal-reconstruction` | Permit reconstruction of a member during enclosing destruction |
+
+`manual-member-construction`, `construction-path-complete`, and
+`construction-at-most-once` were superseded in work item 032. Every explicit
+construction step now suppresses automatic construction; opaque establishment
+is `opaque-construction`; and unknown construction state is an error to
+restructure rather than a fact to assert.
 
 Invocation and result work adds future proof categories without establishing
 their final identifiers:
@@ -153,10 +166,6 @@ when a required valid lifetime, alias, or operation property cannot be proved.
 These names identify future-work concerns. They are not accepted keywords. Their
 central maturity and occurrence inventory is maintained in the
 [raw analysis-control registry](analysis-control-registry.md#unsafe-category-inventory).
-
-`unsafe ???` already supplies the unsafe acknowledgment for delayed
-construction. Calling `+++` later does not need a second unsafe category merely
-because initialization was bypassed.
 
 An unsafe assertion may override incomplete proof or assert the result of an
 opaque operation. It cannot make a known-ended lifetime live again.

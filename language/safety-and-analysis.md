@@ -335,8 +335,11 @@ Unsafe controls must distinguish:
 
 - bounded partial-instance access;
 - escape or external publication;
-- asserting that opaque work established a member;
-- suppressing a generated lifecycle operation; and
+- asserting that opaque work established a member, which
+  [`opaque-construction`](construction-and-destruction.md#construction-by-an-opaque-operation)
+  does at the establishing operation and which also takes the member out of
+  automatic construction;
+- suppressing a generated destruction; and
 - claiming path completeness or at-most-once behavior.
 
 ### Replacement and aliases

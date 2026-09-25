@@ -1377,35 +1377,6 @@ A panic blocks the incomplete operation. It does not return a partially
 constructed array or unwind completed elements. A matching helper may repair
 the condition and resume the same operation; otherwise the process crashes.
 
-### Delayed construction after `unsafe ???`
-
-```zax
-rawArray : MyItem[5] = unsafe ???
-```
-
-This bypasses initialization of the entire array representation. It does not
-create five live elements waiting to be filled, and it does not reserve
-uninitialized element capacity.
-
-Delayed construction receives an ordinary array value:
-
-```zax
-rawArray.+++([
-  makeFirst(),
-  makeSecond(),
-  makeThird(),
-  makeFourth(),
-  makeFifth()
-])
-```
-
-The bracket expression first constructs a `MyItem[5]` temporary. Ordinary
-same-array construction then consumes it. `rawArray.+++()` is available only
-when every required element can be default-constructed.
-
-The reusable unsafe responsibility and lifecycle state belongs to
-[construction, replacement, and destruction](construction-and-destruction.md).
-
 ## Custom indexing and slicing
 
 Intrinsic arrays select real element storage directly. A custom type can make

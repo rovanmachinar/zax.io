@@ -20,7 +20,7 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [032: Construction with `.=`](work/032-dot-equals-construction.md) |
+| Active work item | None; `033` awaits alignment |
 | Next work number | `033` |
 
 Agents receive either the handoff block or the rehydration block in chat. They

@@ -606,7 +606,8 @@ operand domains:
 | --- | --- | --- |
 | `?value` | Symbolic prefix | Return exactly `Boolean` presence for optional, variant, pointer, function, or `once` receiver domains |
 | `value.` | Grammar-recognized postfix access | Produce boxed access after static presence proof |
-| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `replacement +++` or ordinary `---`/`+++` fallback, and forward declared replacement results; on a function result slot not yet constructed, perform its first construction and return access to it |
+| `value .= source` / `value .= [{...}]` | Protected binary at assignment precedence | Completely reconstruct a writable varying resident, selecting `+++ replacement` or ordinary `---`/`+++` fallback, and forward declared replacement results; on an empty result slot or an empty explicitly controlled constructor member, perform its first construction and return access to it |
+| `<routing entries> .= <producer>` | Statement-level result-routing group | Apply `.=` to every existing destination (first construction or replacement) and construct every new declaration; never assigns; produces no expression value |
 | `wrapper .= source` / `wrapper .= [{...}]` | Protected binary at assignment precedence | Re-deliver direct or packet construction inputs to an optional payload; return fresh payload access |
 | `variant.name .= source` / `variant.name .= [{...}]` | Protected binary at assignment precedence | Select and reconstruct the named variant payload; return fresh payload access |
 | `variant .= [{...}]` | Protected binary at assignment precedence | Reconstruct absent or one named-present variant state; return wrapper access |
@@ -872,13 +873,15 @@ variant .= [{ .text = value }]
 `.=` is right-associative at assignment precedence and cannot be overloaded.
 An ordinary live varying place designates complete resident reconstruction. A
 wrapper owner may instead recognize an optional payload, named variant
-alternative, or complete variant selection packet. Delayed `unsafe ???` storage
-uses explicit `+++` because no old live value is being replaced. Union
-whole-value operations retain their protected all-bit-copy behavior.
+alternative, or complete variant selection packet. An empty result slot or an
+empty explicitly controlled constructor member designates first construction;
+the construction owner defines
+[how the compiler decides first construction](construction-and-destruction.md#how-the-compiler-decides-first-construction).
+Union whole-value operations retain their protected all-bit-copy behavior.
 
 Protection is required because an overloaded body retains ordinary receiver
 qualifications. It cannot shed immutability, end its own resident lifetime, or
-gain transitional construction authority. `replacement +++` is the explicit
+gain transitional construction authority. `+++ replacement` is the explicit
 hook inside the compiler-owned `.=` lifecycle skeleton.
 
 ## Allocation initializers
@@ -1066,6 +1069,8 @@ Diagnostics distinguish:
   or viable replacement/fallback constructor;
 - wrapper-owned `.=` with an invalid optional/variant target shape;
 - a variant wrapper `.=` value with no named alternative;
+- a `.=` whose target may be either empty or live;
+- a `.=` routing group outside statement position;
 - invalid shift count; and
 - type-specific failure routed to the applicable concept owner.
 

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; the uses of `.=`, including first construction of explicitly controlled members and the first-construction state rule; construction asserted at an opaque operation; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
 | Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
@@ -86,6 +86,58 @@ leaves the same replacement/reset operation blocked rather than exposing a
 half-updated slot. Complete mode-specific behavior belongs to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#callable-transfer-reset-and-recursion).
 
+### Construct into an existing place with dot-equals
+
+A declaration constructs the place it introduces. Some places are introduced
+in one location and constructed, or constructed again, somewhere else. `.=`
+constructs a new value into such an existing place:
+
+```zax
+Session :: type {
+  connection : Connection
+
+  +++ final : ()(endpoint : Endpoint) = {
+    _.connection .= [{ endpoint }]
+    // The member starts empty in this constructor: first construction.
+  }
+}
+
+make final : (
+  result : Item
+)() = {
+  result .= source
+  // The result slot starts empty: first construction.
+}
+
+message .= makeMessage("second")
+// `message` is live: its old value ends and a new one takes its place.
+
+optional .= [{ constructorInputs }]
+// The wrapper stays; a new payload is constructed inside it.
+```
+
+`.=` has exactly four uses:
+
+| Use | The place before `.=` | Taught in |
+| --- | --- | --- |
+| First construction of a constructor member | An empty direct member under explicit construction control | [Automatic and explicit member construction](#automatic-and-explicit-member-construction) |
+| First construction of a result slot | An empty result slot | [Function invocation](function-invocation.md#opt-in-result-initialization) |
+| Replacement | A live varying place | [Reconstructive replacement](#reconstructive-replacement) |
+| Payload construction | A live optional or variant wrapper | [Wrapper-owned contained reconstruction](#wrapper-owned-contained-reconstruction-with-dot-equals) |
+
+First construction means exactly what the same source would mean as a
+declaration initializer, and it needs no replacement permission. Result slots
+and explicitly controlled members are the only places that can be empty after
+they are declared. The compiler decides whether a particular `.=` constructs or
+replaces with the rule in
+[How the compiler decides first construction](#how-the-compiler-decides-first-construction).
+
+`.=` is compiler-owned and cannot be overloaded. The value a `.=` expression
+produces currently depends on its use: first construction produces access to
+the new value; payload construction produces access to the new payload, or to
+the wrapper for a complete variant packet; and replacement forwards only the
+results declared by the selected replacement constructor.
+
 ## Ordinary construction
 
 ### Constructor declarations
@@ -119,21 +171,70 @@ live while others are not.
 
 ### Automatic and explicit member construction
 
-Before an ordinary constructor body runs, the compiler determines which members
-are under explicit construction control.
+Most members are constructed automatically before the constructor body runs.
+A constructor takes over a member's construction by constructing it
+explicitly in the body:
 
-- A member without an explicit `+++` call is initialized automatically before
-  the enclosing constructor body.
-- Automatic member initialization follows member declaration order.
-- A member with an explicit `_.member.+++()` call is not automatically
-  initialized.
-- Explicit member constructors execute wherever constructor-body control flow
-  reaches them and may run in any order.
-- After an explicit member `+++` completes, that member is live.
-- A later `_.member = value` performs ordinary operator selection against the
-  already-live member.
-- Normal completion requires every member not covered by an explicit unsafe
-  initialization bypass to contain a valid live value.
+```zax
+MyType :: type {
+  a : A
+  b : B = makeB()
+  c : C
+  d : D
+  e : E
+
+  +++ final : ()() = {
+    _.c .= makeC()                                     // c is constructed here
+    unsafe<opaque-construction>{ lowLevelFill(_.d) }   // d is constructed by lowLevelFill
+    _.e = makeE()                                      // e already exists: assignment
+    use(_.a)                                           // a already exists
+  }
+}
+```
+
+- `a`, `b`, and `e` are constructed automatically before the body, in
+  declaration order. Each uses its own declaration: `b` is constructed from
+  `makeB()`, while `a` and `e` use default construction.
+- `c` and `d` are under **explicit construction control**. They start empty and
+  are constructed where the body reaches them.
+
+A member is under explicit construction control when the selected constructor
+contains any of these for it:
+
+- `_.member .= ...`, including `_.member` as a destination in a
+  [`.=` routing group](function-invocation.md#construct-existing-places-with-a-dot-equals-group);
+- `_.member.+++(...)`, the explicit call form that `.=` abbreviates;
+- an `unsafe<opaque-construction>{ ... }` enclosure naming the member, described
+  in [Construction by an opaque operation](#construction-by-an-opaque-operation);
+  or
+- a direct allocation `_.member = @...`, described below, which suppresses the
+  member's declared pointee allocation.
+
+What matters is whether such a step appears, not whether the member is used.
+`_.e = makeE()` is ordinary assignment, so it does not take over construction.
+That line performs two operations: automatic default construction of `e`, then
+assignment. If `E` has no default constructor, the line is an error. Write
+`_.e .= makeE()` to construct `e` once, directly.
+
+Explicit construction is what allows a member whose type has no default
+constructor:
+
+```zax
+Session :: type {
+  connection : Connection
+
+  +++ final : ()(endpoint : Endpoint) = {
+    _.connection .= [{ endpoint }]
+    // Same as _.connection.+++(endpoint)
+  }
+}
+```
+
+Explicit steps run wherever constructor-body control flow reaches them, in any
+order. After a member's first construction it is live, and later operations
+treat it like any other live member. A member whose type cannot be
+default-constructed, with no initializer and no explicit step in the selected
+constructor, is an error.
 
 A pointer member allocates its pointee only when its declaration explicitly uses
 an allocation initializer:
@@ -195,8 +296,8 @@ when its ordinary lifecycle authority permits.
 Complete data publication and the rejected reach-through form are taught by
 [Zax composition](composition.md#construction-remains-whole-member-construction).
 
-Like a direct `_.member.+++()` call, a direct allocation assignment to the
-current instance places that member under explicit constructor control:
+Like `_.member .= ...`, a direct allocation assignment to the current instance
+places that member under explicit constructor control:
 
 ```zax
 MyType :: type {
@@ -244,54 +345,126 @@ intent<conditionally-unallocated-member>{
 The acknowledgement confirms that `bar` may remain vacant. It does not permit
 an indeterminate pointer representation.
 
+### A second `.=` on a member is replacement
+
+The first `.=` on an explicitly controlled member constructs it and needs no
+permission, even for a `final` or immutable member. Once the member is live, a
+further `.=` is [reconstructive replacement](#reconstructive-replacement) and
+follows the ordinary replacement requirements:
+
 ```zax
 MyType :: type {
-  t : T
-  u : U
-  x : X
-  y : Y
-  z : Z
+  label : Label immutable writable varying
+  view : Label readonly varying &
+  fixed final : Label
 
-  +++ final : ()() = {
-    _.t.+++()
-    _.t = makeAT()
+  +++ final : ()(first : Label, second : Label) = {
+    _.label .= first
+    _.label .= second  // replacement: the old immutable value ends; allowed
 
-    _.u = makeAU()
+    _.view .= first
+    _.view .= second   // error: replacement through a readonly path
 
-    _.z.+++()
-    _.x.+++()
+    _.fixed .= first
+    _.fixed .= second  // error: replacement of a final place
   }
 }
 ```
 
-`u` and `y` initialize automatically before the body, in declaration order.
-`t`, `z`, and `x` initialize where their explicit calls execute.
+`immutable` describes the value during one lifetime, so it does not prevent a
+replacement that ends that lifetime. `readonly` restricts the access path and
+`final` fixes the place; either one blocks replacement. Result slots follow
+the same rule.
 
-The direct call permits construction of a member whose type has no default
-constructor:
+Only direct members start empty. Construction does not flatten, so
+`_.member.sub .= value` can only replace a live `sub` after `member` exists. An
+optional or variant member is constructed as a whole wrapper; the payload form
+requires a wrapper that already exists:
 
 ```zax
-Session :: type {
-  connection : Connection
+MyType :: type {
+  choice : MyChoice
 
-  +++ final : ()(endpoint : Endpoint) = {
-    _.connection.+++(endpoint)
+  +++ final : ()() = {
+    _.choice.text .= "ready"          // error: the wrapper is not constructed yet
+    _.choice .= [{ .text = "ready" }] // constructs the wrapper with that alternative
   }
 }
 ```
 
-The compiler tracks member lifecycle states through control flow. It diagnoses
-required cases such as:
+Outside constructors every member is live, so `_.member .= value` in an
+ordinary method is always replacement. Members inside a
+[custom replacement constructor](#custom-replacement) also start live.
 
-- use before construction;
-- missing construction on a normal completion path;
-- constructing one still-live member lifetime more than once;
-- conflicting call-site and constructor-body construction; and
-- normal return with an incomplete instance.
+### How the compiler decides first construction
+
+The same `.=` constructs an empty place and replaces a live one, so the
+compiler must know which state the place is in. It uses a deliberately simple
+rule so that every compiler accepts and rejects the same programs.
+
+Branches that agree are accepted:
+
+```zax
+make final : (
+  result : Item
+)(
+  fast : Boolean
+) = {
+  if fast
+    result .= makeQuick()
+  else
+    result .= makeCareful()
+}
+```
+
+A loop is rejected, even when it would construct only once:
+
+```zax
+make final : (
+  result : Item
+)(
+  candidates : Item[]
+) = {
+  each candidate : in candidates {
+    if candidate.matches() {
+      result .= candidate // error: construction state is unknown inside the loop
+      break
+    }
+  }
+}
+```
+
+The loop body may run more than once, so the compiler cannot tell whether this
+`.=` constructs or replaces. Make the construction point visible, for example
+by finding the match in the loop and constructing `result` once after it.
+
+The rule applies to result slots and to members under explicit construction
+control:
+
+- At every point in the body, each such place is **empty** or **live**.
+- State changes only at visible operations. `.=`, `+++`, a value-bearing
+  `return`, a routing entry, and an `opaque-construction` enclosure naming the
+  place make it live. An explicit `---` makes it empty again.
+- Where control-flow paths join, including the return to the top of a loop,
+  places whose states differ become **unknown**.
+- Conditions are never evaluated. Even a constant condition such as
+  `while true` is treated as possibly true or false.
+- At each `.=`, the state must be known. Empty means first construction; live
+  means replacement; unknown is an error that asks the programmer to
+  restructure the code.
+- At normal completion, every result slot and every required member must be
+  live.
 
 The analysis is static; Zax does not require per-instance runtime flags.
 Compiler debugging modes may add checks without making those checks language
 guarantees.
+
+The compiler also diagnoses:
+
+- use before construction;
+- constructing one still-live member lifetime more than once through `+++`;
+- conflicting call-site and constructor-body construction of one member; and
+- normal return with an incomplete instance.
 
 ## Construction packets
 
@@ -598,8 +771,8 @@ A `.member = expression` entry:
 This is one construction of the direct member, not default construction followed
 by assignment.
 
-An explicit `_.member.+++()` in the selected constructor body conflicts because
-both operations attempt to construct the same member. The compiler diagnoses
+An explicit `_.member .= ...` or `_.member.+++()` in the selected constructor
+body conflicts because both operations attempt to construct the same member. The compiler diagnoses
 that conflict.
 
 Low-level code may eventually use a narrow unsafe lifecycle assertion when
@@ -673,17 +846,8 @@ the incomplete array or a successfully constructed prefix. Complete element
 counts, iterable expansion, relocation, and element access are explained by
 [Zax arrays and slices](arrays-and-slices.md#construction-and-destruction).
 
-`unsafe ???` can instead bypass initialization of the entire array:
-
-```zax
-rawArray : MyItem[3] = unsafe ???
-rawArray.+++([ makeFirst(), makeSecond(), makeThird() ])
-```
-
-The bracket expression first creates an ordinary array value. The explicit
-constructor then uses that array to establish `rawArray`; it is not a special
-variadic array constructor. Extra reserved capacity still contains no elements
-and requires no unsafe bypass.
+Extra reserved capacity contains no elements, so nothing needs to be
+constructed for it.
 
 ## Declared and generated lifecycle operations
 
@@ -761,7 +925,7 @@ cost behavior might otherwise differ.
 `= forbidden` prohibits the exact shape:
 
 ```zax
-replacement +++ final :
++++ replacement final :
   ()(source : Source) = forbidden
 ```
 
@@ -936,10 +1100,10 @@ Complete reconstruction requires:
 It does not require the old value to be mutable. Construction authority
 establishes the successor's mutable or immutable state.
 
-These requirements apply only to a live place. On a function result slot that is
-not constructed yet, `.=` performs its first construction instead and needs no
-replacement permission; see
-[Zax function invocation](function-invocation.md#opt-in-result-initialization).
+These requirements apply only to a live place. On an empty result slot or an
+empty explicitly controlled member, `.=` performs first construction instead
+and needs no replacement permission; see
+[Construct into an existing place with dot-equals](#construct-into-an-existing-place-with-dot-equals).
 
 Type-side `final`, declaration-side `final`, and readonly access independently
 block `.=`:
@@ -994,7 +1158,7 @@ operator binary '=' final : ()(
 }
 ```
 
-This is why the customization point is `replacement +++`, not an overloaded
+This is why the customization point is `+++ replacement`, not an overloaded
 `=` or `.=` body.
 
 ### Replacement inputs and packets
@@ -1012,7 +1176,7 @@ value .= [{
 ```
 
 The compiler evaluates and binds every input before the old lifetime ends. It
-then selects one matching `replacement +++` or applies the ordinary fallback
+then selects one matching `+++ replacement` or applies the ordinary fallback
 with the same inputs.
 
 Direct call-site `.member = ...` entries are unavailable for complete
@@ -1036,7 +1200,7 @@ transition.
 
 ### Custom replacement
 
-A custom replacement constructor uses contextual `replacement +++`:
+A custom replacement constructor uses contextual `+++ replacement`:
 
 ```zax
 Registration :: type {
@@ -1044,15 +1208,15 @@ Registration :: type {
   settings : Settings
 
   +++ final : ()(settings : Settings) = {
-    _.id = registry.register(settings)
-    _.settings = settings
+    _.id .= registry.register(settings)
+    _.settings .= settings
   }
 
   --- final : ()() = {
     registry.unregister(_.id)
   }
 
-  replacement +++ final : ()(
+  +++ replacement final : ()(
     settings : Settings
   ) = {
     registry.reconfigure(_.id, settings)
@@ -1064,7 +1228,7 @@ registration varying :
   Registration immutable writable varying = makeRegistration()
 
 registration .= [{ nextSettings }]
-// Selects replacement +++ and can retain the registration id.
+// Selects +++ replacement and can retain the registration id.
 ```
 
 When selected, the replacement constructor:
@@ -1099,6 +1263,12 @@ The retained resource therefore receives one continuing owner rather than a
 destructor followed by reconstruction. References to the old member still cross
 a real resident-instance boundary even though no member hook ran.
 
+Members start live inside a replacement constructor, because they still hold
+the previous representation. `_.member .= value` there replaces that member. If
+the body explicitly ends a member with `_.member.---()`, the member is empty,
+and the next `_.member .= value` constructs it. Every member must be live and
+valid when the replacement constructor returns.
+
 The compiler tracks member transitions. Normal return requires one live valid
 value for every required member and exactly one disposition for every resource
 the transition ceased to retain. A carried resource counts as transferred into
@@ -1113,7 +1283,7 @@ BufferOwner :: type {
   buffer : Buffer
   format : Format
 
-  replacement +++ final :
+  +++ replacement final :
     (retainedCapacity : Boolean)(
       nextFormat : Format
     ) = {
@@ -1141,7 +1311,7 @@ adapt, or infer an arbitrary result.
 A resultless replacement declaration supplies no result:
 
 ```zax
-replacement +++ final : ()(rhs : Source) = {
++++ replacement final : ()(rhs : Source) = {
   // Complete replacement.
 }
 ```
@@ -1158,6 +1328,22 @@ A result may report resource reuse or another domain outcome. It cannot mean
 that the destination is half-constructed. The compiler cannot infer that
 programmer intent from a Boolean or name, so API design and documentation must
 make the distinction understandable.
+
+A replacement inside a
+[`.=` routing group](function-invocation.md#construct-existing-places-with-a-dot-equals-group)
+has nowhere to send the hook's results, because a routing group is not an
+expression. A required result makes that entry an error; a discardable result
+declared with `#` is dropped. Declare replacement results with `#` when callers
+may reasonably ignore them, and write the replacement as its own statement
+when the result is needed:
+
+```zax
+first: _.a, second: owner .= makeTwo()
+// error when owner's replacement constructor declares a required result
+
+retained := owner .= [{ newFormat }]
+// the result is received
+```
 
 Result references and pointers remain subject to ordinary lifetime and alias
 rules. Expected-result context participates only at the narrow complete
@@ -1202,7 +1388,7 @@ Construction and replacement may be controlled independently:
 ```zax
 +++ final : ()(source : Source) = default
 
-replacement +++ final :
++++ replacement final :
   ()(source : Source) = forbidden
 ```
 
@@ -1222,7 +1408,7 @@ independence. A reference result may point into the destination:
 Document :: type {
   text : String
 
-  replacement +++ final : ()(
+  +++ replacement final : ()(
     source : String readonly &
   ) = {
     _.text = source
@@ -1371,7 +1557,7 @@ The operation:
 The wrapper must be mutable and the current path writable. Its place may be
 final or varying because this operation does not replace the complete wrapper
 lifetime. Type-side `final` at the wrapper layer therefore does not select or
-permit `replacement +++`; no complete wrapper replacement occurs.
+permit `+++ replacement`; no complete wrapper replacement occurs.
 
 Optional and named-variant payload forms return access to the newly constructed
 payload. A packet targeting the complete variant wrapper returns wrapper access,
@@ -1402,7 +1588,7 @@ publish a partial payload, restore the old payload, or continue ordinary
 execution through absence.
 
 Wrapper-owned `.=` performs fresh ordinary payload construction. It does not
-select the old payload type's `replacement +++`. To replace an already active
+select the old payload type's `+++ replacement`. To replace an already active
 payload as a complete varying value, first access or bind that payload and then
 apply complete `.=` reconstruction:
 
@@ -1417,7 +1603,7 @@ switch variant {
 ```
 
 Those target payload places must themselves be varying and writable. A final or
-readonly payload path cannot select `replacement +++`.
+readonly payload path cannot select `+++ replacement`.
 
 `.=` remains protected and cannot be overloaded. Complete optional and variant
 behavior belongs to [optional values](optional-values.md) and
@@ -1679,69 +1865,52 @@ static-analysis contract rather than one compiler's current cleverness.
 
 ## Manual and delayed construction
 
-### `unsafe ???`
+Delayed construction exists only where a place starts empty: result slots and
+members under explicit construction control. A local declaration always
+constructs its value when it is declared.
 
-The declaration form:
+### Construction by an opaque operation
 
-```zax
-value : MyType = unsafe ???
-```
-
-establishes a binding and storage while explicitly bypassing ordinary
-initialization. It leaves representation validity and eventual destruction under
-unsafe programmer responsibility.
-
-Explicit delayed construction remains legal:
-
-```zax
-value : MyType = unsafe ???
-value.+++()
-```
-
-The later `+++` performs the initialization, member construction, allocation,
-and constructor-body work that ordinary declaration initialization would have
-performed. Calling `+++` again on the same still-live lifetime may duplicate
-initialization or leak resources.
-
-### Stored members with `unsafe ???`
-
-A member initializer of `unsafe ???` is already the programmer's unsafe
-disposition:
+Sometimes assembly, foreign code, or another operation the compiler cannot see
+is what establishes a member. The constructor states that at the operation:
 
 ```zax
 MyType :: type {
-  s : S = unsafe ???
+  s : S
   t : T
 
   +++ final : ()() = {
-    _.t.+++()
+    _.t .= [{}]
+    unsafe<opaque-construction>{ lowLevelAssemblyCall(_.s) }
   }
 }
 ```
 
-For `s`:
+The enclosure asserts that `lowLevelAssemblyCall` constructs `s`. It has three
+effects:
 
-- storage exists;
-- ordinary default initialization and `S.+++()` are bypassed;
-- destruction remains scheduled;
-- representation remains indeterminate unless another operation establishes it;
-- the containing constructor may complete without `_.s.+++()`; and
-- the programmer assumes responsibility for every later use and for valid
-  destruction.
+- `s` is under explicit construction control, so it receives no automatic
+  initialization first;
+- after the enclosure, `s` is live for the
+  [first-construction rule](#how-the-compiler-decides-first-construction), so a
+  later `_.s .= ...` is replacement; and
+- the programmer takes responsibility for `s` holding a valid value that its
+  later uses and its destructor accept.
 
-The compiler neither initializes `s` automatically nor requires an explicit
-`_.s.+++()`. Assembly, foreign code, an opaque operation, or another low-level
-mechanism may establish the representation. Leaving `s` unreferenced is not a
-language error.
+Without the enclosure, passing the empty `_.s` to a call is use before
+construction. The compiler cannot distinguish a call that establishes a value
+from one that reads it, so the claim must be written where it is made. An
+enclosure inside a condition leaves `s` in an unknown state, which is an error.
 
-Calling `_.s.+++()` later is legal and transitions the member into an ordinarily
-constructed state. It is optional. `unsafe ???` already supplies the unsafe
-acknowledgment; delayed construction does not require another unsafe category.
+The enclosure must identify exactly which places it establishes; a call that
+receives two empty places must not silently establish both. The source syntax
+for naming those places is future analysis-control work, as is the final
+spelling of the category.
 
-Lifecycle tracking distinguishes ordinary construction, explicit bypass,
-ordinary construction after bypass, and an ended lifetime. The bypass satisfies
-the enclosing constructor's completion requirement through unsafe programmer
-responsibility rather than proof of a valid `S` representation.
+A result slot follows the same rule. When storage outside a type must be
+filled this way, wrap it in a type whose constructor makes the assertion, as
+shown in
+[Zax declarations and bindings](declarations-and-bindings.md#low-level-initialization-belongs-in-a-constructor).
 
 ## Incomplete current instances and unsafe controls
 
@@ -1776,15 +1945,19 @@ Publication may retain a reference, notify subscribers, or reenter through
 another path. Permission for bounded helper access does not imply permission for
 escape.
 
-The language needs distinct future unsafe controls for:
+Construction performed by an opaque operation uses `opaque-construction`, as
+described above. The language needs distinct future unsafe controls for:
 
-- manual member construction or destruction hidden from analysis;
-- construction or destruction that analysis cannot prove occurs on every path;
-- apparently overlapping lifecycle calls known to be mutually exclusive;
+- manual member destruction hidden from analysis;
+- destruction that analysis cannot prove occurs on every path;
+- apparently overlapping destruction calls known to be mutually exclusive;
 - bounded partial-instance access;
 - partial-instance escape or publication;
 - unresolved replacement aliasing; and
 - terminal member reconstruction.
+
+Construction has no such override. When the compiler cannot tell whether a
+place has been constructed, the code must be restructured so that it can.
 
 The final source syntax, analysis provenance, and contract-version behavior
 remain future analysis-control work. The general distinction among proof,
@@ -1844,7 +2017,9 @@ General identity behavior is defined by
 
 Programmers must be able to discover:
 
-- automatic versus explicit member lifecycle operations;
+- automatic versus explicit member lifecycle operations, including the two
+  operations performed when ordinary `=` targets an automatically constructed
+  member;
 - temporaries retained while a construction packet evaluates;
 - declared constructor defaults evaluated after explicit packet inputs;
 - `copy`, `move`, `last`, and reference binding performed for packet entries;
@@ -1879,7 +2054,17 @@ Diagnostics should distinguish:
 - unresolved existing-versus-generated behavior at an actual use;
 - use of a `forbidden` operation;
 - a member that cannot initialize automatically;
+- ordinary `=` on a member whose type cannot be default-constructed, where
+  `.=` would construct it;
 - conflicting call-site and constructor-body member construction;
+- a `.=` whose target may be empty or live because paths disagree or a loop
+  reaches it;
+- a second `.=` on a member through a `final` place or readonly path;
+- payload `.=` on an optional or variant member whose wrapper is not
+  constructed yet;
+- an empty member passed to an operation without construction or an
+  `opaque-construction` assertion;
+- a required replacement-constructor result dropped by a `.=` routing group;
 - use before construction or after destruction where required analysis proves
   it;
 - an access through conditionally live storage, such as an optional stored-value
@@ -1907,7 +2092,7 @@ boundaries remain future diagnostic and safety work.
 
 Canonical formatting should preserve:
 
-- contextual adjacency in `replacement +++`;
+- contextual adjacency in `+++ replacement`;
 - visible construction-packet entry categories;
 - left-to-right packet entry order;
 - explicit positional intent;
@@ -1956,7 +2141,13 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - complete replacement on every normal return, including resultful replacement;
 - resultless replacement producing no implicit destination result;
 - terminal destruction authority;
-- `unsafe ???` satisfying construction through explicit unsafe responsibility;
+- `.=` constructing into existing places, with first construction limited to
+  empty result slots and explicitly controlled members, decided by the
+  conservative first-construction rule;
+- construction by an opaque operation asserted at that operation, with no
+  declaration form that leaves storage indeterminate;
+- the value produced by a `.=` expression, which currently differs by use;
+  unifying it is future work that must not change the rules above;
 - known pointer and alias hazards remaining visible;
 - async, concurrency, ownership, and formal unsafe-control mechanisms remaining
   separate concerns until their focused reviews;

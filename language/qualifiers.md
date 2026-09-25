@@ -634,15 +634,16 @@ transition with a
 [replacement constructor](terms.md#replacement-constructor):
 
 ```zax
-replacement +++ final : ()(
++++ replacement final : ()(
   rhs : Input readonly &
 ) = {
   // `_` initially contains the previous current-instance state.
 }
 ```
 
-`replacement` is contextual syntax only when it immediately precedes `+++`
-where a constructor declaration is legal. Elsewhere it remains an ordinary
+`replacement` is contextual syntax only when it immediately follows `+++`
+where a constructor declaration is legal, in the same post position as the
+other constructor words such as `contextual` and `once`. Elsewhere it remains an ordinary
 identifier:
 
 ```zax
@@ -1069,7 +1070,7 @@ optional .= [{}]
 Those operations remove and create boxed places. They do not mutate or
 independently replace the old payload through postfix access.
 
-Wrapper-owned `.=` does not select `replacement +++` at a final wrapper or
+Wrapper-owned `.=` does not select `+++ replacement` at a final wrapper or
 payload layer. It keeps the mutable wrapper lifetime and performs fresh payload
 construction. To invoke the active payload's complete replacement, postfix
 access must reach a payload place that is itself varying and writable:

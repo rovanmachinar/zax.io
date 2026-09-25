@@ -1264,8 +1264,9 @@ paired with a prototype that already constructed it. Compatible prototypes may
 change initializer expressions only when they establish the same per-result
 entry state required by the body.
 
-An initially unconstructed result may instead be constructed later. The
-ordinary spelling is `.=`, which makes a place hold a newly constructed value:
+A result without an initializer is declared by the prototype but starts empty.
+The body constructs into that existing place with `.=`, the same operator a
+constructor uses for its members:
 
 ```zax
 make final : (
@@ -1277,8 +1278,8 @@ make final : (
 }
 ```
 
-On a result slot that is not constructed yet, `.=` constructs it and means
-exactly what the same source would mean as a declaration initializer:
+First construction means exactly what the same source would mean as a
+declaration initializer:
 
 ```zax
 result .= source        // like `result : Item = source`
@@ -1288,15 +1289,16 @@ result .= [{}]          // zero-input construction; for an optional, a present p
 
 The expression produces access to the newly constructed result. Explicit
 construction through `result.+++(source)` remains available and means the same
-thing.
+thing. A [`.=` routing group](#construct-existing-places-with-a-dot-equals-group)
+can construct several result slots from one multiple-result producer.
 
-This first construction needs no replacement permission, so a `final`, readonly,
-or immutable result can be constructed this way. Once the result is live, `.=`
-is [reconstructive replacement](construction-and-destruction.md#reconstructive-replacement)
+First construction needs no replacement permission, so a `final`, readonly, or
+immutable result can be constructed this way. Once the result is live, `.=` is
+[reconstructive replacement](construction-and-destruction.md#reconstructive-replacement)
 with its usual requirements; a second `.=` on a `final` result is therefore an
 error.
 
-Ordinary `=` never constructs:
+The assignment operator `=` never constructs its destination:
 
 ```zax
 make final : (
@@ -1310,7 +1312,9 @@ Construct the result first, or request pre-body construction with `= :` when
 every implementation of the prototype should receive a live result. That
 initializer is part of the prototype, not a local convenience.
 
-The compiler tracks construction through control flow. It rejects:
+Whether a `.=` constructs or replaces is decided by the conservative rule in
+[How the compiler decides first construction](construction-and-destruction.md#how-the-compiler-decides-first-construction).
+For result slots, the compiler rejects:
 
 - use before result construction;
 - a `.=` or `+++` where the compiler cannot tell whether the result is already
@@ -1770,6 +1774,101 @@ panic does not roll an earlier effect back or unwind to the caller: a matching
 helper repairs the blocked operation and lets it resume, otherwise the process
 crashes gracefully. See
 [Zax safety and analysis](safety-and-analysis.md#panic-boundary).
+
+### Construct existing places with a dot-equals group
+
+An `=` group assigns to every existing destination. To construct existing
+places instead, end the group with `.=`:
+
+```zax
+MyType :: type {
+  a : A
+  b : B
+
+  +++ final : ()() = {
+    first: _.a, second: mySecond : MySecond .= makeTwo()
+    _.b .= mySecond.makeB()
+  }
+}
+```
+
+- `makeTwo()` runs once.
+- `_.a` is an empty member, so `first` constructs it directly. The compiler may
+  elide the producer's result slot into the member.
+- `mySecond : MySecond` is a new declaration, constructed once from `second`.
+- `_.b` is then constructed from `mySecond.makeB()`, and `mySecond` is
+  destroyed at the end of the body.
+
+The group's final token decides what happens to every existing destination:
+
+```zax
+number:, existingText = produce()
+// `=` group: new declarations are constructed; existing destinations are assigned.
+
+first: _.a, second: mySecond .= makeTwo()
+// `.=` group: each existing destination receives `.=`.
+```
+
+A `.=` group never assigns. Each existing destination receives `.=` exactly as
+if written `place .= result`: first construction when the place is empty,
+replacement when it is live. When `mySecond` is already live, its entry is
+replacement:
+
+```zax
++++ final : ()() = {
+  mySecond : MySecond = prepareMeTheSecondPlace()
+  first: _.a, second: mySecond .= makeTwo()
+  // _.a: first construction, with elision possible.
+  // mySecond: replacement from `second`.
+  _.b .= mySecond.makeB()
+}
+```
+
+Replacement cannot elide. A live place cannot become the producer's result
+slot, so `second` is an input to the replacement and its temporary is
+destroyed afterwards. A `+++ replacement` on `MySecond` that accepts that input
+can recycle resources the earlier construction prepared; without one, the
+earlier construction only adds a construction and a destruction.
+
+Result slots use the same form, which constructs them without completing the
+function:
+
+```zax
+make final : (
+  a : A,
+  b : B
+)() = {
+  first: a, second: b .= makeTwo()
+  finishSetup(a, b)
+}
+```
+
+Rules:
+
+- The [first-construction rule](construction-and-destruction.md#how-the-compiler-decides-first-construction)
+  applies to each entry separately.
+- In a constructor, a member used as a `.=` group destination is under
+  explicit construction control.
+- New declarations may appear and are constructed.
+- Entries are processed in order and are not transactional, as in `=` groups.
+- Replacement entries follow the ordinary replacement rules: inputs are secured
+  before the old lifetime ends, and alias hazards still apply.
+- A discarded `#` source result is still constructed by the producer and is
+  destroyed when the mapping completes.
+- A replacement constructor's required result has nowhere to go, so that entry
+  is an error; see
+  [replacement results](construction-and-destruction.md#replacement-results).
+
+A `.=` group is a statement. The other routing contexts have no existing places
+to construct into:
+
+| Context | Destinations | Group token |
+| --- | --- | --- |
+| Call routing | Parameters that the call creates | `=` |
+| `using` lists | New resource bindings | `=` |
+| Capture producer groups | New captures | `=` |
+| `return` routing | Result slots that `return` constructs | `=` |
+| Statement routing | New declarations and existing places | `=` or `.=` |
 
 ### Typed destinations
 
@@ -2956,15 +3055,15 @@ does not also undergo a separate source-slot destruction. This can change the
 overall destruction order.
 
 For example, suppose `makeResults` declares `resultA` before `resultB`. A wrapper
-can discard the first result and map the second directly into its own result
-slot:
+can discard the first result and construct its own empty result slot from the
+second with a `.=` group:
 
 ```zax
 keepSecond final : (
   kept : ResultB
 )() = {
   #,
-  resultB: kept: = makeResults()
+  resultB: kept .= makeResults()
 }
 ```
 
@@ -3082,6 +3181,10 @@ Invocation diagnostics should distinguish:
 - exceptional outcome discard through `#`;
 - a handler destination invalid for one nested source specialization;
 - incomplete or duplicate result construction;
+- a `.=` routing group used in call routing, `using`, capture, or `return`
+  routing, where no existing place can receive `.=`;
+- an existing destination in an `=` group that has not been constructed yet,
+  where a `.=` group would construct it;
 - a `return #` slot whose type cannot be default-constructed;
 - result context without a complete declaration;
 - branch-dependent conditional-expression arms that select incompatible callables

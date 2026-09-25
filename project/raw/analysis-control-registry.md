@@ -44,6 +44,8 @@ Entries use these local maturity labels:
 - **Unassigned**: a domain requires a category, but no identifier is yet
   proposed.
 - **Legacy**: historical evidence requiring value-based disposition.
+- **Superseded**: replaced by a named mechanism; retained only so its evidence
+  and replacement remain discoverable.
 
 An occurrence in source does not raise its maturity.
 
@@ -55,11 +57,12 @@ a defined panic check merely by sharing a failure condition.
 | Identifier | Maturity | Claim or permission | Behavior owner and current evidence |
 | --- | --- | --- | --- |
 | `union-lens-validity` | Accepted domain entry | Assert that the current backing representation of a `union unsafe` is valid for the requested lens where the selected contract does not prove it | [Zax unions](../../language/unions.md#unsafe-union) and [safety and analysis](../../language/safety-and-analysis.md#unsafe-union-lens-validity) |
-| `manual-member-construction` | Provisional | Suppress generated member construction because another operation establishes the member lifetime | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
+| `opaque-construction` | Accepted domain entry (name may be revised; place-naming syntax open) | Assert that the enclosed operation constructs the named empty member or result slot; the member receives no automatic construction | [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md#construction-by-an-opaque-operation), [declarations and bindings](../../language/declarations-and-bindings.md#low-level-initialization-belongs-in-a-constructor), and [raw analysis controls](analysis-controls.md#lifecycle-state-assertions) |
+| `manual-member-construction` | Superseded (032) | Replaced by explicit construction control plus `opaque-construction` | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
 | `manual-member-destruction` | Provisional | Suppress generated member destruction because another operation ends or transfers the member lifetime | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `construction-path-complete` | Provisional | Treat a member as constructed on every applicable normal path despite incomplete proof | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
+| `construction-path-complete` | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
 | `destruction-path-complete` | Provisional | Treat a member as destroyed or dispositioned on every applicable path despite incomplete proof | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `construction-at-most-once` | Provisional | Trust that apparently overlapping paths cannot construct one member lifetime twice | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
+| `construction-at-most-once` | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
 | `destruction-at-most-once` | Provisional | Trust that apparently overlapping paths cannot end one member lifetime twice | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
 | `partial-instance-access` | Provisional | Permit bounded access to a current instance that is not fully constructed | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction and safety owners |
 | `partial-instance-escape` | Provisional | Permit an incomplete current instance or access path to escape or become externally observable | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction and safety owners |
@@ -78,7 +81,7 @@ a defined panic check merely by sharing a failure condition.
 to show that unsafe cannot revive a known-ended lifetime. `lifetime` is too broad
 to identify one responsibility and is not a candidate registry identifier.
 
-`unsafe ???`, `unsafe pliable`, `unsafe cast`, `unsafe from`,
+`unsafe pliable`, `unsafe cast`, `unsafe from`,
 `unsafe outer cast`, `unsafe via`, and `unsafe vacate` are domain source forms,
 not category identifiers in the candidate `unsafe<category>{...}` registry.
 
@@ -87,7 +90,6 @@ not category identifiers in the candidate `unsafe<category>{...}` registry.
 The following reached concerns still need focused review and exact identifiers
 or an explicit decision that another mechanism owns them:
 
-- complete construction and at-most-once establishment of function result slots;
 - source-result and destination-slot single consumption;
 - operations on moved-from or terminal values when validity is unproved rather
   than merely suspicious;
@@ -100,6 +102,11 @@ or an explicit decision that another mechanism owns them:
   lens; and
 - optional or debug-only unchecked variant access if future work wants a local
   source form distinct from disabling its registered panic check.
+
+Complete construction and at-most-once establishment of result slots and
+explicitly controlled members no longer need an unsafe category: the
+construction owner's first-construction rule makes unknown state an error to
+restructure.
 
 Do not assign these identifiers merely to complete the table. Their future owner
 must distinguish an assertion from a defined unsafe permission and from a

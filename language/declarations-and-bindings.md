@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, inferred, and explicitly bypassed initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, and inferred initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
 | Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -32,6 +32,34 @@ This distinction separates three concepts:
 An unresolved assignment target is therefore an error, not an implicit local
 declaration.
 
+Declaring a place is what constructs it. The `=` in `item : Item = source`
+belongs to the declaration: it supplies the source for that construction.
+Some places are declared in one location and constructed in another. A
+function result is declared by its prototype and starts empty; a member is
+declared by its type and may be constructed inside a constructor body. Code
+constructs into such an already declared place with `.=`:
+
+```zax
+item : Item = source
+// Declaring `item` constructs it.
+
+item = other
+// `item` already exists and is live: ordinary assignment.
+
+make final : (
+  result : Item
+)() = {
+  result .= source
+  // `result` was declared by the prototype and starts empty.
+  // `.=` constructs a value into it.
+}
+```
+
+On a place that is already live, `.=` instead replaces the value. A
+declaration never needs `.=`, because introducing the place is the act of
+construction. The uses of `.=` are introduced in
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construct-into-an-existing-place-with-dot-equals).
+
 ## Core value forms
 
 | Form | Meaning |
@@ -40,7 +68,7 @@ declaration.
 | `name : Type = value` | Declare `name` with an explicit type and initialize or construct it directly from `value`. |
 | `name := value` | Declare `name`, infer its type from `value`, and initialize it. |
 | `name = value` | Invoke an assignment operator using an already declared destination. |
-| `name : Type = unsafe ???` | Declare live storage while explicitly and unsafely bypassing ordinary value initialization and construction. |
+| `name .= value` | Construct a new value into an already declared place: first construction when the place is empty, replacement when it is live. |
 
 ### Inferred declarations
 
@@ -115,11 +143,6 @@ resolved default storage profile. A bare array or slice remains one element;
 array-entry `from` explicitly contributes its sequence values. Complete
 examples are in
 [Zax arrays and slices](arrays-and-slices.md#array-expressions).
-
-`unsafe ???` bypasses initialization of the entire array representation. It
-does not create ordinary elements that are merely waiting to be filled and
-cannot be used to reserve uninitialized capacity. Complete delayed construction
-belongs to the array and lifecycle owners.
 
 ### Anonymous declarations and discard names
 
@@ -460,51 +483,35 @@ x : Integer
 x = 1
 ```
 
-It is not an initialize-later form.
-
-### Explicitly uninitialized storage
-
-`unsafe ???` is an explicit escape from ordinary initialization:
-
-```zax
-item : Item = unsafe ???
-```
-
-This form:
-
-1. reserves storage;
-2. establishes a live variable of the declared type;
-3. skips ordinary value initialization and constructor execution;
-4. leaves its representation indeterminate;
-5. schedules the ordinary destructor at scope exit; and
-6. makes the programmer responsible for establishing every invariant required
-   by later use and destruction.
-
-It supports low-level initialization:
-
-```zax
-if condition {
-  item : Item = unsafe ???
-  initializeThroughAssembly(item)
-} // Item's destructor runs
-```
-
-The low-level operation must leave `item` in a state accepted by every later
-operation and by its destructor. Failure to do so is unsafe programmer behavior.
-
-`unsafe ???` may also appear in a stored-member declaration. It explicitly
-bypasses, rather than performs, that member's ordinary initialization. The
-member satisfies the containing constructor's initialization obligation through
-explicit unsafe responsibility: the compiler neither default-initializes it nor
-requires an explicit member `+++`. A later explicit `+++` remains legal delayed
+It is not an initialize-later form. A local declaration always constructs its
+value when it is declared; Zax has no form that leaves a local empty for later
 construction.
-Complete member and delayed-construction behavior is defined by
-[Zax construction, replacement, and destruction](construction-and-destruction.md#manual-and-delayed-construction).
 
-The compiler should diagnose obvious misuse when practical. Complete
-definite-initialization analysis, low-level initialization contracts, relocation,
-return-value optimization, partial construction, and destruction-path analysis
-remain later safety and lifetime work.
+### Low-level initialization belongs in a constructor
+
+Sometimes storage should be filled by an operation the compiler cannot see,
+such as assembly or a device read, without first paying for ordinary
+initialization. Put that storage in a type and establish it in the type's
+constructor:
+
+```zax
+DeviceBuffer :: type {
+  bytes : U8[4096]
+
+  +++ final : ()(device : Device &) = {
+    unsafe<opaque-construction>{ device.readInto(_.bytes) }
+  }
+}
+
+buffer : DeviceBuffer = [{ device }]
+```
+
+`buffer` is an ordinary local that is constructed when declared. Inside the
+constructor, the unsafe enclosure tells the compiler that `readInto` constructs
+`bytes`, so `bytes` receives no automatic initialization first. The wrapper
+type costs nothing at run time, and the unsafe responsibility sits on the one
+operation that needs it. Complete member behavior is defined by
+[Zax construction, replacement, and destruction](construction-and-destruction.md#construction-by-an-opaque-operation).
 
 ## Scope entry and redeclaration
 
@@ -1673,7 +1680,7 @@ Complete replacement uses protected `.=` instead. It requires a type-side
 varying destination, declaration-side varying replacement permission, and a
 writable path. The old value may be mutable or immutable. The compiler-owned
 lifecycle skeleton may select a contextual
-[`replacement +++` constructor](construction-and-destruction.md#custom-replacement)
+[`+++ replacement` constructor](construction-and-destruction.md#custom-replacement)
 or use ordinary destruction/construction fallback. User-defined code cannot
 overload `.=` or replace that skeleton with an ordinary operator body.
 
@@ -1698,6 +1705,41 @@ foo : Bar = source
 The `:` introduces `foo`; user code cannot overload that act. The initializer
 selects construction or initialization behavior for the new `Bar`. Later
 `foo = source` performs operator selection against an existing destination.
+
+### Three roles of `=`
+
+The same character appears in three different roles, and only one of them is
+the assignment operator:
+
+```zax
+item : Item = source
+// 1. Declaration initializer: constructs the declared place.
+
+a: myFoo : MyFoo, b: bar: = makeValues()
+// 2. Routing-group mapping: sends each producer result to its entry.
+//    New declarations such as myFoo and bar are constructed.
+//    An existing destination in the group receives ordinary assignment.
+
+existing = source
+// 3. Assignment operator: requires a live destination.
+```
+
+The assignment operator never constructs its destination. Its right side may
+still construct values, such as a temporary, a producer's result slot, or the
+pointee of a new allocation:
+
+```zax
+scheduled : MyValue * = @
+reset scheduled
+scheduled = @{ anotherArena }
+// The pointer place is live and receives assignment.
+// The new MyValue pointee is constructed on the right side.
+```
+
+To construct into a place that already exists, use `.=` instead. Routing
+groups can also end in `.=`, which constructs or replaces every existing
+destination; see
+[Zax function invocation](function-invocation.md#construct-existing-places-with-a-dot-equals-group).
 
 An uncommitted integer on the right of assignment may fill a concrete integer
 input declared by an already discovered `=` candidate. The assignment receiver
@@ -2237,6 +2279,18 @@ assignment into `existingText`. Mapping is ordered and nontransactional. A
 later panic does not roll earlier work back or unwind to the caller; the blocked
 operation resumes after a matching repair or the process crashes gracefully.
 
+Ending the group with `.=` instead constructs into existing places. Every
+existing destination receives `.=`, so a `.=` group never assigns:
+
+```zax
+first: _.a, second: mySecond : MySecond .= makeTwo()
+// Inside a constructor: `_.a` is constructed from `first`;
+// the new `mySecond` is constructed from `second`.
+```
+
+Complete `.=` group behavior is defined by
+[Zax function invocation](function-invocation.md#construct-existing-places-with-a-dot-equals-group).
+
 Duplicate introduced names remain errors. Ordinary declaration visibility,
 same-scope redeclaration, and declaration-versus-assignment rules continue to
 apply. Complete result labels, routing, omission, construction order, and
@@ -2317,6 +2371,8 @@ Diagnostics should distinguish:
 - positional introduction of several named `using` results where source-result
   labels are required;
 - use of an unconstructed result slot as a live value;
+- ordinary assignment to a place that has not been constructed yet;
+- a `.=` routing group outside statement position;
 - an `except` marker outside a callable result declaration;
 - an exceptional result with a prototype initializer or manual early
   construction;
@@ -2374,12 +2430,16 @@ It establishes constraints that later work must preserve:
   remains the caller's permission to omit a result;
 - a statement `name #` acknowledges an existing binding this body did not
   declare and does not introduce a declaration;
-- result slots may delay construction as a specialized output obligation without
-  creating an initialize-later form for ordinary local declarations;
+- result slots and explicitly controlled constructor members may delay
+  construction without creating an initialize-later form for ordinary local
+  declarations;
 - named non-value definitions may expose incomplete self-names without making
   ordinary value initializers self-referential;
-- constructors and lifetime policies must preserve default, direct, and explicit
-  `unsafe ???` distinctions, including stored-member and delayed construction;
+- constructors and lifetime policies must preserve the distinction between
+  default and direct initialization, including automatic and explicit member
+  construction;
+- a declaration's `=` remains part of declaration syntax, while `.=`
+  constructs into a place that already exists;
 - transfer, ownership, and qualifier design must preserve independent binding,
   declaration stance, value, place, and access capabilities;
 - operator design must not permit operator overloads to introduce unresolved
