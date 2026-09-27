@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | None; `035` awaits alignment |
-| Next work number | `035` |
+| Active work item | [035: Compile-time code and compiler directives](work/035-compile-time-code-and-directives.md) |
+| Next work number | `036` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only
