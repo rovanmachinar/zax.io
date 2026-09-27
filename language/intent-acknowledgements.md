@@ -222,6 +222,10 @@ copying a diagnostic message.
 | `duplicate-resource-enrollment` | Deliberately enroll a place already known to be enrolled by an earlier `using` entry | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `repeated-resource-expression` | Deliberately repeat a resource-producing expression as a later `using` entry while preserving every evaluation | [Zax `using`](using.md#repeated-entries-and-aliases) |
 | `same-prefix-literal-join` | Deliberately invoke the same resolved literal declaration twice and join its concrete results rather than merge the payload for one invocation | [Literal source and operators](literal-source-and-operators.md#same-declaration-requires-intent-acknowledgement) |
+| `grant-redirected-selection` | Deliberately place a partial grant partway through a block where it changes which candidate a later valid use selects | [Zax partials](partials.md#put-grants-at-the-top-of-a-block) |
+| `injected-partial-exposure` | Deliberately make a partial visible to all of an imported module's source through its injection body | [Zax partials](partials.md#including-a-partial-through-an-import) |
+| `uninvoked-hook-role` | Declare a hook point whose type never invokes one or more of its roles | [Zax partials](partials.md#a-declared-hook-the-type-never-calls) |
+| `application-closed-storage` | Declare a type whose storage may be extended from any module, leaving its layout pending until the application is assembled | [Zax partials](partials.md#storage-from-any-module) |
 
 Interior pointers also require intent acknowledgement when replacement of their
 target or an enclosing direct place can renew the resident member instance.
@@ -617,6 +621,47 @@ value join.
 as defined by
 [Zax source structure](source-structure.md#keyword-neutral-bare-source) and
 cannot acknowledge a suspicious form.
+
+### Partial categories
+
+Four categories acknowledge choices that widen what a [partial](partials.md)
+affects. Each encloses the declaration that makes the choice:
+
+```zax
+useIt final : ()(myFoo : MyFoo writable &) = {
+  myFoo.func(100)
+  intent<grant-redirected-selection>{
+    Module.Tools.FooWide :: expose partial   // later func(100) now selects FooWide's overload
+  }
+  myFoo.func(100)
+}
+
+Library :: import Module.LibraryDefinition {
+  intent<injected-partial-exposure>{
+    Module.MyNamespace.MyTagging :: expose partial   // the library's own source can now see it
+  }
+}
+
+MyCatalog :: type seal open storage {
+  intent<uninvoked-hook-role>{
+    hooks partial : MyCatalogHooks                   // some role is never invoked by MyCatalog
+  }
+}
+
+intent<application-closed-storage>{
+  MyRegistry :: type seal open storage module {      // layout waits for the whole application
+  }
+}
+```
+
+`grant-redirected-selection` applies only when the grant is not at the head of
+its block and actually redirects a later use. The other three apply whenever the
+declaration is written, because its consequence falls on code or layouts that
+the author cannot see from that declaration.
+
+By contrast, `seal close storage open module` is non-acknowledgeable: `module`
+widens where storage may come from, and closed storage leaves it nothing to act
+on. Complete behavior belongs to [Zax partials](partials.md).
 
 ## Choosing category boundaries
 

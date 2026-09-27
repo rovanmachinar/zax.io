@@ -6,7 +6,7 @@
 | Audience | Human developers building types from stored components and choosing which component surfaces the container presents |
 | Applies To | Named containment; independent `own`, `preferred`, and `expose`; semantic-indirection boundaries; published data paths; singular and family composition routing and filtering; abstract roles and fulfillment; outer casting and exact-origin proof; costs, diagnostics, formatting, and source stability; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast` (including role-preserving outer casts of managed pointers and their operand-shaped failure), and composition-specific exact-origin proof |
+| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the two activations of abstract roles, through `own` and through hook points; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast` (including role-preserving outer casts of managed pointers and their operand-shaped failure), and composition-specific exact-origin proof |
 | Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); complete semantic-wrapper behavior ([optional values](optional-values.md), [variants](variants.md), and [unions](unions.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy composition intent, reconciled with current declaration, invocation, operator, transfer, lifetime, construction, identity, and safety design |
 | Supersedes | Legacy composition design formerly published at the repository root |
@@ -1059,7 +1059,8 @@ Window :: type {
 }
 ```
 
-An `abstract` declaration is compile-time role metadata. It creates:
+An `abstract` declaration is compile-time role metadata. When an `own` member
+activates it, as here, it creates:
 
 - no storage;
 - no implementation;
@@ -1067,6 +1068,10 @@ An `abstract` declaration is compile-time role metadata. It creates:
 - no vtable or ABI entry;
 - no hidden reference to the container; and
 - no ability for inner code to call outward.
+
+A type can also use a contract of roles as a hook point that its partials
+fulfill; see [hook points](#hook-points-for-partials). Everything else in this
+section describes activation through `own`.
 
 The immediate `own` activates the role. Unless the role is explicitly optional,
 the immediate container must write a compatible declaration that names the role
@@ -1154,6 +1159,36 @@ Contract :: type {
 
 Qualifications belonging to the complete required type or prototype remain
 meaningful.
+
+### `final` fulfillment of a callable role
+
+A role has no declaration side, so its type-side stance follows the ordinary
+default: `start abstract : ()()` asks for a `varying` callable. A `final`
+declaration may still fulfill it, for the same reason `foo final : Foo varying`
+is legal: declaration-side `final` restricts only that declaration's own
+replacement authority, which is compatible with a `varying` place. That is why
+the examples above fulfill `start abstract : ()()` with a fixed `final`
+implementation. A `varying` fulfillment is equally valid and provides a
+replaceable slot.
+
+A role that writes `final` on its type side requires a final place:
+
+```zax
+StartContract :: type {
+  start abstract : ()() final
+}
+
+MyStarter :: type {
+  contract own : StartContract
+
+  begin fulfill contract.start final : ()() = {
+  }
+}
+```
+
+Fulfilling `contract.start` with `begin fulfill contract.start varying : ()()`
+would be an error for the same reason `foo varying : Foo final` is: a
+declaration cannot claim more replacement authority than its place provides.
 
 ### Leaving defaulted qualifier axes open
 
@@ -1265,6 +1300,67 @@ The value route must:
 
 The physical target may be nested. An automatically published short name is
 never sufficient by itself.
+
+### Hook points for partials
+
+A type cannot call functions that its [partials](partials.md) add, because its
+body never sees them. When a type needs its partials to take part in its own
+operations, it declares a **hook point**: a member whose contract roles any
+number of partials may fulfill, and which the type calls.
+
+```zax
+MyCatalog :: forward type
+
+MyCatalogHooks :: type {
+  assign abstract : ()(rhs : MyCatalog readonly &) writable
+}
+
+MyCatalog :: type seal open storage {
+  hooks partial : MyCatalogHooks
+
+  operator binary '=' final : (
+    result self : MyCatalog &
+  )(
+    rhs : MyCatalog readonly &
+  ) writable = {
+    _.hooks.assign(rhs)   // calls every partial's fulfillment of assign
+    return _
+  }
+}
+```
+
+The roles are still abstract: the type does not know how many partials fulfill
+them. If no partial fulfills a role, the compiler removes the call. The two
+activations differ as follows:
+
+| Activation | Fulfilled by | Fulfillments | Called by |
+| --- | --- | --- | --- |
+| `own` member | The immediate container | As the role form allows, for example exactly one for plain `abstract` | Nobody: the role is conformance metadata |
+| Hook point | Partials that name the hook point's roles | Each participating partial fulfills every required role and at most once each optional role | The type, which fans out to every fulfillment |
+
+`hooks partial : MyCatalogHooks` declares the hook point. A partial takes part
+by naming its roles with `fulfill`, for example `fulfill hooks.assign`, just as
+an `own`-activated fulfillment names its role's path. Because the path
+identifies the role, a type may declare several hook points with the same
+contract, and each is fulfilled separately.
+
+A hook call returns nothing. Calling a role that has a result through a hook
+point is an error, because several answers cannot be combined; for the same
+reason, a hook-point contract cannot contain value roles. Complete hook behavior, including order,
+private state, and the intent error for a hook role the type never calls, is
+defined by [Zax partials](partials.md#hooks).
+
+### Partials keep their own scope
+
+A partial's declarations do not join the type's own composition surface.
+Within the type, a directly declared name still takes precedence over a name
+published through `own`, and a family fence still applies to the type's
+generated, exposed, adopted, and direct declarations. Neither rule reaches a
+partial. If a type publishes `label` from an `own` member and a granted partial
+declares its own `label`, uses of that name outside the type are ambiguous. A fence does not prevent a
+partial from adding a name. A type that must accept no added functions writes
+`seal close callable`. See
+[names inside and outside](partials.md#names-inside-the-type-inside-the-partial-and-outside).
 
 ## Identity exposure
 
@@ -1625,6 +1721,7 @@ Required composition diagnostics include:
   container;
 - several fulfillments of an exact role, including an optional exact role, or
   duplicate normalized fulfillments of a relaxed role;
+- a hook-point call to a role that has a result;
 - declaration-side or private words on abstract metadata;
 - reach-through construction of a member declared `own`;
 - an outer-wrapper mapping whose remaining container cannot be destroyed in a
@@ -1712,7 +1809,7 @@ It does not establish:
 - a general interface, trait, concept, or structural-subtyping facility;
 - a whole-type `abstract` contract or required structural shape;
 - generic deduction through preferred projection;
-- partial or external authority to change an owner's exposure fences;
+- external authority to change an owner's exposure fences;
 - generalized parameter-origin result contracts beyond receiver `self`;
 - local or flow-scope `own`;
 - generalized delegation through semantic indirection;

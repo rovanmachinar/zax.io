@@ -7,7 +7,7 @@
 | Applies To | Type-input pressure exposed by operator-phrase, declaration, invocation, scalar-family, and composition review |
 | Owns | Preserved type-parameter, generic, whole-type contract, intrinsic endian/fixed/floating specialization, numeric factory, bounded probing, language-limit, relational-pair, associated-type, representative-source, activation, and retirement questions |
 | Does Not Own | Accepted generic semantics or current declaration/scalar/type behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type-qualified discovery, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, and work item `020` composition constraints |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type-qualified discovery, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, work item `020` composition constraints, and work item `034` partial deferrals |
 
 ## Why this input exists
 
@@ -161,6 +161,12 @@ currently teaches "one declaration, one intended destination" without inventing
 constraint syntax. Constraints on type parameter slots, or exact type-argument
 overloads, must let a type state which destinations each declaration accepts.
 
+This restriction also gates a [partial](../../language/partials.md) that adds
+`as` to a language scalar, so that `myCount as MyTally` works where the partial
+is granted. Without destination restriction, a partial `as` on `I32` would also
+compete with protected conversions such as `myCount as I64`, which partials may
+not claim. The legacy partial input recorded this conversion as a motivating use.
+
 ### Generic protected numeric conversion
 
 Integer, fixed-point, and floating-point conversions are protected intrinsic
@@ -168,6 +174,50 @@ signatures supplied by the language, for example integer-to-float `as`. Generic
 numeric code will need to express those protected conversions over generic
 integer and floating families, such as converting a generic integer to a generic
 float, without programmer declarations on the intrinsic types.
+
+Current [partials](../../language/partials.md) let programmers add functions to
+language-provided types, but conversion families among exact intrinsic
+specializations may instead be supplied by the language or the compiler as
+generated partials. Add design pressure here only when a concrete need for
+built-in conversion families appears. Such generated partials must not depend on source order, and must
+preserve protected all-intrinsic signatures.
+
+## Generic code and partials
+
+How generic code sees operations that [partials](../../language/partials.md)
+add is undecided. A partial is visible only where a
+scope grants it, and it targets a concrete type. The open question is what a
+generic body sees once it becomes concrete:
+
+```zax
+// Library module. Generic syntax is illustrative.
+sum final : (result : R)(left : T, right : U) = {
+  return left + right
+}
+
+// User module.
+Module.MyIntegerOps :: expose partial    // adds Integer + MyType
+total := sum(myInteger, myValue)
+```
+
+Candidate answers:
+
+- **The body sees grants visible where the generic is defined.** `left + right`
+  finds nothing for `Integer + MyType`, so operators added by partials never
+  work through library generics.
+- **The body sees grants visible where it becomes concrete.** The caller's
+  grants flow into library code and can redirect other calls in the body that
+  the library author never saw.
+- **A stated requirement is satisfied at the call site.** If the generic
+  requires "`T + U` exists", the caller's visible candidates satisfy it, and the
+  body uses exactly that operation without re-resolving anything else.
+
+The answer depends on where and how a generic becomes concrete. Whatever
+generic work decides, a caller's grant must never silently redirect a selection
+that the library body already resolves without that grant.
+
+Generic partials, meaning a partial over a generic family rather than one
+concrete type, are also generic work.
 
 ## Computed type results
 

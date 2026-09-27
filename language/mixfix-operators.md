@@ -68,9 +68,12 @@ a -> index -> =
 For `a[b] = c`, `a` is the receiver; `b` and `c` are explicit inputs. Right
 operand types affect viability but do not contribute type-defined discovery.
 
-Global mixfix declarations are not permitted. A future owner-authorized partial
-type mechanism may add mixfix declarations only after defining coherence,
-imports, conflicts, and source-stability behavior.
+Global mixfix declarations are not permitted. A [partial](partials.md) on the
+receiver type may add a mixfix declaration, visible only where the partial is
+granted. Because a matching mixfix is selected instead of the component
+operations a use would otherwise decompose into, granting such a partial can
+change what an existing `a[b] = c` selects; a grant placed partway through a
+block that does so requires acknowledgement.
 
 ## Declaration model
 
@@ -502,6 +505,5 @@ This document defines current conceptual mixfix behavior, not formal grammar,
 reflection metadata, implementation matching algorithms, or a conformance
 contract.
 
-Exact generic substitution, partial-type extension, non-array call/index edge
-cases, lambda types, exact multiword words, and diagnostic identifiers remain
-focused future work.
+Exact generic substitution, non-array call/index edge cases, lambda types, exact
+multiword words, and diagnostic identifiers remain focused future work.

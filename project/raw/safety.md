@@ -7,7 +7,7 @@
 | Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
 | Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
 | Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, and `020`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, `020`, and `032`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
 
 Current general behavior has moved to
 [Zax safety and analysis](../../language/safety-and-analysis.md). This file
@@ -76,8 +76,9 @@ cannot make any known violation valid. Detailed source-control and provenance
 questions are preserved in
 [raw analysis-control input](analysis-controls.md).
 
-Zax has no declaration form that leaves storage indeterminate. Work item 032
-removed `unsafe ???`. Construction performed by an opaque operation is asserted
+Zax has no declaration form that leaves storage indeterminate; the legacy
+`unsafe ???` form no longer exists. Construction performed by an opaque
+operation is asserted
 at that operation with `unsafe<opaque-construction>{ ... }`, which also takes the
 named member out of automatic construction. See
 [construction by an opaque operation](../../language/construction-and-destruction.md#construction-by-an-opaque-operation).

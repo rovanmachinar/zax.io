@@ -348,11 +348,34 @@ myInteger + myCustomValue
 ```
 
 Symbolic, phrase, circumfix, call/index, and mixfix declarations all follow this
-receiver rule. Future partial-type work has strong pressure to permit an
-appropriately authorized extension on the left receiver type so a shape such as
-`Integer + MyType` can become expressible without global declarations. Until
-then, use a custom-receiver operation, phrase, function, or another explicit
-formulation.
+receiver rule. When the receiver is a type you did not write, a
+[partial](partials.md) can add the operator to it:
+
+```zax
+MyIntegerOps :: partial Integer {
+  operator binary '+' final : (
+    result : MyCustomValue
+  )(
+    rhs : MyCustomValue
+  ) = {
+    // ...
+  }
+}
+
+addBoth final : (
+  result : MyCustomValue
+)(
+  myInteger : Integer,
+  myCustomValue : MyCustomValue
+) = {
+  Module.MyIntegerOps :: expose partial
+  return myInteger + myCustomValue   // valid: the partial's `+` is a receiver candidate here
+}
+```
+
+The operator is still owned by the receiver: it joins `Integer`'s candidates, and
+only where the partial is granted. Protected signatures remain unavailable to
+partials.
 
 Importing or exactly aliasing a type preserves its receiver-owned operators.
 Generative imported types have distinct receiver and operator identities.
@@ -525,7 +548,8 @@ constraints, result context, and availability requirements fit.
 Preference is not a score. Candidate A dominates B only when A is no worse for
 every comparable receiver/input/result slot and strictly better somewhere.
 Declaration or partial provenance supplies no preference among declarations on
-the receiver: equal or incomparable surviving candidates are ambiguous.
+the receiver: equal or incomparable surviving candidates are ambiguous. A
+granted partial's operators compete with the receiver's own on equal terms.
 
 A uniquely best bodyless, `forbidden`, unsupported generated/default, or
 otherwise unavailable declaration reports an unavailable operation. Selection

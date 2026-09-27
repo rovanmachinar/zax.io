@@ -138,9 +138,15 @@ myTally : MyTally = [{
 myId : UserId = UserId from myRaw          // an identity type admits its underlying value
 ```
 
-A scalar value is the receiver of `myCount as MyTally`, and user code cannot add
-operators to the language's scalar types. Use construction instead, or an
-identity type's admission.
+A scalar value is the receiver of `myCount as MyTally`, so `MyTally` cannot
+supply that conversion. Use construction instead, or an identity type's
+admission.
+
+A [partial](partials.md) does not solve this. A partial can add operators to
+`I32`, but an `as` declaration accepts every destination type, so a partial
+`as` on `I32` would also claim `myCount as I64`, which belongs to the language.
+It becomes a practical route only once a declaration can restrict its
+destination type.
 
 ## Unchecked reinterpretation with `unsafe cast`
 

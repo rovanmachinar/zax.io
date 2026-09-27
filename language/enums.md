@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing strict, relaxed, and flags enum behavior; not a formal grammar, ABI contract, or specification |
 | Implementation State | Not established by this repository |
 | Owns | The enum mental model; enum-category forwarding; declaration policies; backing eligibility; members, aliases, defaults, and bodies; safe admission and reachable unnamed values; generated comparison and underlying operations; selective operation reuse; flags masks and operations; generated string conversion; enum declaration-traversal facts and local use; enum-domain selection and coverage facts; enum costs, diagnostics, and source stability |
-| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, partial extension, ABI, or FFI |
+| Does Not Own | General identity mechanics ([identity types](identity-types.md)); integer representations and families ([integers](integers.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); shared operator selection ([operators](operators.md)); exact operator forms ([operator catalog](operator-catalog.md)); general safety categories ([safety and analysis](safety-and-analysis.md)); complete iteration, runtime switch behavior ([switch, case, and default](switch.md)), pattern matching, reflection, generics, general partial behavior ([partials](partials.md)), ABI, or FFI |
 | Source / Provenance | Current identity, integer, declaration, operator, safety, and intent designs, incorporating reviewed legacy enum intent |
 
 ## Start with known values
@@ -954,7 +954,9 @@ Still deferred:
 - broader compile-time production of member constants;
 - general reflection and metadata;
 - generic and generated enum families;
-- partial or open enum extension;
+- open enum extension beyond the current rule that a
+  [partial](partials.md#enums-variants-and-unions) may add functions and
+  nested declarations to an enum but never members;
 - broader eligibility for user-defined backing identities;
 - fat identity or enum representation;
 - generalized pattern matching and variant payload binding; current enum use in

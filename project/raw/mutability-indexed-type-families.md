@@ -12,7 +12,7 @@
 ## Reading posture
 
 This file preserves a design pressure that does not belong in ordinary qualifier
-documentation and was not rejected during work item `004`.
+documentation and has not been rejected.
 
 The former mutability page proposed more than qualifying one shared
 representation. It allowed one named type to have distinct mutable and immutable
@@ -324,8 +324,9 @@ Future work must decide:
 - whether omission can be rejected in selected contexts; and
 - how diagnostics identify an ambiguous or unavailable variant.
 
-Work item `004` established only that baseline mutability defaults are
-configurable and apply after inherent, inherited, and explicit qualification.
+Current qualifier design establishes only that baseline mutability defaults
+are configurable and apply after inherent, inherited, and explicit
+qualification.
 
 ## Conversion questions
 

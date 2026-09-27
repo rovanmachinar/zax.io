@@ -1652,6 +1652,51 @@ depends on tracked member state at normal exit, not merely on the presence of a
 The exact severity of optional diagnostics and any runtime debugging checks
 remain future safety and tooling work.
 
+## Storage added by partials
+
+A type that writes `seal open storage` may receive stored members from
+[partials](partials.md). The type's constructors cannot name those members, so
+each partial establishes and ends its own storage:
+
+```zax
+MyCatalog :: type seal open storage {
+  entries : Integer = 0
+}
+
+MyTagging :: partial MyCatalog {
+  tag : String
+
+  +++ final : ()() = {
+    _.tag .= "none"
+  }
+}
+```
+
+A partial may declare only a no-argument `+++`, and the compiler runs it
+automatically. A partial's `---` also runs automatically. The sequence for one
+`MyCatalog` is:
+
+1. `entries` and the type's other automatic members are constructed;
+2. each partial's storage is constructed, in partial definition order;
+3. the selected `MyCatalog` constructor body runs.
+
+Destruction mirrors it: the `---` body runs, then each partial's storage is
+destroyed in reverse, then the type's members.
+
+Generated copy and assignment include partial storage. A hand-written copy
+constructor or `=` cannot name it, so partial storage takes part only when the
+body calls a hook that partials fulfill.
+
+During every replacement of the type, including the
+[generated fallback](#generated-fallback), each partial's storage runs the
+partial's no-argument `+++ replacement` if it declares one. Like any replacement
+constructor, it starts with that storage still live, so it can keep or recycle
+the previous state. Otherwise the partial's storage receives `---` and then
+`+++`, which resets it.
+
+Hooks, inclusion rules, and ordering guidance are defined by
+[Zax partials](partials.md#adding-storage).
+
 ## Scope-exit destruction and flow transfers
 
 Local, body, and flow-header lifetimes end automatically when their scope exits,

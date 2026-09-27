@@ -7,7 +7,7 @@
 | Applies To | Directed/inferred compile-time execution, host/target context, target-format realization, and static support questions |
 | Owns | Preserved compile-time execution, target-format realization, capability-dependent static selection, representative source, activation pressure, and retirement questions |
 | Does Not Own | Accepted compile-time semantics or current integer/fixed/floating/literal/reflection behavior |
-| Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type-qualified discovery, `is constant`, and native execution context |
+| Source / Provenance | Legacy `compiler-directives.md` and `meta-functions.md` evidence together with operator-phrase review of type-qualified discovery, `is constant`, and native execution context; work item `034` partial hook and layout deferrals |
 
 ## Why this input exists
 
@@ -321,6 +321,40 @@ Future work must decide:
 - whether compile-time execution may allocate, and under what policy;
 - resource, recursion, and termination limits; and
 - whether a failure is recoverable in any sense.
+
+## Partials, hooks, and pending layouts
+
+Two compile-time questions about [partials](../../language/partials.md) remain
+open.
+
+**Detecting attached hooks.** Preparing for a hook call may have its own cost.
+A compile-time query could let a type skip that work when no partial fulfills
+the hook:
+
+```zax
+// Illustrative query syntax.
++++ final : ()() = {
+  if compile attached _.hooks.construct {
+    prepareHookState()   // pre-setup cost exists only when a hook is fulfilled
+  }
+  _.hooks.construct()
+}
+```
+
+The query counts included fulfillments, not visible ones. It is answerable
+because storage and hook fulfillment are fixed when the type's module is
+finalized, or, for importers, when the import completes. Under
+`seal open storage module` it cannot be answered until the application is
+assembled.
+
+**`size of` before storage closes.** A type that opens storage has a pending
+layout until its storage closes. Compile-time code in the owner module that asks
+for `size of` before module finalization must wait. Future work must decide
+how that wait is diagnosed, and it must reject a cycle in which a partial's
+existence depends on the size it would change. The maintainer's note also
+suggested that compile-time use of `size of` be discouraged and restricted, and
+that types which must be complete for compile-time work may need to deny
+storage partials.
 
 ## Constraints this input places on current work
 

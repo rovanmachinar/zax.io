@@ -7,7 +7,7 @@
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Transparent aliases and canonical identity preservation under alias property overlays; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
-| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial-extension authority; or general [structural shape and compatibility](structural-shapes-and-compatibility.md) |
+| Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial behavior ([partials](partials.md)); or general [structural shape and compatibility](structural-shapes-and-compatibility.md) |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
 ## Two ways to build on an existing type
@@ -173,9 +173,9 @@ MyDocumentHandle :: identity restricted opaque type Integer
 There is no omission default for either choice. Admission and exposure state
 consequential intent.
 
-### Original definition body and sealing
+### Original definition body and completion
 
-An identity without a body completes and seals as soon as its declaration
+An identity without a body completes as soon as its declaration
 finishes:
 
 ```zax
@@ -200,9 +200,9 @@ MyContextualInteger :: identity admit expose type Integer {
 ```
 
 This is a compile-time definition phase, not a runtime state. No code observes a
-partially defined identity. The closing brace completes and seals the type;
-later additions require whatever authority the future partial mechanism
-provides.
+partially defined identity. The closing brace completes the identity's own
+definition. Later additions come only from partials, as described in
+[partial definitions](#partial-definitions).
 
 The body belongs to the original identity owner. It does not introduce class
 inheritance: the identity remains a distinct representation/composition-based
@@ -576,22 +576,23 @@ Complete behavior belongs to
 
 ## Partial definitions
 
-A future partial mechanism may let an authorized owner add functions to an
-identity:
+An identity is a type, so a [partial](partials.md) can add functions to it
+unless its declaration closes callable additions:
 
 ```zax
-// Illustrative future partial syntax.
 MyIntegerExtension :: partial MyInteger {
-  // Additional MyInteger behavior.
+  // Additional MyInteger functions.
 }
 ```
 
-Partial definitions add; they do not suppress, hide, restrict, remove, or
-replace behavior exposed by the original identity declaration.
+A partial adds; it does not suppress, hide, restrict, remove, or replace
+behavior exposed by the original identity declaration, and it is visible only
+where a scope grants it.
 
-Whether sealed intrinsic or identity types accept language-, compiler-,
-CPU-provider-, owner-, or programmer-supplied partial functions remains future
-partial-type work.
+Like any type, an identity accepts added stored members only when it writes
+`seal open storage`. Stored members change its representation, and so the
+exposure mappings and bridges that depend on it. Partials supplied by the
+language, the compiler, or a CPU provider remain future work.
 
 ## Costs and diagnostics
 
@@ -642,8 +643,8 @@ These are compatibility events, not invisible implementation choices.
 This document is current conceptual design, not formal grammar, a complete
 layout/ABI contract, or an implementation mapping.
 
-Future work owns partial authority, generic identity factories, and reflection
-APIs. [Structural shapes and compatibility](structural-shapes-and-compatibility.md),
+Future work owns language- and provider-supplied partials, generic identity
+factories, and reflection APIs. [Structural shapes and compatibility](structural-shapes-and-compatibility.md),
 [current composition](composition.md), and
 [current enum behavior](enums.md) preserve the explicit identity boundary and
 admission/exposure choices defined here.

@@ -7,7 +7,7 @@
 | Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
 | Owns | Preservation of construction-derived category behavior, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
 | Does Not Own | The centralized provisional category inventory ([analysis-control registry](analysis-control-registry.md)); current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
-| Source / Provenance | Work items `005`, `006`, `007`, `012`, and `015`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, and panic-category pressure |
+| Source / Provenance | Work items `005`, `006`, `007`, `012`, `015`, `032`, and `034`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, panic-category, and intent-naming pressure |
 
 ## Reading posture
 
@@ -56,6 +56,13 @@ This raw input retains only semantic permissions or assertions that change what
 the compiler may trust about an unproved lifetime, alias, construction, or other
 required property. Lint suppression remains separate from both.
 
+The maintainer intends a later collective review of category names. The
+partial categories `grant-redirected-selection`, `injected-partial-exposure`,
+`uninvoked-hook-role`, and `application-closed-storage` entered the current
+intent registry on that understanding. They avoid a `partial-` prefix because
+`partial-enum-selection` and `partial-variant-selection` already use "partial"
+to mean incomplete.
+
 ## Permission regions
 
 Some operations are valid only when the programmer accepts responsibility for a
@@ -100,7 +107,7 @@ documentation attachment, nesting, and source reflection.
 ## Lifecycle-state assertions
 
 An opaque operation may establish a member state that ordinary analysis cannot
-observe. Work item 032 aligned one construction assertion, made at the
+observe. Current construction design has one such assertion, made at the
 establishing operation:
 
 ```zax
@@ -143,8 +150,8 @@ generated code or the compiler's semantic state.
 | `terminal-reconstruction` | Permit reconstruction of a member during enclosing destruction |
 
 `manual-member-construction`, `construction-path-complete`, and
-`construction-at-most-once` were superseded in work item 032. Every explicit
-construction step now suppresses automatic construction; opaque establishment
+`construction-at-most-once` are superseded. Every explicit construction step
+suppresses automatic construction; opaque establishment
 is `opaque-construction`; and unknown construction state is an error to
 restructure rather than a fact to assert.
 

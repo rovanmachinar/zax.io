@@ -429,16 +429,37 @@ They intentionally do not share one “active member” model.
 
 ## Partial and generic completion boundaries
 
-Future partial definitions cannot alter a type after shape- or
-lifecycle-dependent checks have finalized. Every authorized piece that can add
-stored members, union lenses, variant alternatives, hidden components, or
-lifecycle operations must merge into one reproducible, order-independent
-complete definition first.
+Another declaration can add to a type through a
+[partial](partials.md). A type states what others may add with a `seal`
+clause:
+
+```zax
+MyCatalog :: type seal open storage {
+  entries : Integer
+}
+```
+
+By default, others may add functions, nested types, and `once` state, but not
+stored members. `seal open storage` allows added stored members, and bare
+`seal` allows nothing.
+
+Added stored members change the type's size, layout, and generated lifecycle,
+so those facts wait until every storage addition is known. For a type that
+opens storage, that happens when its own module is finalized; importers see
+the final layout as soon as the import completes. A type with
+`seal open storage module` waits until the whole application is assembled.
+Until then, `size of` and the other completion facts listed under
+[self-reference, recursion, and completion](#self-reference-recursion-and-completion)
+remain pending.
+
+A partial never adds union lenses or variant alternatives. Complete partial
+behavior, including which categories exist and how storage is included, belongs
+to [Zax partials](partials.md).
 
 Likewise, a generic instantiation must become one complete concrete type before
 size, recursive layout, generated lifecycle operations, union admissibility, or
-variant storage and coverage are decided. Exact partial and generic syntax
-remains future work.
+variant storage and coverage are decided. Exact generic syntax remains future
+work.
 
 ## Costs and diagnostics
 
@@ -472,5 +493,4 @@ generated operations. Adding a fixed function does not change stored shape;
 adding varying per-instance callable storage does.
 
 This document defines current conceptual design, not formal grammar, ABI,
-reflection schema, partial-type authority, compiler lowering, or a conformance
-specification.
+reflection schema, compiler lowering, or a conformance specification.

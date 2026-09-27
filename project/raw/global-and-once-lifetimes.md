@@ -129,6 +129,11 @@ Cache or generated-code reuse must not merge state. Conversely, different local
 aliases to one deliberately injected module instance must not duplicate its
 state accidentally.
 
+Current [partials](../../language/partials.md) may add `once` state to a type.
+That state belongs to the module instance that declares the partial, not to the
+module that declares the type. Future lifecycle work must order its
+initialization and teardown under the same module-instance rules.
+
 ## Shared array-storage provider pressure
 
 Current array storage direction permits one provider instance to back several

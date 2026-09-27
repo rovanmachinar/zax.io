@@ -7,7 +7,7 @@
 | Applies To | Native representation classification; integer, fixed, floating, and legacy character selectors; support classes; machine-word families; pointer/size capacities; mapping stability; metadata; and fallback |
 | Owns | Preserved CPU-provider format, versioning, selection, support, cost, runtime-hardware, X87, legacy character profile, and fallback requirements |
 | Does Not Own | Accepted scalar semantics, CPU-profile source format, ABI contracts, or implementation algorithms |
-| Source / Provenance | Current integer, fixed-point, floating-point, endian, and native/compiler-host/target execution design |
+| Source / Provenance | Current integer, fixed-point, floating-point, endian, and native/compiler-host/target execution design; work item `034` provider-partial deferral |
 
 Current programmer-visible integer roles, ranges, and profile constraints are
 owned by [Zax integers](../../language/integers.md). Fixed-point formats are
@@ -267,6 +267,14 @@ compatibility. Future work must decide:
 
 ABI correspondence remains interoperability work. A native representation does
 not by itself promise a foreign ABI type or calling convention.
+
+## Provider-supplied functions
+
+Current [partials](../../language/partials.md) let programmers add functions to
+language-provided scalar types. Whether a CPU provider may also supply
+optimized `final` functions on those types is undecided. Add design pressure only
+if a concrete need appears. Any such mechanism must preserve protected
+all-intrinsic signatures and must not depend on source or import order.
 
 ## Metadata requirements
 

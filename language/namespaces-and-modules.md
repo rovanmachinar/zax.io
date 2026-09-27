@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing namespaces, module roots, source order, imports, injection, declaration exposure, visibility baseline, and module identity; not a formal grammar or build specification |
 | Implementation State | Not established by this repository |
 | Owns | Protected module-local roots; language-provided root declarations; namespace declaration, reopening, placement, ownership, and self-name shadow permission; source-file contribution and order; named and direct imports; generative module instances; import injection and exact shared dependencies; direct-versus-imported collision behavior; module-internal default visibility; explicit export and non-transitive import baseline; module cycles; namespace/module diagnostics, costs, and source stability |
-| Does Not Own | General lexical declaration lookup, aliases, and forwards ([declarations and bindings](declarations-and-bindings.md)); type-alias identity ([identity types](identity-types.md)); exact export/private compiler-directive syntax; package acquisition and locking; complete global/module initialization; compile-time availability queries; partial-type authority; reflection; or implementation architecture |
+| Does Not Own | General lexical declaration lookup, aliases, and forwards ([declarations and bindings](declarations-and-bindings.md)); type-alias identity ([identity types](identity-types.md)); exact export/private compiler-directive syntax; package acquisition and locking; complete global/module initialization; compile-time availability queries; partial behavior ([partials](partials.md)); reflection; or implementation architecture |
 
 ## Start with a named import
 
@@ -196,8 +196,12 @@ Library :: import Module.LibraryDefinition {
 ```
 
 An exact namespace alias preserves identity but does not transfer reopening
-authority. Future partial-type or extension work may define another explicit
-authority mechanism.
+authority.
+
+Adding to an imported *type* is a different mechanism. A
+[partial](partials.md) may add functions to a type it cannot reopen, and becomes
+visible only where a scope grants it. Stored members added by a partial reach an
+imported type only through an injection body, described below.
 
 ### Self-name shadow permission belongs to one opening
 
@@ -492,6 +496,39 @@ Future compile-time source selection may let a module detect an injected symbol
 and import or declare a fallback only when absent. Such selection is part of
 the module instance's semantic inputs.
 
+### Including partials in an imported type
+
+An injection body is also how an importer adds stored members to a type in the
+imported module, when that type writes `seal open storage`. It can include a
+[partial](partials.md) written elsewhere in the importer:
+
+```zax
+Library :: forward module
+
+namespace MyNamespace {
+  MyTagging :: partial Library.MyCatalog {
+    tag : String = "none"
+  }
+}
+
+Library :: import Module.LibraryDefinition {
+  Module.MyNamespace.MyTagging :: own partial
+}
+```
+
+`own partial` includes the partial's storage and hook fulfillments in that
+module instance's `MyCatalog` without making the partial's names visible to the
+library's source, so the library's own code keeps selecting exactly what it did
+before. `expose partial` in the same position would also make the partial
+visible to all of the library's source. It requires an
+`intent<injected-partial-exposure>` acknowledgement because it can change
+selections in code the importer cannot see. A partial defined directly inside
+the injection body behaves like `own partial`.
+
+Partials declared in a type's own module are included automatically. Complete
+inclusion, ordering, and lifecycle rules belong to
+[Zax partials](partials.md#adding-storage).
+
 ### Import cycles
 
 Recursive import expansion must terminate. A repeated module dependency on one
@@ -685,7 +722,7 @@ Future work owns:
   identity, and cache control;
 - module/global initialization, destruction, `once`, and concurrency;
 - compile-time availability and fallback-source syntax;
-- partial/open namespace or type authority;
+- open namespace authority;
 - source and declaration reflection; and
 - dynamic loading and runtime name lookup.
 

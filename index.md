@@ -39,6 +39,9 @@ producing them.
 - Read [Zax composition](language/composition.md) for named containment, data
   publication through `own`, expected-type projection through `preferred`,
   behavior exposure, abstract fulfillment, and outer casting.
+- Read [Zax partials](language/partials.md) for adding operators, functions,
+  and state to types you did not write, visibility grants, `seal` categories,
+  added storage and its lifecycle, and hook points.
 - Read [Zax identity types](language/identity-types.md) for transparent aliases,
   distinct identities, admission, projection, exposed and opaque surfaces, and
   declared identity bridges.
@@ -153,6 +156,7 @@ producing them.
 - [Variants](language/variants.md)
 - [Namespaces and modules](language/namespaces-and-modules.md)
 - [Composition](language/composition.md)
+- [Partials](language/partials.md)
 - [Identity types](language/identity-types.md)
 - [Structural shapes and compatibility](language/structural-shapes-and-compatibility.md)
 - [Conversions and casts](language/casting.md)
@@ -210,7 +214,8 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 - [Optional values](language/optional-values.md) — current optional wrapper,
   construction, transfer, qualification, and proven-access design
-- [Partial types](partial.md)
+- [Partials](language/partials.md) — current partial, visibility-grant, sealing,
+  added-storage, and hook design
 
 ### Memory and lifetime
 

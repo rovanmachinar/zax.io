@@ -418,6 +418,43 @@ records or archives. Retain legacy text in an ordinary public reading path only
 while it remains unique useful input for an unresolved concern or teaches a
 concrete current compatibility boundary.
 
+### Promotion re-authors for a different reader
+
+A working record is written for its reviewers rather than for programmers
+learning the language. Its findings must still be understandable to a reviewer
+judging the work, with enough context and explanation to decide what should be
+done; density is never a goal. Even so, a finding's meaning often depends on the
+discussion that produced it. A finding may be phrased as the alternative that
+survived, and an example may have been clear
+only because the surrounding exchange supplied its question. By promotion time,
+the promoting agent has usually spent a long session inside that record, so its
+sense of what a reader already knows is its own.
+
+Left unchecked, that vantage produces two recurring failures:
+
+- **Decision history presented as teaching.** "We previously did X but rejected
+  it because Y" teaches the reader about something they never learned.
+- **Transplanted snippets.** An example moved without the situation it answers
+  can confuse more than it clarifies.
+
+The same finding can need very different treatment in different owners: a
+paragraph and an example where a reader first meets the concept, a single
+clause where it only bounds a local rule. Decide per destination, from the
+position of a reader who arrived at that section directly. Two judgement tests
+help:
+
+- **Would a competent programmer who never saw the discussion plausibly write or
+  expect this?** If so, teach against it. When a restriction exists for a
+  reason, teach the reason as a consequence in the reader's terms, for example
+  "if every type accepted added storage, no library could know any type's
+  size", rather than as the decision that was taken.
+- **Can you name the question this example answers for the reader at this
+  point?** State that situation before the snippet and the consequence after
+  it. If you cannot name the question, the example probably belongs elsewhere or
+  not at all.
+
+These are judgement aids, not a template.
+
 ## Teaching debt
 
 Current language owners may accumulate teaching debt as a natural consequence
@@ -532,8 +569,12 @@ depends on it sends ordinary readers into project records or dead ends.
 
 - Cite current conceptual predecessors or live legacy evidence instead.
 - State a boundary as future work by its subject rather than by a work number.
-- Keep numbered-work provenance in `project/` records, including active work
-  files and `project/raw/` inputs, which may retain it freely.
+- Keep numbered-work provenance in `project/` records. Active work files may
+  retain it freely. A `project/raw/` input explains each finding in place and
+  cites numbered work only in its `Source / Provenance` metadata, never in its
+  body. A body reference invites future readers into archived work whose
+  conclusions may since have been revised; archived work is read only in an
+  intentional audit.
 - Do not route ordinary readers from a current or public owner into
   `project/raw/` material.
 
@@ -745,6 +786,10 @@ obligation even when the maintainer does not separately repeat â€œcapture this.â
 The obligation does not itself authorize an edit; normal discussion, alignment,
 and explicit edit authorization still apply.
 
+Until promotion, the active work file is the normal holding place for a
+capture: record the finding, its destination, and what the destination must
+preserve. The promotion change set writes it into the raw input or owner.
+
 The active work file evolves only through discussed, aligned, and explicitly
 authorized edits.
 
@@ -772,6 +817,9 @@ The dry run:
    to hold every disposition without creating duplicate authority or orphaned
    material.
 9. Produces the exact proposed promotion change set.
+10. Records a short teaching plan for each owner section the promotion
+    changes: why a reader is there, what they already know at that point, what
+    changes for them, and what they might wrongly try.
 
 Record the result in the active work file and report **PASS** or **FAIL** in
 chat. FAIL means the dry run found material design, ownership, or integration
@@ -917,6 +965,11 @@ For an authorized documentation change, check the applicable items:
 - A reader entering an edited owner or linked section can understand its
   immediate purpose, representative behavior, and route to deeper rules without
   reconstructing project history.
+- After a substantial promotion, an agent that has not read the working record
+  reviews the changed owner sections as a reader arriving directly. It reports
+  what it cannot follow, leaked discovery history, and examples without an
+  evident purpose. The promoting agent's own cold-reader check is not a
+  substitute, because it shares the working context.
 - Mirrored stable operating-prompt guidance agrees.
 - Both operating-prompt sources retain the generic active-work placeholder.
 - The `project/README.md` active-work pointer and next number agree with actual

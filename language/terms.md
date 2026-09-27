@@ -553,6 +553,15 @@ exact-alias completion. It fixes root lookup while leaving category-dependent
 facts pending. See
 [Zax declarations and bindings](declarations-and-bindings.md#forward-anchors).
 
+## Hook point
+
+A **hook point** is a type member whose contract of `abstract` roles may be
+fulfilled by any number of the type's partials. The type calls the roles, and
+each call runs every fulfillment; if no partial fulfills a role, the compiler
+removes the call. It is the only route by which a type's own code reaches its
+partials. See
+[Zax partials](partials.md#hooks).
+
 ## Indirection level
 
 An **indirection level** is one pointer or reference layer between an access path
@@ -943,6 +952,14 @@ Positional, named, omitted, or routed source input may bind the slot. The slot i
 complete before the callable body begins. See
 [Zax function invocation](function-invocation.md).
 
+## Partial
+
+A **partial** is a named, add-only contribution of declarations to an existing
+concrete type. Its additions are visible only where a scope grants the partial,
+and the type's `seal` clause decides which kinds of addition are allowed. A
+partial's name identifies the contribution; it is not a type. See
+[Zax partials](partials.md).
+
 ## Place
 
 An **instance place**, usually shortened to **place**, is the stable typed
@@ -1245,10 +1262,12 @@ cost, and ABI compatibility. See
 
 ## Sealed type
 
-A **sealed type** cannot receive ordinary externally added members or
-operations. A separately authorized partial mechanism may still permit narrowly
-classified additions without changing stored shape. See
-[Zax integers](integers.md#exact-intrinsic-family).
+A type is **sealed** to a category of addition when [partials](partials.md)
+may not add that kind of declaration to it. A type's `seal` clause opens or
+closes each category: `callable`, `nested`, `once`, `storage`, and `module`.
+By default, storage is sealed and the other additions are open. Language-provided
+types are sealed to storage and open to added functions. See
+[what a type allows others to add](partials.md#what-a-type-allows-others-to-add).
 
 ## Short-circuit operator
 
@@ -1511,6 +1530,14 @@ an opaque but potentially valid raw relationship. Managed pointers and
 guaranteed leaks reject it even under `unsafe`.
 
 See [Zax pointers and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
+
+## Visibility grant
+
+A **visibility grant**, written `Path :: expose partial`, makes one partial's
+additions visible from that point to the end of the enclosing block, including
+nested blocks. Without a grant, a partial's names are not visible, and its
+candidates take no part in selection. See
+[Zax partials](partials.md#making-a-partial-visible).
 
 ## Value lifetime
 

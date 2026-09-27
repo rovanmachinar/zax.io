@@ -7,7 +7,7 @@
 | Applies To | Public placement of opaque facilities, callable metadata, text identities, and the `Legacy` anchor |
 | Owns | Placement pressure, candidate exposure shapes, activation pressure, and retirement criteria |
 | Does Not Own | The semantics of the named facilities, current name lookup, accepted imports, or scalar ownership |
-| Source / Provenance | Work item `027` promotion review and existing string, pointer, callable, and namespace owners |
+| Source / Provenance | Work item `027` promotion review and existing string, pointer, callable, and namespace owners; work item `034` execution-context naming |
 
 ## Why this input exists
 
@@ -77,6 +77,19 @@ must not be disguised by manufacturing a substitute identity.
 `U8`, `U16`, and `U32` remain under `Scalars`. This placement review does not
 move or duplicate them merely because text identities use those scalar storage
 units.
+
+## Execution context type
+
+The execution context's type is named `ExecutionContext`, so that partials can
+target it. Its namespace is unresolved and should be decided only once every
+system type needing a namespace is known. Considerations so far:
+
+- it cannot live under `Scalars`;
+- `Execution` could group the future thread, task, and context facilities,
+  giving `Execution.ExecutionContext` or `Execution.Context` with a short alias;
+- `Runtime` risks conflict with a compile-time host context;
+- `Concurrency` is too narrow for a context that holds default arenas; and
+- `System` suggests the operating system and tends to become a catch-all.
 
 ## Boundaries
 

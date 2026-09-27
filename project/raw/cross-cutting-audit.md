@@ -7,7 +7,7 @@
 | Applies To | Concerns that cross several owners and must survive numbered-work archival |
 | Owns | An indexed, live list of cross-cutting audit entries, each with a concern, why local review misses it, likely owners, resolution criteria, activation pressure, current constraints, and eventual disposition; the durable-queue purpose, future-agent workflow, add/do-not-add criteria, and retirement model |
 | Does Not Own | Accepted language design, a miscellaneous design dump, ordinary local TODOs, or competing authority over any concept owner |
-| Source / Provenance | Work item `007` promotion and its corrective promotion; work item `012` optional legacy disposition |
+| Source / Provenance | Work item `007` promotion and its corrective promotion; work item `012` optional legacy disposition; work items `032` and `034` entries |
 
 ## Purpose
 
@@ -362,9 +362,18 @@ Each entry preserves:
   `contextual`, `explicit`, and `replacement` precede `final`, while `once`
   follows it. The construction owner states that the exact keyword position
   remains future declaration and source integration.
-- **Why local review misses it.** Each owner introduced its word locally: work
-  item 032 moved `replacement` to the post position to match the others
-  without deciding their relative order. The inconsistency is visible only
+
+  Type declarations now carry a comparable question. The `seal` clause of
+  [partials](../../language/partials.md) follows `type`, but its position
+  relative to other type-declaration words is not decided:
+
+  ```zax
+  MyCatalog :: type seal open storage { … }
+  ExecutionContext :: type seal open storage module { … }
+  ```
+- **Why local review misses it.** Each owner introduced its word locally:
+  `replacement` was moved to the post position to match the others without
+  deciding their relative order. The inconsistency is visible only
   when the variants are compared.
 - **Likely owners.** Construction, replacement, and destruction; declarations
   and bindings (qualifier attachment); qualifiers; Nothing instances
@@ -376,7 +385,45 @@ Each entry preserves:
 - **Activation pressure.** A new constructor or declaration word; a
   declaration that combines two of these words; or formal grammar work.
 - **Current constraints.** Every word stays in the post position after `+++`.
-  Do not reorder existing examples until the rule is decided.
+  Do not reorder existing examples until the rule is decided. The `seal` clause
+  stays directly after `type`.
+- **Disposition.** Open.
+
+### Language-contract locking for syntax evolution
+
+- **Concern.** A later Zax version may adopt or reserve syntax that existing
+  source already uses, for example a phrase word sequence that a partial
+  supplies:
+
+  ```zax
+  MyCombining :: partial U32 {
+    operator binary 'combines with' final : (result : MyType)(rhs : MyType) = { … }
+  }
+  // A later language version reserves `combines with`.
+  ```
+
+  The maintainer does not want Zax to promise that such changes never happen.
+  Instead, compilers should accept reasonable locking of source to an older
+  language contract, lint where the language has since evolved, and avoid
+  conflicts with code compiled against newer contracts.
+- **Why local review misses it.** Each owner that allows programmer-chosen words
+  or forms treats reservation locally. The same exposure exists for phrases,
+  partial additions, literal operators, and other extensible surfaces, and the
+  pattern is visible only across them. This is a candidate reusable language
+  principle, not a partial-specific rule.
+- **Likely owners.** [Safety and analysis](../../language/safety-and-analysis.md#language-contracts-and-compiler-analysis),
+  which already owns language-contract selection for required analysis;
+  [principles](../../language/principles.md) if it is adopted as a principle;
+  [operator phrases](../../language/operator-phrases.md); and
+  [partials](../../language/partials.md).
+- **Resolution.** An aligned statement of how language-contract selection
+  applies to syntax and reservation changes, placed in its owner and applied
+  to the affected surfaces.
+- **Activation pressure.** The first language-version change that reserves or
+  redefines a form, formal compatibility work, or principles review.
+- **Current constraints.** Current owners describe reservation of a
+  programmer-supplied form as a source-compatibility event. They do not promise
+  that it cannot occur.
 - **Disposition.** Open.
 
 ## Activation and retirement

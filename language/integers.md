@@ -92,7 +92,8 @@ Signed values use two's-complement representation. Every logical bit pattern
 represents a valid value.
 
 The built-in integer family is open to specialization. Each realized
-specialization is **sealed** against ordinary extension.
+specialization is **sealed** to added storage: its representation is exactly
+its logical bits and padding.
 
 ```zax
 // Generic syntax remains future work.
@@ -110,9 +111,15 @@ not a user-implemented integer and is no longer generic after realization.
 Zax does not predefine every possible `I<W>` and `U<W>` name. Programmers name
 unusual widths deliberately.
 
-Future partial work decides whether a sealed specialization may receive
-language-, compiler-, CPU-provider-, owner-, or programmer-supplied functions
-under narrower authority rules.
+A specialization remains open to added functions and operators. A
+[partial](partials.md) can give an integer type an operation it does not
+declare, such as `+` with a programmer type on the right, visible only where the
+partial is granted. Protected all-integer signatures stay unavailable. Because
+`Integer` and other role names are aliases, a partial on one extends whatever
+specialization that name resolves to on the current profile.
+
+Functions supplied by the language, the compiler, or a CPU provider remain
+future work.
 
 ## Integer storage and padding
 
@@ -867,7 +874,8 @@ a CPU-profile format, or an implementation mapping.
 
 Exact integer-factory syntax, intrinsic-endian generic syntax, relational-pair
 declarations, reflection metadata, CPU-provider files, literal grammar, pointer
-validity, partial authority, build-option syntax, and foreign correspondence
+validity, language- or provider-supplied partials, build-option syntax, and
+foreign correspondence
 remain future work. Those mechanisms must preserve the concrete integer
 guarantees established here.
 [Current composition](composition.md) and

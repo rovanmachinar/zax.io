@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, callable result/input reshape mapping, and callable exceptional-outcome reshape; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
-| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial-type authority, ABI/FFI contracts, complete `unsafe cast` behavior and general casting ([conversions and casts](casting.md)), or compiler lowering |
+| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial behavior ([partials](partials.md)), ABI/FFI contracts, complete `unsafe cast` behavior and general casting ([conversions and casts](casting.md)), or compiler lowering |
 
 ## Start with distinct identities
 
@@ -1604,7 +1604,8 @@ Future focused work owns:
 - future scalar families supplying their own safe/coercive leaf relationships;
 - pointer-copy provenance when slicing separates a pointer from referenced
   storage;
-- partial/open type authority and compatibility invalidation;
+- reflection of how storage added by [partials](partials.md) changed a
+  completed shape;
 - explicit non-overlap analysis contracts;
 - ABI/FFI layout and calling-convention guarantees;
 - general casting outside the protected forms integrated here; and

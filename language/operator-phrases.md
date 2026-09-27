@@ -350,8 +350,11 @@ intrinsic left operand cannot contribute either a symbolic or phrase
 declaration:
 
 ```zax
+intrinsicValue : U32
+customValue : MyType
+
 intrinsicValue combines with customValue
-// error: no receiver type can own this phrase implementation
+// error: U32 declares no such phrase, and MyType is not the receiver
 ```
 
 The workaround is to reframe the wording around the extensible receiver:
@@ -365,10 +368,26 @@ the unavailable intrinsic-first wording. The programmer can rewrite the phrase
 around the custom receiver, use an ordinary function, or choose another
 supported form.
 
-Future partial-type work has strong pressure to permit an appropriately
-authorized extension on the intrinsic left receiver while preserving protected
-signatures, ownership, order-independent conflicts, and reproducible imports.
-Until that authority exists, imports cannot add the intrinsic-first operation.
+The intrinsic-first wording is still available when you want it, through a
+[partial](partials.md) on the intrinsic receiver:
+
+```zax
+MyCombining :: partial U32 {
+  operator binary 'combines with' final : (
+    result : MyType
+  )(
+    rhs : MyType
+  ) = {
+    // ...
+  }
+}
+```
+
+Where a scope grants `MyCombining`, `intrinsicValue combines with customValue`
+selects this phrase. Everywhere else it remains unavailable. The phrase still
+belongs to the receiver type, protected phrase signatures stay protected, and a
+later Zax version may reserve a word sequence that a partial already uses,
+which is a source-compatibility event like any other phrase change.
 
 ## How word-spelled source is interpreted
 

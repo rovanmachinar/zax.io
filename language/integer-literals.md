@@ -1029,8 +1029,9 @@ operation.
 - Range failure does not fall through to another candidate.
 - Adding a finite viable overload may introduce a loud ambiguity; source or
   declaration order never breaks it.
-- Adding an authorized partial candidate may deliberately change an existing
-  `Integer`/`UInteger` preference; partial provenance does not alter ranking.
+- Granting a [partial](partials.md) that adds a candidate may change an
+  existing `Integer`/`UInteger` preference where the grant applies; partial
+  provenance does not alter ranking.
 - Contextual construction never repairs a direct ambiguity, selected range
   failure, or unavailable-best operation.
 - Exact-width destinations retain their range across environments; their

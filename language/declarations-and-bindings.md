@@ -812,8 +812,14 @@ Omitting `report` from `Service` would also be valid. If it is present, the
 `abstract optional` supplies no default body or runtime hook.
 
 Ordinary omission in an abstract role resolves qualifier defaults just as it
-does elsewhere. `abstract relaxed` is the narrow opt-in that instead leaves only
-otherwise defaulted outer value axes, or callable receiver axes, open:
+does elsewhere. A callable role's omitted type-side stance is therefore
+`varying`, and a `final` fulfilling declaration is compatible with it because
+declaration-side `final` restricts only that declaration. A role that writes
+`final` on its type side rejects a `varying` fulfillment. See
+[composition](composition.md#final-fulfillment-of-a-callable-role).
+
+`abstract relaxed` is the narrow opt-in that instead leaves only otherwise
+defaulted outer value axes, or callable receiver axes, open:
 
 ```zax
 ObserverContract :: type {
@@ -1790,7 +1796,18 @@ NamespaceName :: forward namespace
 ImportedModule :: forward module
 MappingName :: forward reshape
 x :: forward operator literal
+PartialName :: forward partial
+MyPointOps :: partial Point { }
+PointOps :: alias partial Module.Geometry.MyPointOps
+Module.Geometry.MyPointOps :: expose partial
+Module.Geometry.MyPointOps :: own partial
 ```
+
+`partial` adds declarations to an existing type, and `alias partial` gives a
+partial another name. `expose partial` makes a partial visible in the rest of
+the enclosing block. `own partial` appears in an import injection body and
+includes a partial's storage in the imported type without making its names
+visible there. All are defined by [Zax partials](partials.md).
 
 The family does not imply one runtime behavior. In particular, `::` does not mean
 "evaluated at build time." Build-time versus runtime evaluation depends on
@@ -1881,6 +1898,7 @@ NamespaceName :: forward namespace
 ModuleName :: forward module
 MappingName :: forward reshape
 x :: forward operator literal
+PartialName :: forward partial
 ```
 
 `forward variable` includes one function variable or approved polymorphic
@@ -1894,8 +1912,11 @@ The forward supplies no body, value, layout, member set, function prototype,
 mapping, module instance, or initialization state. Dependent checks remain
 pending. The matching completion must have the same scope, name, and category
 and may be either a direct declaration or exact alias. `forward module`
-completes through one import. Partial declarations add to an already completed
-owner; they do not complete a forward.
+completes through one import. `forward partial` completes through one
+[partial](partials.md) declaration or exact `alias partial`. A partial
+declaration adds to the type it extends and never completes a forward of that
+type. When the extended type is still pending, for example behind a
+`forward module`, the partial's checks wait until the type completes.
 
 `forward union` and `forward variant` preserve their specialized categories.
 `alias union` and `alias variant` may respectively complete them. An ordinary
@@ -2458,8 +2479,8 @@ It establishes constraints that later work must preserve:
   [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md);
   defaults and initializers affect construction rather than completed stored
   shape, while future reflection reports the resolved distinction; and
-- future generic and partial work, and current
-  [composition](composition.md), must preserve the explicit
+- future generic work, and current [composition](composition.md) and
+  [partials](partials.md), must preserve the explicit
   identity-declaration integration owned here and the behavior owned by
   [Zax identity types](identity-types.md); and
 - future global and `once` lifetime work must preserve type-callable `once`

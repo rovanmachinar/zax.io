@@ -7,7 +7,7 @@
 | Applies To | The `___` execution context, its application-wide shape, per-thread instance, replacement, default arenas, and default array-storage selection; not a formal grammar or runtime ABI |
 | Implementation State | Not established by this repository |
 | Owns | The programmer-facing execution-context mental model and its relationship to allocation and array-storage defaults |
-| Does Not Own | Allocation syntax and arena behavior ([pointers, allocation, and arenas](pointers-and-arenas.md)); partial-type mechanics; async context switching; arena interfaces; task-local context; or implementation transport |
+| Does Not Own | Allocation syntax and arena behavior ([pointers, allocation, and arenas](pointers-and-arenas.md)); general partial behavior ([partials](partials.md)); async context switching; arena interfaces; task-local context; or implementation transport |
 | Source / Provenance | Legacy context input reconciled with current allocation, lifetime, and concurrency design |
 | Supersedes | The retired root context page |
 
@@ -23,15 +23,56 @@ currentThread.___
 Functions reached along that path can use the same current context without
 receiving an ordinary explicit parameter at each call.
 
-The complete application has one resolved context type shape:
+The context's type is `ExecutionContext`. The complete application has one
+resolved context shape:
 
 - the language supplies a core shape;
-- permitted partial additions may contribute application-specific services;
+- modules may add their own members and functions through partials;
 - the complete shape is fixed before runtime use; and
 - every replacement context instance has that same shape.
 
-Exact partial-type syntax, contribution authority, conflict handling, and build
-ordering remain future partial-type work.
+## Adding your own context state
+
+A module adds per-thread state by declaring a [partial](partials.md) on
+`ExecutionContext`:
+
+```zax
+MyRequestTracking :: partial ExecutionContext {
+  requestId : U64 = 0
+
+  nextRequest final : (result : U64)() writable = {
+    ++_.requestId
+    return _.requestId
+  }
+}
+```
+
+Code that grants the partial can then use it through `___`:
+
+```zax
+handleRequest final : ()() = {
+  Module.MyRequestTracking :: expose partial
+
+  id := ___.nextRequest()
+}
+```
+
+Every thread's context carries `requestId`, but only code that grants
+`MyRequestTracking` can name it. Another module can add its own `requestId` in
+its own partial without conflict, because each is visible only where its partial
+is granted.
+
+The compiler constructs every addition when a thread's context comes online, so
+a context partial establishes its storage with a no-argument `+++` or member
+initializers, like any other partial.
+
+`ExecutionContext` accepts storage from any module's own source, which ordinary
+types do not. As a result, its complete shape is known only when the whole
+application is assembled. That is acceptable here because the runtime constructs
+every context instance and code normally reaches it through `___`. A type that
+embedded an `ExecutionContext` by value would inherit the same pending layout.
+The general cost is described under
+[storage from any module](partials.md#storage-from-any-module).
 
 ## Replacing the current context
 
@@ -45,6 +86,24 @@ currentThread.___ = myReplacementContext
 Replacement changes what later context-dependent operations observe on that
 thread. It does not mutate the shape or retroactively change operations that
 already selected and captured a context value.
+
+A module cannot construct additions it cannot name, so a replacement context
+normally starts as a copy of the current one:
+
+```zax
+restartRequests final : ()() = {
+  Module.MyRequestTracking :: expose partial
+
+  myReplacement := currentThread.___       // the generated copy carries every addition
+  myReplacement.requestId = 0              // change only what this code can name
+  currentThread.___ = myReplacement
+}
+```
+
+The context's generated copy and `=` include every module's additions. A
+partial may declare its own same-type `=` on `ExecutionContext`. That is legal
+but not recommended: it is ambiguous with the generated `=` wherever the
+partial is granted, and it is not guaranteed to remain permitted.
 
 The in-place context instance need not be internally synchronized merely because
 the application has several threads. Each thread has its own current context.
@@ -185,8 +244,9 @@ mapping.
 
 Still deferred:
 
-- exact core context declaration and member names;
-- partial-extension syntax and authority;
+- exact core context member names, and the namespace that holds
+  `ExecutionContext`;
+- carrying context additions across async suspension;
 - initialization and teardown order;
 - context inheritance when creating a thread;
 - async task capture, replacement, restoration, and migration;

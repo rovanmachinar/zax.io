@@ -20,7 +20,7 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [034: `partial`](work/034-partial.md) |
+| Active work item | None; `035` awaits alignment |
 | Next work number | `035` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
