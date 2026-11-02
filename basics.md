@@ -229,12 +229,12 @@ target overhead size of
 is target constant
 ````
 
-> The `host`/`target`/context distinction above is preserved future input. Current
-> documentation defines only that `size of`, `alignment of`, `offset of`, and
-> `is constant` answer in the *active execution context*, and separately defines
-> **native** as the environment whose execution semantics are currently in
-> effect. The contextual variants are routed to
-> [raw compile-time execution input](project/raw/compile-time-execution.md).
+> The `host`/`target` prefixed forms above are legacy input. Current design asks
+> for a specific environment through environment-relative type names, such as
+> `size of Target.Integer` and `size of CompilerHost.Integer`; unqualified
+> queries answer in the active environment. See
+> [Zax compile-time code](language/compile-time-code.md#which-definitions-apply-while-compiling)
+> and [Zax endianness](language/endianness.md#active-and-absolute-names).
 
 
 #### Other expressions

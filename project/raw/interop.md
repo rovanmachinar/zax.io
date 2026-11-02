@@ -195,6 +195,18 @@ boundary needs an explicit adapter or terminated policy specialization; an
 ordinary `MbcsString<Encoding>` may contain embedded NUL and cannot expose
 `.c_str()`.
 
+## ABI directive pressure
+
+The root legacy compiler-directive page keeps the `abi` directive section
+(`virtual`, `c`, `never`, `interrupt`) as deferred input. Two observations to
+carry into ABI work:
+
+- `never` (a function that never returns) and `interrupt` (an interrupt-return
+  sequence) are not calling conventions in the same sense as `c` or `virtual`,
+  and may belong in separate directives; and
+- `abi=never` collides in name with the
+  [`[<never>]` path promise](../../language/core-flow-control.md#branch-hints-and-path-promises).
+
 ## Activation and retirement
 
 Activate this input before defining assembly integration, FFI, ABI controls,

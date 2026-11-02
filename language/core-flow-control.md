@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing synchronous flow control; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, `return`, and producer/forwarding `except` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
+| Owns | The exact-`Boolean` condition contract; clause selection; effective-body execution; conditional and loop header schemas, phase order, and `;;` section roles; `if`/`else` clause forms, chaining, and normal-completion post operations; branch hint and path-promise slots and the unattached unreachable marker; `while`, `until`, `redo while`, `redo until`, `forever`, `each`, and explicit `scope` as flow constructs; `break`, `continue`, `next`, `goto`, `return`, and producer/forwarding `except` as flow transfers, target eligibility, and barriers; flow-label spelling, placement, lookup, and reference; the conditional expression's shared condition, selected-arm, and convergence model; flow-facing costs, diagnostics, formatting, and source stability |
 | Does Not Own | Complete runtime `switch`/`case` behavior ([switch, case, and default](switch.md)); complete `each` source families, bindings, cursor protocol, or erasure behavior ([iteration](iteration.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); expression/operator selection ([operators](operators.md)); complete [optional behavior](optional-values.md); source token/layout behavior ([source structure](source-structure.md)); lifecycle/access proof ([construction and destruction](construction-and-destruction.md)); whole-function result completion ([function invocation](function-invocation.md)); or the cohesive [exceptional result-flow model](except.md) |
 | Source / Provenance | Legacy [flow control](../flow-control.md) and retired scope evidence |
 
@@ -446,6 +446,115 @@ process crashes gracefully, with no scope unwinding or post execution.
 An `if` post operation is ordinary normal-completion work, not a destructor,
 `finally`, `defer`, or guaranteed cleanup hook. Deliberately bypassing it is
 part of the labeled-exit model.
+
+### Declarations that outlive a branch
+
+A declaration inside a branch ends with that branch. A declaration marked
+`outward` instead belongs to the scope around the whole `if` chain, provided
+every path that continues past the chain declares it exactly once:
+
+```zax
+if useLarge {
+  limit outward final : Integer = 1000
+} else {
+  limit outward final : Integer = 10
+}
+
+process(limit)
+```
+
+The complete rules are described by
+[declarations and bindings](declarations-and-bindings.md#outward-declarations).
+To choose a branch while compiling, so that only one branch becomes part of the
+program, write `if compile`; see
+[compile-time code](compile-time-code.md#choosing-code-at-compile-time).
+
+## Branch hints and path promises
+
+### Telling the compiler which branch is common
+
+A compiler lays out branches and predicts jumps better when it knows which path
+usually runs. `[<likely>]` and `[<unlikely>]` say so for one branch. They are
+hints: they never change what the program does, and a compiler may ignore them.
+
+The directive goes in the branch's slot, at the end of its header, just before
+its body:
+
+```zax
+if parsed [<likely>] {
+  useResult()
+} else if retryable [<likely>] {
+  retry()
+} else {
+  reportError()
+}
+
+if cacheHit {
+  serve()
+} else [<unlikely>] {
+  rebuild()
+}
+```
+
+For an `else`, the slot follows the word `else`. An `if` with a label,
+initializer, or post keeps the slot after the complete header:
+
+```zax
+if cached: entry := lookup(key) ;; entry.valid ;; touch(entry) [<likely>] {
+  use(entry)
+}
+```
+
+Several branches may be marked likely. Marking every branch the same way says
+nothing, so a lint may point it out.
+
+### Promising that a path is always or never taken
+
+`[<always>]` and `[<never>]` are promises rather than hints. `[<always>]` on a
+branch promises that its condition always selects it. `[<never>]` promises that
+the branch is never selected:
+
+```zax
+if bufferReady [<always>] {    // promise: bufferReady is always true here
+  flush()
+}
+
+if corrupted [<never>] {       // promise: this branch never runs
+  recover()
+}
+```
+
+The compiler may optimize on the promise. By default the promise is also
+checked: breaking it panics in the `always-path-missed` or `never-path-reached`
+category. Disabling that category removes the check, and then breaking the
+promise is undefined behavior. See
+[controlling panic checks](safety-and-analysis.md#controlling-panic-checks).
+
+An unattached `[<never>]` on its own line promises that execution never reaches
+that point:
+
+```zax
+forever {
+  value := random()
+  if value >= 0 {
+    continue
+  }
+  if value < 0 {
+    continue
+  }
+
+  [<never>]                    // every value took one of the branches above
+
+}
+```
+
+A hint is a probability; a promise is a fact the compiler may rely on. So
+`[<always>]` together with `[<likely>]` on one branch is redundant, which a lint
+may report, and `[<always>]` together with `[<unlikely>]` contradicts itself and
+is an error.
+
+The same directives on `case` and `default` are described by
+[switch, case, and default](switch.md#case-hints-and-promises).
 
 ## Loops and explicit `scope`
 
@@ -1206,8 +1315,8 @@ The following remain explicit future work and are not established here:
 - complete function capture and closure representation, including callable-like
   scope capture;
 - async suspension, cancellation, executors, and concurrent flow;
-- `[<likely>]`, `[<unlikely>]`, and other reachability or likelihood directives;
-  and
+- formal definitions of the reachability that `[<never>]` and `[<always>]`
+  promise; and
 - formal reachability, definite-initialization, and termination algorithms,
   diagnostic identifiers, and compiler lowering.
 

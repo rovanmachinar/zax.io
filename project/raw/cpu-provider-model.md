@@ -287,6 +287,26 @@ later defined.
 Diagnostics should lead with public integer role names and expose profile and
 exact-specialization detail on demand.
 
+### Compile-time support queries
+
+[Compile-time selection](../../language/compile-time-code.md#choosing-code-at-compile-time)
+is now current: a discarded `if compile` branch may name an unsupported
+operation without demanding executable support, and `Compilation.target.hasFeature`
+answers feature questions. Future work must expose the remaining facts above to
+compile-time code so source can inspect:
+
+- complete core support for an exact scalar type;
+- one exact operation's availability;
+- software, guaranteed hardware, runtime-optional hardware, or trap-emulated
+  classification;
+- the selected exact format and endianness; and
+- language and profile size limits.
+
+A selected branch that uses an unsupported operation still receives an
+availability diagnostic. Layout queries (`size of`, `alignment of`, `offset of`)
+must also define how unusual widths and padding participate when the compiler
+host and target differ, and how a mismatch is diagnosed.
+
 ## Activation and retirement
 
 Activate this input for CPU profiles, target descriptions, compiler-host/target

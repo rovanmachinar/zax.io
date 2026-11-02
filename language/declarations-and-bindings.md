@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, and inferred initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, and inferred initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; `outward` declarations; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
 | Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -663,6 +663,138 @@ identity and does not grant permission to hide unrelated outer declarations.
 The complete declaration/reopening rule is defined by
 [Zax namespaces and modules](namespaces-and-modules.md#self-name-shadow-permission-belongs-to-one-opening).
 
+## Outward declarations
+
+A branch is a scope, so a declaration inside it normally ends with the branch.
+Sometimes the branch exists only to decide *how* to initialize something that
+later code needs:
+
+```zax
+if useLarge {
+  limit final : Integer = 1000
+} else {
+  limit final : Integer = 10
+}
+
+process(limit) // error: each limit ended with its branch
+```
+
+Declaring `limit` before the `if` and assigning it in each branch would not
+work, because `limit` is `final`. Marking the declaration `outward` makes it
+belong to the scope around the construct instead:
+
+```zax
+if useLarge {
+  scratch := measure()                  // stays inside the branch
+  limit outward final : Integer = 1000
+} else {
+  limit outward final : Integer = 10
+}
+
+process(limit) // valid: limit was declared and initialized exactly once
+```
+
+`outward` sits on the declaration-name side, where `shadowable` sits. For a `::`
+declaration it comes just before the `::`:
+
+```zax
+MyIndex outward :: alias type U64
+```
+
+Only the marked declarations escape. Helpers in the same branch stay local.
+
+### Where an outward declaration lands
+
+An outward declaration lands in the scope containing the nearest enclosing
+`if`, `switch`, or explicit `scope`:
+
+- a plain `{ ... }` block between the declaration and that construct is passed
+  through;
+- an `if`/`else if`/`else` chain is one construct, so a declaration in any of
+  its branches lands outside the whole chain; and
+- each construct is crossed one level at a time:
+
+```zax
+if outerCondition {
+  if innerCondition {
+    limit outward := 10   // lands in the outer branch, not beyond it
+  } else {
+    limit outward := 20
+  }
+  use(limit)              // valid here
+}
+
+use(limit)                // error: limit did not escape the outer if
+```
+
+To lift a declaration further, write the decision as one chain.
+
+Inside a loop, a branch's outward declaration lands in the loop body, which is a
+fresh scope on every pass, just like any other declaration there:
+
+```zax
+forever {
+  if ready {
+    item outward := take()
+  } else {
+    item outward := wait()
+  }
+  process(item)              // valid: this pass's item
+}
+```
+
+What `outward` cannot do is escape a loop itself. A loop body runs repeatedly
+and may not run at all, so a declaration written directly in a loop body has no
+single place outside the loop to land:
+
+```zax
+forever {
+  item outward := take()     // error: the nearest enclosing construct is the loop
+}
+```
+
+`outward` with no enclosing `if`, `switch`, or `scope`, such as in a plain block
+directly in a function body, is also an error.
+
+### Every path declares it exactly once
+
+After the construct, the name must have exactly one meaning, whichever way the
+program went.
+
+**Runtime branches.** Every path that reaches the code after the construct must
+declare the same name with the same type and qualifiers. The result is one
+declaration, initialized by whichever path ran. Different declarations on
+different paths are an error at the construct. A path that leaves through
+`return`, a `break` to an outer target, or a panic never reaches the following
+code, so it needs no declaration:
+
+```zax
+if mode == 1 {
+  limit outward final : Integer = 10
+} else if mode == 2 {
+  return                                // leaves: needs no limit
+} else {
+  limit outward final : Integer = 100
+}
+```
+
+A runtime `if` therefore needs a final `else` whenever it declares outward.
+Behavior inside `switch`, including fallthrough, is described by
+[Zax switch, case, and default](switch.md#outward-declarations-in-cases).
+
+**Compile-time selection.** In an `if compile` or `switch compile`, only the
+selected branch exists, so branches may declare different things. A name that
+the selected branch does not declare is simply an unknown name where it is used.
+See [compile-time code](compile-time-code.md#selecting-declarations).
+
+### Outward declarations and shadowing
+
+An outward declaration behaves exactly as if it had been written in the scope
+it lands in. If that scope already declares the same name, the result is a
+duplicate declaration, not shadowing. Its relationship to declarations in
+scopes further out follows the ordinary [shadowing](#shadowing) rules, and its
+lifetime ends with the scope it lands in.
+
 ## Instance members
 
 Instance members are not injected into an instance function's ordinary lexical
@@ -1303,11 +1435,10 @@ reader : Foo readonly & = value
 No access may modify the underlying value. An immutable value cannot provide a
 writable view.
 
-The baseline unqualified access default is writable and may be changed for an
-applicable source context. Explicit `writable` remains useful where a positive
-capability must be stated, selected, reflected, or restored. Defaults fill only
-unresolved axes and never override qualifications supplied by a source,
-referent, or resolved type. Exact default-directive syntax is later design.
+The unqualified access default is writable everywhere; no directive changes it.
+Explicit `writable` remains useful where a positive capability must be stated,
+selected, reflected, or restored. Defaults fill only unresolved axes and never
+override qualifications supplied by a source, referent, or resolved type.
 
 ### Capability conversions
 
@@ -1533,8 +1664,9 @@ runtime and return a runtime value:
 instance := factory create MyType
 ```
 
-Compile-time execution remains directed and inferred under the ordinary
-compile-time function model; a phrase adds no special execution rule. For a
+When it runs follows the ordinary
+[execution policies](compile-time-code.md#letting-a-function-decide-execution-policies);
+a phrase adds no special execution rule. For a
 non-generic declaration, the enclosing type name identifies the owner inside
 its body. Generic instantiations, aliases, and qualified type-identity lookup
 remain future generic and reflection work.

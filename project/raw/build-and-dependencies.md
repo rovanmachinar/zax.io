@@ -194,6 +194,35 @@ inputs, line endings, paths, and algorithm migration.
 Deleting or repairing a cache may reacquire the same locked source. It must not
 silently update a moved selector or change a module instance's identity.
 
+## Directive-related build pressure
+
+The root legacy compiler-directive page keeps the `source` and `asset` directive
+sections (required, warning, and generated variants, wildcard ordering, asset
+renaming) as deferred input for this work. Current design already fixes some
+constraints they must meet:
+
+- **Inclusion carries directive state.** A file brought in by source inclusion
+  starts with the directive state in effect at the inclusion line, and its own
+  ranges end at its end. See
+  [directive ranges](../../language/compiler-directives.md#what-bounds-a-range).
+- **Reproducibility.** The legacy `generated=yes` check compares file
+  timestamps, which conflicts with reproducible builds. Writing files from
+  compile-time code is a host-world effect of
+  [compile-time code](../../language/compile-time-code.md#two-programs-from-one-source).
+- **Panic starting state.** Build configuration sets each module's starting
+  panic-check state, which source directives refine. See
+  [controlling panic checks](../../language/safety-and-analysis.md#controlling-panic-checks).
+  This work must define that build option and how it is recorded.
+- **Pinning non-reproducible facts.** `Compilation.build.time`,
+  `Compilation.build.variable`, `Compilation.module.path`,
+  `Compilation.module.git`, and `Compilation.file.modified` vary between builds.
+  Build configuration must be able to pin them, and `Compilation.*.setting`
+  values come from build configuration. See
+  [compilation information](../../language/compile-time-code.md#compilation-information).
+- **Import versions.** `deprecate` `min` and `max` compare against the version an
+  importer requests. This work defines how an import requests a version, and
+  should review those two options when it does.
+
 ## Activation and retirement
 
 Activate this input before defining the lasting build/dependency owner,

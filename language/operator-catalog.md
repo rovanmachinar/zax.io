@@ -672,7 +672,7 @@ forms. So are these query forms:
 | `size of` | Pre-unary type-identity operand | Byte size in active execution environment | Complete layout/context |
 | `alignment of` | Pre-unary type-identity operand | Required alignment in active environment | Complete layout/context |
 | `offset of` | Binary member path and containing type | Byte offset to member path | Member-designator grammar/layout |
-| `is constant` | Post-unary expression | Whether expression is compile-time available | Constant/execution model |
+| `is constant` | Post-unary expression | Whether the expression is a [compile-time value](compile-time-code.md#compile-time-values) | None; the rule is defined there |
 | `is final` | Post-unary type-use query | Underlying place final/varying truth | Qualifier reflection |
 | `is immutable` | Post-unary value/type-use query | Value-lifetime mutability truth | Qualifier reflection |
 | `is readonly` | Post-unary access/type-use query | Access capability truth | Qualifier reflection |

@@ -277,6 +277,16 @@ exceptional result:
 Runtime callback selection therefore performs no handler discovery. The static
 prototype already determines every possible completion outcome.
 
+The prototype also carries an
+[execution policy](compile-time-code.md#letting-a-function-decide-execution-policies),
+which says whether calls may or must run while compiling. A lambda takes a
+policy in the same slot as a declared function and defaults to `auto`. A
+replacement installed in varying storage must be able to run everywhere the
+slot can be called from, and a lambda created by compile-time code can become
+part of the program only if it captures nothing. The complete rules are
+described by
+[compile-time code](compile-time-code.md#function-values-and-replaceable-implementations).
+
 ### Fixed and varying examples
 
 ```zax

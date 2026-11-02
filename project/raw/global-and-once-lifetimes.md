@@ -176,6 +176,26 @@ The provider/handle protocol remains
 [indexed array-storage-strategy work](array-storage-strategies.md). This file
 owns only the shared provider value's global/`once` lifetime pressure.
 
+## `lock-free` construction pressure
+
+The root legacy compiler-directive page keeps the `lock-free` section and its
+example: a local `once` value whose construction is normally guarded against
+concurrent first use, with `[<lock-free>]` removing that guard:
+
+```zax
+// Legacy evidence; local once values are not current design.
+giveMeMyType final : (myType : MyType &)() = {
+  singleton once [<lock-free>] : MyType
+  return singleton
+}
+```
+
+Its meaning is already settled for when `once` values are designed: it is an
+[unchecked-promise directive](../../language/compiler-directives.md#what-a-directive-may-promise)
+promising that construction is never contended, so it needs no separate
+`unsafe` marker, and violating the promise is a data race. Exact attachment and
+whether the guard is a panic-checkable condition remain open.
+
 ## Activation and retirement
 
 Activate this input when global initialization, `once`, module startup, process

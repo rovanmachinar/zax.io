@@ -768,14 +768,17 @@ myByte : Byte = compileTimeResult()
 // error: concrete Integer does not reopen for Byte realization
 ```
 
-Constant-only operands and arguments may permit or suggest compile-time
-execution, but do not require it by themselves. Candidate selection, integer
-realization, and execution timing are separate:
+Constant arguments do not by themselves move a call to compile time. Candidate
+selection, integer realization, and execution timing are separate:
 
 1. select a callable or concrete operation;
 2. realize its uncommitted integer inputs;
-3. execute during compilation when later compile-time rules require or permit
-   it; otherwise use ordinary runtime execution.
+3. run it during compilation when the caller writes `compile` or the callee's
+   execution policy requires it; otherwise run it at runtime.
+
+Execution policies, and when a result counts as a compile-time value, are
+defined by
+[compile-time code](compile-time-code.md#letting-a-function-decide-execution-policies).
 
 A compile-time-known panic from a selected concrete operation becomes a compiler
 diagnostic. Constant evaluation does not reopen typed values as uncommitted
@@ -966,8 +969,11 @@ myAbsolute : Scalars.Integers.Little.I32 = 42
   byte order.
 
 Performing realization in the compiler does not make the active environment
-mean compiler host. Programmers use an absolute-endian exact type or explicit
-environment path when representation must agree across environments.
+mean compiler host: source written in the target program realizes against the
+target. Inside [compile-time code](compile-time-code.md#which-definitions-apply-while-compiling),
+the active environment is the compiler host. Programmers use an
+absolute-endian exact type or explicit environment path when representation
+must agree across environments.
 
 ## Costs and failures
 

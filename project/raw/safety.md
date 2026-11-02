@@ -232,6 +232,24 @@ A source-program panic during compile-time execution must become a compiler
 diagnostic with source and evaluation-path context rather than an internal
 compiler crash. This does not imply a compile-time panic handler.
 
+Source-level panic-check controls are current design in
+[safety and analysis](../../language/safety-and-analysis.md#controlling-panic-checks).
+
+### Panic function pressure
+
+The root legacy compiler-directive page keeps its panic-function section as
+deferred input: a replaceable `___.panic(...)` function receiving an error code
+and source location. The maintainer's direction for that future work:
+
+- a custom panic function may only capture state, such as logs or crash
+  reports; it cannot repair the condition or resume;
+- when it returns, the program ends gracefully;
+- an internal pre-panic capture always runs first, regardless of the installed
+  function, so a corrupted function pointer still leaves a record; and
+- the legacy runtime lookup table that let execution continue past a failed
+  check without panicking is rejected: disabling a category removes its check
+  instead.
+
 ## Nothing-instance safety pressure
 
 [Zax Nothing instances](../../language/nothing-instances.md) establishes a

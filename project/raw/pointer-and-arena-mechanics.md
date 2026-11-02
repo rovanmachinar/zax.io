@@ -137,7 +137,7 @@ bytes := overhead size of MyValue * strong
   control-block description type.
 - `overhead size of` is design pressure only. The size varies by pointer role and
   by compiler host versus target (see
-  [raw compile-time execution](compile-time-execution.md)). Custom control blocks
+  [compile-time environments](../../language/compile-time-code.md#which-definitions-apply-while-compiling)). Custom control blocks
   are considered unlikely and are not its motivation.
 - A `weak count probe` beside the current `strong count probe` may be added if
   weak-count observation is needed.

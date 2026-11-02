@@ -6,7 +6,7 @@
 | Audience | Human developers selecting runtime behavior from one value |
 | Applies To | Programmer-facing `switch`, `case`, and `default` behavior; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Runtime selector capture; ordinary ordered case testing; direct, equality, and pre-unary case interpretation; variant-specific alternative routing and payload binding; comma-separated alternatives; case and switch posts; switch and case labels; switch-specific `break`, `continue`, `next`, and `goto` behavior; `default`, incomplete selection, exhaustiveness, overlap, reachability, costs, diagnostics, formatting, and source stability |
+| Owns | Runtime selector capture; ordinary ordered case testing; direct, equality, and pre-unary case interpretation; variant-specific alternative routing and payload binding; comma-separated alternatives; case and switch posts; switch and case labels; switch-specific `break`, `continue`, `next`, and `goto` behavior; `default`, incomplete selection, exhaustiveness, overlap, reachability; case hint and promise slots; `outward` declarations in cases; costs, diagnostics, formatting, and source stability |
 | Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); ordinary operator selection ([operators](operators.md)); complete optional behavior ([optional values](optional-values.md)); complete managed-alternative lifecycle ([variants](variants.md)); enum reachable domains ([enums](enums.md)); general source layout ([source structure](source-structure.md)); or generalized pattern matching |
 | Source / Provenance | Current flow, operator, enum, optional, lifetime, source, and intent designs, incorporating reviewed legacy switch evidence |
 | Supersedes | Legacy switch sections formerly preserved on [flow control](../flow-control.md) |
@@ -446,6 +446,75 @@ switch mode {
 The enclosure occupies one complete contextual clause position and includes the
 required body. It cannot enclose only a test while borrowing a body from outside.
 Uncertain or runtime-dependent overlap requires no acknowledgement.
+
+## Case hints and promises
+
+The [branch hints and path promises](core-flow-control.md#branch-hints-and-path-promises)
+used on `if` also apply to cases. The directive goes in the slot after the
+`case` tests or after `default`, and applies to that clause's test, not to its
+body:
+
+```zax
+switch value {
+  case 1 [<likely>]
+    handleCommon()
+  case 2
+    handleOther()
+  default [<unlikely>]
+    handleUnexpected()
+}
+```
+
+Hints never change which clause is selected or which test effects happen. The
+ordering rules above still hold: a compiler may try a likely clause's test
+first only when that cannot change the selected clause, the operations that
+run, or their effects. With overlapping tests, or tests that call functions,
+the visible order stays.
+
+`[<never>]` on a case promises that the case is never selected.
+`[<always>]` promises that it is always the selected case:
+
+```zax
+switch mode {
+  case MyMode.Legacy [<never>]      // promise: never selected
+    legacyPath()
+  case MyMode.Modern [<always>]     // promise: always the selected case
+    modernPath()
+}
+```
+
+These are checked by default, like the `if` forms: breaking one panics in the
+`never-path-reached` or `always-path-missed` category, and disabling that
+category makes a broken promise undefined behavior.
+
+## Outward declarations in cases
+
+An [`outward`](declarations-and-bindings.md#outward-declarations) declaration in
+a case body belongs to the scope around the `switch`. Every path that continues
+past the `switch` must declare it exactly once, with the same type and
+qualifiers. A case that leaves the `switch` another way needs no declaration:
+
+```zax
+switch mode {
+  case 1
+    limit outward final : Integer = 10
+  case 2
+    limit outward final : Integer = 1000
+  case 3
+    return                            // leaves: needs no limit
+  default
+    limit outward final : Integer = 100
+}
+
+process(limit)
+```
+
+When one body enters another with `goto`, both bodies run on that path, so only
+one of them may declare a given outward name.
+
+To select a case while compiling, so that only the selected body becomes part of
+the program, write `switch compile`; see
+[compile-time code](compile-time-code.md#if-compile-and-switch-compile).
 
 ## Normal completion and posts
 
@@ -1313,7 +1382,7 @@ Still future:
 - unmanaged-union selection, which has no active-lens state;
 - value-producing selection and result convergence;
 - mixfix or other multi-hole case tests;
-- compile-time selection and dispatch;
+- compile-time dispatch strategies beyond `switch compile`;
 - generic specialization and reflection;
 - formal reachability, path-merge, and termination algorithms; and
 - compiler lowering or dispatch-table strategy.

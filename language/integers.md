@@ -720,7 +720,9 @@ default, recorded in build metadata, and leave optional, wrapping, saturating,
 reporting, and narrowing forms unchanged. Known compile-time violations remain
 diagnostics.
 
-Exact option/directive syntax remains future analysis-control work.
+Source-level panic controls are described by
+[safety and analysis](safety-and-analysis.md#controlling-panic-checks); exact
+build-option syntax and category names remain future analysis-control work.
 
 ## Structural scalar compatibility
 

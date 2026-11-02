@@ -6,7 +6,7 @@
 | Audience | Human developers reasoning about Zax's safe subset, compiler proof, unsafe responsibility, and source portability |
 | Applies To | Cross-cutting programmer-visible safety and static-analysis behavior; not a formal proof system or diagnostic specification |
 | Implementation State | Not established by this repository |
-| Owns | The safe-subset model; required proof; narrow unsafe assertions and permissions; known-invalid boundaries; distinction from intent and lints; language-contract versus compiler-analysis evolution; cross-cutting safety diagnostics and source stability |
+| Owns | The safe-subset model; required proof; narrow unsafe assertions and permissions; known-invalid boundaries; distinction from intent and lints; language-contract versus compiler-analysis evolution; panic-check control attachment, ranges, import boundary, and build starting state; cross-cutting safety diagnostics and source stability |
 | Does Not Own | Domain-specific validity and admission rules, including [enum admission](enums.md#admission-and-reachable-values); exact future unsafe syntax and category registry; intent acknowledgements ([intent acknowledgements](intent-acknowledgements.md)); or compiler implementation algorithms |
 | Source / Provenance | Current intent, construction, invocation, optional, lifetime, and pointer safety boundaries |
 | Supersedes | Accepted general safety direction formerly preserved only as project input |
@@ -618,14 +618,66 @@ principle. A concept owner links here when lack of unwinding changes local
 construction, mapping, disposal, or replacement behavior rather than redefining
 panic independently.
 
-Panic categories can be enabled or disabled independently. A future narrow
-contract may promise that one selected panic condition cannot occur and permit
-the compiler to omit its check. If the condition occurs anyway, behavior is
-undefined. Other panic categories remain enabled.
+Panic categories can be enabled or disabled independently. Disabling a category
+promises that its condition cannot occur, and lets the compiler omit the check.
+If the condition occurs anyway, behavior is undefined. Other panic categories
+remain enabled.
 
 For allocation, this is not a third unchecked operator: `@` remains panicking
-and `@!` must still detect request failure to return a vacant pointer. Exact
-panic-category names and control syntax remain future analysis-control work.
+and `@!` must still detect request failure to return a vacant pointer.
+
+### Controlling panic checks
+
+A panic control is a [compiler directive](compiler-directives.md) naming one
+category. Attached, `[<panic=no, ...>]` disables the check for one statement
+or declaration, and `[<panic=yes, ...>]` enables it:
+
+```zax
+// Category names are illustrative; the registry is future work.
+[<panic=no, fixed-arithmetic-overflow>]
+total = total + delta   // no overflow check for this statement
+```
+
+As a [range](compiler-directives.md#directive-ranges), unattached state markers
+set the check's state for the code that follows, inside one opening or file:
+`never` disables it, `always` enables it, `inherit` restores the state the
+opening started with, and `default` restores the language's default:
+
+```zax
+MyMixer :: type {
+
+  [<panic=never, fixed-arithmetic-overflow>]
+
+  accumulate final : ()() = {
+  }
+
+  [<panic=inherit, fixed-arithmetic-overflow>]
+
+  audit final : ()() = {
+  }
+
+}
+```
+
+Here `accumulate` has no overflow check, and `audit` is back to the state
+`MyMixer` started with. The closing brace restores the surrounding state in any
+case.
+
+Rules that keep these promises honest:
+
+- **Name each category.** There is no "disable every check" form, so a category
+  added to the language later is never disabled without someone naming it.
+- **Imports are a wall.** An importer's panic state never reaches the modules it
+  imports, so no module makes undefined-behavior promises about code it did not
+  write.
+- **Build configuration sets the starting state.** The build may set a module's
+  starting state before its own source runs, and the module's directives refine
+  it from there. A build that disables a check for a dependency is an explicit,
+  auditable choice by whoever owns the build.
+- **Not a build mode.** Whether a check exists never depends on debug or release
+  mode, only on these controls.
+
+Exact category names remain future analysis-control work.
 
 ## Diagnostics
 

@@ -6,7 +6,7 @@
 | Audience | Human developers defining, constructing, composing, or inspecting Zax types |
 | Applies To | Ordinary named and anonymous type definitions and their programmer-visible organization; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The ordinary type-definition mental model; named and anonymous identity; direct stored shape; type-body storage, behavior, and metadata categories; incomplete self-names, forwards, recursion, completion, and `outer tracked` integration |
+| Owns | The ordinary type-definition mental model; named and anonymous identity; direct stored shape; type-body storage, behavior, and metadata categories; incomplete self-names, forwards, recursion, completion, and `outer tracked` integration; explicit member layout with `align`, `reorder`, `reserve`, and `void` |
 | Does Not Own | General declaration syntax ([declarations and bindings](declarations-and-bindings.md)); complete lifecycle behavior ([construction, replacement, and destruction](construction-and-destruction.md)); qualifiers ([qualifiers](qualifiers.md)); composition ([Zax composition](composition.md)); structural compatibility ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); [unions](unions.md); or [variants](variants.md) |
 | Source / Provenance | Reviewed legacy type-definition evidence reconciled with current declaration, lifecycle, lifetime, qualifier, composition, structural, callable, union, and variant design |
 
@@ -426,6 +426,96 @@ allowing zero or one payload life path to be active. Its wrapper owns selection,
 construction, destruction, and replacement.
 
 They intentionally do not share one “active member” model.
+
+## Explicit member layout
+
+Usually the compiler decides how members are aligned and how much padding sits
+between them, while keeping members in declaration order. When a layout must
+match something outside the program, such as a network packet, a file format,
+or a hardware register block, directives state it explicitly:
+
+```zax
+MyPacketHeader :: type {
+  size : U32
+
+  [<align=16>]
+  id : Uuid                    // placed at an offset that is a multiple of 16
+
+  [<reserve=100>]              // 100 unnamed bytes at this point
+
+  [<void>]
+  checksumView : U64           // has an offset here, but occupies no bytes
+
+  checksum : U32               // shares checksumView's offset
+}
+```
+
+### Alignment
+
+`[<align=n>]` on the line above a member places that member at an offset that is
+a multiple of `n`. `n` must be a power of two; any other value is an error.
+
+### Member order
+
+Members are never reordered unless the type asks. `[<reorder=compact>]` or
+`[<reorder=speed>]` above a type definition lets the compiler choose an order
+that minimizes size or favors access speed; `reorder=none` is the default. A
+reorder changes only where members are placed. Construction and destruction
+still follow declaration order.
+
+```zax
+[<reorder=compact>]
+MyStats :: type {
+  enabled : Boolean
+  total : U64
+  flags : Byte
+}
+```
+
+### Reserved bytes
+
+An unattached `[<reserve=n>]` inside a type body adds `n` unnamed bytes at that
+point. Reserved bytes have no initial value and carry no value, like the padding
+described for [unions](unions.md#padding-and-non-value-bits): copying, equality,
+and construction never depend on their contents.
+
+### Members that occupy no space
+
+`[<void>]` above a member gives that member an offset but no size. The next
+member starts at the same offset. Reading a void member reinterprets whatever
+bytes are at its offset, including later members and possibly bytes beyond the
+type's own storage, such as variable-length data that follows a header in
+memory.
+
+That reinterpretation is unchecked. Writing `[<void>]` is itself the visible
+promise that the access is valid, as with other
+[unchecked-promise directives](compiler-directives.md#what-a-directive-may-promise),
+so no separate `unsafe` marker is required.
+
+### Layouts that differ by environment
+
+When a layout must differ between targets, select it while compiling and mark
+the selected member [`outward`](declarations-and-bindings.md#outward-declarations):
+
+```zax
+MyBlock :: type {
+  if compile size of Target.Integer > 4 {
+    [<align=16>]
+    data outward : MyPayload
+  } else {
+    data outward : MyPayload
+  }
+}
+```
+
+### Layout and partials
+
+By default, [partials](partials.md#what-a-type-allows-others-to-add) cannot
+add stored members, so an explicit layout stays as written. A type that writes
+`seal open storage` lets partials append storage after its own members.
+`reserve` and `void` describe positions among the type's own members, so they
+keep their meaning, but the total size grows. A layout whose total size must
+stay fixed simply leaves storage closed.
 
 ## Partial and generic completion boundaries
 

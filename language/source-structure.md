@@ -562,29 +562,37 @@ Contiguous `[[ ... ]]` belongs to lambda capture. A compiler directive instead
 uses contiguous `[<` and `>]` delimiters:
 
 ```zax
-// Illustrative directive name; exact directive catalog remains future work.
-[<likely>] if condition {
+[<deprecate>]
+drawLineOld final : ()() = {
+}
+
+if condition [<likely>] {
   handleExpectedCase()
 }
 ```
 
-`[<likely>]` is metadata attached to the following `if`; it is not an array,
-capture, grouped expression, or ordinary `<`/`>` comparison.
+`[<deprecate>]` is metadata about the declaration on the next line, and
+`[<likely>]` is metadata about the branch whose header it ends. Neither is an
+array, capture, grouped expression, or ordinary `<`/`>` comparison.
 
 The enclosure is recognized only where compiler-directive attachment is
 permitted. Its payload must follow the selected directive's own argument
 grammar. Several directives may be adjacent:
 
 ```zax
-// Illustrative directive names; exact directive catalog remains future work.
-[<likely>][<hot>] while condition {
-  process()
+[<deprecate>][<inline>]
+drawLineOld final : ()() = {
 }
 ```
 
-The source form does not establish `likely`, `hot`, or any other directive by
-itself. Current/future directive owners define which names exist, where they
-attach, whether they carry arguments, and what they mean.
+A directive on its own line attaches to the statement or declaration on the
+line directly below it. With a blank line between them, it is unattached. That
+physical-line relationship is part of directive attachment, so formatters must
+preserve blank lines around directives, and `\` continuation is never used to
+express it.
+
+Which names exist, the three attachment positions, ranges, and each directive's
+meaning are described by [compiler directives](compiler-directives.md).
 
 ### Circumfix attachment
 
@@ -2343,9 +2351,10 @@ a declared or fenced operator phrase carry phrase roles instead. The complete
 keyword catalog and each construct's grammar remain with their own owners and
 future work.
 
-Compiler directives use the current `[< ... >]` enclosure. Each directive owner
-still defines its permitted attachment positions and whether a physical-line
-relationship is part of that attachment. A directive on one physical line and a
+Compiler directives use the `[< ... >]` enclosure. A directive on its
+own line attaches to the line directly below it, and a blank line makes it
+unattached; [compiler directives](compiler-directives.md#where-a-directive-goes)
+defines the attachment positions. A directive on one physical line and a
 related construct on the next do not use `\` merely to express that
 relationship. Explicit continuation retains its single purpose of continuing
 one statement across physical lines.
@@ -2355,6 +2364,13 @@ complete payload, creates no scope or final tree boundary, neutralizes
 non-operator keyword roles strictly, and does not recognize a nested opener.
 Complete behavior is defined above; source reflection must retain the written
 enclosure even though it creates no final expression-tree node.
+
+`compile{...}` and `wellformed{...}` also use contiguous openers: `compile{`,
+and `wellformed{` or `wellformed<options>{`, with no space before the brace.
+Unlike `bare{...}`, their braces enclose statements as a block. A spaced
+`wellformed {` is an ordinary name followed by a brace, so a variable named
+`wellformed` remains usable. Their meaning is defined by
+[compile-time code](compile-time-code.md).
 
 Comma-list continuation is the ordinary list-level implicit continuation because
 the parsed comma already requires another element. Declaration colon and mixfix

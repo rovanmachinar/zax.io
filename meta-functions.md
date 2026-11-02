@@ -24,9 +24,10 @@ runtime result inference.
 > future input in
 > [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
 >
-> Compile-time specialization, directed and inferred execution, and compile-time
-> failure are preserved in
-> [raw compile-time execution input](project/raw/compile-time-execution.md).
+> Compile-time execution, execution policies, `wellformed{...}` checks (which
+> replace the `[<compiles>]` directive), and compile-time failure are defined by
+> [Zax compile-time code](language/compile-time-code.md). Candidate selection by
+> `requires`, `concept`, or a `true`/`false` declarative remains generic input.
 > Reflection-dependent behavior is preserved in
 > [raw reflection input](project/raw/reflection.md).
 >

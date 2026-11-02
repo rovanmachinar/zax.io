@@ -78,6 +78,37 @@ That spelling has not been reviewed against the current `ParameterType : type`
 slot. Future work must decide whether the two are the same mechanism written
 differently, two distinct mechanisms, or one superseding the other.
 
+## Compile-time selection pressure from legacy directives
+
+The root legacy compiler-directive page keeps three sections as deferred input
+for generic work: `requires` (a compile-time Boolean block that enables or
+disables a candidate), `concept` (a function used as a type's selection
+criteria), and `compile` on inputs (arguments that must be compile-time values).
+The legacy `true`/`false` declarative after a prototype, which statically
+enables or disables a candidate, is part of the same pressure. Current design
+constrains them:
+
+- **Checking code.** [`wellformed{...}`](../../language/compile-time-code.md#checking-whether-code-is-well-formed-wellformed)
+  is current. It fully checks code a payload creates and trusts existing code
+  by its prototype; generic work must define how deep a generic instantiation
+  created by a payload is checked, and any SFINAE-like selection must follow
+  that rule.
+- **Compile-time values.** A compile-time block may use only types and
+  [compile-time values](../../language/compile-time-code.md#compile-time-values),
+  never runtime values, and has no runtime side effects.
+- **Compile-time parameters.** The useful form of `compile` on inputs is an
+  argument whose value the function body uses while compiling, which is
+  per-value specialization. Its motivation includes arguments that must not
+  come from runtime data, such as format strings and SQL templates. The
+  maintainer's earlier analysis applies here: `readonly` may suffice to keep
+  such a value stable inside the body, while `immutable` would need `final` so a
+  replacement constructor cannot change it.
+- **Generic bodies and compile points.** A compile point inside a generic body
+  runs once per instantiation.
+- **Type arguments.** A type argument alone never forces compile-time execution;
+  calls follow ordinary
+  [execution policies](../../language/compile-time-code.md#letting-a-function-decide-execution-policies).
+
 ## Generic type arguments and constraints
 
 Future work must decide:

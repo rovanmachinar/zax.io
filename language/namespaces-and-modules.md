@@ -6,8 +6,8 @@
 | Audience | Human developers organizing declarations or using code across Zax modules |
 | Applies To | Programmer-facing namespaces, module roots, source order, imports, injection, declaration exposure, visibility baseline, and module identity; not a formal grammar or build specification |
 | Implementation State | Not established by this repository |
-| Owns | Protected module-local roots; language-provided root declarations; namespace declaration, reopening, placement, ownership, and self-name shadow permission; source-file contribution and order; named and direct imports; generative module instances; import injection and exact shared dependencies; direct-versus-imported collision behavior; module-internal default visibility; explicit export and non-transitive import baseline; module cycles; namespace/module diagnostics, costs, and source stability |
-| Does Not Own | General lexical declaration lookup, aliases, and forwards ([declarations and bindings](declarations-and-bindings.md)); type-alias identity ([identity types](identity-types.md)); exact export/private compiler-directive syntax; package acquisition and locking; complete global/module initialization; compile-time availability queries; partial behavior ([partials](partials.md)); reflection; or implementation architecture |
+| Owns | Protected module-local roots; language-provided root declarations; namespace declaration, reopening, placement, ownership, and self-name shadow permission; source-file contribution and order; named and direct imports; generative module instances; import injection and exact shared dependencies; direct-versus-imported collision behavior; module-internal default visibility; explicit export and non-transitive import baseline; `export` directive attachment and ranges; directive state stopping at imports; module cycles; namespace/module diagnostics, costs, and source stability |
+| Does Not Own | General lexical declaration lookup, aliases, and forwards ([declarations and bindings](declarations-and-bindings.md)); type-alias identity ([identity types](identity-types.md)); general directive attachment and ranges ([compiler directives](compiler-directives.md)); exact `private` and selective-export options; package acquisition and locking; complete global/module initialization; compile-time queries ([compile-time code](compile-time-code.md)); partial behavior ([partials](partials.md)); reflection; or implementation architecture |
 
 ## Start with a named import
 
@@ -110,6 +110,11 @@ second : GeometryB.Scalars.Integers.I32 = first
 
 This sharing is specific to exact language-provided declarations. It does not
 merge declarations written by `GeometryA` and `GeometryB`.
+
+`Compilation` is another protected language-provided name. It answers
+compile-time questions about the build, such as `Compilation.module.location`,
+and its answers are specific to the module instance asking. See
+[compile-time code](compile-time-code.md#compilation-information).
 
 ## Namespaces organize one module
 
@@ -492,9 +497,22 @@ An injected import or exposure may contribute several imported candidates with
 one name. Those declarations retain imported provenance and use the demand-time
 ambiguity rule. Direct declarations written in the injection body do not.
 
-Future compile-time source selection may let a module detect an injected symbol
-and import or declare a fallback only when absent. Such selection is part of
-the module instance's semantic inputs.
+A module can detect whether its importer injected something, and supply a
+fallback only when it did not:
+
+```zax
+if compile !wellformed{ Module.UseComplexMath } {
+  UseComplexMath outward :: import Module.DefaultComplexMath
+}
+```
+
+[`wellformed{...}`](compile-time-code.md#checking-whether-code-is-well-formed-wellformed)
+asks the question under the imported module's own root. `if compile` makes the
+choice while compiling, and the
+[`outward`](declarations-and-bindings.md#outward-declarations) import becomes a
+declaration of the module only when the fallback is selected. The answer is part
+of that module instance's semantic inputs: a different injection produces a
+different instance.
 
 ### Including partials in an imported type
 
@@ -569,9 +587,54 @@ A module may explicitly export a named import binding. Downstream source then
 reaches that same generative instance through the exported path rather than
 creating another import automatically.
 
-Exact `private`, `[<export>]`, selective export, alias export, and re-export
-syntax remains future compiler-directive/visibility work. That work inherits
-these constraints:
+### Exporting with directives
+
+Export is written with the `export`
+[compiler directive](compiler-directives.md). Attached, it exports one
+declaration:
+
+```zax
+[<export>]
+MyPoint :: type {
+  x : I32
+  y : I32
+}
+```
+
+As a [range](compiler-directives.md#directive-ranges), `[<export=always>]`
+exports the declarations written after it, within one opening or file, until
+`[<export=never>]` or the end of that region:
+
+```zax
+// file: api.zax
+[<export=always>]
+
+open final : ()() = {             // exported
+}
+
+close final : ()() = {            // exported
+}
+
+Math :: import Module.Math        // not exported: ranges never export imports
+
+[<export>]
+Geometry :: import Module.Geometry  // exported: an explicit attachment
+```
+
+A range exports only declarations written directly inside it. It never exports:
+
+- import bindings or aliases, which always need an attached `[<export>]`, so
+  importing never re-exports by itself;
+- declarations injected by an importer, or added by partials declared
+  elsewhere; or
+- the contents of nested namespaces, which need their own range or attachment.
+
+A range ends at its end marker, at the closing brace of its opening, or at the
+end of its file. Reordering or moving files therefore never exports something
+by accident.
+
+Exact `private`, selective export, alias export, and re-export option sets
+remain future visibility work. That work inherits these constraints:
 
 - module-internal is the default;
 - export is explicit;
@@ -579,6 +642,14 @@ these constraints:
 - visibility is eligibility, not match quality;
 - inaccessible candidates do not compete as worse alternatives; and
 - order never breaks an export collision.
+
+### Directive state stops at an import
+
+No directive state crosses an `import`. An imported module begins with its own
+defaults and its own source, whatever deprecation, export, or panic-check state
+the importer is in. Source files brought in by inclusion are different: they
+begin with the state in effect where they are included. See
+[directive ranges](compiler-directives.md#what-bounds-a-range).
 
 ## Namespace and module aliases
 
@@ -717,11 +788,10 @@ contract, package-manager specification, ABI promise, or compiler mapping.
 
 Future work owns:
 
-- exact export/private/compiler-directive syntax;
+- exact `private`, selective export, alias export, and re-export options;
 - package fetching, Git resolution, versions, locking, canonical content
   identity, and cache control;
 - module/global initialization, destruction, `once`, and concurrency;
-- compile-time availability and fallback-source syntax;
 - open namespace authority;
 - source and declaration reflection; and
 - dynamic loading and runtime name lookup.

@@ -74,6 +74,17 @@ embedded an `ExecutionContext` by value would inherit the same pending layout.
 The general cost is described under
 [storage from any module](partials.md#storage-from-any-module).
 
+## The context during compilation
+
+Compile-time code runs on the build machine, in a separate copy of the program
+with its own globals and its own `___`. That copy cannot wait for the whole
+application to be assembled, so its context shape is fixed at each point where
+compile-time code runs. It includes the core members, partials from completed
+imports, and this module's partials completed before that point. Nothing in the
+compile-time context reaches the running program's context. The complete rules
+are described by
+[compile-time code](compile-time-code.md#the-compile-time-___).
+
 ## Replacing the current context
 
 A thread may replace its current context:
@@ -251,7 +262,6 @@ Still deferred:
 - context inheritance when creating a thread;
 - async task capture, replacement, restoration, and migration;
 - task-local or nested context layers;
-- reflection;
-- compile-time/host/target context relationships; and
+- reflection; and
 - implementation transport, including whether calls physically receive a hidden
   parameter.

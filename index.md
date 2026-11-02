@@ -141,6 +141,12 @@ producing them.
   specialization, absolute and environment-selected names, numeric conversion,
   byte-preserving coercion, and native versus compiler-host and target byte
   order.
+- Read [Zax compile-time code](language/compile-time-code.md) for computing
+  values and choosing code while compiling, execution policies, values crossing
+  into the program, `wellformed{...}` checks, and compilation information.
+- Read [Zax compiler directives](language/compiler-directives.md) for what a
+  `[<...>]` directive is, where it attaches, directive ranges, deprecation,
+  source mapping, and the directive catalog.
 - Use [Zax language-design terms](language/terms.md) for cross-cutting
   descriptive vocabulary used by current conceptual design.
 - Use the grouped design notes below when exploring a specific proposed concept.
@@ -191,6 +197,8 @@ producing them.
 - [Integer operator catalog](language/integer-operator-catalog.md)
 - [Mixfix operators](language/mixfix-operators.md)
 - [Endianness](language/endianness.md)
+- [Compile-time code](language/compile-time-code.md)
+- [Compiler directives](language/compiler-directives.md)
 - [Language-design terms](language/terms.md)
 
 ## Legacy language-design notes
@@ -226,7 +234,11 @@ semantics remain non-authoritative until individually reviewed and promoted.
 
 ### Build-time programming and modules
 
-- [Compiler directives](compiler-directives.md)
+- [Compiler directives](compiler-directives.md) — deferred legacy input for
+  source generation, generic selection, source inclusion, async, ABI,
+  panic-function, and `once`-value directives; current directives are owned by
+  [compiler directives](language/compiler-directives.md) and
+  [compile-time code](language/compile-time-code.md)
 - [Meta-functions](meta-functions.md)
 - [Meta-types](meta-types.md)
 - [Namespaces and modules](language/namespaces-and-modules.md) — current

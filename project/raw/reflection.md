@@ -595,6 +595,30 @@ without requiring one permanently exhaustive bitmap. It must distinguish:
 - an individually available operation from the complete core bundle; and
 - canonical/noncanonical validity from one value's runtime classification.
 
+## Compile-time reflection pressure
+
+[Compile-time code](../../language/compile-time-code.md#the-compile-time-___)
+fixes one principle for reflection while compiling: a type keeps one identity
+in both the compile-time world and the target program, while its shape may
+differ. Plain reflection in compile-time code describes the compile-time
+world's shape at that point; a question about the target's final shape waits
+for it or is rejected. The `ExecutionContext` is the main case, because its
+shape grows as partials are declared:
+
+```zax
+// Illustrative reflection spelling.
+compile{
+  for member in members of ExecutionContext {   // the compile-time shape so far
+    emitAccessor(member)
+  }
+}
+```
+
+Future work must choose the reflection spelling, and the explicit form that asks
+for the target's shape. It must also choose the exact spelling for asking
+whether a hook point has fulfillments, whose availability rule is current in
+[partials](../../language/partials.md#asking-at-compile-time-whether-a-hook-is-fulfilled).
+
 ## Constraints this input places on current work
 
 - current documentation must not present illustrative reflection wording as an

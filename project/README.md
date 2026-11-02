@@ -20,7 +20,7 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [035: Compile-time code and compiler directives](work/035-compile-time-code-and-directives.md) |
+| Active work item | None; `036` has not been prepared |
 | Next work number | `036` |
 
 Agents receive either the handoff block or the rehydration block in chat. They

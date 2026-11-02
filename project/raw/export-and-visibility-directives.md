@@ -25,43 +25,36 @@ Future syntax must preserve:
 These semantics are current conceptual design. This raw input does not reopen
 them.
 
-## Syntax pressure
+## Current export directive
 
-Legacy material proposed export controls. Current source reserves `[[ ... ]]`
-for lambda capture and uses `[<...>]` for compiler directives. Future export
-syntax therefore starts from the current enclosure:
+Export is now a current directive. Attached `[<export>]` exports one
+declaration, and an `[<export=always>]` ... `[<export=never>]` range exports the
+declarations written directly inside it, bounded by its opening or file. A
+range never exports import bindings, aliases, injected declarations,
+declarations from partials elsewhere, or nested namespace contents. See
+[namespaces and modules](../../language/namespaces-and-modules.md#exporting-with-directives)
+and [compiler directives](../../language/compiler-directives.md#directive-ranges).
+
+## Remaining syntax pressure
+
+Legacy material also proposed `[<export=yes>]` and `[<export=no>]` for a single
+following declaration. Current attachment makes `yes` redundant with the
+attached form; whether a `no` exclusion inside a range is useful remains open:
 
 ```zax
-// Illustrative export directive; exact export behavior is not accepted here.
-[<export>]
-MyType :: type {
+// Illustrative; not current.
+[<export=always>]
+
+open final : ()() = {
 }
 
-[<export>]
-Utilities :: import Module.UtilitiesDefinition
-```
-
-and stateful directive forms:
-
-```zax
-// Illustrative directive payloads; exact state behavior is not accepted here.
-[<export=always>]
-[<export=never>]
-[<export=yes>]
 [<export=no>]
+internalHelper final : ()() = {
+}
 ```
 
-Future work must decide whether export is:
-
-- a declaration modifier;
-- a compiler directive attached to one declaration;
-- a scoped directive state;
-- a selective import/exposure list;
-- or a bounded combination.
-
-The result must make attachment and source stability explicit. A stateful
-directive must not silently export an unrelated later declaration because a
-file was reordered, generated, or composed differently.
+Future work must still decide whether selective import/exposure lists
+complement the directive.
 
 ## Alias and re-export pressure
 
@@ -110,9 +103,8 @@ another root.
 
 ## Activation and retirement
 
-Activate this input when exact `private`, `[<export>]`, declaration attachment,
-selective exposure, alias export, import-module export, or re-export syntax is
-reviewed.
+Activate this input when exact `private`, export exclusions, selective exposure,
+alias export, import-module export, or re-export syntax is reviewed.
 
 Move accepted syntax into the namespace/module, declaration, source, and
 compiler-directive owners. Retire this file after every preserved question is

@@ -357,16 +357,17 @@ The baseline omission defaults are:
 - value mutability: `mutable`; and
 - access capability: `writable`.
 
-Each default may be changed for an applicable source context. Exact directive
-syntax, lexical scope, stacking, and precedence between future default sources
-belong to compiler-directive design.
+These defaults are the same everywhere. No directive or source context changes
+them, so a declaration copied from one module into another means exactly the
+same thing. A project that wants every qualifier spelled out may enforce that
+with a lint, which never changes meaning.
 
 Qualifiers resolve independently at every applicable layer:
 
 1. preserve inherent or inherited qualifications supplied by the source,
    referent, or resolved type;
 2. apply explicit qualifications at their stated layers;
-3. apply contextual defaults only to still-unresolved axes; and
+3. apply the defaults only to still-unresolved axes; and
 4. diagnose contradictions in the resulting combination.
 
 A default never overrides a qualification carried by the source:
@@ -1315,7 +1316,7 @@ Diagnostics should:
 - distinguish unavailable authority from a conflicting qualification;
 - reject duplicate qualifier tokens at one syntactic point;
 - reject a declaration-side stance that would exceed the underlying capability;
-- report contradictions where contextual defaults become concrete;
+- report contradictions where defaults become concrete;
 - explain required and available receiver-operand qualifications when no
   candidate is viable; and
 - distinguish an unsafe bypass from ordinary promise strengthening;
@@ -1333,7 +1334,6 @@ The qualifier model makes useful promises visible, but those promises have
 costs:
 
 - additional indirection levels require additional qualification decisions;
-- configurable defaults make omitted source context-dependent;
 - deep immutable construction may require copying, exclusive authority, or
   specialized construction;
 - readonly aliases do not prevent mutation through other paths;

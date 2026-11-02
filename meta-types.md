@@ -17,10 +17,10 @@
 > families below are **not** current design. They are preserved as future input in
 > [raw type-parameter and generic input](project/raw/type-parameters-and-generics.md).
 >
-> Compile-time type behavior is preserved in
-> [raw compile-time execution input](project/raw/compile-time-execution.md), and
-> type metadata and identity questions in
-> [raw reflection input](project/raw/reflection.md).
+> General compile-time execution is defined by
+> [Zax compile-time code](language/compile-time-code.md); compile-time type
+> computation remains generic input, and type metadata and identity questions
+> are preserved in [raw reflection input](project/raw/reflection.md).
 >
 > This note routes those concerns without rewriting the complete legacy syntax
 > below.

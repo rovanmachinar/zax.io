@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing ordinary, prefixed, merged, and joined literal source; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Literal taxonomy; ordinary decimal real source and default; attached literal phrases and payloads; source merge `<\|>`; compile-time literal join `<+>`; final unbound literal declarations and borrowed payloads; qualification, lookup, exact aliases, and forwarding; generic uncommitted result specialization; first-class and extended radix catalogs; binary-power exponents; type-qualified raw scalar patterns; literal diagnostics, costs, and source stability |
-| Does Not Own | Uncommitted integer operations and realization ([integer literals and realization](integer-literals.md)); concrete [fixed-point](fixed-point-scalars.md) or [floating-point](floating-point-scalars.md) realization; string and character identities ([strings and characters](strings-and-characters.md)); general operator selection ([operators](operators.md)); complete source layout ([source structure](source-structure.md)); complete generics or compile-time execution; or runtime string libraries |
+| Does Not Own | Uncommitted integer operations and realization ([integer literals and realization](integer-literals.md)); concrete [fixed-point](fixed-point-scalars.md) or [floating-point](floating-point-scalars.md) realization; string and character identities ([strings and characters](strings-and-characters.md)); general operator selection ([operators](operators.md)); complete source layout ([source structure](source-structure.md)); the general compile-time model ([compile-time code](compile-time-code.md)); complete generics; or runtime string libraries |
 | Source / Provenance | Legacy literal, casting, alias, and forward-declaration material refined against current source, scalar, declaration, invocation, operator, and namespace/module design |
 
 ## Start with the value each form produces
@@ -724,27 +724,52 @@ Complete format-specific availability and value behavior remains with the
 ## Required compile-time execution
 
 Literal operators and literal-result joins must complete during compilation.
+A literal body is ordinary
+[compile-time code](compile-time-code.md): it runs on the build machine, the
+same way a `compile` expression does, and its result crosses into the program
+as a constant.
+
+```zax
+MyColor :: type {
+  operator literal 'rgb' final : (result : MyColor)(
+    payload : String immutable readonly final &
+  ) unbound = {
+    // Runs while compiling. Integer here is the build machine's Integer.
+  }
+}
+
+myAccent := MyColor.rgb'#3366CC'   // a constant in the program; no parsing at runtime
+```
+
+Because the body runs on the build machine, environment-relative types inside
+it use the build machine's definitions. A result whose type's definition
+differs in the target is converted when it crosses, with the range checks
+described by
+[compile-time code](compile-time-code.md#values-crossing-into-the-program). A
+literal whose result must not depend on the build machine computes with exact
+types, such as `U32`, or with explicit target types, such as `Target.Integer`.
+
 The local guarantee is:
 
-- evaluation uses the enclosing active execution context;
-- target-context source uses target type/profile facts;
-- compiler-host facts require an explicit compiler-host context;
-- source decoding and numeric parsing are independent of host locale;
-- results depend only on payload, declaration, explicit static inputs, selected
-  environment/profile, and versioned language/library data;
-- mutable compile-time state cannot make identical literal evaluations
-  source-order dependent;
-- temporary compiler allocation cannot leak into the result;
+- source decoding and numeric parsing are independent of the build machine's
+  locale;
+- results depend only on the payload, the declaration, explicit compile-time
+  inputs, the definitions of the environments the body uses, compile-time state
+  the body reads, and versioned language and library data;
+- a literal body may read and write compile-time state; such evaluations
+  happen in source order, as described by
+  [compile-time code](compile-time-code.md#compile-time-writes-and-order);
+- temporary compile-time allocation cannot leak into the result;
 - deliberate literal rejection and language panic become source diagnostics;
 - resource exhaustion is a compiler diagnostic rather than another candidate;
   and
-- a selected compile-time-unavailable join does not retry a runtime or weaker
-  overload.
+- a selected join that cannot run at compile time does not retry a runtime or
+  weaker overload.
 
-Exact capability syntax, rejection APIs, scheduling, sandboxing, caching,
-filesystem/network access, recursion, and resource budgets remain future
-compile-time design. `final` and `unbound` describe declaration storage and
-receiver shape; required compile-time execution comes from the literal category.
+Exact rejection APIs, sandboxing, caching, and filesystem or network access
+remain future compile-time design. `final` and `unbound` describe declaration
+storage and receiver shape; required compile-time execution comes from the
+literal category.
 
 ## Costs and diagnostics
 
@@ -802,7 +827,7 @@ Compatibility events include changing:
 This document is current conceptual design, not formal grammar, generic syntax,
 a compile-time execution specification, or an implementation mapping.
 
-Still future are complete generics/type factories, compile-time APIs and
+Still future are complete generics/type factories, compile-time sandboxing and
 capabilities, exact export/private compiler-directive syntax, runtime joining,
 code-page data, complete source-reflection representation, and exact diagnostic
 identifiers.

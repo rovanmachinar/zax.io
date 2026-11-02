@@ -643,7 +643,9 @@ Both settings:
 - retain diagnostics for compile-time-known violations; and
 - do not affect optional, wrapping, saturating, reporting, or narrowing forms.
 
-Exact option/directive syntax remains future analysis-control work.
+Source-level panic controls are described by
+[safety and analysis](safety-and-analysis.md#controlling-panic-checks); exact
+build-option syntax and category names remain future analysis-control work.
 
 ## Costs and diagnostics
 

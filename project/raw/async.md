@@ -288,6 +288,17 @@ Cross-thread preparation might:
 
 This example demonstrates why no one current stance is universally sufficient.
 
+## Synchronous and asynchronous directive pressure
+
+The root legacy compiler-directive page keeps the `synchronous` and
+`asynchronous` directive sections as deferred input. They mark a `promise`,
+`task`, or `channel` function as single-thread-only, or an ordinary function as
+thread-aware, which changes whether pass-by-value arguments are expected to be
+`deep`. Async work must decide whether these remain directives, which
+[directive kind](../../language/compiler-directives.md#what-a-directive-may-promise)
+they are, and what promise `synchronous` makes when the function is in fact
+used from another thread.
+
 ## Activation and retirement
 
 Activate this input before promoting async documentation, defining the

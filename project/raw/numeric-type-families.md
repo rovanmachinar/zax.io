@@ -328,6 +328,29 @@ validation, optional and unsafe adoption, and canonicalization without
 reopening those semantic distinctions. Ordinary floating bitwise operators
 remain unavailable.
 
+## Exact uncommitted real evaluation limits
+
+[Literal source](../../language/literal-source-and-operators.md#ordinary-numeric-source)
+evaluates the uncommitted real operation family as exact finite rationals and
+rounds once at commitment; exceeding the compiler's practical capacity is a
+resource diagnostic, never hidden rounding. That compiler-arithmetic limit is
+distinct from user compile-time code, which has no language time limit.
+
+Future work must decide:
+
+- practical capacity guarantees programmers can rely on;
+- resource diagnostics that do not depend on one compiler's algorithm;
+- caching of exact evaluations; and
+- how a programmer establishes an earlier concrete boundary to control cost,
+  for example by committing to a concrete type before a long chain of
+  operations.
+
+It must preserve exact grouping, sign, `+`, `-`, `*`, rational `/`, equality,
+and ordering; zero-divisor diagnostics; exact scaled source without expanding
+repeating decimals; destination-aware algorithms only when they prove the same
+correctly rounded result; and a required concrete commitment before square
+root, transcendental, or representation-dependent operations.
+
 ## Activation and retirement
 
 Activate this input for custom/unbounded numeric types, generic numeric

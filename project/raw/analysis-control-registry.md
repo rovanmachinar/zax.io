@@ -25,10 +25,11 @@ by
 `intent<...>` confirms defined but suspicious behavior; it supplies no unsafe
 fact and disables no runtime check. Do not duplicate its categories here.
 
-The root
-[legacy compiler-directive page](../../compiler-directives.md#panic-registry-and-meanings)
-contains historical panic names. They are evidence to disposition by value, not
-the current registry and not authority for syntax or behavior.
+The root legacy compiler-directive page formerly contained historical panic
+names; they and their legacy meanings are preserved below under
+[legacy panic identifiers](#legacy-panic-identifiers-requiring-disposition).
+They are evidence to disposition by value, not the current registry and not
+authority for syntax or behavior.
 
 ## Registry maturity
 
@@ -130,6 +131,8 @@ reporting form.
 
 | Identifier | Maturity | Checked condition | Domain and disabled-check promise |
 | --- | --- | --- | --- |
+| `never-path-reached` | Accepted domain entry | A `[<never>]` branch, case, or point is reached | [Core flow control](../../language/core-flow-control.md#branch-hints-and-path-promises) and [switch](../../language/switch.md#case-hints-and-promises). Enabled by default; disabling promises the path is unreachable. |
+| `always-path-missed` | Accepted domain entry | An `[<always>]` branch or case is not the one taken | [Core flow control](../../language/core-flow-control.md#branch-hints-and-path-promises) and [switch](../../language/switch.md#case-hints-and-promises). Enabled by default; disabling promises the marked path is always taken. |
 | `inactive-variant-access` | Accepted domain entry | Direct access names a variant alternative that is not active because another name or absence is current | [Zax variants](../../language/variants.md#presence-and-named-access-answer-different-questions) and [safety and analysis](../../language/safety-and-analysis.md#checked-variant-access). Enabled by default; disabling promises the requested alternative is active and does not apply to `.=` or a case-routed binding. |
 
 ### Unassigned required panic categories
@@ -170,17 +173,26 @@ Allocation, arithmetic, and zero-divisor contract pressure is preserved by
 
 ### Legacy panic identifiers requiring disposition
 
-The legacy compiler-directive registry contains these names:
+The legacy compiler-directive registry contained these names, with the legacy
+default state in parentheses and its legacy meaning:
 
-- `out-of-memory`;
-- `intrinsic-type-cast-overflow`;
-- `string-conversion-contains-illegal-sequence`;
-- `not-all-pointers-destructed-during-allocator-cleanup`;
-- `impossible-switch-value`;
-- `impossible-if-value`;
-- `impossible-code-flow`;
-- `lazy-already-complete`; and
-- `value-polymorphic-function-not-found`.
+- `out-of-memory` (enabled): memory was requested but insufficient memory
+  existed; allocation failure normally panicked rather than returning a vacant
+  pointer;
+- `intrinsic-type-cast-overflow` (enabled): an intrinsic value overflowed during
+  `as` to a type with fewer bits;
+- `string-conversion-contains-illegal-sequence` (enabled): a string literal
+  conversion found an illegal character sequence;
+- `not-all-pointers-destructed-during-allocator-cleanup`: allocator cleanup ran
+  while instances it allocated were not all destructed;
+- `impossible-switch-value`, `impossible-if-value`, and `impossible-code-flow`
+  (enabled): a value or path marked impossible by `[<never>]` or `[<always>]`
+  occurred. **Superseded** by `never-path-reached` and `always-path-missed`
+  below;
+- `lazy-already-complete` (enabled): a `lazy` function was called after its
+  final `return`; and
+- `value-polymorphic-function-not-found` (enabled): a value-polymorphic
+  function was called but none of its precondition checks succeeded.
 
 None is promoted by appearing here. Future analysis-control work must compare
 each name and behavior with current allocation, scalar, string, pointer, flow,

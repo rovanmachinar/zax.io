@@ -228,6 +228,10 @@ In an unsafe union, source that interprets those overlapping bits through a
 restricted lens needs proof or explicit unsafe responsibility. The language
 does not promise that ignored bits remain stable after another write.
 
+Bytes added to an ordinary type with `[<reserve=n>]` follow the same rule: they
+carry no value. See
+[explicit member layout](type-definitions.md#explicit-member-layout).
+
 ## Plain and unsafe unions
 
 ### Plain union

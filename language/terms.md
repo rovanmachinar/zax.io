@@ -279,15 +279,16 @@ A **compiler-directive enclosure** uses contiguous `[<` and `>]` delimiters to
 attach recognized compiler metadata:
 
 ```zax
-// Illustrative directive name; exact directive catalog remains future work.
-[<likely>] if condition {
+if condition [<likely>] {
   handleExpectedCase()
 }
 ```
 
 The enclosure is not an array expression, lambda capture, or grouping.
 Contiguous `[[ ... ]]` belongs to lambda capture. See
-[Zax source structure](source-structure.md#compiler-directive-enclosure).
+[Zax source structure](source-structure.md#compiler-directive-enclosure). What a
+directive is, where it attaches, and which directives exist are described by
+[Zax compiler directives](compiler-directives.md).
 
 ## Commitment boundary
 
@@ -334,6 +335,28 @@ The **compiler host** is the environment running the compiler and applicable
 build-time code. It is distinct from the generated target even when both happen
 to use the same CPU model or representation. See
 [Zax integers](integers.md#native-representation-and-software-emulation).
+
+## Compile point
+
+A **compile point** is a `compile` expression or `compile{...}` block. It runs
+once, when the compiler compiles the place where it is written, whether or not
+the running program ever reaches that place. Only compile points in discarded
+compile-time branches or inside a `wellformed{...}` check never run:
+
+```zax
+myTableSize := compile cubed(4)   // runs while compiling; the program holds 64
+```
+
+See [Zax compile-time code](compile-time-code.md#when-compile-points-run).
+
+## Compile-time value
+
+A **compile-time value** is a value known while compiling: a literal, an
+expression built only from compile-time values, a compile point's result, the
+result of a `compile` or constant-argument `folding` call, a compile-time query
+such as `size of`, or a `final` binding initialized from one. `is
+constant` answers by this rule, never by what the optimizer did. See
+[Zax compile-time code](compile-time-code.md#compile-time-values).
 
 ## Circumfix operator
 
@@ -468,6 +491,15 @@ attachment, or physical-line position contradicts the parsed source structure.
 The remedy is to correct presentation or explicit structure. It does not require
 a keyword-neutral or confusable-form escape.
 
+## Directive range
+
+A **directive range** is the stretch of source after an unattached state marker
+such as `[<deprecate=always>]`. The state lasts until a later marker for the
+same directive changes it, the closing brace of the opening it is in, or the end
+of its file, and it never crosses an `import`. Only `deprecate`, panic controls,
+and `export` have ranges. See
+[Zax compiler directives](compiler-directives.md#directive-ranges).
+
 ## Direct storage
 
 **Direct storage** means that a value occupies the storage place declared for
@@ -522,6 +554,15 @@ the selected scalar type. Compiler capacity failure is distinct from hidden
 rounding in a compiler-host float. See
 [literal source and operators](literal-source-and-operators.md#ordinary-numeric-source).
 
+## Execution policy
+
+An **execution policy** is a function's declared answer to "when may I run?":
+`auto` (the default: at runtime, with invisible pre-computation allowed),
+`runtime`, `folding` (at compile time whenever every argument is a
+compile-time value), or `compile` (always at compile time). It is written as
+`[<execute=...>]` after `final` and is part of the visible prototype. See
+[Zax compile-time code](compile-time-code.md#letting-a-function-decide-execution-policies).
+
 ## First construction
 
 **First construction** is `.=` applied to a place that is declared but still
@@ -561,6 +602,14 @@ each call runs every fulfillment; if no partial fulfills a role, the compiler
 removes the call. It is the only route by which a type's own code reaches its
 partials. See
 [Zax partials](partials.md#hooks).
+
+## Host world
+
+The **host world** is the copy of a program that runs on the build machine
+while compiling. It has its own globals, its own `___`, and its own memory,
+separate from the target program's. It affects the target program only through
+the plain values its compile-time work produces. See
+[Zax compile-time code](compile-time-code.md#two-programs-from-one-source).
 
 ## Indirection level
 
@@ -782,6 +831,14 @@ When the target lacks the needed trap, Zax does not insert universal software
 checks and an access relying on that trap has undefined behavior.
 
 See [Zax Nothing instances](nothing-instances.md).
+
+## Observable effect
+
+An **observable effect** is anything a computation does that is visible outside
+it: output, file or device access, reading the clock, or changing state that
+outlives the call. Work with no observable effect may be pre-computed under the
+`auto` execution policy without changing the program's meaning. See
+[Zax compile-time code](compile-time-code.md#auto-stays-invisible).
 
 ## Opaque owner and observers
 
@@ -1034,6 +1091,23 @@ car.engine.rpm // physical path to the same Integer
 Both paths reach the same place and therefore the same resident instance,
 lifetime, and qualifications. See
 [Zax composition](composition.md#publishing-stored-data-with-own).
+
+## Outward declaration
+
+An **outward declaration** is a declaration marked `outward` inside a branch,
+which belongs to the scope around the nearest enclosing `if`, `switch`, or
+`scope` instead of to the branch. Every path that reaches later code must
+declare it exactly once:
+
+```zax
+if useLarge {
+  limit outward final : Integer = 1000
+} else {
+  limit outward final : Integer = 10
+}
+```
+
+See [Zax declarations and bindings](declarations-and-bindings.md#outward-declarations).
 
 ## Outer cast
 
@@ -1530,6 +1604,20 @@ an opaque but potentially valid raw relationship. Managed pointers and
 guaranteed leaks reject it even under `unsafe`.
 
 See [Zax pointers and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
+
+## Well-formedness check
+
+A **well-formedness check**, `wellformed{...}`, is a compile-time `Boolean`
+answering whether the enclosed source would form valid code at that point. The
+payload is checked but never run:
+
+```zax
+if wellformed{ ++myValue } {
+  scaleUp(myValue)
+}
+```
+
+See [Zax compile-time code](compile-time-code.md#checking-whether-code-is-well-formed-wellformed).
 
 ## Visibility grant
 

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | The cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -72,8 +72,10 @@ Their:
 - names and labels;
 - types and qualifications;
 - transfer stances;
-- input defaults; and
-- result-acknowledgement policy
+- input defaults;
+- result-acknowledgement policy; and
+- [execution policy](compile-time-code.md#letting-a-function-decide-execution-policies),
+  which says whether calls may or must run while compiling
 
 affect how callers can use the callable.
 
@@ -293,6 +295,42 @@ Exact default timing across a flattened mixfix, variadics, result forwarding,
 lambda/generated callable types, construction-like call syntax, and indexing
 details remain future integration. Complete tree behavior is defined by
 [mixfix operators](mixfix-operators.md#call-index-and-splice-components).
+
+### Inlining hints
+
+A call normally jumps to the function's code and returns. Inlining instead
+copies a function's body into each caller, which avoids the call overhead and
+can enable further optimization, at the price of larger code. A compiler
+decides this by itself, and a `final` function may express a preference with
+`[<inline>]` in the slot after `final`:
+
+```zax
+smallHelper final [<inline>] : (result : Integer)(value : Integer) = {
+  return value + 1
+}
+
+hotPath final [<inline=always>] : ()() = {
+}
+
+coldPath final [<inline=never>] : ()() = {
+}
+```
+
+| Form | Meaning |
+| --- | --- |
+| no directive | `maybe`: the compiler decides |
+| `[<inline>]` | `likely`: prefer inlining |
+| `[<inline=unlikely>]` | prefer an ordinary call |
+| `[<inline=always>]` | inline wherever possible |
+| `[<inline=never>]` | keep every call an ordinary call |
+
+Every level is a [hint](compiler-directives.md#what-a-directive-may-promise):
+inlining never changes what a call does, and it is never an error when inlining
+is impossible. `never` can always be honored, because a call can always remain
+a call, so compilers honor it. `always` is the strongest request: a recursive function or a call
+through a function value cannot always be inlined, and the compiler does what
+it can, for example by inlining a local recursive helper per use. Variables
+declared in an inlined body stay private to it, exactly as in an ordinary call.
 
 ## Parameters, arguments, and type arguments
 
@@ -886,6 +924,23 @@ The positional form is:
 ```zax
 connect(host, : :, true)
 ```
+
+### The caller's source location as a default
+
+Because a default is caller-side setup, a default argument can report where the
+call was written. `Compilation.caller` is valid only as a default argument, and
+gives the call site's location:
+
+```zax
+trace final : ()(where : SourceLocation = Compilation.caller) = {
+  print(where.file.path, where.line)
+}
+
+trace()   // reports this line, not a line inside trace
+```
+
+The [`Compilation`](compile-time-code.md#compilation-information) namespace
+describes `SourceLocation` and the other compile-time facts.
 
 ## Visible defaults and compatible implementations
 

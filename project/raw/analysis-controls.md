@@ -436,6 +436,14 @@ metadata must expose the effective enabled/disabled state of each category.
 The centralized provisional inventory is the
 [raw analysis-control registry](analysis-control-registry.md#panic-category-inventory).
 
+Source-level panic-control attachment is now current design in
+[safety and analysis](../../language/safety-and-analysis.md#controlling-panic-checks):
+attached and range directives that name one category each, no wildcard disable,
+no crossing of `import`, and a build-configured starting state that source
+refines. Remaining future work is the category names, the build-option syntax
+that sets a module's starting state, and how tooling reports the effective
+state.
+
 Current [arrays and slices](../../language/arrays-and-slices.md) require
 provisional registry entries for:
 
@@ -628,7 +636,8 @@ function value into one universal state.
 This file does not establish:
 
 - angle-bracket syntax;
-- block, statement, expression, annotation, or directive form;
+- block, statement, expression, annotation, or directive form for unsafe
+  assertions and permissions (panic-check controls are current directives);
 - the final category names;
 - which analyses are mandatory in each contract;
 - language-version syntax;
