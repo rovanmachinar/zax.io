@@ -5,9 +5,9 @@
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work extending generics into aliases, qualifier families, numeric factories, protocol constraints, or generated type families |
 | Applies To | Generic questions that remain open after the generic foundation became current design |
-| Owns | Preserved questions on generic aliases and forwards, alias and qualified type-identity discovery, qualifier-parameterized families, generic protected numeric conversion, Nothing policy per specialization, intrinsic numeric families and factories, relational pairs, associated-type facilities, fixed and floating specialization details, bounded size probing requirements, protocol and allocation-policy constraints, string terminator policies, whole-type contracts, generic enums and partials, an exact-type specialization form, and their activation and retirement |
-| Does Not Own | Current generic behavior ([Zax generics](../../language/generics.md)) or current declaration, scalar, type, and iteration behavior |
-| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type-qualified discovery, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, work item `020` composition constraints, work item `034` partial deferrals, and work item `036`, which promoted the generic foundation |
+| Owns | Preserved questions on generic aliases and forwards, alias and qualified type-identity discovery, qualifier-parameterized families, generic protected numeric conversion, Nothing policy per specialization, intrinsic numeric families and factories, relational pairs, associated-type facilities, fixed and floating specialization details, bounded size probing requirements, protocol and allocation-policy constraints, string terminator policies, whole-type contracts, generic enums and partials, an exact-type specialization form, variadic generic pressure (tuple-like types over a pack, folding across mixed packs, compile-time iteration over pack indexes), and their activation and retirement |
+| Does Not Own | Current generic behavior ([Zax generics](../../language/generics.md)), the current pack model ([Zax variadics](../../language/variadics.md)), or current declaration, scalar, type, and iteration behavior |
+| Source / Provenance | Legacy `meta-types.md` and `meta-functions.md` evidence together with operator-phrase review of type parameters and type-qualified discovery, work item `012` optional-depth substitution pressure, work item `015` allocation-policy pressure, work item `020` composition constraints, work item `034` partial deferrals, work item `036`, which promoted the generic foundation, and work item `037` variadic deferrals |
 
 ## Why this input exists
 
@@ -524,6 +524,120 @@ ambiguous today. Candidate spelling considered: `UseType : type == Boolean`,
 with the risk that a one-character slip to `= Boolean` silently becomes a
 default.
 
+## Variadic generic pressure
+
+[Zax variadics](../../language/variadics.md) is current design. A pack is a
+group of separately bound parameters with a compile-time count. A prototype may
+declare several packs, each after the first starting at its label, and each
+pack is used on its own: no form walks two packs together. Two extensions of
+that model remain open. Each needs concrete library pressure before design
+starts. A compile-time index loop, which several of these would use, is
+recorded last.
+
+### Tuple-like generic types with a member per pack element
+
+**Why it matters.** A library may need one heterogeneous value: several
+arguments kept together, returned as one result, or stored for later, with one
+typed member per item. Today a pack cannot be that value:
+
+```zax
+remember$ final : (Items ... : type)()(items ... : Items) = {
+  saved := items             // error: a pack is not a value
+}
+```
+
+The current way to keep a pack for later is a lambda capture, whose generated
+receiver has one member per captured item:
+
+```zax
+deliverAll$ final : (Items ... : type)()(items ... : Items) = {
+}
+
+deferDelivery$ final : (Items ... : type)(callback : ()() bound unique)(items ... : Items) = {
+  return [[ items ]] ()() bound unique {
+    deliverAll(from items as copy)
+  }
+}
+```
+
+A type with one stored member per element would need a member form that
+current type bodies lack:
+
+```zax
+// Illustrative only: a member pack inside a type body is not established.
+MyRecord$(Fields ... : type) :: type {
+  fields ... : Fields
+}
+```
+
+Future work must decide how such members are declared, named or indexed,
+constructed, compared, laid out, and reflected, and how the type relates to
+result packs and structural shapes.
+
+**Activates when** a library needs a heterogeneous value rather than a pack of
+separate bindings.
+
+**Constraint on current design.** Packs never silently become such a value.
+Building a structure from a pack is not viable without names for its items, and
+several results never become a tuple. A result pack cannot become a member of
+a value made with `-<`.
+
+### Folding across a mixed pack
+
+**Why it matters.** Accumulating items of different numeric types needs an
+accumulator whose type can follow the items. Today an `each` body is checked
+once per item type, but a local declared before the loop keeps one type:
+
+```zax
+isNumeric final : (result : Boolean)(UseType : type) = {
+}
+
+addAll$ final : (Items ... : isNumeric)(result : Integer)(items ... : Items) = {
+  total : Integer = 0
+  each item : in items {
+    total += item            // checked for each item's type; total stays Integer
+  }
+  return total
+}
+```
+
+Future work must decide whether a fold form, a per-step result type, or a
+library facility expresses accumulation whose type changes from item to item.
+
+**Activates when** accumulating mixed numeric types becomes a concrete need.
+
+**Constraint on current design.** None.
+
+### Compile-time iteration over indexes
+
+**Why it matters.** A pack can be walked item by item with `each`, and one
+item can be selected with a compile-time index, but no form loops over
+compile-time indexes. Code that needs to visit items by computed position,
+such as every second item or two items at a time, can only do it for a fixed
+count:
+
+```zax
+link$ final : (Left : type, Right : type)()(left : Left, right : Right) = {
+}
+
+pairFour$ final : (Items ... : type)()(items ... : Items)
+  requires Items count == 4 = {
+  link(items[0] as copy, items[1] as copy)
+  link(items[2] as copy, items[3] as copy)
+}
+// no general form walks items two at a time for any even count
+```
+
+A compile-time loop would also help with folding (above). Walking two packs
+together in step is deliberately not supported, and a compile-time index loop
+over one pack is a different facility.
+
+**Activates when** library code needs to visit pack items by computed position,
+or compile-time code needs a loop whose body is checked per index.
+
+**Constraint on current design.** Packs are walked with `each` or indexed by a
+constant. Two packs are never walked together.
+
 ## Constraints this input places on current work
 
 Optional wrapper composition adds a resolved-type intent requirement:
@@ -567,7 +681,10 @@ families, alias or qualified type-identity discovery, numeric factories,
 relational pairs, associated-type facilities, intrinsic fixed or floating
 specialization details, bounded size probing, protocol or allocation-policy
 constraints, whole-type contracts, string terminator policies, generic enums or
-partials, or an exact-type specialization form is reviewed. Move accepted
-behavior into [Zax generics](../../language/generics.md) and the declaration,
-numeric, iteration, allocation, string, and reflection owners, then retire this
-file after every preserved question is dispositioned.
+partials, an exact-type specialization form, a heterogeneous value over a pack,
+accumulation across mixed pack items, or compile-time iteration over pack
+indexes is reviewed. Move
+accepted behavior into [Zax generics](../../language/generics.md),
+[Zax variadics](../../language/variadics.md), and the declaration, numeric,
+iteration, allocation, string, and reflection owners, then retire this file
+after every preserved question is dispositioned.

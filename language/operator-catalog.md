@@ -6,7 +6,7 @@
 | Audience | Human developers and tooling looking up recognized operator source forms |
 | Applies To | Exact forms, fixity, precedence, association, reservation, and domain routing; not type-specific result semantics or a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, complete and wrapper-owned reconstruction `.=` forms, callable binding-kind and composition/chaining forms, opaque type probe/transfer, strong-count and allocation-root queries, cursor protocol, array capacity queries, iterable count, outer-cast and `inner` forms, `unsafe cast` source roles, and pointer-to-integer conversion; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; protected-form classification; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
+| Owns | The closed symbolic and circumfix catalogs; exact language-defined phrase forms, including transfer-stance restatement, protected presence/reset/liveness, complete and wrapper-owned reconstruction `.=` forms, callable binding-kind and composition/chaining forms, opaque type probe/transfer, strong-count and allocation-root queries, cursor protocol, array capacity queries, iterable and variadic pack count, outer-cast and `inner` forms, `unsafe cast` source roles, and pointer-to-integer conversion; implicit literal-source adjacency, explicit merge `<\|>`, value join `<+>`, and array compound join `<+>=`; array range/splice components; reserved allocation-initializer tokens; precedence and association; protected-form classification; compact protected-domain availability; generated immediate-underlying and enum forms; call/index/splice recognition; and deferred/unavailable forms |
 | Does Not Own | Complete transfer semantics ([transfer stances](transfer-stances.md)); shared operator/callable selection ([operators](operators.md), [function invocation](function-invocation.md)); phrase use and presentation ([operator phrases](operator-phrases.md)); literal declarations, payloads, merge, and required compile-time execution ([literal source and operators](literal-source-and-operators.md)); string/character join domains ([strings and characters](strings-and-characters.md)); complete [iteration and cursor behavior](iteration.md); uncommitted integer behavior ([integer literals and realization](integer-literals.md)); or cohesive type-specific behavior such as [structural shapes and compatibility](structural-shapes-and-compatibility.md), [composition](composition.md), [optional values](optional-values.md), [integer operations](integer-operator-catalog.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md), [identity types](identity-types.md), [enums](enums.md), and [endianness](endianness.md) |
 | Source / Provenance | Legacy [basics](../basics.md) operator evidence, refined against current operator, phrase, mixfix, integer, identity, and endian design |
 
@@ -150,6 +150,24 @@ myCombined := myCustomLeft + myCustomRight
 
 Several results do not become an implicit tuple or anonymous structure. Shared
 result routing belongs to [Zax function invocation](function-invocation.md).
+
+A built-in operator's result label is
+[incidental](function-invocation.md#incidental-labels). A built-in result used
+as a call input therefore binds by position and never raises the single-result
+intent error, even next to a parameter named `result`:
+
+```zax
+record final : ()(total : Integer, result : Integer) = {
+}
+
+myLeft := 2
+myRight := 3
+myResult := 10
+record(myLeft + myRight, myResult)   // the sum fills total by position
+```
+
+A programmer-declared operator follows the labels and markings in its own
+declaration.
 
 ## Protected domains
 
@@ -501,6 +519,7 @@ The mapping-bound protected forms are:
 | --- | --- |
 | Decompose one source | `<destination mappings> >- <source>` |
 | Recompose results | `<destination> -< <producer>` |
+| Recompose results as an expression | `-< <producer>` (anonymous value) or `<type> -< <producer>` |
 | Update an existing destination | `<destination> -<>- <source>` |
 | Update through a reshape | `<destination> -<>- <reshape> -<>- <source>` |
 | Construct through automatic transformation | `<destination context> = -<>- <source>` |
@@ -513,7 +532,10 @@ Multiple-result routing keeps its ordinary final
 `-<>-`; it is never enabled for the complete result sequence.
 
 These forms receive their grouping from declaration, call, and result-mapping
-grammar rather than inventing ordinary arithmetic-expression precedence.
+grammar rather than from ordinary arithmetic-expression precedence. The one
+expression form, a leading `-< <producer>`, applies to the invocation that
+follows it and has greater precedence than `|>`, as the chaining forms below
+show.
 
 Complete semantics, visual mnemonic, costs, and failures belong to
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md).
@@ -651,6 +673,32 @@ composition mapping form. `|>` is the protected immediate chaining form at the
 same level. Complete behavior belongs to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md).
 
+A postfix `reshape` attaches to the invocation just before it, as `catch` and
+`except` clauses do, and it binds more tightly than `|>`. In a chain, it
+therefore relabels the stage it is written on, never the chain so far:
+
+```zax
+produce final : (head : String, tail : String)() = {
+}
+
+consume final : ()(first : String, second : String) = {
+}
+
+SwapNames :: reshape {
+  head: second:
+  tail: first:
+}
+
+produce() reshape SwapNames |> consume()   // reshapes produce(), then chains
+```
+
+A leading `-<` also has greater precedence than `|>`, so `x |> -< produce()` is one
+stage: `x` is carried into `produce()`, and its results become one value before
+the chain continues.
+
+Retained `>|>` composition instead recognizes a reshape as its own middle
+component, as described above.
+
 `T? ?` is two optional type layers and requires the separating space. Compact
 `T??` contains the conditional-expression token. `[{}]` is the canonical
 zero-entry construction packet; neither form is an independently overloadable
@@ -756,6 +804,24 @@ The `count` operation is optional. A provided operation returns a concrete
 count and promises exact agreement with traversal. Array construction may use
 it for reservation; complete behavior is in
 [Zax arrays and slices](arrays-and-slices.md#iterable-contributions).
+
+The same post-unary `count` phrase also works on a variadic pack and on a
+variadic type parameter. The language provides it, rather than the pack or type
+parameter declaring it:
+
+| Use shape | Result |
+| --- | --- |
+| `<pack> count` | The number of items in the pack, as a compile-time `IndexSize` |
+| `<type pack> count` | The number of types in the pack, as a compile-time `IndexSize` |
+
+```zax
+average final : (result : Float)(values ... : Float)
+  requires values count >= 1 = {
+}
+```
+
+Here `average` uses the count in its `requires` clause to insist on at least
+one value. [Zax variadics](variadics.md#inside-the-body) covers packs in full.
 
 ## Array capacity forms
 

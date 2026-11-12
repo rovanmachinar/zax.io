@@ -230,7 +230,7 @@ proxy. The complete mixfix declares the result. Ordinary component results
 matter only when direct mixfix selection finds no applicable candidate and
 decomposition occurs.
 
-Named/default mapping, variadics, result forwarding, lambda-generated callable
+Named/default mapping, variadic call components, result forwarding, lambda-generated callable
 types, construction-like call syntax, non-array delimited forms, and exact
 default timing remain future invocation/indexing integration.
 

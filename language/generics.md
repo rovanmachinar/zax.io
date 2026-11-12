@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers writing or reading code that works over many types or compile-time values |
-| Applies To | Generic functions, operators, and types; compile-time parameters and inputs; supplying and working out compile-time arguments; instantiation and identity; constraints and `requires`; specialization; lookup inside generic bodies; extension across modules; consistency of choices; limits, costs, and diagnostics; not a formal grammar or a compiler architecture |
+| Applies To | Generic functions, operators, types, and lambdas; compile-time parameters and inputs, including variadic `$` parameters and pack counts; supplying and working out compile-time arguments; instantiation and identity; constraints and `requires`; specialization; lookup inside generic bodies; extension across modules; consistency of choices; limits, costs, and diagnostics; not a formal grammar or a compiler architecture |
 | Implementation State | Not established by this repository |
-| Owns | The two forms of generic; `$` lists and `$(...)` supply; `[<constant>]` inputs; per-input processing; filling compile-time parameters; types as compile-time values; instantiation identity; short-form constraints and `requires` clauses; specialization ranking; lookup inside generic bodies; open extension and program-wide agreement; instantiation formation and consistency; `[<instantiation-depth=...>]` |
-| Does Not Own | Compile-time execution, execution policies, and layout queries ([compile-time code](compile-time-code.md)); the structure of callable preference ([function invocation](function-invocation.md#candidate-selection)); alias and identity declarations ([declarations and bindings](declarations-and-bindings.md), [identity types](identity-types.md)); partials; reflection; the numeric families ([integers](integers.md)) |
+| Owns | The two forms of generic; `$` lists and `$(...)` supply; variadic `$` parameters and value packs; `[<constant>]` inputs; per-input processing, including per pack count; filling compile-time parameters; generic lambdas; types as compile-time values; instantiation identity, including pack identity; short-form constraints, every-element constraints, and `requires` clauses; specialization ranking; lookup inside generic bodies; open extension and program-wide agreement; instantiation formation and consistency; `[<instantiation-depth=...>]` |
+| Does Not Own | The pack model: walking, counting, indexing, expanding, and mapping packs ([variadics](variadics.md)); compile-time execution, execution policies, and layout queries ([compile-time code](compile-time-code.md)); the structure of callable preference ([function invocation](function-invocation.md#candidate-selection)); lambda capture and storage ([lambdas and callable composition](lambdas-and-callable-composition.md)); alias and identity declarations ([declarations and bindings](declarations-and-bindings.md), [identity types](identity-types.md)); partials; reflection; the numeric families ([integers](integers.md)) |
 | Source / Provenance | Legacy meta-function, meta-type, and compiler-directive input, reconciled with current compile-time, invocation, declaration, literal, and numeric design |
 
 ## Write it once, use it with many types
@@ -175,6 +175,107 @@ fives := fillArray$(5)(10)        // 5 Integer elements
 bytes := fillArray$(:, U8)(128)   // length keeps its default; 10 U8 elements
 ```
 
+### A variable number of compile-time parameters
+
+Some functions accept any number of arguments, each of its own type. A
+`print` that takes a string, a number, and a flag needs a type for each of
+them. A **variadic `$` parameter**, written with `...` after its name, holds
+that whole list of types:
+
+```zax
+print$ final : (Items ... : type)()(items ... : Items) = {
+  each item : in items {
+    write(item)                // checked once for each item's type
+  }
+}
+
+print("total:", 3, true)       // Items is String, Integer, Boolean
+print(7)                       // Items is Integer: a separate instantiation
+```
+
+`items ... : Items` declares a **pack**. Each argument gets its own separately
+bound parameter: the first has type `Items[0]`, the next `Items[1]`, and so on.
+
+The list of types is a compile-time input, and so is its length, which is the
+number of arguments. That is why `print("total:", 3, true)` and `print(7)` are
+different instantiations. Walking, counting, indexing, and passing a pack on
+are taught in [variadics](variadics.md#inside-the-body).
+
+You need a `$` parameter only when the element types must be named or
+supplied. If you state the element type, the pack needs no `$` list at all. If
+all the elements share one type that should be worked out, an ordinary `$`
+parameter is enough:
+
+| Element types | Declaration | Processed once per |
+| --- | --- | --- |
+| Stated | `sum final : (result : Integer)(values ... : Integer)` | Distinct count |
+| One shared, worked out | `largest$ final : (UseType : type)(result : UseType)(values ... : UseType)` | Distinct element type and count |
+| Each worked out separately | `print$ final : (Items ... : type)()(items ... : Items)` | Distinct list of types |
+
+The full declaration rules are in
+[declaring a variadic parameter](variadics.md#declaring-a-variadic-parameter).
+
+When the compiler works out the element types, it treats each element the way
+it treats a single parameter. Qualifiers and references stay, as described
+under [working out from arguments](#working-out-from-arguments):
+
+```zax
+myFlag : Boolean = true
+myView : Boolean & = myFlag
+
+print(myFlag, myView)          // Items is Boolean, Boolean &: the second item is a reference
+```
+
+The caller can also state the element types in `$(...)`. There, a variadic
+`$` parameter absorbs every positional argument from its position onward, so a
+`$` parameter declared after it can be reached only by label:
+
+```zax
+tagged$ final : (Items ... : type, Tag : type = String)()(
+  tag : Tag,
+  items ... : Items
+) = {
+}
+
+tagged("sizes", 3, 4)                         // Items is Integer, Integer; Tag worked out as String
+tagged$(Integer, Integer)("sizes", 3, 4)      // both stated types join Items
+tagged$(Integer, Integer, Tag: U8)(7, 3, 4)   // Tag stated by label
+```
+
+The same label rule lets a `$` list declare several variadic `$` parameters.
+Each one after the first is supplied by its label, which starts that list of
+types, and it keeps absorbing until the next label:
+
+```zax
+annotate$ final : (Notes ... : type, Values ... : type)()(
+  notes ... : Notes,
+  values ... : Values
+) = {
+}
+
+annotate$(Notes: String, String, Values: Integer, Float)("draft", "urgent", values: 1, 2.5)
+annotate("draft", "urgent", values: 1, 2.5)   // the same types, worked out from the arguments
+```
+
+When the types are worked out, the input packs' own labels separate the
+arguments.
+
+Those are the only two sources of element types: `$(...)` and the arguments.
+The expected result never supplies them. A call with no arguments for the pack
+makes the pack empty.
+
+A variadic `$` parameter may also hold compile-time values instead of types:
+
+```zax
+MyMask$(bits ... : Integer) :: type { }
+
+lowBits : MyMask$(1, 4, 9)
+noBits : MyMask$()             // an empty pack: a different type from lowBits
+```
+
+[Comparing arguments](#comparing-arguments) says when two value packs make the
+same type.
+
 ### Compile-time inputs in the ordinary input list
 
 A third kind of compile-time input is not a generic parameter, but it is
@@ -202,20 +303,45 @@ other := formatTime(userFormat, now()) // error: userFormat is a runtime value
 to keep the value stable inside the body; an `immutable` parameter also needs
 `final`, so that its value cannot be replaced in place.
 
+`[<constant>]` can also be written on a pack. Then every item must be a
+compile-time value, and the function is processed once per distinct list of
+values:
+
+```zax
+tags final : ()(names ... [<constant>] : String) = { }
+
+tags("alpha", "beta")   // processed once for this exact list
+```
+
+Mixing a single `[<constant>]` input with a runtime pack is covered in
+[compile-time values in packs](variadics.md#compile-time-values-in-packs).
+
 Examples on this page use `Compilation.error("message")` for a compiler error
 carrying the author's message; its exact spelling is listed under
 [boundaries and maturity](#boundaries-and-maturity).
 
 ### When code is processed once per input
 
-> A function with compile-time inputs (type arguments, `$` parameters, or
-> `[<constant>]` inputs) is processed once per distinct set of those inputs.
-> Every compile point in its body runs once per processing.
+> A function with compile-time inputs (type arguments, `$` parameters,
+> `[<constant>]` inputs, or the number of arguments in a pack) is processed
+> once per distinct set of those inputs. Every compile point in its body runs
+> once per processing.
 
 ```zax
 formatTime("%H:%M", now())   // one processing, for "%H:%M"
 formatTime("%Y", now())      // another, for "%Y"
 formatTime("%H:%M", later)   // reuses the first
+```
+
+The number of arguments in a pack counts as one of those inputs even when no
+`$` list names their types. Each new count is a new processing:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = { }
+
+first := sum(1, 2)       // one processing, for two values
+second := sum(4, 5, 6)   // another, for three
+third := sum(7, 8)       // reuses the first
 ```
 
 The rule counts inputs, not whether the body happens to use them. A compile
@@ -237,6 +363,65 @@ describeBuild final : ()() = {
 
 [Processing and compile points](#processing-and-compile-points) covers order,
 module instances, and host and target builds.
+
+### Generic lambdas
+
+A lambda stored under a name can be generic. This is useful when one small
+piece of local behavior, such as a helper that captures a prefix, must accept
+arguments of many types. As on a function, `$` goes on the name, and the
+lambda's first parenthesized list holds its compile-time parameters:
+
+```zax
+prefix := "> "
+
+show$ final := [[ prefix ]] (Items ... : type)()(items ... : Items) {
+  each item : in items {
+    write(prefix)
+    write(item)
+  }
+}
+
+show("a", 2, true)                 // worked out: show$(String, Integer, Boolean)
+show$(String, Integer)("a", 2)     // stated
+```
+
+Callers use the ordinary generic call forms.
+
+Only a named lambda can be generic. `$` marks a name because a generic is a
+family of instantiations reached through that name, as with `add$`, `MyPair$`,
+and `'*'$`. A lambda that is passed, returned, or invoked immediately has no
+name and is used in one place, so it has no family and no `$` list. Its types
+are concrete. They come from its destination's prototype, from types written
+directly, or from an enclosing generic's `$` parameters:
+
+```zax
+larger$ final : (UseType : type)(result : UseType)(first : UseType, second : UseType) = {
+  return ([[]] (result : UseType)(a : UseType, b : UseType) {
+    if a > b {
+      return a
+    }
+    return b
+  })(first, second)                // UseType comes from larger$
+}
+```
+
+A generic lambda's binding must be `final`, for the same reason that
+[generic functions are `final`](#generic-functions-are-final). The lambda's
+call operation is processed once per set of compile-time inputs, but a
+replaceable slot holds one fixed prototype. A declaration without a storage
+qualifier is `varying`, so you have to write `final`:
+
+```zax
+echo$ := [[]] (UseType : type)(result : UseType)(value : UseType) {   // error: a generic lambda needs final storage
+  return value
+}
+```
+
+Constraints and `requires` work on a generic lambda as they do on any generic.
+Specialization does not apply, because a single lambda expression has no other
+declarations to rank against. How a generic lambda captures and is stored is
+part of
+[lambdas and callable composition](lambdas-and-callable-composition.md#lambdas-with-packs).
 
 ## Supplying compile-time arguments
 
@@ -306,6 +491,25 @@ when the argument is a reference. A generic that always wants a value removes
 the reference explicitly; type reflection owns the operations that strip
 qualifiers, references, and pointers.
 
+The opposite case is a generic that always wants a reference. It writes `&`
+after the type parameter. That `&` matches the argument's own reference when
+the argument is one, and otherwise binds a reference to the argument's place.
+Either way the parameter is one reference, never a reference to a reference:
+
+```zax
+inspect$ final : (UseType : type)()(value : UseType readonly &) = {
+}
+
+myPointer : Boolean * = @
+
+inspect(myFlag)      // UseType is Boolean: value refers to myFlag
+inspect(myView)      // UseType is Boolean: the written & matches myView's reference
+inspect(myPointer)   // UseType is Boolean *: value is a readonly reference to the pointer
+```
+
+A pointer is an ordinary value here, so a written `&` adds a reference to it.
+Only an argument's existing reference is matched.
+
 The parameter's own declaration applies its qualifiers on top of the
 worked-out type, the way an alias overlays a pre-qualified type. A qualifier
 written more locally replaces an inherited one on the same axis, and omitted
@@ -354,6 +558,8 @@ use(parseValue(input))            // an enclosing call never supplies it: Intege
 This is the same narrow boundary that ordinary
 [expected-result selection](function-invocation.md#narrow-expected-result-selection)
 uses. An expected result never reaches through an enclosing call or operator.
+Nor does it ever fill a variadic `$` parameter. A pack's types and count come
+only from `$(...)` or from the arguments.
 
 ### Defaults
 
@@ -389,6 +595,10 @@ instantiation they choose:
 ```zax
 myAdd : (result : Integer)(value1 : Integer, value2 : Integer) = add
 ```
+
+A function with a pack must be `final` for the same reason, even when it has
+no `$` list. It is processed once per argument count, so it too would need a
+slot for every count in use.
 
 ## Generic types and other generic declarations
 
@@ -623,6 +833,18 @@ myFlags : MyBits$(MyFlag) = makeFlags()   // the same type, with the same layout
   Pointers, references, capturing lambdas, and unions are not allowed as value
   arguments. A pointer or reference cannot cross into the program, and a union
   has no defined active member to compare.
+- **Packs compare item by item.** Two packs are the same argument when they
+  have the same length and each item is the same under the rules above. An
+  empty pack is an argument too:
+
+  ```zax
+  MyMask$(bits ... : Integer) :: type { }
+
+  a : MyMask$(1, 4, 9)
+  b : MyMask$(1, 4, 9)   // same type as a
+  c : MyMask$(1, 4)      // a different type: a different length
+  d : MyMask$()          // a different type again
+  ```
 
 A programmer-defined `==` never decides identity, so no user code runs when the
 compiler looks up an instantiation. The comparison walks the same parts that
@@ -754,10 +976,45 @@ The short form always declares a type parameter. It reads as "a type that
 satisfies `isTemperature`". The constraint lists every destination the body
 can produce.
 
+### Every element of a pack
+
+A short-form constraint also works on a
+[variadic `$` parameter](#a-variable-number-of-compile-time-parameters). There
+it applies to each element type separately, and every one of them must satisfy
+it:
+
+```zax
+isScalar final : (result : Boolean)(UseType : type) = {
+  return UseType == Integer || UseType == Float || UseType == U8
+}
+
+total$ final : (Items ... : isScalar)(result : Integer)(items ... : Items) = { }
+
+myRatio : Float = 2.5
+myByte : U8 = 7
+
+mixed := total(1, myRatio, myByte)   // fine: every element is scalar
+wrong := total(1, "two")             // error: no viable total; the item at position 1, String, fails isScalar
+none := total()                      // fine: an empty pack has no element that fails
+```
+
+An empty pack has nothing to check, so it satisfies every every-element
+constraint. If a declaration needs at least one element, it adds a
+`requires` clause on the count, as the next section shows.
+
+When an element fails, the rejection names its type and its zero-based
+position, the same position that `Items[1]` uses:
+
+```text
+error: no viable `total` for total(1, "two")
+  candidate: total$(Items ... : isScalar)
+    rejected: the item at position 1 (the second item), String, fails isScalar
+```
+
 ### `requires` clauses
 
 A `requires` clause states any compile-time `Boolean` expression over the
-compile-time parameters. It can relate several parameters, check value
+compile-time inputs. It can relate several parameters, check value
 parameters, or compare directly:
 
 ```zax
@@ -800,8 +1057,8 @@ convert$ final : (
 The clause reaches as far as it can, to the `::` or `=` that ends it.
 
 **What it may use.** Only compile-time inputs: types, `$` values, type
-arguments, and `[<constant>]` inputs. It cannot use a runtime input, because it
-runs before any call:
+arguments, `[<constant>]` inputs, and pack counts. It cannot use a runtime
+input, because it runs before any call:
 
 ```zax
 clamp$ final : (UseType : type)(result : UseType)(
@@ -810,6 +1067,41 @@ clamp$ final : (UseType : type)(result : UseType)(
 ) requires limit > 0 = {   // error: limit is a runtime input
 }
 ```
+
+**Packs.** A clause can check a pack's count or the type at one position. To
+check the whole list of types at once, pass it to a compile-time function that
+takes a type pack. Each such call counts as one opaque term:
+
+```zax
+pair$ final : (Items ... : isScalar)()(items ... : Items)
+  requires Items count == 2 = { }
+
+labelled$ final : (Items ... : type)()(items ... : Items)
+  requires Items count >= 1 && isText(Items[0]) = { }
+
+allSameWidth final : (result : Boolean)(Types ... : type) = {
+  // walks Types with each, comparing the target size of each
+}
+
+packed$ final : (Items ... : type)()(items ... : Items)
+  requires allSameWidth(from Items) = { }
+```
+
+A pack's count is a compile-time input even when its element type is stated.
+So a declaration with no `$` list at all can still have a `requires` clause:
+
+```zax
+average final : (result : Float)(values ... : Float)
+  requires values count >= 1 = { }
+
+mean := average(1.0, 2.0)   // fine
+nothing := average()        // error: no viable average; values count >= 1 is false
+```
+
+`Items count` and `values count` are compile-time `IndexSize` values. An index
+such as the `0` in `Items[0]` must also be a compile-time value.
+[Inside the body](variadics.md#inside-the-body) explains counting and
+indexing.
 
 **Combining.** Short-form constraints and a `requires` clause combine with
 `&&`. Short forms are checked first, in parameter order, then the clause. The
@@ -962,7 +1254,10 @@ counts : MyBits$(U8)       // only the first is viable
 
 Each declaration's constraint is a set of **terms**. Each short-form constraint
 is one term, and each `&&`-separated part of a `requires` clause is one term. A
-part joined with `||`, or a negation, counts as one term.
+part joined with `||`, or a negation, counts as one term. An
+[every-element](#every-element-of-a-pack) short form is one term for the whole
+pack, however many elements it checks. Two different every-element checks on
+one pack are two different terms.
 
 > Declaration A beats declaration B when A has every term B has, written
 > identically and resolving to the same declarations, plus at least one more.
@@ -1032,6 +1327,24 @@ match quality first. Only between equally good matches does a non-generic
 candidate beat a generic one; then the term rule ranks generic declarations.
 Anything still tied is ambiguous. Adding a convenient non-generic overload
 therefore never captures calls that were exact matches for the generic.
+
+Being processed once per input does not by itself make a declaration generic.
+A function with a `[<constant>]` input is an ordinary non-generic candidate,
+and so is a function whose pack has a stated element type and no `$` list.
+Between equally good matches, such a function beats a generic one like any
+other non-generic candidate:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = { }
+sum$ final : (Items ... : isNumeric)(result : Integer)(items ... : Items) = { }
+
+plain := sum(1, 2)                      // both exact: the non-generic sum wins
+stated := sum$(Integer, Integer)(1, 2)  // only the generic is a candidate
+```
+
+Packs bring a few selection rules of their own, such as a fixed parameter
+beating one absorbed into a pack. Those are taught in
+[choosing between overloads](variadics.md#choosing-between-overloads).
 
 ### Specializations may differ in members
 
@@ -1270,7 +1583,8 @@ depth. Exceeding it is a diagnostic showing the growing chain.
 Programmers must be able to discover:
 
 - each distinct instantiation compiled, including one per qualification or
-  reference shape of a worked-out type;
+  reference shape of a worked-out type, and one per distinct pack count or
+  list of element types;
 - generated code added for each instantiation that is not merged;
 - compile-time work in constraints, `requires` clauses, defaults, and compile
   points in generic bodies, once per argument set or processing; and
@@ -1283,6 +1597,9 @@ Diagnostics should distinguish:
 
 - a candidate rejected by a constraint, naming the constraint and the
   arguments;
+- a candidate rejected by an every-element constraint, naming the failing
+  item's zero-based position and type;
+- a generic lambda whose binding is not `final`;
 - a candidate not viable because a shared parameter cannot be worked out to
   one type;
 - an error inside a generic body, with the instantiation chain;
@@ -1320,6 +1637,8 @@ Future work owns:
 
 - generic aliases for families and partial application, and generic forwards;
 - generic enums and generic partials;
+- tuple-like generic types with one member per pack element;
+- folding across a pack whose elements have different types;
 - explicit qualifier-parameterized families;
 - a standard set of protocol constraints, such as for cursors, arrays, and
   allocation policies, and any whole-type contract facility;

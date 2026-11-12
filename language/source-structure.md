@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing source structure; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation; switch clause-region, case-list, and case-post presentation; exceptional `catch`, forwarding `except`, and outcome-`reshape` clause attachment and layout; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition, postfix `_` keyword-role escape, and strict tree-transparent `bare{...}` neutralization; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
+| Owns | ASCII identifier character domain; statement-level newlines, explicit, construct-open, comma-list, and trailing-symbolic-infix continuation; effective statements and bodies; semicolon composition; comment and physical-line trivia retained through composition and layout validation; exact two-space structural indentation and physical-tab rejection; symbolic-operator whitespace and adjacency; longest recognized symbolic tokens; grouped separate unary applications; allocation-token/enclosure attachment; application of general tokenization/comment/continuation mechanics to operator phrases and their literal boundary; declaration-colon and mixfix-component-list continuation; the boundary between structural operands and expression continuation; `;;` and `??` separator whitespace; flow-header continuation and the explicit `\` alignment escape hatch; `each` header and named-binding presentation, including the `from each` mapping header; the variadic `...` declaration marker and its spacing; switch clause-region, case-list, and case-post presentation; exceptional `catch`, forwarding `except`, and outcome-`reshape` clause attachment and layout; brace layout, `else` attachment and layout, body boundaries and the empty-header-block intent error; contextual keyword recognition, postfix `_` keyword-role escape, and strict tree-transparent `bare{...}` neutralization; intent-acknowledgement enclosure boundaries; acknowledgeable/non-acknowledgeable intent-form distinction; mandatory layout validation; diagnostic categories; and comment forms and attachment |
 | Does Not Own | Declaration behavior ([declarations and bindings](declarations-and-bindings.md)); enum member-prologue grammar ([enums](enums.md)); allocation semantics ([pointers, allocation, and arenas](pointers-and-arenas.md)); integer realization ([integer literals and realization](integer-literals.md)); literal declarations, payload meaning, merge results, and joining ([literal source and operators](literal-source-and-operators.md)); string/character identities ([strings and characters](strings-and-characters.md)); flow semantics ([core flow control](core-flow-control.md)); exceptional result semantics ([exceptional result flow](except.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); or operator/phrase interpretation ([operators](operators.md), [operator phrases](operator-phrases.md)) |
 
 ## Mental model
@@ -259,6 +259,49 @@ This is one routing group whose producer is `makeResults()`. It is not a
 `kept .= makeResults()` expression nested inside the second entry. Group
 behavior is defined by
 [Zax function invocation](function-invocation.md#construct-existing-places-with-a-dot-equals-group).
+
+### The variadic `...` marker
+
+A variadic parameter writes `...` between its name and its colon:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = {
+}
+
+print$ final : (Items ... : type)()(items ... : Items) = {
+}
+```
+
+`...` is a single token, and it appears only in a declaration, in the slot
+between a name and its `:` where name-slot directives also sit. A bare `...` is
+never an expression.
+
+That slot can hold several markers, and they always appear in the same order:
+the name, then `...`, then the discardable marker `#`, then directives:
+
+```zax
+names ... [<constant>] : String            // a pack, then a directive
+height # [<label=incidental>] : Integer    // discardable, then a directive
+results ... # : Items                      // a discardable result pack
+```
+
+Write `...` with one space on each side. Because the marker changes how many
+arguments the parameter accepts, any other spacing is an intent error rather
+than something a formatter quietly repairs:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = {   // canonical
+}
+
+sum final : (result : Integer)(values... : Integer) = {    // intent error: write one space on each side of ...
+}
+
+sum final : (result : Integer)(values ...: Integer) = {    // intent error, for the same reason
+}
+```
+
+[Zax variadics](variadics.md#declaring-a-variadic-parameter) teaches variadic
+declarations.
 
 ### Allocation-token attachment
 
@@ -1373,6 +1416,29 @@ each outer: (
 introducer. Inside the binding packet, `name:` and `value:` are role labels;
 `memberName :` and `memberValue :` are declarations. Complete binding and
 traversal behavior is owned by [Zax iteration](iteration.md).
+
+The same binding header also appears inside an argument list or array
+expression, where `from each` runs a `|>` chain once per item of a pack:
+
+```zax
+render final : ()(texts ... : String) = {
+}
+
+describe$ final : (Item : type)(result : String)(item : Item) = {
+}
+
+renderAll$ final : (Items ... : type)()(items ... : Items) = {
+  render(from each item : in items |> describe())
+}
+```
+
+The form reads left to right: `from`, then the ordinary `each` header with its
+required binding name, then `|>` and the stages. The header has no braces and
+no body. The mapping ends at the comma or closing delimiter of the entry that
+contains it. When the chain spans several physical lines, a trailing `|>`
+continues it, as any trailing symbolic infix operator does.
+[Zax variadics](variadics.md#transforming-each-item) explains what the mapping
+means.
 
 Runtime selection uses `;;` for switch and clause posts:
 

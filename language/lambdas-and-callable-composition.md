@@ -6,8 +6,8 @@
 | Audience | Human developers defining, storing, composing, and invoking callable values |
 | Applies To | Lambda expressions, captures, callable storage and receiver lifetime, partial application, composition, and chaining; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | Lambda expression and capture behavior; generated lambda receivers; fixed/varying and bound/unbound callable storage integration; receiver-lifetime modes; installed binding kind and weak callable invocation; callable transfer, reset, recursion, and repeated capture state; partial argument capture; positional and reshape composition; preservation and relabeling of exceptional outcomes through retained composition; immediate chaining; callable-specific costs and diagnostics |
-| Does Not Own | General declaration rules ([declarations and bindings](declarations-and-bindings.md)); call phases and result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete transfer meaning ([transfer stances](transfer-stances.md)); reference lifetime ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and opaque lifetime facilities ([pointers and arenas](pointers-and-arenas.md)); exact operator registration ([operator catalog](operator-catalog.md)); or complete generics, variadics, async, reflection, FFI, ABI, and lowering |
+| Owns | Lambda expression and capture behavior; generated lambda receivers; fixed/varying and bound/unbound callable storage integration; receiver-lifetime modes; installed binding kind and weak callable invocation; callable transfer, reset, recursion, and repeated capture state; pack capture; variadic and generic lambdas in `final` storage; partial argument capture and prototype adaptation; composition and reshape stages; preservation and relabeling of exceptional outcomes through retained composition; immediate chaining as the nested call, including postfix reshape on stage invocations and per-item mapping chains; callable-specific costs and diagnostics |
+| Does Not Own | General declaration rules ([declarations and bindings](declarations-and-bindings.md)); call phases and the rule by which results find inputs ([function invocation](function-invocation.md#how-forwarded-results-find-their-parameters)); reshape declarations and positional `[N]` source paths ([structural shapes and compatibility](structural-shapes-and-compatibility.md#reusable-mapping-with-reshape)); the pack model ([variadics](variadics.md)); the generic rules that generic lambdas follow ([generics](generics.md#generic-lambdas)); cohesive [exceptional result flow](except.md); complete transfer meaning ([transfer stances](transfer-stances.md)); reference lifetime ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and opaque lifetime facilities ([pointers and arenas](pointers-and-arenas.md)); exact operator registration ([operator catalog](operator-catalog.md)); or async, reflection, FFI, ABI, and lowering |
 | Source / Provenance | Maintainer-supplied lambda design, legacy function composition evidence, and current declaration, invocation, lifetime, transfer, Nothing, source, and operator design |
 | Supersedes | Current-purpose lambda, capture, callable-storage, composition, and chaining material formerly distributed through root legacy function pages and raw project input |
 
@@ -37,10 +37,10 @@ later runs the body against that retained receiver; it does not capture
 The declaration and lambda expression have separate roles:
 
 ```text
-scale :=                         declare and initialize scale
-[[ factor ]]                    construct its capture receiver
-(result : Integer)(input : ...) state its call prototype
-{ ... }                         define its delayed body
+scale :=                             declare and initialize scale
+[[ factor ]]                        construct its capture receiver
+(result : Integer)(input : Integer) state its call prototype
+{ ... }                             define its delayed body
 ```
 
 An empty capture is explicit:
@@ -445,6 +445,117 @@ handler : MyHandler = [[]] {
 A `>|>` target may similarly supply the complete remaining prototype when target
 selection is unambiguous.
 
+### Lambdas with packs
+
+Lambdas can work with packs in two ways: a lambda can capture a pack its
+enclosing function received, or it can declare a pack parameter of its own.
+
+A function that accepts any number of arguments receives them as a
+[pack](variadics.md), which is several separately bound parameters under one
+name. Suppose such a function wants to hand its arguments to a callback that
+runs later. A lambda inside it can capture the whole pack by name:
+
+```zax
+sendAll$ final : (Items ... : type)()(items ... : Items) = {
+}
+
+deferSend$ final : (Items ... : type)(
+  callback : ()() bound unique
+)(
+  items ... : Items
+) = {
+  return [[ items ]] ()() bound unique {
+    // inside the lambda, the captured items are still a pack
+    sendAll(from items as copy)
+  }
+}
+```
+
+`deferSend$` is compiled separately for each list of argument types it is
+called with. In each of those versions the item types are known, so the
+generated receiver simply has one member per captured item. Inside the
+lambda, the captured items are still a pack, used just as in the enclosing
+function. A stance written on the capture applies to
+each item on its own, and capturing a pack does not change the lambda's own
+prototype.
+
+A lambda can also declare a pack parameter of its own:
+
+```zax
+total final := [[]] (result : Integer)(values ... : Integer) {
+  running := 0
+  each value : in values {
+    running += value
+  }
+  return running
+}
+
+grandTotal := total(1, 2, 3)
+```
+
+Like a variadic function, `total` is compiled once for each number of arguments
+it is called with. That is why it must be held in `final` storage: replaceable
+storage holds one implementation, but a lambda with a pack parameter has one per
+count.
+
+```zax
+counter := [[]] (result : Integer)(values ... : Integer) {   // error: a variadic lambda needs final storage
+  return 0
+}
+```
+
+You can still install `total` in a `varying` slot or pass it as a callback.
+That destination has one fixed prototype, so installing `total` there selects
+the one processing that matches it:
+
+```zax
+handler : (result : Integer)(first : Integer, second : Integer) = total
+// handler holds total's two-argument processing
+```
+
+When the items may have different types, the lambda needs a compile-time list
+of types, and that makes it a generic lambda. The `$` goes on the name, as for
+every generic. The binding name carries `$`, and the lambda's first
+parenthesized list holds the compile-time parameters:
+
+```zax
+prefix := "> "
+
+show$ final := [[ prefix ]] (Items ... : type)()(items ... : Items) {
+  each item : in items {
+    write(prefix)
+    write(item)
+  }
+}
+
+show("a", 2, 3.0)                  // Items worked out from the three arguments
+show$(String, Integer)("a", 2)     // Items stated
+```
+
+A `$` binding must be `final`. Constraints and `requires` work as they do for
+any generic. Specialization does not apply, because a single lambda expression
+has no overloads to rank.
+
+A lambda written inline cannot be generic this way, whether it is passed,
+returned, or invoked immediately, because it has no name to carry `$`. It is
+always headed for a fixed prototype or a single use. Its types therefore come
+from its destination, from types written directly, or from an enclosing
+generic's parameters:
+
+```zax
+relayFirst$ final : (Items ... : type)()(items ... : Items)
+  requires Items count >= 1 = {
+  ([[]] ()(value : Items[0]) {
+    write(value)
+  })(items[0] as copy)
+  // Items[0] is a concrete type in each processing of relayFirst$
+}
+```
+
+[Generic lambdas](generics.md#generic-lambdas) covers the generic rules in
+full. The pack side, including how packs travel through function values, is in
+[lambdas and function values](variadics.md#lambdas-and-function-values).
+
 ## Presence, liveness, and installed binding kind
 
 `?callback` asks whether an implementation is assigned. It does not ask whether
@@ -616,8 +727,39 @@ printNumberWith := [[ number: number: ]] ()(
 printNumberWith("apples")
 ```
 
-Construction binds `number` once. The written prototype renames the remaining
-input. When no visible change is needed, the target supplies it:
+Construction binds `number` once. The written prototype then lists the inputs
+that remain, in order, and may give them new names. Here `remainingText` is
+`printPair`'s `text` under another name.
+
+The match is by position. Writing a prototype in front of `>|>` adapts the
+target, the same way installing a callable behind a compatible visible
+prototype does. It is not a case of results finding inputs, so a written name
+never matches a target parameter by label, even when the two names are equal:
+
+```zax
+printTriple final : ()(
+  number : Integer,
+  label : String,
+  text : String = ""
+) unbound = {
+  print(number, label, text)
+}
+
+number := 42
+
+printLabelled := [[ number: number: ]] ()(
+  text : String
+) >|> printTriple
+
+printLabelled("apples")
+// calls printTriple(42, "apples", "")
+```
+
+The written `text` takes the next input left after `number`, which is `label`.
+`printTriple`'s own `text` is not reached and keeps its default.
+
+When no visible change is needed, omit the written prototype and the target
+supplies its remaining inputs under their own names:
 
 ```zax
 printNumberWith := [[ number: number: ]] >|> printPair
@@ -628,8 +770,8 @@ value is explicitly captured now.
 
 ## Compose functions for later use
 
-`>|>` builds a new callable from existing ones without calling anything.
-Compatible callables compose positionally:
+`>|>` builds a new callable from existing ones without calling anything. The
+results of the first become inputs of the second:
 
 ```zax
 parse final : (
@@ -646,17 +788,50 @@ render final : (
 ) unbound = {
 }
 
+sourceText := "1 + 2"
+
 parseThenRender := parse >|> render
 text := parseThenRender(sourceText)
 ```
 
 Constructing `parseThenRender` calls neither function. Each invocation calls
-`parse`, maps its result into `render`, calls `render`, and exposes the final
+`parse`, passes its results to `render`, calls `render`, and exposes the final
 result. Several results remain separate slots.
+
+Results reach `render` the same way they would in the nested call
+`render(parse(sourceText))`. A result whose label names one of the next
+callable's parameters binds that parameter. The remaining results fill the
+remaining parameters in order. Here `parsed` binds `render`'s `parsed` by
+label.
+
+A label match settles where a result goes. If the result's type does not fit
+that parameter, the composition is an error, and Zax does not look for another
+position to put it in. The full rule, including leftover results and
+collisions, is in
+[how forwarded results find their parameters](function-invocation.md#how-forwarded-results-find-their-parameters).
 
 ### Remap with `reshape`
 
+When the labels do not line up, a reshape between the stages renames results
+before they reach the next callable:
+
 ```zax
+parse final : (
+  tree : Tree,
+  notes : Notes
+)(
+  source : String
+) unbound = {
+}
+
+render final : (
+  text : String
+)(
+  document : Tree,
+  diagnostics : Notes
+) unbound = {
+}
+
 ParseToRender :: reshape {
   tree: document:
   notes: diagnostics:
@@ -665,17 +840,52 @@ ParseToRender :: reshape {
 parseThenRender := parse >|> ParseToRender >|> render
 ```
 
-The three-part source is one composition operation; the reshape is not invoked
-and creates no intermediate aggregate. Mapping proceeds deterministically:
+`ParseToRender` sits between the two callables as a stage of its own. A reshape
+stage relabels the callable on its left, so
+`parse >|> ParseToRender >|> render` means
+`(parse reshape ParseToRender) >|> render`. The relabeled results then reach
+`render` under the usual rule: `tree` binds `document` by label, and `notes`
+binds `diagnostics`.
 
-1. apply explicit reshape entries;
-2. match remaining equal labels;
-3. map remaining slots positionally;
-4. apply destination defaults and source-result omission policy; and
-5. never backtrack.
+The three-part source is still one composition operation. The reshape is not
+invoked, and it creates no intermediate aggregate.
 
-An incompatible equal-label pair is an error rather than a reason to guess
-another positional mapping.
+Only retained `>|>` composition has reshape stages. In an immediate `|>` chain,
+you apply the reshape postfix to one stage's invocation instead, as
+[reshape a stage's results](#reshape-a-stages-results) shows.
+
+All of a reshape's entries apply at once, so one reshape can swap labels or
+shift several along. What it cannot do is leave two results with the same
+label:
+
+```zax
+produce final : (a : Integer, b : Integer)() unbound = {
+}
+
+consume final : ()(b : Integer, c : Integer) unbound = {
+}
+
+AToB :: reshape {
+  a: b:
+}
+
+broken := produce >|> AToB >|> consume   // error: two results labeled b
+
+AToBAndBToC :: reshape {
+  a: b:
+  b: c:
+}
+
+pipeline := produce >|> AToBAndBToC >|> consume   // a feeds b, b feeds c
+```
+
+`AToB` renames `a` to `b` while `produce`'s own `b` keeps its label, which
+leaves two results labeled `b`. `AToBAndBToC` moves both at once, so nothing
+collides.
+
+A reshape can also pick out a result that has no label by its position, as
+described in
+[naming results by position with `[N]`](structural-shapes-and-compatibility.md#naming-results-by-position-with-n).
 
 ### Exceptional outcomes in retained composition
 
@@ -683,23 +893,46 @@ another positional mapping.
 only after every prior stage selected success:
 
 ```zax
+parse final : (
+  tree : Tree,
+  failure except : ParseError
+)(
+  source : String
+) unbound = {
+}
+
+render final : (
+  text : String
+)(
+  tree : Tree
+) unbound = {
+}
+
 pipeline := parse >|> render
 ```
 
 If `parse` selects an exceptional outcome, `render` is not invoked. Calling
 `pipeline` must handle or forward that parse outcome. An exceptional outcome
-from `render` remains independently exposed.
+declared by a later stage remains independently exposed.
 
-A retained callable prototype requires unique exceptional labels. Reshape a
-collision before composition:
+A retained callable prototype requires unique exceptional labels. If a later
+stage also declares `failure`, reshape one of them before composing:
 
 ```zax
+renderChecked final : (
+  text : String,
+  failure except : RenderError
+)(
+  tree : Tree
+) unbound = {
+}
+
 ParseFailureNames :: reshape {
   failure: parseFailure:
 }
 
 renamedParse := parse reshape ParseFailureNames
-pipeline := renamedParse >|> render
+checkedPipeline := renamedParse >|> renderChecked
 ```
 
 Applying the reshape adapts `parse`'s visible outcome label without invoking it.
@@ -718,27 +951,180 @@ taught by [Zax exceptional result flow](except.md).
 result := 5 |> double() |> square() |> half()
 ```
 
-It evaluates the carried source once, maps it to the next call, completes that
-call, and advances with its result. `>|>` instead constructs a retained callable
-for later invocation.
+It evaluates the value on its left once, passes it to the next call, completes
+that call, and advances with its results. `>|>` instead constructs a retained
+callable for later invocation.
 
-Named and several-result chaining use the same explicit routing principles as
-composition.
-
-Each reached stage's exceptional outcomes remain exposed to a trailing handler.
-An exceptional stage skips every later stage. Equal-label stage outcomes may
-share one branch-specialized catch at that immediate use or be distinguished by
-outcome reshape:
+Each step of a chain is the nested call written in a different order.
+`x |> f(rest)` means `f(x, rest)`, and `g() |> f(rest)` means `f(g(), rest)`.
+The values arriving from the left and the arguments written in the call are
+routed together, as one argument list:
 
 ```zax
-result := source |>
-  parse() reshape failure: parseFailure: |>
-  render() catch parseFailure {
-    return
-  } catch failure {
-    return
-  }
+produce final : (text : String, number : Integer)() = {
+}
+
+consume final : ()(flag : Boolean, number : Integer, text : String) = {
+}
+
+produce() |> consume(true)
+// the same call as consume(produce(), true): number and text bind by label,
+// and true fills the remaining flag
 ```
+
+The same holds for a plain value. It goes where the nested call would put it,
+and a label written later in the call moves the cursor just as it does in any
+other call:
+
+```zax
+place final : ()(a : Integer, b : Integer = 0, c : Integer, d : Integer) = {
+}
+
+place(2, c: 1, 3)
+2 |> place(c: 1, 3)   // the same: 2 → a, 1 → c, 3 → d; b keeps its default
+```
+
+Because a chain is an ordinary call, it follows the general routing rule in
+[how forwarded results find their parameters](function-invocation.md#how-forwarded-results-find-their-parameters).
+
+### Reshape a stage's results
+
+Sometimes a stage's result labels steer its results to the wrong parameters of
+the next stage. To rename them first, write `reshape` after that stage's
+invocation. Unlike retained `>|>` composition, an immediate `|>` chain has no
+separate reshape stage, so the reshape attaches to a call:
+
+```zax
+split final : (head : String, tail : String)(text : String) = {
+}
+
+joinReversed final : (result : String)(tail : String, head : String) = {
+}
+
+SwapEnds :: reshape {
+  head: tail:
+  tail: head:
+}
+
+myText := "first second"
+
+reversed := myText |> split() |> joinReversed()
+// by label: head → head, tail → tail
+
+swapped := myText |> split() reshape SwapEnds |> joinReversed()
+// the same call as joinReversed(split(myText) reshape SwapEnds):
+// split's head now reaches tail, and its tail reaches head
+```
+
+Every stage after the starting value is an invocation, so there is always a
+call to attach a reshape to. A plain value at the start of a chain never needs
+one. Write it where it belongs in the call directly.
+
+### Exceptional outcomes in a chain
+
+Any stage of a chain may fail. In the example below, both `parse` and `render`
+declare an outcome labeled `failure`. If `parse` fails, `render` never runs,
+and the handlers at the end of the chain see the failure. The reshape renames
+`parse`'s outcome to `parseFailure`, so each stage's failure gets its own
+catch:
+
+```zax
+parse final : (
+  tree : Tree,
+  failure except : ParseError
+)(
+  source : String
+) = {
+}
+
+render final : (
+  text : String,
+  failure except : RenderError
+)(
+  tree : Tree
+) = {
+}
+
+showSource final : ()(source : String) = {
+  text := source |>
+    parse() reshape failure: parseFailure: |>
+    render() catch parseFailure {
+      return
+    } catch failure {
+      return
+    }
+  print(text)
+}
+```
+
+The general rule is that a stage selecting an exceptional outcome skips every
+later stage. A trailing handler sees the exceptional outcomes of every stage
+that was reached.
+
+Without the reshape, the two `failure` outcomes could share one catch at this
+immediate use. That catch is specialized separately for each stage the outcome
+may come from. Use a reshape, as above, when the stages need distinct names.
+
+### Run a chain for each item of a pack
+
+Sometimes every argument in a pack needs the same treatment before it moves on,
+such as padding each line or splitting and rejoining each string. Inside a
+function that accepts any number of arguments as a [pack](variadics.md),
+`from each item : in pack |> stages` runs the chain once for each item. The
+results take the pack's place in the call as a new group of arguments:
+
+```zax
+split final : (head : String, tail : String)(text : String) = {
+}
+
+join final : (result : String)(first : String, second : String) = {
+}
+
+pad final : (result : String)(width : Integer, text : String) = {
+}
+
+show final : ()(lines ... : String) = {
+}
+
+showAll final : ()(width : Integer, lines ... : String) = {
+  show(from each line : in lines |> pad(width, line))
+  // pad(width, line) for each line; the padded lines go to show
+
+  show(from each line : in lines |> split() |> join())
+  // split(line), then join, for each line
+
+  show(from each line : in lines |> split())
+  // error: split's tail is not discardable, so each item would offer two values
+}
+```
+
+The first stage decides where the item goes. If the stage writes the item's
+name, as in `pad(width, line)`, the item goes only there. If it does not, as in
+`split()`, the item becomes that stage's first positional input. Later stages
+receive the previous stage's results as in any chain, and the item's name stays
+visible in every stage.
+
+Each item runs through every stage before the next item starts. The whole
+mapping occupies one argument position, so the enclosing call's other
+arguments still evaluate in source order around it.
+
+Intermediate stages may pass several results along, but the last stage
+contributes exactly one value per item: its first result. That keeps the new
+group the same length as the pack. Any later results of the last stage must be
+discardable, and they go unused, as in a declaration such as
+`value := measure()`, which binds the first result. That is why the third
+call above fails: the chain ends at `split`, whose `tail` cannot be discarded.
+To keep both parts, end the chain with a
+[`-<`](structural-shapes-and-compatibility.md#recompose-several-results-with--)
+stage, as in `|> -< split()`, which makes one value per item with members
+`head` and `tail`.
+
+If a stage selects an exceptional outcome, the remaining items do not run.
+[Exceptional result flow](except.md#mapping-each-item-of-a-pack) covers how
+that outcome is handled.
+
+[Transforming each item](variadics.md#transforming-each-item) teaches the
+complete mapping form, including arrays and transfer stances.
 
 ## Optional callable values
 
@@ -765,6 +1151,9 @@ Programmers and tools must expose:
 - unique/strong/weak and local/atomic accounting;
 - liveness probes and weak promotion;
 - composition call sequence and mapping;
+- the calls a per-item chain makes for each item of a pack;
+- the processings a variadic or generic lambda receives, one per count or type
+  list, and any adaptation when one is installed in a fixed prototype;
 - retained outcome sets, exceptional-label reshape, and skipped later stages;
 - reset/replacement work and panic paths; and
 - static lifetime, origin, transfer, and repeated-state analysis.
@@ -780,6 +1169,10 @@ Diagnostics should distinguish:
   the body read the bare name or `_.name`;
 - resultful weak storage;
 - failed composition mapping;
+- a reshape stage whose relabel leaves two results with one label;
+- a per-item chain whose last stage produces no result, or a result after its
+  first that is not discardable;
+- a variadic or `$` lambda outside `final` storage;
 - repeated invalid capture use;
 - unavailable invocation;
 - ineligible reset;
@@ -793,8 +1186,11 @@ implementation mapping, or conformance contract.
 
 Still deferred:
 
-- generic lambda parameters, constraints, and specialization;
 - complete variadic composition;
+- short-form lambdas, for a compact stored lambda;
+- spreading several values per item into a pack at the end of a per-item
+  chain, which stays an error; `-<` combines them into one value per item
+  instead;
 - async suspension and cancellation;
 - foreign callable ABI and dynamic linking;
 - canonical namespace placement for callable metadata;

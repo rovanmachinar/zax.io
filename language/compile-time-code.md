@@ -702,7 +702,7 @@ could travel far before it is used:
 
 ```zax
 entrySize final [<execute=compile>] : (result : Integer)(UseType : type) = {
-  return host size of UseType   // a build-machine fact, and the source says so
+  return host size of UseType   // a build-machine fact, stated explicitly by host
 }
 
 myEntrySize := entrySize(MyEntry)

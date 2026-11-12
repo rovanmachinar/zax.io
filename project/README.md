@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | None; `037` (variadic arguments) awaits an aligned initiating input |
-| Next work number | `037` |
+| Active work item | [038: Terminal transfer intent](work/038-terminal-transfer-intent.md) |
+| Next work number | `039` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

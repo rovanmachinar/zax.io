@@ -6,7 +6,7 @@
 | Audience | Human developers declaring, producing, handling, or forwarding exceptional function outcomes |
 | Applies To | Programmer-facing synchronous exceptional result flow; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Exceptional result declarations; success and named exceptional completion outcomes; producer `except`; local `catch`; explicit forwarding; outcome reshape; exhaustive outcome acknowledgement; handler binding; exceptional propagation, cleanup, elision, costs, diagnostics, and source stability |
+| Owns | Exceptional result declarations; success and named exceptional completion outcomes; producer `except`; local `catch`; explicit forwarding; outcome reshape; exhaustive outcome acknowledgement; handler binding; outcomes from per-item mapped calls; exceptional propagation, cleanup, elision, costs, diagnostics, and source stability |
 | Does Not Own | Ordinary argument/result routing and callable selection ([function invocation](function-invocation.md)); general declaration behavior ([declarations and bindings](declarations-and-bindings.md)); scope transfers and posts ([core flow control](core-flow-control.md)); general lifecycle ordering ([construction, replacement, and destruction](construction-and-destruction.md)); transfer stances ([transfer stances](transfer-stances.md)); reference origin ([lifetimes and references](lifetimes-and-references.md)); resource disposal ([Zax `using`](using.md)); callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); or panic and unsafe proof ([safety and analysis](safety-and-analysis.md)) |
 
 ## Start with success or one named failure
@@ -398,10 +398,15 @@ comma-separated reshape entries are invalid.
 Ordinary mappings remain in the success shape; exceptional mappings remain
 exceptional outcomes. Reshape cannot change either category or merge them.
 
-Explicit entries consume their source and destination labels before remaining
-equal-label matching. Duplicate destination outcome labels are an error.
-Complete no-storage mapping behavior is shared with
-[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#reusable-mapping-with-reshape).
+A reshape only relabels. Each entry renames its source label to its
+destination label, and labels the reshape does not mention stay as they are.
+All entries apply together, so one reshape can swap two labels. A relabel that
+leaves two outcomes with the same label is an error.
+
+The meaning is the same on every callable surface, whether the reshape is
+applied to an invocation, applied to a callable, or written as a `>|>` stage.
+The no-storage mapping behavior behind it is shared with
+[Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#mapping-callable-results-to-inputs).
 
 ## Result construction and cleanup
 
@@ -743,6 +748,82 @@ result := source |>
 
 Without reshape, equal-label outcomes may share one branch-polymorphic handler.
 
+### Mapping each item of a pack
+
+A function that accepts any number of arguments can run a chain for each one
+with `from each item : in pack |> stages` and pass the results on. If a stage
+can fail, you do not need a handler per item. One handler on the enclosing
+invocation covers every mapped call:
+
+```zax
+parse final : (
+  tree : Tree,
+  failure except : ParseError
+)(
+  text : String readonly &
+) = {
+}
+
+header final : (head : Header)() = {
+}
+
+footer final : (foot : Footer)() = {
+}
+
+render final : (page : Page)(head : Header, trees ... : Tree, foot : Footer) = {
+}
+
+publish final : ()(page : Page) = {
+}
+
+report final : ()(problem : ParseError readonly &) = {
+}
+
+buildPage final : ()(docs ... : String) = {
+  page := render(header(), from each doc : in docs |> parse(), foot: footer()) catch failure {
+    report(failure)
+    return
+  }
+  publish(page)
+}
+// With three docs, the render call behaves as:
+//   render(header(), parse(doc0), parse(doc1), parse(doc2), foot: footer())
+```
+
+Because `foot` follows the pack in `render`'s inputs, the call supplies it by
+label.
+
+The mapped calls behave as if each one were written out as its own argument.
+`buildPage` makes them before `render` starts, so the handler covers them
+under the ordinary [nested-call rule](#nested-calls-expose-their-outcomes).
+
+Suppose `parse(doc1)` selects `failure`. Then:
+
+- the values already completed are not rolled back; they are cleaned up as
+  already-bound arguments;
+- `parse(doc2)`, `footer()`, and `render` do not run; and
+- the handler runs.
+
+A function that declares the outcome itself can forward it with
+`except failure` instead of `catch`. The remaining items stop in the same way.
+
+The first failure ends the mapping, and failures are never collected. Each
+call completes with exactly one outcome. Gathering several failures would need
+an erased common error object, and Zax does not create one. If the other items
+should keep processing after a failure, handle the outcome inside the stage,
+for example with a helper that substitutes a value, or use an `each`
+statement instead.
+
+When the items have different types, each item's `parse` may be a different
+instantiation with a different payload type. The handler is then checked
+separately for each source path, as for any nested equal-label outcome.
+
+The handler isn't told which item failed. If it needs that, the payload must
+carry it.
+
+[Transforming each item](variadics.md#transforming-each-item) teaches the
+complete mapping form.
+
 ### Retained `>|>` composition
 
 `>|>` constructs a callable without running either stage. The composed callable:
@@ -873,6 +954,8 @@ Still deferred:
   declarations belong to ordinary function and call-syntax callable
   prototypes;
 - handlers that recover by producing replacement success results;
+- identifying which item of a mapped pack selected an exceptional outcome,
+  which currently depends on what the payload reports;
 - an explicit catch-all;
 - generalized patterns and guards;
 - async suspension and cancellation;

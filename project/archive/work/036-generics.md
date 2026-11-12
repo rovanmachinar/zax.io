@@ -2872,6 +2872,5 @@ Dispositions at closure:
   analysis controls.
 - **Teaching-debt observations:** none recorded.
 
-Successor: work item `037` will address variable-length (variadic) arguments.
-Its initiating input and reading scope are to be aligned with the maintainer
-before the file is created.
+Successor: work item `037`, variadic arguments
+(`project/work/037-variadic-arguments.md`).

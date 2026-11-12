@@ -274,7 +274,9 @@ using (
 ```
 
 If `acquirePair()` produces two results, the flattened enrollment order is its
-first result, its second result, then `externalResource`.
+first result, its second result, then `externalResource`. Result labels play no
+part here. A resource list has no parameters for them to match, so a label
+matters only when an entry names it, as in the named captures below.
 
 A structured pair is one result and therefore one enrolled receiver. `using`
 does not descend into its members automatically.

@@ -7,7 +7,7 @@
 | Applies To | Programmer-facing intrinsic arrays, array expressions, indexing, slicing, capacity, layout, and element lifetime; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
 | Owns | Fixed and resizable array identities; logical length and usable capacity; array expressions and inference; intrinsic index and splice behavior; borrowed slices; direct splice mutation; element-place stability; programmer-visible storage selection and capabilities; array transfer and joining; storage-erased array references; array parameter behavior; array-specific costs, diagnostics, reflection facts, and future boundaries |
-| Does Not Own | General construction packets and lifecycle machinery ([construction, replacement, and destruction](construction-and-destruction.md)); reusable reference lifetimes ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and arenas ([pointers, allocation, and arenas](pointers-and-arenas.md)); exact array storage-provider/handle protocols; shared operator and mixfix selection ([operators](operators.md), [mixfix operators](mixfix-operators.md)); general traversal protocol behavior ([iteration](iteration.md)); qualifier meaning ([qualifiers](qualifiers.md)); transfer-stance meaning ([transfer stances](transfer-stances.md)); general integer roles ([integers](integers.md)); general structural transformation ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); runtime string APIs; user-defined generics ([generics](generics.md)); or implementation layout and lowering |
+| Does Not Own | General construction packets and lifecycle machinery ([construction, replacement, and destruction](construction-and-destruction.md)); reusable reference lifetimes ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and arenas ([pointers, allocation, and arenas](pointers-and-arenas.md)); exact array storage-provider/handle protocols; shared operator and mixfix selection ([operators](operators.md), [mixfix operators](mixfix-operators.md)); general traversal protocol behavior ([iteration](iteration.md)); qualifier meaning ([qualifiers](qualifiers.md)); transfer-stance meaning ([transfer stances](transfer-stances.md)); general integer roles ([integers](integers.md)); general structural transformation ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); runtime string APIs; user-defined generics ([generics](generics.md)); variadic packs ([variadics](variadics.md)); or implementation layout and lowering |
 
 ## Start with an ordinary array
 
@@ -264,8 +264,9 @@ views := [ view ]
 expanded := [ from view ]
 ```
 
-`from` means sequence expansion through direct array/slice traversal or the
-cursor protocol. Structural `>-` decomposition remains a different operation.
+`from` means sequence expansion through direct array/slice traversal, the
+cursor protocol, or the items of a [pack](#contributions-from-a-pack).
+Structural `>-` decomposition remains a different operation.
 
 ### Exact contribution count
 
@@ -304,6 +305,75 @@ The first result can contain any count supplied by its runtime slice. The second
 always has at least the separately written `makeItem()` element.
 
 These are resizable arrays, not runtime-dependent fixed array types.
+
+### Contributions from a pack
+
+A function that accepts any number of arguments receives them as a
+[pack](variadics.md#accept-any-number-of-arguments). A pack is not an array.
+It is a set of separate parameters whose count is known while compiling. When
+you need the arguments as an array, perhaps to hand them to an API that takes
+one, you can use `from` to turn the items into array elements:
+
+```zax
+sumAll final : (result : Integer)(values : Integer[]) = {
+  total := 0
+  each value : in values {
+    total += value
+  }
+  return total
+}
+
+sum final : (result : Integer)(values ... : Integer) = {
+  return sumAll([ from values ])   // the items become the array's elements
+}
+```
+
+`from each` first passes every item through a call, and each call contributes
+one result to the array:
+
+```zax
+measureWidth$ final : (UseType : type)(result : IndexSize)(value : UseType readonly &) = { }
+
+widths$ final : (Items ... : type)(result : IndexSize[Items count])(items ... : Items) = {
+  return [ from each item : in items |> measureWidth() ]   // one width per item
+}
+
+sizes := widths("label", 42, true)   // three IndexSize elements
+```
+
+The ordinary element rule still applies, so every contribution must share one
+common element type. Items of different types do not make an array. Neither do
+mapped results whose type differs from item to item:
+
+```zax
+collect$ final : (Items ... : type)()(items ... : Items) = {
+  all := [ from items as copy ]
+}
+
+collect(1, 2)       // fine: both items are Integer
+collect(1, "two")   // error: the committed element types differ
+```
+
+The mapping runs item by item, at its own position among the entries.
+Ordinary entries written before and after it keep their written order.
+
+Going the other way, from an array into a pack, depends on the length. A
+pack's count must be known while compiling, so a resizable array or slice
+cannot be spread into a pack. A fixed-length array can, because its length is
+part of its type. An API that must accept a list whose length is known only at
+run time declares an array or slice parameter instead, as `sumAll` does:
+
+```zax
+fixedScores : Integer[3] = [ 1, 2, 3 ]
+scores : Integer[0..100] = [ 4, 5 ]
+
+fixedTotal := sum(from fixedScores)   // fine: three values, known while compiling
+badTotal := sum(from scores)          // error: a pack's count must be known while compiling
+runtimeTotal := sumAll(scores)        // the runtime-length API
+```
+
+[Variadics](variadics.md#transforming-each-item) teaches the complete pack
+model, including mapping and evaluation order.
 
 ## Iterable contributions
 

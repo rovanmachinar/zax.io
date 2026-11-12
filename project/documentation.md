@@ -282,6 +282,17 @@ source and its comments as well as in the surrounding explanation.
 - Establish shared behavior before explaining variations. Organize differences by
   the property that actually varies so document structure does not make an
   ordinary family member appear categorically special.
+- Do not write `...` in a parameter or result position, in source or in prose
+  such as `(result : ...)`; it reads as a variadic pack. Use a concrete type,
+  or describe the declaration in words. `// ...` and `{ ... }` for elided
+  bodies remain clear.
+- Do not use a coined term, such as a name for a form or a rule, before it is
+  defined. If the term is not worth defining, describe the thing in plain
+  words wherever it appears.
+- Say the concrete thing. Stock phrasings such as "says so", "cannot write
+  out", or "meets X" make a reader guess the actual claim, and an unclear
+  pronoun such as "it" in a rule leaves the reader unsure what the rule
+  applies to.
 
 ### Raw material carries the same obligation
 

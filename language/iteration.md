@@ -3,11 +3,11 @@
 | Field | Value |
 | --- | --- |
 | Status | Current conceptual design |
-| Audience | Human developers traversing arrays, enums, structured values, ranges, views, or generated sequences |
+| Audience | Human developers traversing arrays, enums, structured values, packs, ranges, views, or generated sequences |
 | Applies To | Programmer-facing `each in` and `each from` behavior; not a formal grammar, collection contract, or implementation specification |
 | Implementation State | Not established by this repository |
-| Owns | The `each` mental model; direct and cursor-driven traversal; header phases and entry bindings; positional and named roles; compiler-known array, enum, and structural traversal; cursor acquisition, value production, progression, erasure, direct re-entry to a live current entry, and active-`each` access; traversal costs, diagnostics, mutation responsibilities, and source stability |
-| Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); general token and layout rules ([source structure](source-structure.md)); collection-specific place stability ([lifetimes and references](lifetimes-and-references.md)); complete reflection or type-declaration traversal; constraint syntax ([generics](generics.md#constraints)); or compiler lowering |
+| Owns | The `each` mental model; direct and cursor-driven traversal; header phases and entry bindings; positional and named roles; compiler-known array, enum, structural, and pack traversal; cursor acquisition, value production, progression, erasure, direct re-entry to a live current entry, and active-`each` access; traversal costs, diagnostics, mutation responsibilities, and source stability |
+| Does Not Own | Shared flow-transfer and unwinding rules ([core flow control](core-flow-control.md)); general token and layout rules ([source structure](source-structure.md)); collection-specific place stability ([lifetimes and references](lifetimes-and-references.md)); complete reflection or type-declaration traversal; constraint syntax ([generics](generics.md#constraints)); the pack model and mapping a pack per item ([variadics](variadics.md)); or compiler lowering |
 | Source / Provenance | Legacy [flow control](../flow-control.md) together with current array, enum, flow, declaration, qualifier, lifetime, safety, operator, and transfer designs |
 
 ## Start with one entry at a time
@@ -42,7 +42,8 @@ each value : from values {
 ```
 
 - `in` knows the source's structure directly. Its source families are intrinsic
-  arrays and slices, enum declarations, and stored instance members.
+  arrays and slices, enum declarations, stored instance members, and the packs
+  a [variadic function](variadics.md) receives.
 - `from` obtains a cursor and uses its declared progression and value
   operations.
 
@@ -396,6 +397,75 @@ places.
 Compiler-known member selection and per-member checking do not imply
 compile-time execution. Runtime effects in the body remain runtime effects
 unless an independent compile-time execution context says otherwise.
+
+### Packs
+
+A function that accepts any number of arguments receives them as a
+[pack](variadics.md#accept-any-number-of-arguments), with one parameter per
+argument and possibly a different type for each. To do something with every
+argument, walk the pack with `each in`:
+
+```zax
+print$ final : (Items ... : type)()(items ... : Items) = {
+  each item : in items {
+    write(item)
+  }
+}
+
+print("total:", 3, true)
+// write receives "total:", then 3, then true
+```
+
+Walking a pack works like walking stored instance members. The compiler checks
+the binding, body, and post separately for each item's type, so `write(item)`
+above may select a different `write` for each item. At run time the body runs
+once per item, in argument order. As with members, this is a typing rule, not
+a requirement that the compiler unroll the loop.
+
+The inferred and `&` bindings refer to each item. A `copy` binding
+requests an owned copy instead, and copying must be viable for every item:
+
+```zax
+keepAll$ final : (Items ... : type)()(items ... : Items) = {
+  each item : copy in items {
+    keep(item)
+  }
+}
+
+myHandle : MyHandle          // a type that cannot be copied
+
+keepAll(1, "two")            // fine: both items can be copied
+keepAll(1, myHandle)         // error: copy is not viable for the item at position 1, a MyHandle
+```
+
+A pack of types, such as `Items`, can be walked the same way:
+
+```zax
+describeSizes$ final : (Items ... : type)()() = {
+  each Item : in Items {
+    print(target size of Item)
+  }
+}
+
+describeSizes$(Integer, String)()   // walks Integer, then String
+```
+
+An `each` header can also appear inside an expression, when you want to
+transform every item and pass the results on rather than run a loop body.
+`from each item : in items |> describe()` calls `describe` once per item. The
+results go to the enclosing call or array expression as a new pack:
+
+```zax
+printDescribed$ final : (Items ... : type)()(items ... : Items) = {
+  print(from each item : in items |> describe())
+}
+```
+
+That expression is not a loop statement, and
+[transforming each item](variadics.md#transforming-each-item) teaches it in
+full. Do not confuse it with [`from each value`](#accessing-the-active-each).
+That form has no `: in` clause and reaches the current entry of an active
+`each`.
 
 ## Cursor-driven `from` traversal
 
@@ -865,8 +935,8 @@ control transfer exits early.
   visited entry.
 - `goto` can repeat the current body and its per-entry work without paying post,
   value production, or progression cost.
-- Structural `copy` performs and checks that work separately for each selected
-  member type.
+- Structural and pack `copy` performs and checks that work separately for each
+  selected member or item type.
 - Runtime invalidation tracking is present only when a cursor or collection
   contract chooses it.
 - Replacement progression may construct and destroy cursor values; an
@@ -886,7 +956,7 @@ Representative diagnostics distinguish:
 - unavailable or ambiguous `advance`;
 - a value binding when the cursor supplies no viable `value at`;
 - incompatible explicit reference or value binding;
-- unavailable `copy` for one structural member specialization;
+- unavailable `copy` for one structural member specialization or pack item;
 - unavailable `erase` or `erase and advance`;
 - `with erase` on a transfer target other than `each from`;
 - any combined `goto ... with erase` form;
@@ -959,7 +1029,9 @@ Still future:
 - generic collection, proxy, range-value, and non-array view catalogs;
 - generator and coroutine production;
 - asynchronous, concurrent, and parallel traversal;
-- compile-time execution of traversal bodies;
+- compile-time execution of traversal bodies, including generating
+  declarations by walking a type pack; a type-pack `each` currently produces
+  only a runtime body;
 - formal cursor invalidation and effect contracts; and
 - implementation-specific optimization and lowering.
 

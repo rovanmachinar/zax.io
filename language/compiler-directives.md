@@ -106,7 +106,31 @@ if cacheHit [<likely>] {           // slot: inside a construct, at a defined pla
 - **Slot.** The directive sits at a defined position inside a construct: after
   an `if`, `else if`, or `else` header for one branch, after a `case` or
   `default` test, after `final` in a function declaration, or after a
-  parameter's name.
+  parameter's or result's name.
+
+A name slot sits between the name and its `:`, so a directive there describes
+the name rather than the type that follows. If the name also carries the
+variadic marker `...` or the discardable marker `#`, those markers come first,
+in that order, and directives follow, as in
+`results ... # [<label=incidental>] : Items`.
+[The variadic `...` marker](source-structure.md#the-variadic--marker) covers
+that ordering. A directive written after the type is not in the name slot:
+
+```zax
+addUp final : (result [<label=incidental>] : Integer)(
+  left : Integer,
+  right : Integer
+) = {
+  return left + right
+}
+
+addAgain final : (result : Integer [<label=incidental>])(
+  left : Integer,
+  right : Integer
+) = {   // error: label belongs in the slot after the result's name
+  return left + right
+}
+```
 
 Because a blank line separates unattached from attached, a blank line between
 a directive and code changes its meaning. Formatters must preserve the blank
@@ -230,7 +254,7 @@ Every directive is one of three kinds:
 | --- | --- | --- |
 | Hint | Suggests an optimization. A compiler may ignore it, and the program's meaning never changes. | `inline` levels, `likely`, `unlikely` |
 | Unchecked promise | States a fact the compiler may rely on. Where a check exists, it is on by default; with the check disabled, breaking the promise is undefined behavior. | `always`, `never`, `void`, disabling a panic category |
-| Semantic control | Changes what the program means | `execute`, `constant`, `deprecate`, `export`, the Nothing policy, layout |
+| Semantic control | Changes what the program means | `execute`, `constant`, `label`, `deprecate`, `export`, the Nothing policy, layout |
 
 An unchecked-promise directive is itself the visible marker of the promise. It
 needs no separate `unsafe` enclosure. Whether a check exists is controlled by
@@ -343,6 +367,7 @@ directives.
 | `execute` | Semantic control | Slot after `final` | [Compile-time code](compile-time-code.md#letting-a-function-decide-execution-policies) |
 | `inline` | Hint | Slot after `final` | [Function invocation](function-invocation.md#inlining-hints) |
 | `constant` | Semantic control; requires the argument to be a compile-time value and is part of the prototype | Slot after a parameter's name | [Generics](generics.md#compile-time-inputs-in-the-ordinary-input-list) |
+| `label` | Semantic control; part of the visible prototype. `descriptive`, the default, routes when a forwarded result matches it; `incidental` says the name carries no routing meaning, so it never matches implicitly; `significant` requires every caller to show the name with the value | Slot after a parameter's name; slot after a result's name (`significant` on parameters only) | [Function invocation](function-invocation.md#incidental-labels), [significant labels](function-invocation.md#significant-labels) |
 | `instantiation-depth` | Semantic control; sets the maximum nesting of a generic's own instantiations, default and guaranteed minimum `4096` | Slot after `final` in a generic declaration | [Generics](generics.md#limits) |
 | `likely`, `unlikely` | Hint | `if`/`else` branch slot, `case`/`default` slot | [Core flow control](core-flow-control.md#branch-hints-and-path-promises), [switch](switch.md#case-hints-and-promises) |
 | `always`, `never` | Unchecked promise | `if`/`else` branch slot, `case` slot; `never` also unattached | [Core flow control](core-flow-control.md#branch-hints-and-path-promises), [switch](switch.md#case-hints-and-promises) |
@@ -359,7 +384,8 @@ directives.
 Diagnostics should distinguish:
 
 - an unknown plain directive name;
-- a directive in a position it does not accept;
+- a directive in a position it does not accept, such as `label` after a type
+  instead of after a parameter's or result's name;
 - a state marker placed as an attachment, or a standalone directive that needs
   something to attach to;
 - a state marker that sets the state already in effect, which is redundant;
@@ -376,7 +402,12 @@ The following changes are source- or behavior-visible:
 - moving a declaration into or out of a range changes whether it is
   deprecated or exported;
 - moving source inclusion lines relative to directives changes what an
-  included file starts with; and
+  included file starts with;
+- adding or removing `[<label=incidental>]` on a visible prototype changes how
+  results route at call sites written against that prototype, and whether they
+  raise the single-result intent error, without changing any type;
+- adding `[<label=significant>]` to a parameter makes existing calls that
+  supply it without its name into errors; and
 - deprecating a declaration adds warnings for its users, and errors where
   `error` is given or where an undecided `wellformed` check uses it.
 

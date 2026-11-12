@@ -366,10 +366,11 @@ the optimizer did. See
 ## Compile-time input
 
 A **compile-time input** is an input whose argument must be known while
-compiling: a type argument, a `$` parameter, or a `[<constant>]` input. A
+compiling: a type argument, a `$` parameter, a `[<constant>]` input, or the
+number of arguments a [variadic parameter](#variadic-parameter) receives. A
 function with compile-time inputs is processed once for each distinct
 combination of compile-time arguments it receives.
-See [Zax generics](generics.md#two-forms-of-generic).
+See [Zax generics](generics.md#when-code-is-processed-once-per-input).
 
 ## Circumfix operator
 
@@ -615,6 +616,15 @@ exact-alias completion. It fixes root lookup while leaving category-dependent
 facts pending. See
 [Zax declarations and bindings](declarations-and-bindings.md#forward-anchors).
 
+## Forwarded result sequence
+
+A **forwarded result sequence** is a callable's bare result sequence used
+directly as inputs, as in `consume(produce())` or `produce() |> consume()`.
+Labeled results first bind the parameters with exactly their labels, and the
+rest take positions under ordinary call rules. A single result in argument
+position is one expression value, not a forwarded sequence. See
+[Zax function invocation](function-invocation.md#how-forwarded-results-find-their-parameters).
+
 ## Generic
 
 A **generic** is a function, operator, or type written once that the compiler
@@ -675,6 +685,23 @@ instance before that module's own source resolves. Injected declarations use
 target-module ownership and collision rules while retaining lexical access to
 the injection site. See
 [Zax namespaces and modules](namespaces-and-modules.md#inject-declarations-before-module-source).
+
+## Incidental label
+
+An **incidental label** is a parameter or result label marked
+`[<label=incidental>]` because it carries no routing meaning, such as a
+conventional `result`:
+
+```zax
+addUp final : (result [<label=incidental>] : Integer)(left : Integer, right : Integer) = {
+  return left + right
+}
+```
+
+It never matches a label implicitly when results are forwarded, so it never
+moves a result or raises the single-result intent error. Explicit labels,
+routing groups, and reshape labels still name it. See
+[Zax function invocation](function-invocation.md#incidental-labels).
 
 ## Instantiation
 
@@ -911,6 +938,16 @@ obligations. See
 [Zax core flow control](core-flow-control.md),
 [Zax function invocation](function-invocation.md), and
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
+
+## Pack
+
+A **pack** is the group of arguments a [variadic parameter](#variadic-parameter)
+receives, held as separate bindings under one name. Its count is known while
+compiling. A pack is not one value, array, or tuple, even when every item has
+the same type. Writing `from items` contributes its items where values are
+expected. A function may also return a result pack or hold one in a local pack
+declaration.
+See [Zax variadics](variadics.md).
 
 ## Panic
 
@@ -1409,6 +1446,27 @@ behavior is not general laziness: the language fixes which operand may be
 skipped, and a user overload does not receive an arbitrary unevaluated
 expression.
 
+## Significant label
+
+A **significant label** is a parameter label marked `[<label=significant>]`.
+Every value supplied to that parameter must show the parameter's name, for
+example through an explicit label, a variable or member with that name, a
+decomposed member, or a result with that label:
+
+```zax
+publish final : ()(body : String, caption [<label=significant>] : String) = {
+}
+
+publish(myBody, caption: "Greeting")   // fine
+publish(myBody, "Greeting")            // error: nothing names caption
+```
+
+A computed value, a conversion, or a result whose label is incidental shows no
+name, so it needs an explicit label. The name is checked, never used to route.
+An unmarked label is descriptive,
+the default; see [incidental label](#incidental-label) for the third marking
+and [Zax function invocation](function-invocation.md#significant-labels).
+
 ## Software emulation
 
 **Software emulation** implements a scalar operation through several native
@@ -1644,6 +1702,22 @@ arguments, or from the declared type at a fully typed declaration, instead of
 from `$(...)`. A worked-out type is exactly the argument's type, including its
 qualifiers. See
 [Zax generics](generics.md#supplying-compile-time-arguments).
+
+## Variadic parameter
+
+A **variadic parameter** accepts any number of arguments as a
+[pack](#pack). It writes `...` between its name and its colon:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = {
+}
+```
+
+A variadic function is processed once per distinct argument count, or per
+distinct list of argument types when a variadic `$` parameter such as
+`Items ... : type` names them. A prototype may declare several packs; each one
+after the first starts at its label. See
+[Zax variadics](variadics.md#declaring-a-variadic-parameter).
 
 ## Variant wrapper and active alternative
 

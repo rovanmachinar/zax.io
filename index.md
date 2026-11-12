@@ -148,6 +148,9 @@ producing them.
   and types, compile-time parameters, how arguments are worked out,
   constraints and `requires`, specializations, extension across modules, and
   instantiation identity.
+- Read [Zax variadics](language/variadics.md) for functions that accept any
+  number of arguments: declaring, calling, walking, counting, passing on, and
+  transforming packs, result and local packs, overloads, and variadic lambdas.
 - Read [Zax compiler directives](language/compiler-directives.md) for what a
   `[<...>]` directive is, where it attaches, directive ranges, deprecation,
   source mapping, and the directive catalog.
@@ -203,6 +206,7 @@ producing them.
 - [Endianness](language/endianness.md)
 - [Compile-time code](language/compile-time-code.md)
 - [Generics](language/generics.md)
+- [Variadics](language/variadics.md)
 - [Compiler directives](language/compiler-directives.md)
 - [Language-design terms](language/terms.md)
 
@@ -217,7 +221,6 @@ semantics remain non-authoritative until individually reviewed and promoted.
   owned by [Zax integers](language/integers.md),
   [literal source and operators](language/literal-source-and-operators.md), and
   [strings and characters](language/strings-and-characters.md)
-- [Variadic functions](variadic.md)
 - [Flow control](flow-control.md) — legacy value-polymorphism input;
   current ordinary flow and runtime selection are owned by
   [core flow control](language/core-flow-control.md) and

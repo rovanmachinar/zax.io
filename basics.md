@@ -190,16 +190,9 @@ through the destination role's vacant pointer state.
 Operator phrases are current design and taught by
 [Zax operator phrases](language/operator-phrases.md). Exact forms and precedence
 are in the [operator catalog](language/operator-catalog.md#operator-forms).
-
-The list below retains only the unresolved variadic proposal. Its exact words
-are not protected because variadic functions have not established their
-prototypes. Current container/member navigation, interior ownership, and pointer
-queries are owned by [Zax composition](language/composition.md) and
+Current container/member navigation, interior ownership, and pointer queries are
+owned by [Zax composition](language/composition.md) and
 [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md).
-
-````
-count of             // pre-unary count of a variadic expression
-````
 
 A compiler has both a host and a target for compilation. Any compile-time code that evaluates on a compiler's host system may have different value sizing and alignments than that of a compiler's target system. For example, a host may operate on a 64-bit system but target may compile for a 32-bit compilation.
 
@@ -239,19 +232,6 @@ is target constant
 > queries answer in the active environment. See
 > [Zax compile-time code](language/compile-time-code.md#which-definitions-apply-while-compiling)
 > and [Zax endianness](language/endianness.md#active-and-absolute-names).
-
-
-#### Other expressions
-
-The promoted declaration, discard, call/index, block, construction, directive,
-current-instance, and lifecycle forms were removed from this legacy list. The
-remaining generic/variadic spellings are future evidence:
-
-````
-$               // pre-unary templated argument declaration
-...             // unary variadic values (array of optional variable arguments)
-$...            // unary variadic types (array of types of variadic values)
-````
 
 
 ### Compiler directives

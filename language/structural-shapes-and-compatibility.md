@@ -6,8 +6,8 @@
 | Audience | Human developers defining, converting, routing, or inspecting structurally related values |
 | Applies To | Programmer-facing structural shape, compatible binary recasting, anchored regions, decomposition, recomposition, and transformation; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-`, `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, callable result/input reshape mapping, and callable exceptional-outcome reshape; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
-| Does Not Own | Complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial behavior ([partials](partials.md)), ABI/FFI contracts, complete `unsafe cast` behavior and general casting ([conversions and casts](casting.md)), or compiler lowering |
+| Owns | Type identity versus shape; direct and flattened stored shape; compatibility postures and type-alias posture overlays; source anchors; safe structural conversion; coercive structural conversion; structural applications of `unsafe cast`; same-storage compatible views; `>-` (including name binding without moving the cursor), `-<`, `-<>-`, exact `reshape` aliases, reshape forwarding, callable reshape as a relabel (stage, callable, and invocation forms), `[N]` positional source paths on callable surfaces, and callable exceptional-outcome reshape; composition data-path participation; scalar-format and anonymous-report integration; structural costs, diagnostics, and source stability |
+| Does Not Own | The rule by which results and members find parameters, including incidental labels ([function invocation](function-invocation.md#how-forwarded-results-find-their-parameters)); composition and chaining ([lambdas and callable composition](lambdas-and-callable-composition.md)); complete exceptional result handling and forwarding ([exceptional result flow](except.md)); complete generic constraints, reflection APIs, pointer provenance, scalar-family meaning ([integers](integers.md), [fixed-point scalars](fixed-point-scalars.md), [floating-point scalars](floating-point-scalars.md)), partial behavior ([partials](partials.md)), ABI/FFI contracts, complete `unsafe cast` behavior and general casting ([conversions and casts](casting.md)), or compiler lowering |
 
 ## Start with distinct identities
 
@@ -993,7 +993,8 @@ Point :: type {
 plot final : ()(
   x : Integer,
   y : Integer,
-  label : String = "point"
+  label : String = "point",
+  detail : String = ""
 ) = {
 }
 
@@ -1001,8 +1002,48 @@ point : Point
 plot(>- point)
 ```
 
-`x` and `y` map by name. `label` uses its default. `description` remains an
-untouched member of `point`.
+`x` and `y` map by name, and `label` and `detail` use their defaults.
+`description` matches no parameter, so it is ignored and remains an untouched
+member of `point`.
+
+You can still pass ordinary arguments next to a decomposed value. Members bind
+by name without moving the positional cursor, so positional arguments written
+alongside them fill whichever parameters remain:
+
+```zax
+plot(>- point, "caption")
+// x and y by name; "caption" → label; description is ignored;
+// detail keeps its default
+
+plot(>- point, "caption", detail: point.description)
+// the same, plus description supplied to detail explicitly
+```
+
+A member that matches no parameter is never moved into a position, even when a
+parameter of a compatible type is still open. If `detail` had no default,
+`plot(>- point, "caption")` would be an error: `description` would not fill
+`detail`, and nothing else would.
+
+Several results of a call used as inputs behave differently. They also bind by
+label first, but a result that matches no label takes the next remaining
+position, and it must be discardable if nothing receives it. That rule is
+taught in
+[how forwarded results find their parameters](function-invocation.md#how-forwarded-results-find-their-parameters).
+
+A parameter whose label is declared [incidental](function-invocation.md#incidental-labels)
+carries no routing meaning. A member with the same name therefore does not bind
+it:
+
+```zax
+plotIncidental final : ()(
+  x : Integer,
+  y [<label=incidental>] : Integer
+) = {
+}
+
+plotIncidental(>- point)            // error: y is incidental, so the member y does not bind it
+plotIncidental(>- point, point.y)   // y supplied by position
+```
 
 There is no automatic positional fallback. A candidate must obtain one complete
 deterministic mapping from names, explicit arguments, and declared defaults.
@@ -1062,6 +1103,48 @@ summary : Summary -< produce()
 Unmapped destination members may use established construction defaults.
 Non-discardable source results must be routed or recomposed; discardable results
 may remain unused.
+
+`-<` also works without a destination on its left, wherever an expression can
+appear. `-< producer()` makes one anonymous value from every labeled result, and
+`MyType -< producer()` makes one `MyType`:
+
+```zax
+measureBox final : (width : Integer, height # : Integer)(shape : Shape) = {
+}
+
+keep$ final : (UseType : type)()(value : UseType) = {
+}
+
+myShape : Shape
+keep(-< measureBox(myShape))   // one anonymous value with members width and height
+```
+
+Every labeled result becomes a member, including a discardable one. A producer
+that later gains a result therefore gains a member rather than shifting any
+position.
+
+This form is how a per-item chain combines several results into one value per
+item. `-<` has greater precedence than `|>`, so `|> -< toPoint()` is one stage whose
+invocation is `toPoint()`; see
+[variadics](variadics.md#one-value-per-item).
+
+A [result pack](function-invocation.md#result-packs) cannot become a member,
+because a member is one value and a pack is not. Route the pack out first, and
+recompose the remaining results:
+
+```zax
+produceReport$ final : (Items ... : type)(total : Integer, items ... : Items)() = {
+}
+
+items: outs ... :, summary : -< produceReport$(Integer, String)()
+// outs holds the items; total becomes the only member of summary
+
+report : -< produceReport$(Integer, String)()
+// error: the result pack items cannot become a member; route it out first
+```
+
+As in the first example of this section, the routed entry takes its result
+first, and `-<` gathers only the results that are left.
 
 Named recomposition targets physical construction shape. It does not initialize
 through `own` or data-`via` paths as though those paths were direct members.
@@ -1194,7 +1277,9 @@ SwapCoordinates :: reshape {
 }
 ```
 
-The explicit mappings prevent automatic `x: x:` and `y: y:` mappings.
+The explicit mappings prevent automatic `x: x:` and `y: y:` mappings. This
+consuming of endpoints is specific to structural transformation with `-<>-`.
+On a callable surface, a reshape relabels results instead, as described below.
 
 A reshape has no instance, runtime identity, storage, constructor, or anchor.
 It is checked when applied to concrete source and destination types. Reversing
@@ -1220,10 +1305,16 @@ rules are defined by
 
 ### Mapping callable results to inputs
 
-A reshape can map one concrete callable result shape into another callable's
-input shape:
+A reshape can rename one callable's results so that they reach another
+callable's inputs:
 
 ```zax
+parse final : (tree : Tree, notes : Notes)(source : String) unbound = {
+}
+
+render final : (text : String)(document : Tree, diagnostics : Notes) unbound = {
+}
+
 ParseToRender :: reshape {
   tree: document:
   notes: diagnostics:
@@ -1232,16 +1323,118 @@ ParseToRender :: reshape {
 pipeline := parse >|> ParseToRender >|> render
 ```
 
-The reshape remains no-storage. The complete three-part expression constructs
-one composition and creates no intermediate structural value.
+On a callable surface, a reshape relabels results, and it means the same thing
+wherever it is written. It can appear in three places:
 
-Mapping applies explicit entries first, then exact equal labels, then remaining
-positions in declaration order. Destination defaults and source-result omission
-apply afterward. Mapping never backtracks, and an incompatible equal-label pair
-is an error until an explicit entry states another route.
+- as a stage of its own in retained `>|>` composition, where it relabels the
+  callable on its left, so `parse >|> ParseToRender >|> render` means
+  `(parse reshape ParseToRender) >|> render`;
+- applied directly to a callable, as in `parse reshape ParseToRender`; and
+- applied postfix to one stage's invocation in an immediate `|>` chain, which
+  has no separate reshape stages.
 
-Complete callable construction and invocation are defined by
+All entries apply at once, so a reshape can swap two labels. A relabel that
+leaves two results with the same label is an error.
+
+After relabeling, the results reach `render` the way any results reach
+inputs: labels first, then the remaining results in order. Here `tree` binds
+`document` and `notes` binds `diagnostics` by label. The full rule is in
+[how forwarded results find their parameters](function-invocation.md#how-forwarded-results-find-their-parameters).
+
+The reshape remains no-storage. The three-part expression constructs one
+composition and creates no intermediate structural value. How the composed
+callable is built and invoked is taught in
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#remap-with-reshape).
+
+### Naming results by position with `[N]`
+
+A reshape entry usually names a result by its label, but some results have no
+label to name, such as the items of a result pack. A reshape can name a result
+by its position instead. `[N]` is the Nth ordinary result in result order,
+counting from zero:
+
+```zax
+measure final : (width # : Integer, height : Integer)(shape : Shape) = {
+}
+
+scale final : (result : Shape)(size : Integer) = {
+}
+
+SecondAsSize :: reshape {
+  [1]: size:
+}
+
+myShape : Shape
+
+measureThenScale := measure >|> SecondAsSize >|> scale
+// retained: height feeds size; width is discardable and goes unused
+
+resized := myShape |> measure() reshape SecondAsSize |> scale()
+// immediate: the reshape applies postfix to the measure() invocation
+
+resizedAgain := scale(measure(myShape) reshape [1]: size:)
+// the same call written nested, with one inline mapping
+```
+
+In all three forms, `[1]` is `height`, the second result, and `width` is
+discardable, so it goes unused.
+
+`[N]` counts results whether or not they also have labels. A reshape may name a
+result either by label or by position, but naming the same result both ways is
+a duplicate mapping. The spelling matches compile-time indexing of
+a [pack](variadics.md#inside-the-body).
+
+A result pack's own label names the whole pack. An entry such as
+`results: values:` relabels every item of the pack together, so the pack can
+then bind an input pack labeled `values`. Use `[N]` to steer one item on its
+own.
+
+Only the ordinary success results of the invocation or callable being reshaped
+are counted. An exceptional outcome is an alternative to success, not a
+position in a sequence, so a reshape always names it by label. Here
+`parseTree` declares a failure outcome:
+
+```zax
+parseTree final : (
+  tree : Tree,
+  failure except : ParseError
+)(
+  source : String
+) = {
+}
+
+inspect final : ()(tree : Tree) = {
+}
+
+checkSource final : ()(source : String) = {
+  // exceptional outcomes are reshaped by label only
+  inspect(parseTree(source) reshape failure: parseFailure:) catch parseFailure {
+    return
+  }
+}
+```
+
+Positions are available only for results on a callable surface. A structural
+reshape used with `-<>-` maps members by name only. With `DevicePoint` and
+`RenderPoint` as declared at the start of
+[reusable mapping with `reshape`](#reusable-mapping-with-reshape):
+
+```zax
+devicePoint : DevicePoint
+
+PositionalDeviceToRender :: reshape {
+  [0]: x:
+  deviceY: y:
+}
+
+renderPoint : RenderPoint =
+  -<>- PositionalDeviceToRender -<>- devicePoint
+// error: structural members are mapped by name, not position
+```
+
+Structured values always have member names, so positions are never needed to
+reach a member. Mapping by position would also silently change meaning
+whenever a type's members were reordered.
 
 ### Outcome reshape
 
@@ -1286,10 +1479,37 @@ Callable-surface reshape:
 - cannot map an ordinary result to an exceptional outcome or the reverse; and
 - rejects duplicate destination labels.
 
-Explicit entries apply before equal-label outcomes remain exposed. Applying a
-named reshape to a callable adapts its visible outcome labels without invoking
-it. This lets a retained composition establish unique outcome names before
-`>|>` combines stage contracts.
+Entries apply together. Labels that the reshape does not mention remain
+exposed unchanged. Applying a named reshape to a callable adapts its visible outcome
+labels without invoking it. This lets a retained composition establish unique
+outcome names before `>|>` combines stage contracts.
+
+When a reshaped invocation's results become another call's inputs, the new
+labels route just as declared labels would. There is one addition. A label
+given by a reshape is something the programmer wrote on purpose, so it binds
+the parameter it names even when that parameter's label is declared
+[incidental](function-invocation.md#incidental-labels):
+
+```zax
+produceTotals final : (sum : Integer, count : Integer)() = {
+}
+
+store final : ()(
+  count : Integer,
+  total [<label=incidental>] : Integer,
+  limit : Integer = 0
+) = {
+}
+
+store(100, produceTotals() reshape sum: total:)
+// count binds count by label, and the reshape label binds the incidental
+// total; 100 takes the remaining limit
+// without the reshape, 100 would reach total and sum would reach limit
+```
+
+Without the reshape, `count` would still bind by label, but `store` has no
+parameter labeled `sum`. The remaining values would fill positions in order,
+so `100` would reach `total` and `sum` would reach `limit`.
 
 An invocation-level reshape affects only the selected invocation's exposed
 outcome surface. Complete branch-polymorphic catch and forwarding behavior is
@@ -1552,6 +1772,9 @@ Diagnostics should distinguish:
 - a same-storage view requesting unavailable replacement authority;
 - positional decomposition intent where only name mapping exists;
 - missing, duplicate, inaccessible, or multiply consumed reshape paths;
+- a callable reshape whose relabel leaves two results with one label, or that
+  names one result both by label and by `[N]`;
+- a `[N]` source path in a structural reshape or naming an exceptional outcome;
 - outcome reshape whose source label is absent, destination label collides, or
   mapping crosses the ordinary/exceptional category boundary;
 - comma-separated reshape entries or several inline mappings where one
@@ -1580,6 +1803,8 @@ These changes can alter source validity or behavior:
 - adding or removing a compatibility posture or default result anchor;
 - changing an `own` or data-`via` path used by mapping;
 - changing a reshape entry or making two paths reach one place;
+- adding, removing, or reordering a callable's ordinary results, which changes
+  what a `[N]` source path names;
 - changing destination construction, assignment, copy, replacement, or
   destruction behavior;
 - adding a source-family result or changing a result label used by

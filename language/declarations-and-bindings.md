@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing declaration, binding, initialization, name-resolution, and assignment boundaries; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, and inferred initialization; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; `outward` declarations; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
+| Owns | Value declaration forms, including anonymous declarations, explicit discard names, and unread-name acknowledgement; default, direct, and inferred initialization; multiple-result capture and assignment forms, and local pack declarations; binding visibility; declaration and result transfer stance; ordinary versus exceptional result-marker placement; declaration-facing compatibility-posture attachment, strict defaulting, and explicit retention; redeclaration and shadow permission; `outward` declarations; one lexical identifier namespace; qualified-path resolution through incomplete declarations; explicit instance-member lookup; composition-facing member, route, role, and fulfillment declaration forms; bound/unbound function prototypes, fixed function implementation storage, and type-callable `once` declaration integration; declaration-facing qualifier axes and attachment, including declaration-side replacement permission; exact type/union/variant/variable/namespace/reshape alias declaration integration; operator-phrase and literal-operator declaration ownership, type-parameter slots, uncommitted generic result slots, and type-qualified operator discovery; bounded private member eligibility; the declaration-versus-assignment boundary; the general non-value definition family, no-storage `reshape`, and identity-declaration integration; named type self-reference and general forward anchors; declaration diagnostics and formatting |
 | Does Not Own | Complete ordinary type meaning ([type definitions](type-definitions.md)); unmanaged overlays ([unions](unions.md)); managed alternatives ([variants](variants.md)); complete namespace/module/import/export behavior ([namespaces and modules](namespaces-and-modules.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); complete literal payload, lookup, merge, join, and execution behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); function invocation/result routing ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); complete [composition behavior](composition.md); `using` resource enrollment and disposal ([Zax `using`](using.md)); source token/layout behavior ([source structure](source-structure.md)); qualifier semantics ([qualifiers](qualifiers.md)); transparent alias/identity semantics ([identity types](identity-types.md)); or enum members and policies ([enums](enums.md)) |
 
 ## Mental model
@@ -2433,8 +2433,11 @@ A complete typed capture introduces ordinary declarations:
 number : Integer, text : String = produce()
 ```
 
-That form consumes results positionally. A source-result label may instead select
-the result before introducing an inferred or typed destination:
+That form consumes results positionally. Each new name states its type, so a
+capture written in the wrong order is usually rejected because the types don't
+match. A source-result
+label may instead select the result before introducing an inferred or typed
+destination:
 
 ```zax
 number: sum:,
@@ -2445,6 +2448,60 @@ text: description : String = produce()
 destination, while `description : String` introduces a typed destination
 initialized from the selected `text` result. This source/destination order is the
 same in declarations, call routing, return routing, and `using`.
+
+It is tempting to introduce several names at once without types, but each entry
+in a destination list is read on its own, and the `:` of `:=` belongs only to
+the last entry:
+
+```zax
+produce final : (number : Integer, text : String)() = {
+  return 42, "answer"
+}
+
+number, text := produce()
+// error: number is not an existing place to assign into,
+// and text would take an inferred type from the second result by position alone
+```
+
+Read that way, `number` is an assignment into an existing place, and `text` is
+a new name with an inferred type that takes whatever result sits in its
+position. When a destination list takes several results, an inferred new name
+must select its result by label instead. If it depended only on result order,
+reordering a producer's results could silently change what the name denotes.
+Selecting by label ties each name to a specific result, and a typed capture lets
+the declared types catch most mistakes.
+
+A single new name is different. A declaration that introduces only one name,
+such as `value := measure()`, binds the first result, and every later result
+must be discardable, so moving a required result out of first place is
+reported:
+
+```zax
+measure final : (value : Integer, note # : String)() = {
+  return 42, "measured"
+}
+
+value := measure() // binds value; the discardable note goes unused
+```
+
+Results may also be assigned to existing places, either in result order or by
+label:
+
+```zax
+existingNumber : Integer
+existingText : String
+
+existingNumber, existingText = produce()                  // in result order
+text: existingText, number: existingNumber = produce()    // by label
+```
+
+The places already have declared types, so most swaps are rejected because the
+types don't match. Two places of the same type can still be swapped silently,
+because results are never matched to a place by the place's name. In fact, none of
+these destination forms matches result labels against the names being declared
+or assigned. Only an explicit `label:` selects a result. Results forwarded
+straight into a call follow a different rule, described in
+[function invocation](function-invocation.md#how-forwarded-results-find-their-parameters).
 
 New declarations and existing destinations may coexist:
 
@@ -2468,6 +2525,59 @@ first: _.a, second: mySecond : MySecond .= makeTwo()
 
 Complete `.=` group behavior is defined by
 [Zax function invocation](function-invocation.md#construct-existing-places-with-a-dot-equals-group).
+
+Inside a [variadic](variadics.md) function, a call may return a
+[result pack](function-invocation.md#result-packs) whose number of items
+depends on how the function was called, so there is no fixed list of locals to
+declare for it. A local pack declaration holds it:
+
+```zax
+passThrough$ final : (Items ... : type)(results ... : Items)(items ... : Items) = {
+  return from items as last
+}
+
+showAll$ final : (Items ... : type)()(items ... : Items) = {
+}
+
+relay$ final : (Items ... : type)()(items ... : Items) = {
+  outs ... := passThrough(from items as copy) // several locals, one per item
+  showAll(from items as copy)                  // items stay usable
+  showAll(from outs as copy)
+}
+```
+
+`outs ... :=` declares several locals, one per result, in the same way that a
+pack parameter is several parameters. A pack is not a value, even when it holds
+a single item. The body is checked for every count, so code that treated a
+one-item pack as a value would break at every other count. A local pack
+cannot be assigned or stored as a whole, and you reach its items through
+`from outs`, `each`, `outs count`, or a compile-time index:
+
+```zax
+keepOne$ final : (Items ... : type)()(items ... : Items) = {
+  outs ... := passThrough(from items as copy)
+  saved := outs // error: a pack is not a value; write from outs where values are expected
+}
+```
+
+Unlike introducing several inferred names by position, this cannot silently
+redirect a name. The items have no individual names, only positions.
+
+When a call returns several result packs, select each pack by its label, as for
+any labeled result, and introduce a local pack for it:
+
+```zax
+firsts: lefts ... :, seconds: rights ... : = makeBoth$(Firsts: Integer, String, Seconds: Float)()
+// lefts holds the firsts pack; rights holds the seconds pack
+```
+
+`firsts:` selects the result pack labeled `firsts`, and `lefts ... :`
+introduces an inferred local pack for it, in the same way that `number: sum:`
+introduces `sum` for a single result. Here `makeBoth$` returns result packs
+`firsts` and `seconds`, as shown in
+[result packs](function-invocation.md#result-packs).
+[Variadics](variadics.md#returning-and-holding-packs) teaches complete pack
+behavior.
 
 Duplicate introduced names remain errors. Ordinary declaration visibility,
 same-scope redeclaration, and declaration-versus-assignment rules continue to
@@ -2545,7 +2655,10 @@ Diagnostics should distinguish:
 - an unread named binding that was not acknowledged with `#`;
 - a declaration form used in a source position that does not accept it;
 - declaration-like spacing that conflicts with label intent;
-- duplicate bindings introduced by a result-routing construct; and
+- duplicate bindings introduced by a result-routing construct;
+- several bare new names introduced from one producer, where source-result
+  labels or typed declarations are required;
+- a local pack used, assigned, or stored as one value;
 - positional introduction of several named `using` results where source-result
   labels are required;
 - use of an unconstructed result slot as a live value;

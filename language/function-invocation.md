@@ -6,8 +6,8 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; fixed-arity overload viability and preference; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
-| Does Not Own | The cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; the positional cursor and labels at a variadic pack, and `from` expansion in argument lists; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; result packs in result slots; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; the single routing rule for forwarded result sequences into calls, returns, and construction, including collisions, the single-result intent error, and incidental labels; overload viability and preference, including selection rules for variadic candidates; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation, including a function value selecting one processing of a variadic callable; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Does Not Own | The variadic pack model: declaring, walking, counting, indexing, mapping, and holding packs ([variadics](variadics.md)); the `label` directive catalog entry ([compiler directives](compiler-directives.md#directive-catalog)); the cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
 ## Mental model
@@ -291,7 +291,7 @@ Omitted `:` still occupies one call slot and requires the mixfix parameter's
 declared default. A consumed call/index component produces no intermediate
 call result or proxy; the complete mixfix owns the final result shape.
 
-Exact default timing across a flattened mixfix, variadics, result forwarding,
+Exact default timing across a flattened mixfix, result forwarding,
 lambda/generated callable types, construction-like call syntax, and indexing
 details remain future integration. Complete tree behavior is defined by
 [mixfix operators](mixfix-operators.md#call-index-and-splice-components).
@@ -651,6 +651,17 @@ Input mapping is tested separately for each callable candidate:
 4. A parameter may be mapped at most once.
 5. A positional input never skips the current parameter merely because that
    parameter has a default.
+6. The cursor skips every parameter already supplied by name. Two kinds of
+   name match claim their parameters before any input is placed by position,
+   wherever they are written in the call: a forwarded result's label, and a
+   member decomposed with
+   [`>-`](structural-shapes-and-compatibility.md#decompose-one-value-with--).
+   An explicit label claims its parameter when the call reaches it in source
+   order. After a named input, the next positional input therefore fills the
+   first parameter after it that is still open. A duplicate arises only when a
+   label names a parameter that is already filled. Forwarded results are
+   covered under
+   [how forwarded results find their parameters](#how-forwarded-results-find-their-parameters).
 
 Given:
 
@@ -683,6 +694,72 @@ configure(host: host, 3, true)
 ```
 
 Here `3` maps to `retries` and `true` maps to `verbose`.
+
+### Inputs around a variadic pack
+
+Some functions take any number of extra arguments, such as a list of options. A [variadic parameter](variadics.md#declaring-a-variadic-parameter)
+collects them into a **pack**. To the positional cursor, a pack is simply a
+parameter that keeps accepting inputs:
+
+```zax
+connect final : ()(
+  host : Host,
+  attempts : Integer = 3,
+  extras ... : Option,
+  where : SourceLocation = Compilation.caller
+) = {
+}
+
+myHost : Host
+myFast : Option
+mySecure : Option
+myPlace : SourceLocation
+
+connect(myHost)                              // attempts defaulted; extras empty
+connect(myHost, 5, myFast, mySecure)         // 5 maps attempts; both options join extras
+connect(myHost, :, myFast, mySecure)         // attempts defaulted explicitly
+connect(myHost, extras: myFast, mySecure)    // the label starts the pack; it keeps absorbing
+connect(myHost, 5, myFast, where: myPlace)   // a parameter after the pack only by label
+connect(myHost, myFast, mySecure)            // error: myFast maps attempts, then fails by type
+```
+
+Parameters before the pack map as usual. A positional input still never skips
+a defaulted parameter, which is why the last call fails: `myFast` lands on
+`attempts`. Once the cursor reaches the pack, it stays there and absorbs every
+positional input that follows. A parameter declared after the pack can
+therefore be reached only by its label. You can also label the pack itself:
+`extras:` puts the cursor on the pack, and the inputs after it keep joining.
+
+A prototype may declare several packs. Each one after the first is a parameter
+after a pack, so it starts at its label and absorbs until the next label:
+
+```zax
+tagged$ final : (Tags ... : type, Values ... : type)()(
+  tags ... : Tags,
+  values ... : Values
+) = {
+}
+
+tagged("draft", "urgent", values: 1, 2.5)   // tags takes two inputs; values takes two
+```
+
+To pass values you already hold as separate inputs, write `from`. It expands a
+pack or a fixed-length array into positional inputs that move through the
+ordinary cursor, so they can land in a pack or in ordinary parameters:
+
+```zax
+plot final : ()(x : Integer, y : Integer) = {
+}
+
+myCoords : Integer[2] = [ 3, 4 ]
+plot(from myCoords)   // 3 maps x, 4 maps y
+```
+
+The number of inputs to a call must be known while compiling, so a
+runtime-length slice or array cannot be expanded this way.
+[Variadics](variadics.md#calling-with-a-pack) covers expanding packs, stances
+on the expanded items, and mapping each item with
+`from each item : in items |> stages`.
 
 ### Explicit positional intent
 
@@ -1119,6 +1196,73 @@ makeByte final : (result : Byte)() = {
 
 Here `55` is checked against `Byte`, and the caller receives a `Byte`. See
 [Zax integer literals and realization](integer-literals.md#concrete-results-and-compile-time-execution).
+
+### Result packs
+
+A variadic function can return a variable number of results by declaring a
+result pack. The number is fixed for each processing. A pass-through is the
+simplest case:
+
+```zax
+passThrough$ final : (Items ... : type)(results ... : Items)(items ... : Items) = {
+  return from items as last
+}
+
+x : Integer, y : Integer, z : Integer = passThrough(1, 2, 3)   // three results
+```
+
+`results ... : Items` declares a **result pack**. Like an input pack, it is not
+one value or a tuple. Each processing of the function has a fixed number of
+ordinary result slots, one per item, and each slot behaves like a separately
+declared result: routing, acknowledgement, elision, and `return #` apply to
+each slot individually. A caller that knows the count can capture the items with typed
+declarations, as the example does.
+
+A few rules shape how result packs are declared and used:
+
+- The pack's types come from the inputs or from `$(...)`. Neither the body nor
+  an expected result ever supplies them.
+- Acknowledgement and discardability are written once on the pack and apply to
+  every item.
+- Individual items have no labels. A reshape can name an item by its position
+  with
+  [`[N]`](structural-shapes-and-compatibility.md#naming-results-by-position-with-n).
+- The pack as a whole is labeled by its declared name. When the pack is
+  forwarded, that label binds an input pack with the same label, and the items
+  go there as a group. A pack label never binds an ordinary parameter, even
+  when the pack holds one item. Without a match, the items route by position.
+  A reshape such as `reshape results: values:` relabels the whole pack.
+- A prototype may declare several result packs. A result declared after a
+  result pack, including another pack, can be reached only by its label.
+
+Two result packs with labeled `$(...)` supply look like this:
+
+```zax
+makeBoth$ final : (Firsts ... : type, Seconds ... : type)(
+  firsts ... : Firsts,
+  seconds ... : Seconds
+)() = {
+  each first : in firsts {
+    first .= [{}]
+  }
+  each second : in seconds {
+    second .= [{}]
+  }
+}
+
+storeBoth$ final : (Firsts ... : type, Seconds ... : type)()(
+  firsts ... : Firsts,
+  seconds ... : Seconds
+) = {
+}
+
+storeBoth(makeBoth$(Firsts: Integer, String, Seconds: Float)())
+// firsts binds firsts as a group; seconds binds seconds
+```
+
+[Variadics](variadics.md#returning-and-holding-packs) shows how to hold a
+result pack when its number of items depends on how the function was called,
+and how a body builds one item at a time.
 
 ### Receiver-origin `self` results
 
@@ -1580,7 +1724,8 @@ completion position unless a surrounding construct, such as `using`, establishes
 an anonymous destination lifetime for it. An unmarked result must be captured,
 routed, or explicitly discarded.
 
-A short capture consumes a prefix. Every unmentioned trailing result must permit
+A capture with fewer destinations than results, such as `value := measure()`,
+consumes the leading results. Every unmentioned trailing result must permit
 omission.
 
 Protected assignment forms such as `a = b` and `place .= source` return access
@@ -1644,7 +1789,11 @@ consume(produce())
 ```
 
 A bare invocation in a mapping-capable argument-list position may expose several
-results to consecutive input parameters.
+results as inputs. Used this way, its results form a **forwarded result
+sequence**. Each result whose label names a parameter binds that parameter, and
+the rest take positions under ordinary call rules.
+[How forwarded results find their parameters](#how-forwarded-results-find-their-parameters)
+walks through the rule.
 
 Grouping requires one expression:
 
@@ -1668,7 +1817,23 @@ consume(: = produce())
 ```
 
 It establishes a source-result cursor and a destination-parameter cursor and
-maps the producer's bare result sequence.
+maps the producer's bare result sequence by position. Unlike a bare forwarded
+sequence, it ignores result labels entirely. Write it when results should go in
+result order, however they happen to be labeled:
+
+```zax
+split final : (head : String, tail : String)(text : String) = {
+}
+
+joinReversed final : (result : String)(tail : String, head : String) = {
+}
+
+myText := "left:right"
+reversed := joinReversed(: = split(myText))   // by position: head fills tail, tail fills head
+```
+
+Even though both functions use the labels `head` and `tail`, the explicit form
+pairs them by position, so `split`'s `head` lands in `joinReversed`'s `tail`.
 
 Parentheses on the mapper's right side force expression mode first:
 
@@ -1680,7 +1845,11 @@ The mapper receives one expression value and cannot recover the parenthesized
 call's original multiple-result sequence.
 
 Parentheses are therefore not cosmetic at a multiple-result boundary. A
-formatter must not add or remove them as stylistic cleanup.
+formatter must not add or remove them as stylistic cleanup. Around a call with
+only one result they make no difference. The result binds at its written
+position either way, and the
+[single-result rule](#a-single-result-stays-at-its-position) applies in both
+cases.
 
 A `using` resource list is another mapping-capable context:
 
@@ -1729,6 +1898,54 @@ Grouping does not combine them. At a mapping-capable complete producer boundary,
 operator results use the same acknowledgement, labels, cursors, construction,
 and discard behavior as another callable result shape.
 
+Forwarding is the one place operators differ. Only a bare invocation can be a
+forwarded result sequence, and an operator expression is a single expression
+node. When an operator with several results should supply call inputs, write
+an explicit [routing group](#result-routing-groups). A one-result operator in
+argument position is one expression value and follows the
+[single-result rule](#a-single-result-stays-at-its-position), just like a
+one-result call.
+
+A built-in operator's result label is [incidental](#incidental-labels), so
+ordinary arithmetic never routes by label and never raises an intent error:
+
+```zax
+record final : ()(total : Integer, result : Integer) = {
+}
+
+myLeft := 2
+myRight := 3
+myResult := 10
+record(myLeft + myRight, myResult)   // the sum fills total by position
+```
+
+The sum fills `total` because that is where it is written, even though the next
+parameter happens to be called `result`.
+
+A programmer-declared operator follows the labels in its own declaration. If it
+uses a conventional `result` label that should never route, mark the label
+incidental:
+
+```zax
+MyAmount :: type {
+  operator binary '+' final :
+    (result [<label=incidental>] : MyAmount)(rhs : MyAmount) readonly = {
+  }
+}
+
+store final : ()(total : MyAmount, result : MyAmount) = {
+}
+
+myPrice : MyAmount
+myTax : MyAmount
+myTotal : MyAmount
+store(myPrice + myTax, myTotal)   // the sum fills total by position
+```
+
+Without the marking, the sum would carry a `result` label that names `store`'s
+second parameter while sitting in the first position. That disagreement is the
+single-result intent error.
+
 Zero-result operators remain valid complete operations but cannot supply a value
 to a parent expression node.
 
@@ -1756,6 +1973,27 @@ The producer executes once. The routing entries:
 The first label in each pair selects the source result. The second selects the
 destination parameter. Result routing consistently reads from source to
 destination.
+
+A routing group is written intent. Unlike a bare
+[forwarded sequence](#how-forwarded-results-find-their-parameters), it never
+matches labels on its own: every entry states where its result goes. A
+destination named in a group also moves the call's positional cursor, just as
+an explicit `name: value` input does.
+
+For a single result, a named input such as `count: getCount()` is simpler.
+Reach for a group when a producer offers several results and you want only
+some of them:
+
+```zax
+produceDetailed final : (text # : String, number : Integer)() = {
+}
+
+consumeNumber final : ()(number : Integer, flag : Boolean) = {
+}
+
+consumeNumber(number: = produceDetailed(), flag: true)
+// selects number; the discardable text goes unused
+```
 
 `using` resource mapping reuses the same source/destination order, but its
 destination label introduces a body-visible resource binding rather than
@@ -1818,6 +2056,32 @@ consume(
 Here `text` routes directly to the positional parameter after `first`. Bare `:`
 does not introduce a caller-visible name or a separate anonymous intermediate;
 the existing parameter slot is the destination.
+
+The destination cursor is not separate bookkeeping for the group. It is the
+call's own positional cursor, so it skips any parameter that a forwarded
+sequence elsewhere in the call has claimed by label. That holds even when the
+forwarded sequence is written later in the call:
+
+```zax
+assemble final : ()(a : Integer, b : Integer, c : String) = {
+}
+
+produceA final : (a : Integer, note # : String)() = {
+}
+
+produceX final : (x : Integer)() = {
+}
+
+assemble(x: : = produceX(), produceA())
+// produceA's a claims a by label, so the bare : sends x to b;
+// produceA's note then fills c by position
+```
+
+This is action at a distance: a later argument decides where an earlier bare
+`:` lands. If `produceA` ever stopped offering a result labeled `a`, the same
+group would quietly send `x` to `a` instead. When a result's place should not
+depend on the rest of the call, name the destination, as in
+`x: b: = produceX()`.
 
 ### Existing destinations and new declarations
 
@@ -2113,24 +2377,39 @@ share one evaluation automatically.
 
 ### Cursor exhaustion and optional tails
 
-Simple or explicit mapping consumes producer results while destinations remain.
-A discardable result is still mapped when a destination remains; optionality does
-not make the mapper skip it to improve a later match.
+Forwarded and explicit mapping both consume producer results for as long as
+destinations remain. A discardable result is still mapped while a destination
+remains. Being optional does not make the mapper skip it to improve a later
+match.
 
 If the producer has three results and only two destinations remain, the third may
-remain unused only when it permits omission.
+remain unused only when it permits omission:
 
 ```zax
-consumeFour(
-  produceThreeWithLastOptional(),
-  produceTwoMore()
-)
+consumeFour final : ()(
+  first : Integer,
+  second : Integer,
+  third : Integer,
+  fourth : Integer
+) = {
+}
+
+produceThree final : (low : Integer, middle : Integer, high # : Integer)() = {
+}
+
+produceTwo final : (start : Integer, extra # : Integer)() = {
+}
+
+consumeFour(produceThree(), produceTwo())
+// low, middle, and high fill first, second, and third;
+// start fills fourth; the discardable extra goes unused
 ```
 
-All three results from the first producer map because destinations remain. The
-first result from the second producer maps to destination four. Its remaining
-result must permit omission. Mapping does not backtrack and discard an earlier
-optional result to make room.
+None of these result labels names a parameter, so every result takes a
+position. All three of `produceThree`'s results map, `high` included, because
+destinations remain. `start` then fills `fourth`, which leaves `extra` with
+nowhere to go. That is allowed only because `extra` permits omission. Mapping
+never backtracks to discard an earlier optional result and make room.
 
 ### Structural result mapping
 
@@ -2254,35 +2533,579 @@ and reshape semantics are defined by
 
 ## Forwarding results
 
-### Forwarding into another call
-
-Simple forwarding is positional:
-
-```zax
-consume(produce())
-```
-
-Result labels do not automatically remap parameter names. Use a routing group to
-reorder by labels.
-
-A named argument expects one expression value:
+When one call produces exactly what another needs, its results can go straight
+into that call without being named first:
 
 ```zax
-consume(payload: produceTwo())
+produce final : (text : String, number : Integer)() = {
+}
+
+accept final : ()(
+  flag : Boolean,
+  number : Integer,
+  text : String,
+  enabled : Boolean = false,
+  count : Integer = 0
+) = {
+}
+
+accept(true, produce())   // number and text bind by label; true fills flag
+accept(produce(), true)   // the same call
 ```
 
-This is an error when `produceTwo()` cannot form one usable expression value.
+`produce` offers results labeled `text` and `number`, and `accept` has
+parameters with those same labels. Each result goes to its namesake, whatever
+order either side declares them in. `true` then fills the first parameter still
+open, which is `flag`, so the two calls mean the same thing.
+
+The same rule applies wherever results meet inputs: a nested call, a `|>` chain
+stage, `>|>` composition, `return`, and a construction packet.
+
+### How forwarded results find their parameters
+
+When a bare invocation is used directly as inputs, its results form a
+**forwarded result sequence**. They find their parameters in two steps:
+
+1. Labels match first. Each labeled result binds the parameter with exactly
+   that label, and that parameter is used up. This decides only where results
+   go, not when anything runs: every input still evaluates in the caller's
+   source order. When either label is [incidental](#incidental-labels), no
+   match happens. A label written in a postfix `reshape` is different. It is
+   written intent, so it binds the parameter it names, even an incidental one.
+2. Everything else follows ordinary call rules, in source order. Unmatched
+   results sit where their call was written, alongside the inputs written
+   around them. Positional inputs follow the cursor, and an explicit label
+   moves the cursor as in any call. The cursor skips the parameters used up in
+   the first step, along with any already supplied by an explicit label.
+
+Here are both steps at work, using `produce` and `accept` from
+[the opening example](#forwarding-results) and one more producer:
+
+```zax
+produceMore final : (enabled : Boolean, count : Integer)() = {
+}
+
+accept(true, produce(), produceMore())
+// every result binds by label; true fills flag
+
+accept(produce(), true, enabled: true, 5)
+// true fills flag; enabled by label; 5 follows the cursor into count
+```
+
+In the second call, `number` and `text` are taken by label before anything is
+placed by position. The cursor then starts at `flag` and moves just as it would
+in a call with no forwarding at all.
+
+A parameter you supplied with an explicit label is skipped the same way. After
+an explicit label, the cursor moves to the next parameter that is still open:
+
+```zax
+place final : ()(x : Integer, y : Integer, z : Integer) = {
+}
+
+place(y: 1, x: 2, 3)   // after x:, y is already supplied, so 3 fills z
+place(1, x: 2)         // error: x is supplied twice, by position and then by label
+```
+
+A duplicate arises only when a label names a parameter that is already filled.
+
+Because label matches go first, a forwarded sequence can push a written input
+to a later parameter. That is not an error:
+
+```zax
+measure final : (width : Integer, height : Integer)(shape : MyShape) = {
+}
+
+frame final : ()(height : Integer, width : Integer, margin : Integer) = {
+}
+
+myShape : MyShape
+frame(5, measure(myShape))
+// width and height bind by label, so 5 fills margin
+```
+
+`5` is written first, but `measure`'s results have already taken `height` and
+`width`, so it lands in `margin`. A label match against an explicit label is a
+different matter: that is a
+[collision](#when-two-sources-claim-one-parameter).
+
+A `|>` chain is the same call written in another order: `g() |> f(rest)` means
+exactly `f(g(), rest)`. So a positional input after a label behaves the same in
+both forms:
+
+```zax
+fill final : ()(a : Integer, b : Integer = 0, c : Integer, d : Integer) = {
+}
+
+myFirst := 1
+myLast := 2
+fill(myFirst, c: 3, myLast)     // myFirst fills a; b takes its default; then c, then myLast fills d
+myFirst |> fill(c: 3, myLast)   // the same call
+```
+
+[Lambdas and callable composition](lambdas-and-callable-composition.md#chain-calls-immediately)
+teaches chains in full.
+
+A named argument expects one expression value, so it never receives a whole
+sequence:
+
+```zax
+accept(true, number: produce())   // error: produce() has two mandatory results
+```
+
+### When two sources claim one parameter
+
+Forwarding can supply the same parameter twice. That happens when two
+sequences offer the same label, or when a label match meets an explicit label
+for the same parameter. Again using `produce` and `accept` from
+[the opening example](#forwarding-results):
+
+```zax
+accept(produce(), produce())         // error: number and text are each offered twice
+accept(produce(), number: 7, true)   // error: number from produce() and from the label
+```
+
+A collision is handled by the ordinary [viability](#viability) rule: a
+candidate whose inputs supply a parameter twice is not viable. If another
+candidate is still viable, ordinary selection picks it. If none is, the
+diagnostic shows the collision. A discardable result collides too, because
+permission to go unused does not let it step aside.
+
+In this example the collision rules out one overload, and selection falls
+through to the other:
+
+```zax
+present final : ()(number : Integer, text : String, flag : Boolean) = {
+}
+
+present final : ()(
+  caption : String,
+  count : Integer,
+  value : Integer,
+  enabled : Boolean
+) = {
+}
+
+produceOther final : (number : Integer, flag : Boolean)() = {
+}
+
+present(produce(), produceOther())
+// the first present would receive number twice, so it is not viable;
+// the second matches no labels and takes text, number, number, and flag by position
+```
+
+### Steering a forwarded sequence
+
+A label match is not always what you want. When it isn't, indicate where the
+results go instead:
+
+```zax
+split final : (head : String, tail : String)(text : String) = {
+}
+
+joinReversed final : (result : String)(tail : String, head : String) = {
+}
+
+myText := "left:right"
+
+joined := joinReversed(split(myText))
+// by label: head fills head, tail fills tail
+
+swapped := joinReversed(split(myText) reshape {
+  head: tail:
+  tail: head:
+})
+// the reshape relabels first, so split's head fills tail
+
+byPosition := joinReversed(: = split(myText))
+// explicit positional mapping: no labels are matched
+```
+
+A postfix `reshape` relabels the invocation it follows before any of its results
+route. It binds more tightly than `|>`, so in a chain it relabels just the stage
+it is written on.
+
+A reshape can also give a result the label a parameter expects. Here
+`produce`, from [the opening example](#forwarding-results), offers `text`, but
+the consumer wants `caption`:
+
+```zax
+consumeCaption final : ()(caption : String, number : Integer) = {
+}
+
+consumeCaption(produce() reshape text: caption:)   // text now binds caption
+```
+
+You could also make a result positional by relabeling it to a name that no
+parameter uses. That keeps working only while no parameter has that name, so
+the explicit positional form `: = producer()` is the better choice.
+
+[Structural shapes and compatibility](structural-shapes-and-compatibility.md#naming-results-by-position-with-n)
+defines reshape declarations and the `[N]` names for unlabeled results.
+
+### A single result stays at its position
+
+A call with only one result works differently. One result is one expression
+value, so it binds where it is written, and the label its producer declared
+never moves it. Trouble arises when that label names a different parameter that
+is still unfilled. The label and the position then disagree, and either one
+could be the mistake, so the call is an intent error rather than a guess:
+
+```zax
+getCount final : (count : Integer)() = {
+}
+
+report final : ()(total : Integer, count : Integer) = {
+}
+
+myTotal := 10
+report(getCount(), myTotal)     // intent error: count would reach total by position
+getCount() |> report(myTotal)   // the same intent error
+report((getCount()), myTotal)   // still the intent error: parentheses do not change it
+```
+
+To fix it, say which one you meant. Any of these works:
+
+```zax
+report(myTotal, getCount())                         // reorder: position and label agree
+report(count: getCount(), total: myTotal)           // label the call's inputs
+report(: getCount(), myTotal)                       // by position, on purpose
+report(getCount() reshape count: total:, myTotal)   // relabel to the intended parameter
+report(myTotal, count: = getCount())                // an explicit routing group
+report((: Integer = getCount()), myTotal)           // an anonymous typed destination drops the label
+```
+
+Alternatively, the producer or the consumer can mark the label
+[incidental](#incidental-labels). It then never routes, and never causes this
+error.
+
+The check looks at source shape, not at whether the types would fit. It runs on
+the candidate that selection has already chosen, so it never moves selection to
+another overload, and it fires only when the label names a different parameter
+of that candidate. A common label such as `value` will sometimes trigger it.
+For example, `pad(getValue(), myWidth)` against
+`pad final : ()(width : Integer, value : Integer)` triggers it, and there it
+catches a real swap.
+
+### Names you choose never route
+
+Only the labels declared on result slots route, and only while their results
+are being forwarded. Once a result is bound to a name, that name is the
+caller's private choice:
+
+```zax
+report final : ()(total : Integer, count : Integer) = {
+}
+
+computeTotal final : (result : Integer)() = {
+}
+
+computeCount final : (result : Integer)() = {
+}
+
+total := computeTotal()
+count := computeCount()
+
+report(total, count)                 // positional
+report(count, total)                 // positional, not an error: count fills total
+report(count: count, total: total)   // by label, when wanted
+report(count:, total:)               // error: empty labels omit both inputs, and report has no defaults
+```
+
+`report(count, total)` hands `count` to `total` without complaint. The variable
+names are the caller's own, so the call is purely positional.
+
+The last line looks like a by-name shorthand, but it is not. In an ordinary
+call, a bare `count:` acknowledges an omitted input. Inside a
+[routing group](#two-cursors) such as `text: = produce()`, the same spelling
+selects the same-named result instead. Neither meaning passes a local variable
+by name.
+
+Renaming a local variable therefore never reroutes a call, and the same holds
+for the item name in a
+[`from each` mapping](variadics.md#transforming-each-item).
+
+Destinations never match labels implicitly either. New names come from
+selecting results by label or from typed declarations, and existing places
+receive results in result order. Using `produce` from
+[the opening example](#forwarding-results):
+
+```zax
+number:, text: = produce()                      // new same-named bindings, selected by label
+
+existingText : String
+existingNumber : Integer
+existingText, existingNumber = produce()        // assignment in result order
+```
+
+`number, text := produce()` is an error. Each destination entry is read on its
+own, so `number` would be an assignment into an existing place, and `text`
+would take an inferred type from the second result by position alone.
+[Declarations and bindings](declarations-and-bindings.md#multiple-results)
+lists the complete destination forms.
+
+Put together, every label-related error comes from one of three situations:
+
+- two meaningful declared labels disagree, such as a result label and a
+  parameter label;
+- one parameter is supplied twice; or
+- a [significant](#significant-labels) parameter receives a value that doesn't
+  show the parameter's name.
+
+A name the caller chose never routes, and outside a significant parameter it
+never causes an error by itself. That is why
+`report(getCount(), myTotal)` is an intent error while `report(count, total)`
+is not.
+
+### Explicit routing moves the cursor
+
+A label match and an explicit label affect the cursor differently. A label
+match uses up its parameter without anything written at a position, so later
+positional inputs simply fill whatever remains. An explicit label, whether
+`count: value` or a routing group `count: = producer()`, is a written
+instruction, and it moves the cursor as in any call:
+
+```zax
+getCount final : (count : Integer)() = {
+}
+
+report final : ()(total : Integer, count : Integer) = {
+}
+
+myTotal := 10
+report(count: = getCount(), myTotal)
+// error: the cursor moves past count, so myTotal has no parameter
+
+report(myTotal, count: = getCount())
+// total by position, then count by label
+```
+
+### Incidental labels
+
+Many labels mean nothing beyond "the answer": `result`, `output`, and similar
+conventional names. Writing `[<label=incidental>]` after the name marks the
+label as carrying no meaning, so it never routes implicitly:
+
+```zax
+addUp final : (result [<label=incidental>] : Integer)(left : Integer, right : Integer) = {
+  return left + right
+}
+
+record final : ()(total : Integer, result : Integer) = {
+}
+
+myResult := 7
+record(addUp(1, 2), myResult)      // addUp's result fills total by position
+record(5, result: = addUp(1, 2))   // explicit selection still works
+```
+
+Without the marking, `addUp`'s `result` label would name `record`'s second
+parameter while the call sits in the first position. That is the single-result
+intent error.
+
+The marking can go on either side of a call:
+
+- An incidental **result** label never binds a parameter by label and never
+  raises the single-result intent error.
+- An incidental **parameter** label is never claimed by a producer's label. A
+  single result whose label names an incidental parameter raises no intent
+  error, because no two meaningful labels disagree. A
+  [`>-` member](structural-shapes-and-compatibility.md#decompose-one-value-with--)
+  with that name does not bind it either, so the parameter must be supplied
+  another way.
+- Explicit use still works in both cases: `name: value`, routing groups, and
+  reshape labels. A reshape label is written intent, so it binds even an
+  incidental parameter.
+
+Here the marking is on the parameter side:
+
+```zax
+getTotal final : (total : Integer)() = {
+}
+
+getCount final : (count : Integer)() = {
+}
+
+store final : ()(count : Integer, total [<label=incidental>] : Integer) = {
+}
+
+myCount := 3
+store(getTotal(), 5)
+// no intent error, because total is incidental on store; the call is purely
+// positional, so getTotal()'s result fills count and 5 fills total
+store(getCount() reshape count: total:, myCount)    // the reshape label binds the incidental total
+```
+
+Most declarations whose result is labeled `result` need no marking, because the intent error
+fires only when a label names a different parameter. Marking every label
+incidental would throw away the routing that a meaningful label provides.
+
+The directive appears only in the declaration; callers write nothing extra.
+Like the label itself, the marking belongs to the visible prototype, as
+[compatible visible prototypes](#compatible-visible-prototypes) explains. The
+directive is listed in the
+[compiler directive catalog](compiler-directives.md#directive-catalog).
+
+A built-in operator's result label is incidental, as
+[operator result shapes](#operator-result-shapes) shows.
+
+### Significant labels
+
+Some parameters are easy to fill with the wrong value, because position alone
+doesn't show what the value means. Writing `[<label=significant>]` after a
+parameter's name requires every caller to show that name with the value:
+
+```zax
+MyDocument :: type {
+  caption : String
+}
+
+publish final : ()(body : String, caption [<label=significant>] : String) = {
+}
+
+getCaption final : (caption : String)() = {
+}
+
+myBody := "Hello"
+caption := "Greeting"
+myDocument : MyDocument
+
+publish(myBody, caption)               // fine: the variable is named caption
+publish(myBody, caption: "Greeting")   // fine: an explicit label
+publish(myBody, myDocument.caption)    // fine: the member is named caption
+publish(myBody, >- myDocument)         // fine: the decomposed member caption binds by name
+publish(myBody, getCaption())          // fine: the result is labeled caption
+publish(myBody, "Greeting")            // error: nothing names caption
+publish(myBody, : "Greeting")          // error: positional intent does not override it
+```
+
+A matching name only confirms the value. It never routes it:
+
+```zax
+publish(caption, myBody)
+// error: caption fills body by position, and myBody then reaches caption
+// without naming it
+```
+
+So a significant parameter is the one place where a name the caller chose
+matters. Even there, the name is checked, never used to move a value.
+
+A value keeps its name only through built-in constructs whose meaning is fixed
+and which pass the value along unchanged:
+
+- a bare variable, or member access, which keeps the member's name;
+- grouping, as in `(caption)`;
+- a leading `:`, as in `: caption`, which neither adds nor removes a name;
+- a stance restatement, such as `caption as copy`;
+- a member decomposed with `>-`;
+- an [argument declaration](#argument-declaration-expressions) with that name,
+  such as `(caption : String = "Greeting")`.
+
+A call result shows a name only through its own declared label, as
+`getCaption()` does above. Any operator, conversion, or other call produces a
+new value with no name, because the value has changed: neither `area * 2` nor
+`sqrt(area)` is still the area.
+
+```zax
+publish(myBody, caption as copy)          // fine: the same value, restated
+publish(myBody, : caption)                // fine: : does not change the name
+publish(myBody, caption + "!")            // error: a new value; write caption: caption + "!"
+publish(myBody, caption: caption + "!")   // fine
+```
+
+A conversion with `as` is a new value too, unlike a stance restatement that
+uses the same keyword:
+
+```zax
+MyCaption :: type { }
+// assume MyCaption declares a conversion to String, as shown in casting
+
+publishFrom final : ()(caption : MyCaption) = {
+  publish("Hello", caption as String)            // error: a conversion makes a new value
+  publish("Hello", caption: caption as String)   // fine
+}
+```
+
+Conversions are described in [casting](casting.md).
+
+A result label marked incidental shows no name, because an incidental label
+carries no meaning:
+
+```zax
+getText final : (caption [<label=incidental>] : String)() = {
+}
+
+publish(myBody, getText())            // error: getText's caption label is incidental
+publish(myBody, caption: getText())   // fine
+```
+
+A significant pack is checked as a whole. Its items arrive together, so the pack
+must be started by its name: an explicit label, a forwarded result pack with that
+label, or `from` a source pack with that name. Supplying no items is fine,
+because nothing reached the pack without its name:
+
+```zax
+publishAll final : ()(body : String, tags ... [<label=significant>] : String) = {
+}
+
+publishAll(myBody, tags: "draft", "urgent")   // fine: the label starts the pack
+publishAll(myBody)                            // fine: the pack is empty
+publishAll(myBody, "draft", "urgent")         // error: the pack is filled without naming tags
+
+forwardTags final : ()(body : String, tags ... : String) = {
+  publishAll(body, from tags as copy)         // fine: the source pack is named tags
+}
+```
+
+A label with no marking is **descriptive**: it describes the value, binds a
+forwarded result with the same label, and otherwise takes positional inputs.
+`[<label=descriptive>]` states that default explicitly. Every label has one of
+three markings:
+
+| Marking | Behavior |
+| --- | --- |
+| None, or `[<label=descriptive>]` | The default. A forwarded result with the same label binds it; otherwise it takes positional inputs |
+| `[<label=incidental>]` | Never routes implicitly; explicit use still works |
+| `[<label=significant>]` | Every value supplied to it must show its name |
+
+`significant` can mark parameters only. Like the other markings, it belongs to
+the visible prototype.
+
+### Leftover results
+
+A producer can offer more results than the consumer takes. Any forwarded result
+that no parameter consumes must be discardable:
+
+```zax
+outline final : (width : Integer, height # : Integer)(shape : MyShape) = {
+}
+
+area final : (result : Integer)(width : Integer) = {
+}
+
+myShape : MyShape
+myArea := area(outline(myShape))              // width by label; the discardable height goes unused
+myArea2 := myShape |> outline() |> area()     // the same call
+```
+
+Pack items are stricter. An item carried into a `|>` stage by
+`from each item : in items |> stages` has no discard marking, so if that stage
+does not consume it, the call is always an error. Items of a
+[result pack](#result-packs) follow whatever discardability the pack declares.
 
 ### Forwarding from a return
 
-A bare invocation can forward a compatible complete result sequence:
+`return produce()` forwards a complete result sequence by the same rule.
+Labeled results fill the result slots with the same labels first, and the rest
+fill the remaining slots in order. Here `wrapper` reuses `produce` from
+[the opening example](#forwarding-results):
 
 ```zax
 wrapper final : (
   number : Integer,
   text : String
 )() = {
-  return produce()
+  return produce()   // produce's text and number fill the same-labeled slots
 }
 ```
 
@@ -2292,15 +3115,53 @@ Return routing can remap labels:
 return text: outputText:, number: outputNumber: = produce()
 ```
 
-Grouping always requires one expression:
+A return can also label the values it supplies, the way a call labels its
+inputs. Each label fills the result slot it names, and later unlabeled values
+fill the next open slots after it:
+
+```zax
+describeAnswer final : (text : String, number : Integer)() = {
+  return number: 42, text: "answer"   // each value goes to the slot with its label
+}
+
+describeAgain final : (text : String, number : Integer)() = {
+  return text: "answer", 42           // 42 fills number, the next open slot
+}
+```
+
+The same cursor rules as a call apply. A label on a
+[result pack](#result-packs) starts that pack, which keeps absorbing values
+until the next label:
+
+```zax
+regroup$ final : (Lefts ... : type, Rights ... : type)(
+  rights ... : Rights,
+  lefts ... : Lefts
+)(
+  leftInputs ... : Lefts,
+  rightInputs ... : Rights
+) = {
+  return lefts: from leftInputs as last, rights: from rightInputs as last
+}
+```
+
+A labeled value, `label: value`, is not a routing group. A routing group pairs a
+source label with a destination label and ends in `= producer()`.
+
+Parentheses change what a return forwards. A parenthesized call must be one
+expression value:
 
 ```zax
 return (produce())
 ```
 
-It does not preserve a multi-result sequence.
+Here the parentheses ask for a single value, so the multi-result sequence is
+not forwarded. This works only if `produce()` can form one usable value. To
+forward every result, leave the parentheses off.
 
-Result routing itself cannot be grouped as an expression:
+It can also be tempting to wrap a long routing group in parentheses to spread it
+across lines. Result routing cannot be grouped as an expression, so this is an
+error:
 
 ```zax
 return (
@@ -2310,7 +3171,9 @@ return (
 // error: result routing cannot be grouped as an expression
 ```
 
-Use naked return routing and explicit continuation for multiline layout.
+To lay the group out over several lines, write the routing directly after
+`return`, without parentheses, and continue it onto the next lines with
+explicit continuation.
 
 ### Forwarding into construction
 
@@ -2322,8 +3185,12 @@ pair : Pair = [{
 }]
 ```
 
-This selects a compatible `Pair` constructor. It does not implicitly pack result
-labels into stored members or create one anonymous structural value.
+This selects a compatible `Pair` constructor, and the results route into that
+constructor's parameters by the
+[same rule](#how-forwarded-results-find-their-parameters) as in a call. Labels
+that name constructor parameters bind first, and the rest fill positions. The
+packet does not match result labels against `Pair`'s stored members, and it
+does not create one anonymous structural value.
 
 Use explicit `-<` recomposition when the remaining results should become one
 structural value; see
@@ -2548,7 +3415,9 @@ candidates. See
 
 A candidate is viable only when:
 
-- every explicit input and omission maps without duplication;
+- every explicit input, omission, and forwarded result maps without
+  duplication, so a [collision](#when-two-sources-claim-one-parameter) makes
+  that candidate not viable;
 - every required parameter receives a value or declared default;
 - arguments and receiver operands can bind with required types, qualifications,
   and transfer behavior;
@@ -2658,6 +3527,9 @@ public declaration.
 A resolved function value or exact typed function alias may select one complete
 prototype before invocation. A fully typed function value selects one generic
 instantiation the same way; see [naming a generic](generics.md#naming-a-generic).
+It selects one processing of a variadic function the same way, as
+[a function value for a variadic function](#a-function-value-for-a-variadic-function)
+shows.
 Complete exact-prototype syntax remains later callable-selection work.
 
 ### Terminal opportunity requires intent
@@ -2732,6 +3604,60 @@ configure(value, option:)
 
 when both forms activate the same callable default.
 
+An empty variadic pack also counts as one omitted default.
+[Candidates with a variadic pack](#candidates-with-a-variadic-pack) shows how
+that decides between overloads.
+
+### Candidates with a variadic pack
+
+A variadic overload often sits beside fixed ones, such as a general `largest`
+next to a two-argument version. When the candidates otherwise match equally
+well, three rules decide between them.
+
+First, an argument bound to an ordinary parameter beats one absorbed into a
+pack. A fixed declaration accepts a strict subset of the call shapes the pack
+accepts, so it is the more specific choice:
+
+```zax
+largest final : (result : Integer)(first : Integer, second : Integer) = {
+}
+
+largest final : (result : Integer)(values ... : Integer) = {
+}
+
+myLargest := largest(1, 2)   // the two-parameter largest wins
+```
+
+Second, an empty pack counts as one omitted default, so a candidate that needs
+no pack wins:
+
+```zax
+show$ final : (First : type)()(first : First) = {
+}
+
+show$ final : (First : type, Rest ... : type)()(first : First, rest ... : Rest) = {
+}
+
+show(1)   // the first show wins: the second needs an empty pack
+```
+
+Third, a pack with a stated element type and no `$` list makes a non-generic
+candidate, even though the function is processed once per argument count. That
+candidate beats an equally good generic candidate. A call written with `$(...)`
+considers only generic candidates, so it never selects this one:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = {
+}
+
+sum$ final : (Items ... : isNumeric)(result : Integer)(items ... : Items) = {
+}
+
+myTotal := sum(1, 2)   // the sum without $ wins
+```
+
+[Variadics](variadics.md#choosing-between-overloads) has more examples.
+
 ### Expected results as a tie-breaker
 
 Result quality can break a tie only when:
@@ -2778,7 +3704,10 @@ scheduled assignment into open-ended assignment, or remint the callable.
 A generic differs. Its body is processed once for each distinct set of
 compile-time inputs, including each qualification of a worked-out type, and each
 resulting instantiation is its own minted implementation; see
-[generics](generics.md#when-code-is-processed-once-per-input).
+[generics](generics.md#when-code-is-processed-once-per-input). A variadic
+function is processed the same way, and
+[a function value for a variadic function](#a-function-value-for-a-variadic-function)
+explains what that means for function values.
 
 An exact prototype can select one member of an overload group:
 
@@ -2811,6 +3740,35 @@ betterOperation final : (
 
 Calls through `betterOperation` use `result`, `expires`, its `#` permission, and
 `anotherConfiguredTimeout()`.
+
+Relabeling has one more effect. Because forwarded results
+[bind by label](#how-forwarded-results-find-their-parameters), new labels also
+change how results route for callers of the new prototype. Callers always route
+by the labels and [incidental](#incidental-labels) markings of the prototype
+they call through. A compatible implementation installed in a slot may use
+different labels or markings, but installing it never changes routing at a call
+site:
+
+```zax
+MyHandler :: type {
+  onResize : ()(width : Integer, height : Integer)   // the slot's visible prototype
+}
+
+resizeImpl final : ()(w : Integer, h : Integer) = {
+}
+
+measure final : (width : Integer, height : Integer)(shape : MyShape) = {
+}
+
+handler : MyHandler
+handler.onResize = resizeImpl        // compatible: same types and order; labels differ
+
+myShape : MyShape
+handler.onResize(measure(myShape))   // routes by the slot's labels, width and height
+```
+
+`resizeImpl` calls its parameters `w` and `h`, but the call goes through the
+slot, so `measure`'s results route by the slot's `width` and `height`.
 
 Compatibility is positional over ordered input and result slots. A visible
 prototype supplies a call-boundary contract around the unchanged implementation:
@@ -2890,7 +3848,9 @@ can satisfy it. In particular, exposing a scheduled raw result as explicit
 borrowed uses unless a caller restates `last` or proves another owner.
 
 If entering the original body requires executable adaptation, write a wrapper or
-lambda.
+lambda. The one exception is the compiler-generated glue that binds a fixed
+prototype to one processing of a
+[variadic function](#a-function-value-for-a-variadic-function).
 
 Composition `via` is different from an ordinary compatible-prototype alias. The
 declaration explicitly names a contained target, so its thin adapter may adjust
@@ -3010,6 +3970,34 @@ capturing default may still require representation.
 
 This is a programmer-visible compatibility and cost model, not a promise of one
 backend mapping or byte-for-byte generated code.
+
+### A function value for a variadic function
+
+Suppose you want to store `sum` in a variable or pass it as a callback. A
+variadic function is processed once per argument count, or once per type list
+when its element types vary, so there is no single function value to take. A
+fully typed function value picks one processing by mapping its own parameters
+onto the pack:
+
+```zax
+sum final : (result : Integer)(values ... : Integer) = {
+}
+
+pickSum : (result : Integer)(first : Integer, second : Integer) = sum
+myTotal := pickSum(1, 2)   // calls sum's two-item processing
+```
+
+`pickSum` has two parameters, so it binds the processing of `sum` that takes
+two items. Its labels `first` and `second` differ from `sum`'s parameter label
+`values`, and that difference is handled by the ordinary compatible-prototype adaptation described
+above.
+
+Binding may also need compiler-generated adaptation, such as glue between that
+processing's calling convention and the fixed prototype. The assignment is
+supported either way. Any glue is a cost, and tools should be able to show it.
+
+[Variadics](variadics.md#lambdas-and-function-values) covers variadic lambdas
+and `varying` callback slots.
 
 ## Temporary lifetime and call completion
 
@@ -3260,6 +4248,17 @@ Invocation diagnostics should distinguish:
 - unknown parameter or result labels;
 - label-versus-declaration intent errors;
 - duplicate parameter, source-result, or destination mapping;
+- a collision in which two forwarded results, or a forwarded result and an
+  explicit label, supply one parameter, shown for each candidate it made not
+  viable;
+- a single result whose declared label names a different unfilled parameter;
+- a value supplied to a significant parameter without showing its name,
+  including a computed value, a conversion, an incidental result label, or a
+  significant pack filled without its label;
+- a result-pack label that names an ordinary parameter rather than a pack;
+- an unconsumed forwarded result that is not discardable, including an
+  unconsumed pack item;
+- a runtime-length source expanded with `from` into inputs;
 - exhausted or invalid positional cursors;
 - omitted parameters without declared defaults;
 - declared-default omission versus explicit type-default expressions;
@@ -3289,7 +4288,8 @@ Invocation diagnostics should distinguish:
 - contradictory continuation indentation.
 
 When candidates map source differently, diagnostics should show the
-candidate-specific input and result mapping rather than only list signatures.
+candidate-specific input and result mapping rather than only list signatures,
+including which forwarded results bound by label and which took positions.
 
 When result context participates, diagnostics should show the explicit expected
 shape and why each candidate is exact, same-family compatible, incompatible,
@@ -3306,6 +4306,10 @@ Programmers must be able to discover:
 - hidden declared-default work;
 - copies, moves, `last`, references, pointers, and temporary extension;
 - indirect function-value calls;
+- compiler-generated glue that binds a fixed function value to one processing
+  of a variadic function;
+- each processing of a variadic function, one per distinct argument count or
+  type list used;
 - type-qualified `once` calls without receiver evaluation;
 - instance-qualified `once` calls with ordinary once-only receiver evaluation;
 - environments retained for closures or default expressions;
@@ -3369,6 +4373,19 @@ Even deterministic selection cannot prevent every API evolution hazard:
 - adding a more specific overload may change the selected body;
 - adding a default may make another candidate viable;
 - renaming a parameter or result label breaks labeled callers;
+- renaming a parameter or result label can also reroute forwarded results: a
+  result that matched a parameter by label may fall to a position, or start
+  matching a different parameter;
+- adding a labeled result to a producer can make it collide with an explicit
+  label or another forwarded result at existing call sites, making that
+  candidate not viable;
+- adding or removing `[<label=incidental>]` on a visible prototype changes
+  routing and single-result intent errors at call sites written against that
+  prototype, without changing its types;
+- marking a parameter `[<label=significant>]` makes existing calls that supply
+  it without its name into errors, while removing the marking never breaks a
+  call; renaming a significant parameter breaks every caller that showed the
+  old name;
 - reordering parameters or results changes positional cursors;
 - changing result arity or discardability changes mappings;
 - adding, removing, renaming, or reclassifying an exceptional outcome changes
@@ -3407,6 +4424,8 @@ Later work must preserve:
 - result slots without mandatory default-construction cost;
 - complete ordinary-success or one-exceptional-outcome completion;
 - the distinction between one expression and a result sequence;
+- one routing rule wherever forwarded results meet inputs, in which a name the
+  caller chose never routes;
 - explicit result mapping and deterministic cursors;
 - visible-prototype-controlled pre-body result construction,
   implementation-controlled body and return construction, caller-visible
@@ -3433,13 +4452,15 @@ The following remain explicit future work:
   `move`, reference, pointer, and `last`;
 - complete closure layout, raw function-pointer ABI, and mutually recursive
   callable-family forwarding;
-- variadics, partial application, composition, chaining, and split/combine
-  transforms;
+- partial application, composition, and split/combine transforms;
 - complete ownership, moved-from state, returned aliases, and destruction order;
 - async, cancellation, executors, and concurrency;
 - runtime value-polymorphic predicates and hidden `mutator` access;
-- anonymous/private parameter and result labels;
+- parameter and result labels that are anonymous or private to a declaration,
+  as distinct from a label that carries no routing meaning, which can already
+  be marked [incidental](#incidental-labels);
+- [significant](#significant-labels) result labels, which would require a
+  result to be consumed by its label, for when a producer needs them;
 - label aliases and complete reflection metadata;
-- explicit promotion of several results into one structural value;
 - formal grammar, diagnostic identifiers, ABI, and conformance; and
 - compiler lowering and representation.

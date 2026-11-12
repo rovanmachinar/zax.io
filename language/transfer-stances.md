@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-visible `copy`, `deep`, `move`, and terminal-transfer intent; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The transfer-stance mental model; declaration, type-alias overlay, and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent; projection; common costs, diagnostics, and source stability |
+| Owns | The transfer-stance mental model; declaration, type-alias overlay, and use-site stance; `copy`/`deep`/`move`/`last` meaning and fallback; value/reference and receiver behavior; source post-state; terminal intent, including per item of an expanded pack; projection; common costs, diagnostics, and source stability |
 | Does Not Own | Exact callable selection mechanics ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); composition publication and wrapper eligibility ([Zax composition](composition.md)); generated lifecycle signatures ([construction, replacement, and destruction](construction-and-destruction.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
 
@@ -91,6 +91,10 @@ result := source as move copy // error: not one recognized stance phrase
 A type may contain values with their own declaration stances. Projection rules
 decide which one is offered, but the type does not acquire a stance at every
 indirection depth.
+
+A stance can also be written on an expansion of several arguments, such as
+`from items as last`. It then applies once to each complete item, as
+[a stance on several items](#a-stance-on-several-items) explains.
 
 ## Copy
 
@@ -1207,6 +1211,73 @@ forward(resource) // remains a move offer
 Improved analysis may discover more intent errors, but it must not silently
 select a different user body. Destruction does not count as ordinary later use.
 
+### A stance on several items
+
+A function that accepts any number of arguments receives them as a
+[pack](variadics.md) and can pass them on with `from items`. The pack is not
+one value. Each item is its own complete value, so a stance written on the
+expansion applies to each item separately. The terminal-use rule above also
+applies to each item:
+
+```zax
+sendAll$ final : (Items ... : type)()(items ... : Items last) = {
+}
+// Each item may be taken by terminal transfer. Writing `last` after a
+// worked-out type is illustrative spelling.
+
+forwardAll$ final : (Items ... : type)()(items ... : Items) = {
+  sendAll(from items)
+  // error: this is each item's final use, and sendAll could take it
+  // terminally; state copy, move, last, or deep intent
+}
+
+forwardLast$ final : (Items ... : type)()(items ... : Items) = {
+  sendAll(from items as last)   // last applies to each item separately
+}
+```
+
+A function that forwards a pack therefore states its intent, just as it would
+for a single value. Zax does not forward silently. Each item also keeps its own
+worked-out shape, so an item that is a reference stays a reference.
+
+When a chain runs for each item, you can write the stance in either of two
+places. On the source, it applies to each item. At the use inside the chain,
+it applies where the item is passed:
+
+```zax
+encode final : (packet : Packet)(message : Message last) = {
+}
+
+sendPackets final : ()(packets ... : Packet) = {
+}
+
+sendMessages final : ()(messages ... : Message) = {
+  sendPackets(from each message : in messages as last |> encode())
+}
+
+sendMessagesAtUse final : ()(messages ... : Message) = {
+  sendPackets(from each message : in messages |> encode(message as last))
+}
+// Both offer last for each message separately.
+```
+
+A stance on the expansion is the same for every item. To give different items
+different stances, write the items as separate inputs, selecting each one by
+compile-time index:
+
+```zax
+sendPair final : ()(header : Header move, body : Body) = {
+}
+
+forwardPair$ final : (Items ... : type)()(items ... : Items)
+  requires Items count == 2 = {
+  sendPair(items[0] as move, items[1] as copy)
+}
+```
+
+[Passing items on](variadics.md#passing-items-on) teaches the complete pack
+model.
+
 ## Callable values and captures
 
 Capture construction and later callable transfer are different consumers:
@@ -1467,7 +1538,8 @@ Diagnostics should identify the deciding contract, including:
 - accepted `move`/`last` fallback and resulting source state;
 - value/reference ambiguity;
 - the exact mutability, place, access, or stance mismatch;
-- terminal opportunity requiring explicit intent;
+- terminal opportunity requiring explicit intent, including for each item of
+  an expanded pack;
 - terminal-source reuse;
 - a source or result consumed more than once;
 - exceptional handler or forwarding mapping whose source stance cannot satisfy
@@ -1510,6 +1582,15 @@ Focused future work remains for:
 - qualifier-generic syntax and constraints;
 - detailed pointer provenance and casting beyond the current ownership model;
 - moved-from and terminal operation eligibility;
+- whether returning a parameter as its final use is a terminal opportunity
+  that requires explicit intent, as passing it as an argument does:
+
+  ```zax
+  relay final : (result : Message)(input : Message) = {
+    return input   // final use of input: is intent required here?
+  }
+  ```
+
 - async suspension and cancellation;
 - cross-thread value preparation and whether it is a stance, result capability,
   or separate contract;

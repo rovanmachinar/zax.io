@@ -592,6 +592,13 @@ combined := customLeft + customRight
 
 Several results do not become an implicit tuple or structural value.
 
+An operator's results route into call inputs like any callable's, with one
+difference. An operator expression is a single expression node, so it is never
+a forwarded result sequence. Built-in operator results are also incidental,
+which means they always bind by position.
+[Operator result shapes](function-invocation.md#operator-result-shapes) shows
+both effects.
+
 ### Outward result flow
 
 A uniquely selected inner result may make an enclosing operation viable. Its

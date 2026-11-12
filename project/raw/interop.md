@@ -5,9 +5,9 @@
 | Status | Raw placeholder / non-authoritative |
 | Audience | A future numbered work item defining assembly, FFI, ABI, or binding behavior |
 | Applies To | Direct assembly and selected C/C++ interoperability |
-| Owns | Preservation of aligned assembly/FFI requirements, scalar ABI boundaries, and legacy native/code-page string view pressure |
-| Does Not Own | Accepted foreign layouts, calling conventions, or binding contracts |
-| Source / Provenance | Work items `001` and `012`, Zax purpose/design principles, and optional layout/ABI pressure |
+| Owns | Preservation of aligned assembly/FFI requirements, scalar ABI boundaries, legacy native/code-page string view pressure, and untyped foreign variable-argument pressure |
+| Does Not Own | Accepted foreign layouts, calling conventions, or binding contracts, or the Zax pack model ([Zax variadics](../../language/variadics.md)) |
+| Source / Provenance | Work items `001` and `012`, Zax purpose/design principles, optional layout/ABI pressure, and work item `037` variadic deferrals |
 
 ## Aligned requirements
 
@@ -195,6 +195,49 @@ boundary needs an explicit adapter or terminated policy specialization; an
 ordinary `MbcsString<Encoding>` may contain embedded NUL and cannot expose
 `.c_str()`.
 
+## Untyped foreign variable arguments
+
+C functions such as `printf` take untyped variable arguments: the callee walks
+an argument list whose count and types it learns only at runtime, from a format
+string or another convention. Binding to such functions will need a boundary
+form.
+
+Zax's own variadic parameters are different. A
+[pack](../../language/variadics.md) has a compile-time count and a known type
+per item, and the function is compiled once per count or type list:
+
+```zax
+write final : ()(text : String) = {
+}
+
+write final : ()(number : Integer) = {
+}
+
+print$ final : (Items ... : type)()(items ... : Items) = {
+  each item : in items {
+    write(item)          // checked while compiling for each item's type
+  }
+}
+
+print("total:", 3)       // print$(String, Integer): no runtime argument list
+```
+
+No source form exists for declaring or calling an untyped foreign variadic
+function, so this input does not invent one. Future FFI work must decide:
+
+- how a foreign declaration states that it takes untyped variable arguments;
+- which Zax types may be passed through them, and the default argument
+  promotions and calling-convention rules that apply;
+- whether a call is checked against a format string, as a `[<constant>]` input
+  can be checked while compiling, or left as an explicit unsafe responsibility;
+- whether calls from Zax pass a pack through an adapter that builds the foreign
+  argument list; and
+- how foreign callbacks that receive a C `va_list` are represented, if at all.
+
+**Constraint on current design.** Untyped variable arguments never enter
+ordinary Zax calls. A Zax variadic parameter is always a pack with a
+compile-time count, and a runtime-length list is an array or slice.
+
 ## ABI directive pressure
 
 The root legacy compiler-directive page keeps the `abi` directive section
@@ -210,6 +253,6 @@ carry into ABI work:
 ## Activation and retirement
 
 Activate this input before defining assembly integration, FFI, ABI controls,
-binding behavior, X87 correspondence, MBF file exchange, or stable scalar
-serialization. Consume its findings through that work and retire or archive
+binding behavior, untyped foreign variable arguments, X87 correspondence, MBF
+file exchange, or stable scalar serialization. Consume its findings through that work and retire or archive
 this placeholder afterward.
