@@ -47,7 +47,7 @@ Examples include:
 
 - labels and explicit positional forms;
 - complete result declarations selecting a result family;
-- explicit `copy`, `deep`, `move`, reference, or `last` intent;
+- explicit `loan`, `copy`, `move`, `last`, or `deep` intent;
 - selectable memory and lifetime policies; and
 - structural compatibility postures and transformations; and
 - future generic and metaprogramming relationships.
@@ -55,10 +55,14 @@ Examples include:
 [Function invocation](function-invocation.md) applies this principle by
 diagnosing incomparable call candidates and accepting explicit labels,
 declarations, transfers, and prototype bindings as disambiguation.
-[Transfer stances](transfer-stances.md) let a programmer distinguish ordinary
-copying, independent copying, resource transfer, and final resource reuse
+[Transfer stances](transfer-stances.md) let a programmer distinguish lending,
+ordinary copying, taking resources from a value that stays usable, taking
+everything from a value you are finished with, and independent copying,
 without requiring separate source syntax for every constructor, call,
-assignment, and operator.
+assignment, and operator. A use of a variable with no stance means `copy`, so
+Zax never adds `move` or `last` to a variable for you; where they are needed,
+you write them. Only values nobody can use again, such as a function's
+result, are passed on as `last` without a written stance.
 
 Defined source that strongly resembles a mistake may require an
 [intent acknowledgement](intent-acknowledgements.md). That mechanism confirms a
@@ -86,6 +90,39 @@ Examples include:
 
 Familiar syntax is useful, but consistency inside Zax matters more than imitating
 another language mechanically.
+
+## One enforced order for lists of modifiers and clauses
+
+> Where Zax has a list of modifiers or clauses, the compiler enforces one
+> canonical order, so all code reads the same.
+
+A reader should not need to check whether `transfer move copy` and
+`transfer copy move` mean different things, or learn each team's preferred
+arrangement. One order makes lists scannable and makes differences between two
+declarations stand out. An out-of-order list is an error.
+
+Applications include:
+
+- transfer stances, written in the order `loan copy move last deep`: from
+  "nothing leaves the owner" to "everything leaves", with `deep` last. A
+  type's `transfer` list therefore reads `copy move last deep`, leaving out
+  what the type does not allow; and
+- the clauses after `type` in a type definition, where `transfer` comes
+  before `seal`: what the type itself allows comes before what others may
+  add to it.
+
+```zax
+MyCatalog :: type transfer copy move seal open storage close callable {
+}
+
+MyBadOrder :: type transfer last move {
+}
+// error: transfer stances must be in the order copy move last deep
+```
+
+Some lists in the language do not have a defined order yet; each will get one
+as its construct is designed. Wherever an order is defined, the compiler
+enforces it.
 
 ## Visible order should be trustworthy
 

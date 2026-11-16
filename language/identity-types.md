@@ -6,7 +6,7 @@
 | Audience | Human developers defining, reading, or converting aliases and representation-related types |
 | Applies To | Transparent type aliases and distinct identities over existing types; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Transparent aliases and canonical identity preservation under alias property overlays; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
+| Owns | Transparent aliases and canonical identity preservation under alias property overlays; identity boundaries; immediate underlying type/value/place operations; identity declarations and original-owner body authority; admission; identity projection; identity `transfer` lists and their effect on projection and exposed operations; exposed and opaque surfaces; identity-specific application of the shared composition exposure filter; contextual-posture reset and non-forwarding; declared bridges; construction/transfer requirements; costs, diagnostics, and source stability |
 | Does Not Own | Integer-family membership and numeric-source realization ([integers](integers.md), [integer literals and realization](integer-literals.md)); enum members and policies ([enums](enums.md)); qualifier semantics ([qualifiers](qualifiers.md)); the shared exposure filter and general composition behavior ([Zax composition](composition.md)); partial behavior ([partials](partials.md)); or general [structural shape and compatibility](structural-shapes-and-compatibility.md) |
 | Source / Provenance | Legacy alias and enum evidence refined through fundamental-integer and conversion review |
 
@@ -147,7 +147,11 @@ Both answers are explicit:
 
 ```text
 Name :: identity <admission> <surface> type UnderlyingType
+Name :: identity <admission> <surface> transfer <stances> type UnderlyingType
 ```
+
+The optional `transfer` clause is described in
+[transfer lists on identities](#transfer-lists-on-identities).
 
 Exactly one admission keyword is written:
 
@@ -203,7 +207,12 @@ MyContextualInteger :: identity admit expose type Integer {
   +++ contextual final : ()(rhs : Integer) = {
   }
 
-  operator binary '+' contextual existing
+  operator binary '+' contextual final : (
+    result : MyContextualInteger
+  )(
+    rhs : MyContextualInteger
+  ) = existing
+  // illustrative: the exact position of contextual is still open
 
   double final : ()() = {
     _ *= 2
@@ -228,8 +237,9 @@ separately:
 myValue := 0 + (: MyContextualInteger = 5)
 ```
 
-Exact identity-body and `contextual existing` grammar remains future source
-integration. Completion behavior is defined by
+The exact syntax of an identity's body, and where `contextual` goes in a
+declaration, are not settled yet. Contextual completion is
+explained in
 [Zax operators](operators.md#contextual-completion).
 
 ### Integer underlying types do not grant integer membership
@@ -480,8 +490,13 @@ identity regenerates them for its own immediate layer. It may obtain a copied
 deeper value without gaining the inner identity's private place access:
 
 ```zax
-myDeeperValue := (_ underlying place) underlying value
-myDeeperValue.doSomething()
+inspectDeeper final : ()() copy = {
+  myDeeperValue := (_ underlying place) underlying value
+  myDeeperValue.doSomething()
+}
+// declared with a copy receiver: underlying value copies the whole stored
+// value, and a receiver with no stance is a loan, through which the whole
+// value cannot be copied
 ```
 
 The first operation reaches the outer identity's immediate underlying place.
@@ -509,17 +524,127 @@ myIdentity := MyIdentity from myUnderlying
 The operation needs a viable way to establish the underlying stored value:
 
 - `copy`;
-- `deep` copy;
 - `move`;
-- consuming/`last` transfer;
+- `last`;
+- `deep` copy;
 - direct construction; or
-- another declared transfer.
+- a constructor the identity declares for the purpose.
 
 Identity syntax does not manufacture copyability. If no applicable construction
 or transfer exists, by-value admission is unavailable. `move` may fall back to
 `copy`; `last` may fall back to `move` and then `copy`; `deep` requires an exact `deep`
 contract. Complete stance meaning and source state are defined by
 [Zax transfer stances](transfer-stances.md).
+
+### Transfer lists on identities
+
+A copyable type can be given a move-only identity:
+
+```zax
+MyMoveOnlyType :: identity admit expose transfer move type MyType
+MyCount :: identity admit expose type U32   // no clause: transfers come from U32
+```
+
+The `transfer` clause belongs to the identity. It is written in the identity's
+declaration after `expose` or `opaque` and before `type`. Without a clause, an
+identity has whatever transfer operations its underlying type has. With one,
+the list names every stance the identity allows, in the order
+`copy move last deep`, just like a
+[type's transfer list](construction-and-destruction.md#declaring-which-transfers-a-type-allows).
+A stance missing from the list is not allowed for the identity, even if the
+underlying type has it, whether the identity is `expose` or `opaque`.
+
+The list applies to everything that builds or assigns a new value from the
+identity's stored value. That includes converting to the underlying type and
+`underlying value`, which would otherwise copy it:
+
+```zax
+// MyType has both copy and move constructors
+mine : MyMoveOnlyType
+// each line below is a separate alternative
+other : MyMoveOnlyType = mine              // error: copy is not in the list
+copyOut := mine as MyType                  // error: converting would copy the MyType inside
+movedOut := (mine as move) as MyType       // fine: moves the MyType out
+moved : MyMoveOnlyType = mine as last      // fine: falls back to move
+```
+
+`as MyType` here is [identity projection](#identity-projection), which
+converts to the underlying type. It is a different use of `as` from a stance
+such as `as move`. In `(mine as move) as MyType`, the conversion receives
+`move`, so it builds the `MyType` by moving. The rule that the last of several
+stances wins applies only when several stance words are written in a row, not
+to a conversion that follows a stance.
+
+The transfer list does not stop the identity from having functions and
+operators. A call is affected only when it would need an operation the list
+forbids, such as copying a `MyMoveOnlyType` into a by-value parameter. Here
+the identity declares `+` with a by-value input:
+
+```zax
+// illustrative identity-body syntax, inside MyMoveOnlyType
+operator binary '+' final : (
+  result : MyMoveOnlyType
+)(
+  rhs : MyMoveOnlyType
+) = {
+}
+
+a : MyMoveOnlyType
+b : MyMoveOnlyType
+a + b             // error: building rhs from b needs a copy, which the list forbids
+a + (b as move)   // fine: rhs is built by moving b
+```
+
+An operator that takes its inputs by reference works normally, as long as it
+builds its result by moving or by constructing a new value. Building a new
+identity value from a newly computed underlying value, with `from`, is
+allowed.
+
+Listing a stance allows the operation; it does not create it. An identity
+whose underlying type is move-only may list `copy`, but it can only be copied
+if it defines its own `copy` constructor, for example one that reopens a
+handle.
+
+Leaving a stance out works the other way. The basic value types, such as
+`U64`, have `deep`, so an identity over one has `deep` too unless its list
+leaves it out. An ID that names a resource should leave it out, so that a
+deep copy of a type holding the ID cannot quietly duplicate the ID instead of
+the resource:
+
+```zax
+MyFileId :: identity admit expose transfer copy type U64   // copy only: no deep
+```
+
+The restriction belongs to the identity type, so it applies to every value of
+that type wherever it is stored: in array elements, members, optionals, and
+generic code. A stance declared on one variable restricts only that variable:
+
+```zax
+report : MyType move
+reports : MyType[] = [ report as move ]
+copied := reports[0]              // fine: array elements are governed by MyType
+
+held : MyMoveOnlyType[]
+copied2 := held[0]                // error: no value of MyMoveOnlyType can be copied
+```
+
+`opaque` is a separate choice. It decides whether the underlying type's other
+operations come along automatically; it does not by itself make an identity
+move-only.
+
+Converting a lent identity value gives another `loan`:
+
+```zax
+inspectToken final : ()(token : MyMoveOnlyType readonly &) = {
+  view : MyType readonly & = token as MyType   // fine: a loan of the MyType inside
+  copied : MyType = token as MyType            // error: would copy through a loan
+}
+```
+
+See
+[loan](transfer-stances.md#loan).
+
+### Same-storage identity references
 
 A same-storage identity reference is a different operation. It would create a
 view of existing storage rather than a new value, perform no copy, and schedule
@@ -557,9 +682,9 @@ construction, replacement, and destruction obligations match. Additional
 resident identity data or incompatible custom lifecycle behavior prevents that
 relationship.
 
-Identity does not weaken qualifications. Projection, admission, construction,
-and transfer use the applicable place, value, access, `copy`, `deep`, `move`, `last`,
-and lifetime rules.
+Identity does not weaken qualifiers. Converting to or from the underlying
+type, building, and transferring follow the usual rules for qualifiers,
+stances (`loan`, `copy`, `move`, `last`, `deep`), and lifetimes.
 
 Storage compatibility never grants implicit conversion.
 
@@ -599,7 +724,8 @@ MyIntegerExtension :: partial MyInteger {
 
 A partial adds; it does not suppress, hide, restrict, remove, or replace
 behavior exposed by the original identity declaration, and it is visible only
-where a scope grants it.
+where a scope grants it. When the identity declares a `transfer` list, a partial
+cannot add an operation for a stance missing from it.
 
 Like any type, an identity accepts added stored members only when it writes
 `seal open storage`. Stored members change its representation, and so the
@@ -627,8 +753,12 @@ Diagnostics should distinguish:
 - immediate identity projection from unavailable identity-to-identity
   conversion;
 - equal representation without a declared bridge;
-- an operation absent because the identity is opaque; and
-- unavailable by-value admission because no construction or transfer applies.
+- an operation absent because the identity is opaque;
+- creating an identity value from a value with `from`, when the identity has
+  no constructor or transfer that could build it;
+- building, assigning, replacing, or converting that needs a stance missing
+  from the identity's transfer list; and
+- a conversion through a loan that would copy.
 
 Diagnostics lead with source/public names and make underlying representation
 detail available on demand.
@@ -656,6 +786,12 @@ This document is current conceptual design, not formal grammar, a complete
 layout/ABI contract, or an implementation mapping.
 
 Future work owns language- and provider-supplied partials and reflection APIs.
+It also decides whether an opaque identity can use `= existing` to reuse an
+operation of its underlying type: for example, declaring `operator binary '=='`
+on `MyToken :: identity admit opaque type U64` with `= existing` to reuse
+`U64`'s comparison. `= existing` reuses an operation the type already has, and
+it is not yet decided whether an opaque identity counts as already having its
+underlying type's operations.
 Generic identity types are defined by
 [generics](generics.md#generic-types-and-other-generic-declarations). [Structural shapes and compatibility](structural-shapes-and-compatibility.md),
 [current composition](composition.md), and

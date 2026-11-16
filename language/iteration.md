@@ -251,6 +251,11 @@ each element : in values {
 }
 ```
 
+A loop variable with no type, like this one, is just another way to write the
+current element. It behaves exactly like writing `values[i]`, so a transfer
+from it writes its stance where it is used, for example
+`keep(element as move)`.
+
 The programmer may state a compatible reference explicitly:
 
 ```zax
@@ -258,6 +263,13 @@ each element : Integer readonly & in values {
   inspect(element)
 }
 ```
+
+A loop variable written as a reference is a declared reference with its own
+stance. With no stance, as here, it is a `loan`: `inspect` may read the
+element, but nothing can be copied or taken through `element`. A loop
+variable that must copy or take declares `& copy`, `& move`, or `& last`, and
+the loop source must allow it, as in `in values as move` for `& move`. See
+[members and bindings](transfer-stances.md#members-and-bindings).
 
 An explicit non-reference type constructs a separate value:
 
@@ -368,11 +380,11 @@ The value role is heterogeneous and does not accept a concrete type name:
 
 ```zax
 each value : in record {
-  // Default inferred reference.
+  // Names each member's path: uses behave exactly like writing that member.
 }
 
 each value : & in record {
-  // Explicit inferred reference.
+  // Declares a reference to each member; unmarked, it is a loan.
 }
 
 each value : copy in record {

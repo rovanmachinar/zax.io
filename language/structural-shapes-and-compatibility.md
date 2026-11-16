@@ -220,7 +220,9 @@ willing to offer when another concrete type is already expected.
 
 It is deliberately distinct from transfer stance:
 
-- `copy`, `deep`, `move`, and `last` describe resource transfer; and
+- `loan`, `copy`, `move`, `last`, and `deep` describe how much of a value may
+  leave its owner when it is used, from nothing for `loan` to everything for
+  `last`; and
 - compatibility posture describes permission for low-overhead binary recasting.
 
 Every declaration resolves one posture. Omission means:
@@ -674,31 +676,35 @@ stronger responsibility.
 
 ## Transfer stance and anchored regions
 
-A whole-source compatible recast preserves its source transfer stance.
+Viewing a whole value through a compatible shape does not create a new value.
+The stance you write on the value carries into the view, and any stance
+declared on the original, and any `loan` you reached it through, still apply.
 
-An anchored region receives its own default `copy`, like a new reference alias.
-The containing source's `last` does not prove that terminally consuming an
-arbitrary interior region leaves excluded state destruction-valid.
-
-```zax
-(source anchor .payload) as last
-```
-
-This explicit request is viable only when the applicable source contract proves
-that the complete source remains destruction-valid. A result can establish that
-contract for one default anchor:
+An anchored region is treated like a member. It does not take on a stance
+declared on the containing variable: a use of the region with no stance is a
+copy, and anything stronger must be written at the use. Taking a region from
+the middle of a value with `last` could leave the rest of the value unsafe to
+destroy, so it is allowed only when something guarantees that the rest of the
+value stays safe to destroy. A function can give that guarantee for one
+anchor of the value it returns, by naming the anchor on its result:
 
 ```zax
-result :
-  Container last
-  compatible layout
-  anchor .payload
+makeContainer final : (
+  result :
+    Container last
+    compatible layout
+    anchor .payload
+)() = {
+}
+
+// consume takes the region's type by value; each line is a separate alternative
+consume((makeContainer() anchor .payload) as last)   // fine: makeContainer guarantees this anchor
+consume((makeContainer() anchor .header) as last)    // error: no guarantee covers this anchor
 ```
 
-A caller-selected different anchor does not inherit the guarantee.
-
-If conversion selects `copy`, the region receives `copy` even when the outer
-declaration ordinarily offers `last`.
+A caller who chooses a different anchor does not get that guarantee. See
+[members and bindings](transfer-stances.md#members-and-bindings) for the
+general rule.
 
 ## `outer tracked` participates in structure
 

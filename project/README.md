@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [038: Terminal transfer intent](work/038-terminal-transfer-intent.md) |
-| Next work number | `039` |
+| Active work item | [039: Pointer stances](work/039-pointer-stances.md) |
+| Next work number | `040` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

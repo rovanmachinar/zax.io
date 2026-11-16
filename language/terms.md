@@ -480,6 +480,28 @@ recognizes a malformed or forbidden near miss that must be rewritten; an intent
 enclosure cannot make it valid. See
 [Zax intent acknowledgements](intent-acknowledgements.md#non-acknowledgeable-intent-errors).
 
+## Declared stance
+
+A **declared stance** is a transfer stance written in a declaration. Its
+meaning depends on the location. On a local variable, local reference, member,
+or type alias it is a requirement: every [transfer](#transfer) from that place
+must be written with that stance or a stronger one.
+
+```zax
+report : Report move
+// archive takes a Report by value
+archive(report)           // error: report may not be copied
+archive(report as move)   // fine
+```
+
+On a by-value parameter, it is the least stance a call must write. On a
+reference parameter or receiver, it says what the function may do to the
+caller's value. On a result, it decides how the caller's destination is built
+from the result; a by-value result with no stance is passed on as `last`. The compiler never applies a declared stance to a use on your
+behalf, and an inferred declaration does not take one from its initializer.
+See
+[Zax transfer stances](transfer-stances.md#declared-stances-by-location).
+
 ## Declaration-attached raw allocation
 
 A **declaration-attached raw allocation** uses a raw pointer value while its
@@ -798,6 +820,28 @@ constructed, lives, and is destroyed within a life path and never outlives it.
 Paths may be lexical, structural, conditional, or dynamically owned. See
 [Zax lifetimes and references](lifetimes-and-references.md#start-with-a-life-path).
 
+## Loan
+
+A **loan** is the stance of a reference through which the value as a whole
+can never be copied, moved, or taken: the owner keeps the value. The value's
+members follow their own declared stances. Through a `readonly` loan a member
+can only be copied; through a `writable` loan a member can also be changed,
+moved, or taken, as its own stance allows. A reference parameter, receiver, or
+local reference with no stance is a loan; `& loan` says the same thing
+explicitly:
+
+```zax
+show final : ()(input : MyType readonly &) = {
+  keep(input)   // error if keep takes MyType by value: input is on loan
+}
+```
+
+Anything made from a loan that can reach the whole value is also a loan.
+A call written `as loan` can use only functions that take a loan. `loan` is
+never written on a by-value declaration or in a
+[transfer list](#transfer-list). See
+[Zax transfer stances](transfer-stances.md#loan).
+
 ## Minted implementation
 
 A **minted implementation** is one callable body after it has been checked
@@ -854,9 +898,10 @@ from signature protection.
 
 ## Moved-from state
 
-A **moved-from state** is the live source state established by an accepted `move`
-consumer. The original owner still destroys the value later. The type's
-contract decides which other operations remain meaningful. See
+A **moved-from state** is the state a value is left in after its `move`
+operation runs. The value is still fully usable: every ordinary operation
+still works, though the value may now be empty. It is still destroyed later
+at the end of its scope. See
 [Zax transfer stances](transfer-stances.md#move).
 
 ## Native endianness
@@ -1258,22 +1303,33 @@ containing type rather than through an instance expression:
 MyType.inspect()
 ```
 
-`_` identifies the type's Nothing instance, `?_` is false, and the synthesized
-receiver offers `copy`. An instance-qualified call to the same declaration uses
+`_` identifies the type's Nothing instance, `?_` is false, and that receiver
+is used as `copy`. An instance-qualified call to the same declaration uses
 its actual receiver. See
 [Zax Nothing instances](nothing-instances.md#receiverless-and-instance-calls).
 
 ## Receiver stance
 
-A **receiver stance** is the transfer stance offered by the receiver operand
-when selecting a type-defined function or operator:
+A **receiver stance** appears on two sides of a call to a type's function or
+operator. A function may declare one after its signature, as in
+`publish final : ()() deep`, and a call may write one on its receiver, as in
+`(document as deep).publish()`. The call's stance comes from the call, never
+from the variable's declaration:
 
 ```zax
 document : Document deep
-document.publish()
+document.publish()             // no stance written: uses the version with no
+                               // receiver stance, which lends document
+(document as deep).publish()   // the deep version
 ```
 
-It is independent from parameter and result stances. See
+A function declared with no receiver stance takes the receiver as a
+[loan](#loan) and accepts any call; declaring `loan` explicitly means the
+same. A call that writes a stance uses the version with exactly that stance,
+otherwise the version with no receiver stance. A call that writes no stance
+uses the version with no receiver stance, otherwise a `copy` version, and is
+otherwise an error. A function's receiver stance is separate from its
+parameter and result stances. See
 [Zax transfer stances](transfer-stances.md#receiver-stance).
 
 ## Redundant-structure intent error
@@ -1404,6 +1460,24 @@ A varying place may expose successive resident instances. Do not use this term
 for `_` merely because a type-defined body is executing; that established role
 is the **current instance**. See
 [Zax lifetimes and references](lifetimes-and-references.md#life-path-instance-place-and-resident-instance).
+
+## `self` result
+
+A **`self` result** is a reference result declared `self`, such as
+`result self : Engine &`, so that calls can be chained. Every `return` hands
+back the receiver.
+
+The result is the caller's variable exactly as the caller wrote it. Whatever
+the caller may do with that variable, it may do with the result: the stance
+written on the call, the variable's declared stance, any [loan](#loan) it was
+reached through, and its qualifiers all still apply.
+
+A `self` result is written with only its type, `&`, and optionally `#`; a
+stance or qualifiers on it are errors. Like any result, it must be used unless
+it is marked `#`. The generated `=` returns a `self` result, so
+`first = second = third` behaves like `second = third` followed by
+`first = second`; its `#` lets `a = b` stand alone as a statement. See
+[Zax function invocation](function-invocation.md#receiver-origin-self-results).
 
 ## Semantic error
 
@@ -1576,21 +1650,68 @@ environment-relative type paths. See
 
 ## Terminal source state
 
-A **terminal source state** is the destruction-valid state established by an
-accepted `last` consumer. The outer source lifetime remains owned by its original
-declaration and its destructor still runs. Ordinary later use requires a
-defined terminal-state operation and an intent acknowledgement. See
+A **terminal source state** is the state a variable is in after `as last`,
+whichever operation actually ran. The variable is finished: it still exists
+until the end of its scope, and its destructor still runs there. It may be
+destroyed or replaced with `.=` without an acknowledgement; any other use
+needs
+`intent<terminal-source-reuse>`, and the type's documentation says which
+operations make sense. See
 [Zax transfer stances](transfer-stances.md#last).
+
+## Transfer
+
+A **transfer** is any use that builds or assigns a new value from a variable,
+member, or other place: passing it to a by-value parameter, initializing a
+variable, assigning, storing it in an array, capturing it in a lambda, or
+returning it. Passing it to a [loan](#loan) reference, or calling a function
+with a loan receiver on it, is not a transfer. A
+[declared stance](#declared-stance) on a place limits which stances its
+transfers may be written with. See
+[Zax transfer stances](transfer-stances.md#declared-stances-by-location).
+
+## Transfer list
+
+A **transfer list** is the `transfer` clause in a type or identity
+definition. It lists every transfer the type allows, in the order
+`copy move last deep`:
+
+```zax
+MyOwnedFile :: type transfer move {
+  handle : Integer
+}
+```
+
+Defining an operation for a stance missing from the list is an error, whether
+in the type itself or in a partial. Listing a stance allows the operation but
+does not create it. A stance that is listed but not yet written is
+**reserved**: the compiler already treats it as existing when it decides
+whether a use needs a stance, so code stays correct when the operation is
+written later.
+`loan` never appears in the list. See
+[Zax construction, replacement, and destruction](construction-and-destruction.md#declaring-which-transfers-a-type-allows)
+and
+[Zax identity types](identity-types.md#transfer-lists-on-identities).
 
 ## Transfer stance
 
-A **transfer stance** says how one complete source or receiver is offered to a
-consumer. `copy`, `deep`, `move`, and `last` are the four stances.
+A **transfer stance** says how much of a value may leave its owner when the
+value is used. The five stances, in the standard order, are `loan`, `copy`,
+`move`, `last`, and `deep`. The first four are ordered by how much leaves:
+`loan < copy < move < last`; `deep` is outside that order.
 
-The **offered stance** comes from the declaration or a one-use `as <stance>`
-restatement. The **accepted stance** is the consumer selected after fallback.
-The accepted consumer, not the stance expression itself, performs transfer and
-establishes source state.
+For a variable, the stance used comes from the use itself: an `as <stance>`
+written there, or `copy` when none is written, or a loan when the variable is
+passed to a reference. Inside a function whose `deep` reference or receiver
+makes `deep` the default, uses of that reference with no stance are `deep`.
+Values without a name work differently: a value built directly in an
+expression is treated as `as last`, and so is a function's by-value result,
+unless the function declares another result stance. A
+[declared stance](#declared-stance) on a variable is different from these
+defaults: it is a requirement the code must meet by writing the stance, and
+the compiler never writes it for you. Writing a stance moves or
+copies nothing by itself; the function or constructor that receives the value
+does the work, and decides what state the original is left in.
 
 See [Zax transfer stances](transfer-stances.md).
 

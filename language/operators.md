@@ -933,33 +933,36 @@ Complete Nothing-instance and unavailable-function behavior belongs to
 The protected post-unary phrase forms:
 
 ```zax
+source as loan
 source as copy
-source as deep
 source as move
 source as last
+source as deep
 ```
 
-preserve the source's complete value shape and restate one offered transfer
-stance for the immediate consumer.
+keep the value's type unchanged and state one transfer stance for the
+function or constructor that receives it. `as loan` allows only a parameter
+or receiver that borrows `source` as a loan, so a reader sees that `source` as
+a whole is not copied, moved, or taken. Its members follow their own stances.
 
-The form itself performs no `copy`, `move`, destruction, or runtime call because
-it only changes the stance available to selection. A selected constructor,
-assignment, parameter, result slot, receiver-qualified function, or another
-consumer produces any source effect after accepting the stance.
+The form itself copies, moves, destroys, and calls nothing. It only decides
+which functions and constructors the compiler may choose. The constructor,
+assignment, or function that is chosen does the work and decides what
+`source` holds afterward.
 
-These forms are distinct from binary conversion:
+These forms are distinct from conversion to a type:
 
 ```zax
-converted := source as DestinationType
-moved := source as move
+converted := source as DestinationType   // conversion: builds a DestinationType
+moved := source as move                  // stance: source is still a Source;
+                                         // nothing is converted
 ```
 
-Candidate-tree formation recognizes a complete destination type argument for the
-binary form and one exact protected post-unary phrase for the stance form. The
-source does not require an exact phrase fence.
+The parser tells the two apart by the word after `as`: a type for a
+conversion, or one of the five stance words.
 
-Complete `copy`/`deep`/`move`/`last` meaning, fallback, declaration stance,
-receiver behavior, and source state are defined by
+What each stance means, fallback, declared stances, receivers, and what state
+the original is left in are explained in
 [Zax transfer stances](transfer-stances.md).
 
 ### Opaque type probes and transfer

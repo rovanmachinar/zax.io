@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; the uses of `.=`, including first construction of explicitly controlled members and the first-construction state rule; construction asserted at an opaque operation; construction packets; lifecycle declaration states; qualifier-complete generated `copy` families; generated assignment result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; the uses of `.=`, including first construction of explicitly controlled members and the first-construction state rule; construction asserted at an opaque operation; construction packets; lifecycle declaration states; a type's `transfer` list and its effect on generation and `= forbidden`; qualifier-complete generated `copy` families; `= default` for `move`, `last`, and `deep`; lifecycle-source authority; generated assignment's `self` result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
 | Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
@@ -712,8 +712,9 @@ precedence rules still apply inside each entry.
 For each value-producing entry in source order:
 
 1. evaluate its expression;
-2. immediately initialize or bind the selected input slot according to its
-   `copy`, `move`, `last`, reference, pointer, or other parameter semantics; and
+2. immediately build or bind the selected input: a by-value input is built by
+   the constructor the stance written on that entry chooses, and a reference
+   or pointer input is bound to the caller's value; and
 3. complete the observable effects of that binding before evaluating the next
    entry.
 
@@ -734,8 +735,9 @@ storage request fails. Complete allocation ordering is defined by
 - A copied input captures the source value when that entry is evaluated.
 - A reference input binds at evaluation but observes later changes to its
   referent.
-- A by-value `deep`, `move`, or `last` input performs its required parameter
-  construction during that entry's binding.
+- A by-value input is constructed when that entry is bound. The stance the
+  caller writes chooses which constructor runs. The parameter's declared stance
+  does not change the stance the caller wrote.
 - A `move`- or `last`-stanced reference binds directly to caller-owned storage;
   the selected lifecycle body may take resources later during its complete
   call.
@@ -813,7 +815,7 @@ only a designator for its physical place. Construction must establish the
 complete containing member; it never default-constructs that member and then
 assigns through the route silently.
 
-A type with custom copy or lifecycle behavior remains an atomic structural leaf
+A type with custom `copy` or lifecycle behavior remains an atomic structural leaf
 unless a future type-owned bridge permits flattening through it. A same-storage
 compatible reference begins no destination lifetime, so direct destination
 construction or destruction through that view is unavailable.
@@ -923,26 +925,40 @@ exists:
 +++ final : ()() = default
 ```
 
-An arbitrary function does not acquire invented behavior merely because the
-syntax parses:
+`= default` works only where Zax defines a default: constructors, assignment,
+replacement, and the transfer operations described below. An ordinary function
+has no default:
 
 ```zax
-myFunc : ()() = default // error: no language-defined default implementation
+myFunc : ()() = default // error: an ordinary function has no default
 ```
 
-`= existing` deliberately reuses a compatible operation:
+`= existing` says that a declaration does exactly what another operation the
+type already has does. A common case is two qualifier shapes of the same
+assignment. Assigning from a source in a `final` place and from a source in a
+`varying` place are separate declarations, but a type usually wants both to
+behave the same:
 
 ```zax
-+++ final : ()(value : Value copy) = {
-  // Programmer-defined copy behavior.
+operator binary '=' final : (
+  result self # : Value &
+)(
+  source : Value mutable readonly varying & copy
+) mutable writable varying = {
+  // Programmer-defined assignment.
 }
 
-+++ final : ()(value : Value move) = existing
+operator binary '=' final : (
+  result self # : Value &
+)(
+  source : Value mutable readonly final & copy
+) mutable writable varying = existing
+// assigning from a source in a final place uses the assignment above
 ```
 
-Callable compatibility alone does not establish lifecycle-contract
-compatibility. `existing` makes reuse explicit when `copy`, `move`, source-state, or
-cost behavior might otherwise differ.
+Two declarations with compatible signatures are not interchangeable
+automatically, because they can differ in cost or in what they leave in the
+source. Writing `= existing` states that the reuse is deliberate.
 
 `= forbidden` prohibits the exact shape:
 
@@ -972,105 +988,378 @@ A generated empty constructor exists only when every required member has a
 viable default or declared initialization path. Declaring the default-construction
 shape suppresses generation of that shape.
 
-For a containing type, a generated operation selects member operations that
-satisfy the generated lifecycle contract. It does not select any callable member
-operation merely because one exists.
+A generated operation for a type is built from the same operation on each
+member. A generated `copy`, for example, copies each member with that member's
+own `copy` operation. It never uses some other member function just because one
+happens to fit.
 
-Generated `copy` is the conservative transfer baseline. Zax does not generally
-generate `deep`, `move`, or `last` operations:
+`copy` is the only transfer operation the compiler generates automatically. A
+type has `deep`, `move`, or `last` only when it declares them, by writing a body
+or by [opting in to the default](#opting-in-to-default-move-last-and-deep).
+When a type has no operation for the stance a caller writes, a weaker one is
+used:
 
-- `deep` requires an exact `deep` declaration;
-- `move` falls back to `copy` when no `move` declaration exists;
-- `last` falls back to `move` and then `copy`;
-- and a generated containing `copy` selects the exact member `copy` operations
-  required by its contract.
+- `last` falls back to `move`, and then to `copy`;
+- `move` falls back to `copy`;
+- `deep` never falls back: without a `deep` operation, `as deep` is an error.
 
-Complete stance meaning and fallback are defined by
+A type's [transfer list](#declaring-which-transfers-a-type-allows) can leave a
+stance out entirely, and the compiler then generates no operation for that
+stance. What each stance means, and how fallback works, are explained in
 [Zax transfer stances](transfer-stances.md#fallback).
 
 Reflection must eventually distinguish declared, generated, explicitly
 defaulted, delegated-to-existing, bodyless, and forbidden operations.
 
-### Generated copy construction and assignment
+### Declaring which transfers a type allows
 
-Generated `copy` is one compiler-owned schema exposed as exact,
-qualifier-complete declarations. It is not a qualifier-erased prototype.
+A type's definition can list the transfers it allows, right after the `type`
+keyword:
 
-Construction creates a new value lifetime, so both mutable and immutable values
-may have generated `copy` constructors. For a mutable value shape, the compiler
-conceptually supplies exact source-place variants:
+```zax
+MyPoint :: type transfer copy {
+  x : Integer
+  y : Integer
+}
+// MyPoint allows only copy: defining a move, last, or deep operation for it is an error
+
+MyOwnedFile :: type transfer move {
+  handle : Integer
+
+  +++ final : ()(source : MyOwnedFile mutable writable & move) = {
+    // take the handle and leave source vacant
+  }
+}
+// a MyOwnedFile can be moved, never copied
+```
+
+Code that uses these types follows the list:
+
+```zax
+inspect final : ()(file : MyOwnedFile readonly &) = {
+}
+
+useFile final : ()() = {
+  file : MyOwnedFile
+  inspect(file)                        // fine: inspect takes a loan; nothing is duplicated
+  other : MyOwnedFile = file           // error: MyOwnedFile has no copy
+  owner : MyOwnedFile = file as last   // fine: falls back to move; file is finished
+}
+```
+
+The `transfer` list names every stance the type allows for building a value
+from another value of the same type, for assigning with `=`, and for replacing
+with `.=`. The stances are written in the order `copy move last deep`; writing
+them in another order is an error.
+`loan` never appears in the list, because lending is not an operation a type
+defines: every type can be lent.
+
+Defining an operation for a stance that is not in the list is an error, whether
+it is defined in the type itself or in a [partial](partials.md):
+
+```zax
+MyOwnedFile :: type transfer move {
+  handle : Integer
+
+  +++ final : ()(source : MyOwnedFile readonly & copy) = {
+  }
+  // error: copy is not in MyOwnedFile's transfer list (transfer move)
+}
+
+MyPoint :: type transfer copy {
+  x : Integer
+  y : Integer
+
+  +++ final : ()(source : MyPoint mutable writable & move) = {
+  }
+  // error: move is not in MyPoint's transfer list (transfer copy)
+}
+```
+
+Leaving `move` or `last` out of the list does not stop callers writing that
+stance. Fallback only uses operations that exist, so it falls back past the
+missing one. `deep` is the exception: it never falls back, so `as deep` on a
+type without `deep` is an error.
+
+```zax
+moved : MyPoint = point as move   // fine: MyPoint has no move, so copy runs; point is unchanged
+```
+
+A type without `copy` can still be lent: it can be passed to `loan`
+references, and its functions with no receiver stance can be called with no
+stance written. A function declared with a `move` or `last` receiver can still
+be called, as long as the call writes that stance, as in
+`(file as move).close()`. The type's other constructors also still work.
+
+A type for which an independent duplicate makes no sense can leave out
+`deep`:
+
+```zax
+MyConnection :: type transfer copy move last {
+  socket : MySocket * unique
+}
+// no deep: an independent copy of a live connection has no meaning
+```
+
+**A stance missing from the list gets no generated operations.** A
+`transfer move` type gets no generated `copy` constructor and no generated `copy`
+assignment; otherwise the compiler would give it an operation its own list
+does not allow.
+
+**`= forbidden` can still remove a single signature of a listed stance.**
+`= forbidden` also still works everywhere else it is used: on replacement
+constructors, assignment signatures, composition's `forbidden family`
+declarations, and ordinary functions:
+
+```zax
+MyMixed :: type transfer copy move {
+  +++ final : ()(source : MyMixed readonly & copy) = forbidden
+}
+// copy is allowed in general; this one signature is removed
+```
+
+**A `copy` constructor is a constructor whose only input is another value of the
+same type.** Any other constructor is an ordinary constructor. A `move`-only type
+may have one, even if it reads another value of the type:
+
+```zax
+MyOwnedFile :: type transfer move {
+  +++ final : ()(source : MyOwnedFile readonly & loan, mode : MyMode) = {
+    // reopen the file that source names, in another mode
+  }
+}
+// fine: not a copy constructor, and source is not duplicated
+```
+
+`source` is declared `& loan` because the constructor only reads it. `& copy`
+would allow copying a value that cannot be copied. A named function such as
+`duplicate()` that builds a new value through another constructor is allowed
+too: it is not the `copy` operation, and its name tells the reader what it does.
+
+**Listing a stance allows the operation; it does not create it.** If a member
+cannot supply an operation, the generated version of it does not exist. As
+with [demand-driven generation](#demand-driven-generation), that is an error
+only where something tries to use the operation, and the error names the
+member that blocked it:
+
+```zax
+MyBox :: type transfer copy move {
+  file : MyOwnedFile   // transfer move: no copy
+}
+
+box2 : MyBox = box   // error here, not at MyBox's declaration
+```
+
+```text
+error: MyBox has no copy: generated copy needs MyBox.file, and MyOwnedFile
+       has no copy (transfer move)
+```
+
+| Declaration | Copy constructor allowed? | `move` allowed? | What `as move` runs |
+| --- | --- | --- | --- |
+| `transfer move` | No | Yes | `move` if written, otherwise error |
+| `transfer copy` | Yes | No | `copy` |
+| `transfer copy move` | Yes | Yes | `move` if written, otherwise `copy` |
+| No clause | Yes | Yes | whichever function exists now |
+
+In every row that allows a `copy` constructor, writing `= forbidden` on one `copy`
+signature still removes that one generated `copy`, as `MyMixed` shows above.
+
+**A type without a `transfer` list promises nothing.** Its transfers are
+whatever operations it has now, and its own definition or a partial may add
+more. Adding `move` to a type that had only `copy` can break code that uses
+it: wherever such code passes a value, at its last use and with no stance, to
+a plain by-value parameter or into a new variable, `as last` would now run the
+new operation, so the code must start writing a stance. Declaring
+`transfer copy move` from the start avoids that: a stance in the list counts
+as existing when the compiler decides whether a stance must be written, even
+before the operation is written. See
+[when a stance must be written](transfer-stances.md#when-a-stance-must-be-written).
+
+A type's list applies to every value of that type, wherever it is stored: in
+members, array elements, optionals, and generic code. Where the list goes in a
+type definition, and how it is ordered with `seal`, is shown in
+[type definitions](type-definitions.md#transfer-lists).
+
+### Opting in to default `move`, `last`, and `deep`
+
+A structure holding a `move`-only member does not get a `move` automatically:
+
+```zax
+MyFolder :: type transfer move {
+  file : MyOwnedFile
+  name : String
+
+  +++ final : ()(source : MyFolder mutable writable & move) = default
+  // file moves with MyOwnedFile's move; name moves with String's move
+}
+```
+
+Without that declaration, `MyFolder` could not be transferred at all: its
+generated `copy` is unavailable because `MyOwnedFile` has no `copy`, and no `move`
+exists.
+
+The compiler generates only `copy` automatically. What a value should leave
+behind after `move` or `last` can depend on what the value means, not only on
+how it is stored. An `Integer` that counts packets still in flight, for
+example, may need different handling than an ordinary number. So a type must
+ask for the member-by-member version explicitly, with `= default`:
+
+- **`move`** moves each member with its own `move`, falling back to `copy` for
+  a member without one.
+- **`last`** works the same way with `last`, falling back through `move` to
+  `copy`.
+- **`deep`** gives each member a `deep` copy, with no fallback.
+
+`= default` builds the operation from the same operation on every member. If
+any member has no operation for that stance, the `= default` declaration is an
+error. The basic value types (the integer types, fixed-point and
+floating-point numbers, `Boolean`, characters, and enums) all have `deep`,
+which does the same as their `copy`, so a type built from them, and from
+other types with `deep`, can declare its `deep` constructor `= default`.
+Pointers have no `deep`, so a type with a pointer member cannot. Neither can
+a type holding an identity whose `transfer` list leaves out `deep`, which is
+how a handle ID stored as a number avoids being deep-copied by accident; see
+[deep](transfer-stances.md#deep). A generated
+`copy` that you did not ask for is different: a member that blocks it is
+reported only where something tries to copy.
+
+### Generated `copy` construction and assignment
+
+The compiler generates `copy` as a fixed set of ordinary declarations, one
+for each kind of source the type's values can come from. You can read,
+replace, or forbid each one like a declaration you wrote; there is no single
+hidden `copy` declaration that works for every kind of source.
+
+A reference parameter declared `mutable` accepts only mutable values, and one
+declared `immutable` accepts only immutable values, so a mutable source and an
+immutable source need separate declarations. Likewise a source in a `final`
+place and one in a `varying` place. `readonly` on the source also accepts a
+writable path, because `readonly` only limits what this access may do.
+
+For a type whose mutable and immutable values share one representation, the
+compiler generates these eight declarations when they are used:
+
+| Generated operation | Source parameter | What it builds or assigns |
+| --- | --- | --- |
+| `copy` constructor | `mutable readonly final & copy` | a new value |
+| `copy` constructor | `mutable readonly varying & copy` | a new value |
+| `copy` constructor | `immutable readonly final & copy` | a new value |
+| `copy` constructor | `immutable readonly varying & copy` | a new value |
+| `=` | `mutable readonly final & copy` | a `mutable writable varying` destination |
+| `=` | `mutable readonly varying & copy` | a `mutable writable varying` destination |
+| `=` | `immutable readonly final & copy` | a `mutable writable varying` destination |
+| `=` | `immutable readonly varying & copy` | a `mutable writable varying` destination |
+
+A constructor makes a new value, and whether that value is mutable is decided
+by the variable it initializes, so constructors do not multiply by
+destination. The generated `=` replaces the destination's whole value, so the
+destination must be mutable, writable, and in a `varying` place; an immutable
+value cannot be assigned with `=`.
+
+Two of the eight, written out:
 
 ```zax
 +++ final : ()(
-  : MyValue mutable readonly final & copy
+  rhs [<label=incidental>] : MyValue mutable readonly final & copy
 ) = default
 
-+++ final : ()(
-  : MyValue mutable readonly varying & copy
-) = default
-```
-
-The source parameter is compiler-anonymous. Construction has no receiver stance
-because no destination lifetime exists yet.
-
-A corresponding immutable value shape may receive immutable source constructor
-variants. Ordinarily `mutable` and `immutable` qualify the same representation. Future
-mutability-indexed type-family design may instead permit independently defined
-shapes; each such concrete shape still receives only its appropriate
-constructors.
-
-Canonical same-type `=` treats the destination as a complete value. Its receiver
-place must therefore be `varying`: that place permits the complete value to be
-assigned as a unit. For a mutable varying receiver, the compiler conceptually
-supplies:
-
-```zax
 operator binary '=' final : (
-  : MyValue mutable readonly varying & copy
+  result self # [<label=incidental>] : MyValue &
 )(
-  : MyValue mutable readonly final & copy
-) mutable writable varying = default
-
-operator binary '=' final : (
-  : MyValue mutable readonly varying & copy
-)(
-  : MyValue mutable readonly varying & copy
+  rhs [<label=incidental>] : MyValue mutable readonly varying & copy
 ) mutable writable varying = default
 ```
 
-The result and source slots are compiler-anonymous. The language-defined body
-returns readonly `copy` access to the assignment receiver `_`, permitting
-right-associated assignment:
+The parameter and result are named `rhs` and `result`, and marked
+`[<label=incidental>]`, so their names never route arguments. When you write a
+declaration to replace a generated one, only the types, qualifiers, and stances
+must match; your parameter names do not matter. A constructor has no receiver
+stance, because the value it builds does not exist yet.
+
+Leaving `copy` out of the type's `transfer` list removes all eight. Writing
+`= forbidden` on one exact signature removes only that one. You can also
+forbid a version with a particular receiver stance, which the compiler never
+generates, so that a call written with that stance is an error instead of
+using the generated version:
 
 ```zax
-first = second = third
+operator binary '=' final : (
+  result self # [<label=incidental>] : MyValue &
+)(
+  rhs [<label=incidental>] : MyValue mutable readonly varying & copy
+) mutable writable varying last = forbidden
+// (target as last) = source is now an error; target = source still works
 ```
 
-The `final`-source and `varying`-source forms are different declarations.
+If a type's immutable form has its own separate representation, the compiler
+generates nothing between the two forms; each form gets only its own
+constructors. Separate representations are future design.
 
-A `final` receiver promises that its place continues to hold the same value
-lifetime. It may still mutate the contents of a mutable value through eligible
-member functions, member assignments, or a domain-specific in-lifetime `=`, but
-the current generated whole-value assignment family remains unavailable:
+The generated body of `=` returns the assignment's receiver `_` as a
+[`self` result](function-invocation.md#receiver-origin-self-results). The
+`#` on that result means the caller may ignore it, so `a = b` can be written on
+its own without using the result. The result is the destination exactly as
+the caller wrote it, including any stance written on it, and the
+destination's declared stance and qualifiers still apply. A chain of
+assignments therefore behaves like writing the destination again:
+
+```zax
+first = second = third                 // like second = third; first = second
+(first = second).describe()            // fine: describe runs on first
+
+restricted : MyValue move
+// each line below is a separate alternative
+first = restricted = third             // error: like first = restricted, which copies
+first = (restricted = third) as move   // fine: restricted is written with move, as its
+                                       // declaration requires
+```
+
+In the last line, `first`'s assignment receives `restricted` with `move`. The
+compiler generates only `copy` assignments, so unless `MyValue` declares an
+assignment that takes a `move` source, the `copy` assignment runs and
+`restricted` is unchanged. `first = (restricted as move) = third` means the
+same, because the stance written on the destination is carried by the result;
+the form with the stance after the parentheses reads more clearly.
+
+An `=` you write yourself declares its own result, and the ordinary rules
+apply. A by-value result is a new value. A reference result follows its own
+declared stance and lifetime. Declaring `result self # : MyValue &` makes it
+chain like the generated form; without the `#`, every caller would have to
+use the result, so `a = b` on its own would be an error.
+
+When your `=` declares no receiver stance, `_` is a `loan` inside it. Returning
+`_` through a `& copy` reference result is then an error, because the caller
+could copy a value the `=` was only lent.
+
+Assigning from a source in a `final` place and from a source in a `varying`
+place are two different declarations.
+
+A `final` place always holds the same value; it is never replaced by a new
+one. You can still change the contents of a mutable value in a `final` place,
+through its member functions, by assigning to its members, or through an `=`
+the type defines for that purpose. The generated whole-value assignment,
+however, is not available:
 
 ```zax
 stable final : MyValue mutable final
 
-stable.member = replacement // may mutate the current value
+stable.member = replacement // fine: mutates the current value in place
+stable = anotherValue       // error: whole-value assignment needs a varying place
 stable .= anotherValue      // error: complete reconstruction needs a varying place
 ```
 
 A domain-specific `=` may explicitly accept a `final` receiver when it defines
 coherent in-lifetime behavior rather than replacing the complete value.
 
-An immutable value cannot use an ordinary `=` body to mutate its contents.
-When its place is varying and the path has writable replacement authority,
-protected `.=` can instead end the complete resident lifetime and establish a
-successor. Mutable values may also choose `.=` when explicit lifetime renewal is
-intended.
+An immutable value cannot use an ordinary `=` body to change its contents.
+When its place is `varying` and the path is `writable`, `.=` can instead end
+the old value and build a new one in the same place. A mutable value may also
+use `.=` when the code wants a completely new value rather than a changed one.
 
-One concrete value shape is `mutable` or `immutable`, never both. There is no
-runtime branch over mutability or place stance inside one generated declaration.
+One value is either `mutable` or `immutable`, never both. A generated
+declaration never decides at run time whether a value is mutable or whether
+its place is `final` or `varying`.
 An independently defined immutable shape receives constructors but no ordinary
 mutating assignment.
 
@@ -1078,6 +1367,57 @@ Generation is suppressed or replaced only by the exact generated shape. A
 nearly matching programmer declaration may coexist with the generated
 declaration and produce demand-time ambiguity. Diagnostics should show the exact
 generated signature and the mismatching layer.
+
+### Lifecycle sources are never transferred whole
+
+A constructor, assignment, or replacement that builds a value from another
+value of the same type works on that source one member at a time:
+
+```zax
+MyRecord :: type transfer copy move {
+  label : Label
+  count : Integer
+
+  +++ final : ()(source : MyRecord readonly & copy) = {
+    _.label .= source.label             // fine: copies a member
+    _.count .= source.count
+    whole : MyRecord = source           // error: would copy the whole source,
+                                        // which calls this constructor again
+  }
+
+  +++ final : ()(source : MyRecord mutable writable & move) = {
+    _.label .= source.label as move     // fine: takes a member
+    _.count .= source.count             // copies: Integer has nothing to take
+    whole : MyRecord = source as move   // error: the whole source is never transferred
+                                        // here; as move would run this constructor again
+  }
+}
+```
+
+The source's stance (`& copy`, `& deep`, `& move`, or `& last`) says which
+operation this is: `& copy` declares the `copy` constructor, which runs when a
+value is copied, and `& move` declares the `move` constructor, which runs for
+`as move`. It does not let the operation transfer the whole source:
+
+| Source declared | Whole source | Members without their own stance |
+| --- | --- | --- |
+| `& copy` | never transferred | `copy` |
+| `& deep` | never transferred | `deep` |
+| `& move`, `& last` | never transferred | `copy` by default; write `as move` or `as last` to take |
+
+The table is about what a hand-written body gets when it writes no stance.
+Generated and `= default` operations write the operation's own stance for
+each member instead: a defaulted `move` constructor moves each member, and a
+defaulted `last` constructor takes each member with `last`.
+
+When a constructor, assignment, or replacement has a same-type value as its
+only input, declaring that input `& loan` is an error. Such a constructor
+would just be the `copy` constructor under another name, and if it were used for
+`as deep` it would quietly produce a copy that is not independent. Any other
+parameter of a constructor, assignment, or replacement is an ordinary
+parameter. When the operation only reads it, declare it `& loan`: for example,
+the file to reopen in a constructor, the template a replacement reads, or the
+settings an assignment applies.
 
 ## Reconstructive replacement
 
@@ -1296,6 +1636,84 @@ value for every required member and exactly one disposition for every resource
 the transition ceased to retain. A carried resource counts as transferred into
 the successor member, not left undispositioned.
 
+A replacement constructor is also how a type can keep an expensive resource
+when a value is reused. After `as move`, the value is still fully usable, so
+replacing it can reuse whatever the `move` left behind:
+
+```zax
+DatabaseCommand :: type transfer copy move last {
+  connection : PrivateConnection
+  query : Query
+  results : ResultSet
+
+  +++ final : ()(source : DatabaseCommand mutable writable & move) = {
+    // takes source.results and copies source.query; opens a connection of
+    // its own, so source keeps its connection and stays fully usable
+  }
+
+  +++ final : ()(source : DatabaseCommand mutable writable & last) = {
+    // takes source.results and source.connection; source only needs to
+    // survive destruction or replacement
+  }
+
+  +++ replacement final : ()(nextQuery : Query) = {
+    if _.connection.wasTaken() {
+      _.connection .= PrivateConnection.open()
+    } else {
+      _.connection.resetSession()
+    }
+    _.query .= nextQuery as last   // the last use of nextQuery
+  }
+}
+
+runBatch final : ()(queries : Query[]) = {
+  command : DatabaseCommand
+  command.prepare(queries[0])
+  submit(command as move)        // the move constructor runs: results move out; the connection stays
+  command .= [{ queries[1] }]    // the replacement constructor reuses the connection
+  submit(command as last)        // the last constructor runs: it takes the connection too
+}
+// submit takes a DatabaseCommand by value
+```
+
+**A replacement constructor must cope with every state the destructor copes
+with**, including whatever the type's `last` leaves behind. After `as last`,
+`.=` runs the replacement constructor as usual, and the old value may be
+missing a resource that `last` took.
+
+How the type tells whether a resource is still there is up to its author:
+`wasTaken()` above is the author's own method. Using a variable after
+`as last` normally needs an
+[`intent<terminal-source-reuse>`](intent-acknowledgements.md#terminal-source-reuse)
+acknowledgement, but the type's own replacement constructor and destructor can
+call such methods without it, even when the value is in the state `last` left. A type can instead hold the resource through something that can be
+empty, and test whether it is empty:
+
+```zax
+DatabaseCommand :: type transfer copy move last {
+  connection : PrivateConnection * unique
+  query : Query
+  results : ResultSet
+
+  // move and last constructors as in the previous example
+
+  +++ replacement final : ()(nextQuery : Query) = {
+    if _.connection {          // does the pointer still hold a connection? safe to ask
+                               // even after last took it
+      _.connection.resetSession()
+    } else {
+      _.connection = @
+    }
+    _.query .= nextQuery as last   // the last use of nextQuery
+  }
+}
+```
+
+A type whose methods all assume the resource is present can keep that empty
+state hidden: only its destructor and replacement constructor ever check for
+it. What `move` and `last` leave behind is explained in
+[transfer stances](transfer-stances.md).
+
 ### Replacement constructors have no results
 
 A replacement constructor declares no results, exactly like an ordinary
@@ -1388,9 +1806,9 @@ Document :: type {
   text : String
 
   +++ replacement final : ()(
-    source : String readonly &
+    source : String readonly & copy
   ) = {
-    _.text = source
+    _.text = source   // copies through source, so source declares & copy
   }
 
   stringViewFrom final :
@@ -1619,8 +2037,15 @@ order and suppresses the ordinary generated destructor call for that member
 lifetime. The compiler tracks which member lifetimes remain live at every normal
 destructor exit.
 
-Destruction receives terminal mutable and writable authority. It may dismantle
-resources but cannot create an access path valid beyond the enclosing lifetime.
+A destructor may change and take apart the value it is destroying, even one
+declared `immutable` or reached through a `readonly` path, but it cannot hand
+out a reference that outlives the value.
+
+A destructor runs on every value, including one whose resources a `last`
+transfer took. Checking whether a resource is still present needs no
+`intent<terminal-source-reuse>` acknowledgement inside the destructor; see
+[custom replacement](#custom-replacement) for the matching obligation on a
+replacement constructor.
 
 The ordinary pre-unary `dispose` phrase used by
 [Zax `using`](using.md#structural-disposal) is not
@@ -1683,8 +2108,8 @@ automatically. A partial's `---` also runs automatically. The sequence for one
 Destruction mirrors it: the `---` body runs, then each partial's storage is
 destroyed in reverse, then the type's members.
 
-Generated copy and assignment include partial storage. A hand-written copy
-constructor or `=` cannot name it, so partial storage takes part only when the
+Generated `copy` construction and assignment include partial storage. A
+hand-written `copy` constructor or `=` cannot name it, so partial storage takes part only when the
 body calls a hook that partials fulfill.
 
 During every replacement of the type, including the
@@ -2022,11 +2447,14 @@ future async, lifetime, and concurrency work.
 ## Identity admission boundary
 
 By-value identity admission requests a new value. It requires an applicable
-`copy`, `move`, consuming/`last` transfer, direct construction, or another declared
+`copy`, `move`, `last`, or `deep` operation, direct construction, or another declared
 way to establish the identity's underlying stored value.
 
 Identity syntax does not manufacture copyability. When no applicable
-construction or transfer exists, by-value admission is unavailable.
+construction or transfer exists, by-value admission is unavailable. An identity
+may also declare its own transfer list, which governs construction from its
+representation; see
+[transfer lists on identities](identity-types.md#transfer-lists-on-identities).
 
 A same-storage identity reference would instead view existing storage and create
 no independent value lifetime. Its representation-cast, qualification, alias,
@@ -2077,6 +2505,13 @@ Diagnostics should distinguish:
 - equal viable overloads;
 - unresolved existing-versus-generated behavior at an actual use;
 - use of a `forbidden` operation;
+- an operation declared, in the type's body or a partial, for a stance missing
+  from the type's transfer list, or a transfer list out of the order
+  `copy move last deep`;
+- use of a generated operation that is listed but cannot exist, naming the
+  member that blocks it;
+- a constructor, assignment, or replacement whose same-type source is declared
+  `& loan`, or whose body transfers its whole source;
 - a member that cannot initialize automatically;
 - ordinary `=` on a member whose type cannot be default-constructed, where
   `.=` would construct it;
@@ -2158,6 +2593,12 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 - packet multiple-result forwarding remaining distinct from structural packing;
 - ordinary and replacement constructors remaining resultless;
 - demand-driven generated/existing/default/forbidden resolution;
+- a type's transfer list as the list of every stance it allows for
+  construction, assignment, and replacement, with only `copy` generated
+  automatically;
+- constructors, assignments, and replacements working on a same-type source
+  one member at a time, never transferring it whole;
+- replacement constructors coping with every state the destructor copes with;
 - protected complete `.=` reconstruction requiring writable varying replacement
   authority for mutable or immutable values;
 - custom replacement recycling old representation without enclosing `---` or

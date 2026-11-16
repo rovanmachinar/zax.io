@@ -313,8 +313,9 @@ relayFixed$ final : (Items ... : type)()(items ... : Items) = {
 ```
 
 In `relayFixed$`, `as copy` says that each item is copied rather than handed
-over. [Passing items on](#passing-items-on) explains why this last use of the
-items has to state a stance.
+over. [A stance applies to each item](#a-stance-applies-to-each-item) explains
+why this last use of the items needs a stance whenever an item's type has, or
+lists in its `transfer` list, a `move` or `last` operation.
 
 A bare pack name is accepted only where a pack itself is expected: as the
 source of `each item : in items`, before `count`, with a compile-time index, and in a
@@ -419,11 +420,14 @@ passes the items along. `from items` passes the items on as separate positional
 arguments.
 
 The examples here write a **transfer stance** after the items, as in
-`from items as copy`, to say how each value is offered to the receiver: `copy`
-leaves the source unchanged, while `last` offers it as finished. When an item
-is passed for the last time to a receiver that could take ownership of it, Zax
-does not choose for you, and the code must state `copy`, `move`, `last`, or
-`deep`. All four are defined in [transfer stances](transfer-stances.md).
+`from items as copy`, to say how each value is passed on: `copy` leaves the
+original unchanged, while `last` lets the receiving function take everything,
+leaving the original finished. When an item is passed on for the last time,
+and `as last` would run a different operation than the default copy, Zax does
+not choose for you, and the code must state `copy`, `move`, `last`, or
+`deep`. Writing `as loan` instead restricts the call to parameters that only
+borrow each item. Every stance is explained in
+[transfer stances](transfer-stances.md).
 
 ```zax
 logAll$ final : (Items ... : type)()(items ... : Items) = {
@@ -468,13 +472,20 @@ A stance written on an expansion applies to each item separately. Each item
 keeps its own type, including whether it is a reference, so an item that is a
 reference stays a reference.
 
-The rule that a last use needs stated intent also applies item by item. It
-applies whenever the receiver could take an item over. An ordinary by-value
-parameter could, and so could one declared with `last`, such as `sendAll$`'s
-below. It does not apply when taking the item over would change nothing, as
-for a receiver that can only copy. Because a generic item's type may own
-resources, the examples on this page state a stance whenever they pass generic
-items on for the last time:
+The rules for when a stance must be written also apply item by item:
+
+- If the function receiving the items declares them `move` or `last`, as
+  `sendAll$` does below, every call must write at least that stance, for every
+  item type. With no stance written, the call means `copy`, and neither
+  `as copy` nor `as move` can be used for a `last` parameter.
+- If the receiving parameter is an ordinary by-value one, a stance is needed
+  at an item's last use only when the item's type has a `move` or `last`
+  operation, or lists one in its `transfer` list, because `as last` would
+  then run a different operation, now or once it is written. For an item such
+  as an `Integer`, nothing could differ, so no stance is needed.
+
+Because a generic item's type may own resources, the examples on this page
+state a stance whenever they pass generic items on for the last time:
 
 ```zax
 sendAll$ final : (Items ... : type)()(items ... : Items last) = {
@@ -482,14 +493,19 @@ sendAll$ final : (Items ... : type)()(items ... : Items last) = {
 
 forwardAll$ final : (Items ... : type)()(items ... : Items) = {
   sendAll(from items)
-  // error: this is each item's final use, and sendAll could take it
-  // terminally; state copy, move, last, or deep intent
+  // error at any use, for every item type: sendAll requires last, and
+  // no stance means copy
 }
 
 forwardLast$ final : (Items ... : type)()(items ... : Items) = {
   sendAll(from items as last)   // last applies to each item separately
 }
 ```
+
+Generic functions are checked separately for each processing, so the last-use
+rule reports an error only for item types where `as last` would change what
+happens. An item that is a reference is never at its value's last use, so it
+needs no stance for this rule.
 
 The exact spelling of a stance after a type such as `Items` is not final.
 
@@ -811,7 +827,7 @@ sendMessages final : ()(messages ... : MyMessage) = {
 sendMessagesAtUse final : ()(messages ... : MyMessage) = {
   sendPackets(from each message : in messages |> encode(message as last))
 }
-// Both offer last for each message separately.
+// Both pass each message on with last, separately.
 ```
 
 The header accepts the same binding forms as the `each` statement, for example

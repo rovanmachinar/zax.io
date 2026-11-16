@@ -327,7 +327,9 @@ prepared : MyValue * unique shareable =
 The existing resident instance is preserved. `@` allocates only metadata required
 by the destination role:
 
-- a proved raw allocation may become blockless `unique` without `@`;
+- a raw allocation that the compiler can prove has a single owner may become
+  a `unique` pointer when it is passed `as last`, without allocating anything
+  new with `@`;
 - raw or blockless `unique` may use `@` to allocate a detached dormant block for
   `unique shareable`;
 - raw or blockless `unique` may use `@` to allocate and activate a detached block
@@ -462,6 +464,20 @@ Creating a dynamic path with no independently tracked owner or containing
 lifecycle—only a raw pointer value—remains unsafe: losing or repointing that
 pointer may leave no authority able to end the path.
 
+A raw pointer cannot record that it was made from a loan, so it cannot carry
+the loan's promise that nothing will be copied or taken. Making a raw pointer from a loan reference is
+therefore an error outside `unsafe`:
+
+```zax
+show final : ()(input : MyValue readonly &) = {
+  view : MyValue * = input   // error outside unsafe: input is on loan
+}
+```
+
+Inside a member function, `_` stands for the receiver itself, not for a
+pointer the programmer made. Passing `_` on passes the receiver with the same
+permissions; if the function's receiver has no stance, that is a loan. See [loan](transfer-stances.md#loan).
+
 `?view` proves only that the raw pointer value is non-vacant. It does not
 by itself prove a live pointee, valid provenance, alignment, or permitted
 access. When origin and lifetime analysis already proves those facts, the
@@ -591,11 +607,11 @@ tryMakeValue final : (
 }
 ```
 
-An omitted stance defaults to `copy` and requires
-`intent<implicit-stance-at-terminal-use>` acknowledgement because `last` would
-normally transfer the schedule. Explicit `copy` is legal and deliberately
-exposes a borrowed result: callers may use it only within the producer result
-slot's lifetime unless they restate `last` or prove another owner.
+A result with no stance is passed on as `last`, like any by-value result with
+no stance, so the caller takes over the allocation. Declaring `copy` instead
+says on purpose that callers only borrow the pointer: they may use it only
+until the call's result is destroyed, unless they write `as last` or the
+compiler can prove another owner.
 
 Explicit raw `move` likewise does not transfer declaration-attached disposition
 and remains subject to the borrowed lifetime boundary. `deep` is available only
@@ -974,15 +990,38 @@ the intended transition.
 
 ### Scheduled raw and managed ownership
 
-`last` may transfer declaration-attached raw disposition into managed ownership:
+A raw pointer, whether or not it was declared with `= @`, can become a
+`unique` owner only with `as last`. Without `last`, the destination would only
+borrow the address, and a `unique` pointer cannot borrow:
 
 ```zax
 scheduled : MyValue * = @
-owner : MyValue * unique = scheduled as last
+ordinaryRaw : MyValue * = locateValue()           // a raw pointer declared without = @
+
+// each line below is a separate alternative
+owner1 : MyValue * unique = scheduled             // error: unique cannot borrow; write `as last`
+owner2 : MyValue * unique = scheduled as last     // owner2 takes over; scheduled is empty
+owner3 : MyValue * unique = ordinaryRaw as last   // also needs proof that ordinaryRaw is the only owner, or unsafe
 ```
 
 On success, `scheduled` becomes vacant; its cleanup remains scheduled but
-later performs no disposition. `owner` becomes the allocation's unique owner.
+later performs no disposition. `owner2` becomes the allocation's unique owner.
+
+The same applies when passing a pointer to a function. Borrowing copies only
+the address and leaves ownership where it is, so it needs no stance; taking
+ownership needs `as last`:
+
+```zax
+keep final : ()(target : MyValue * unique) = {
+}
+
+borrow final : ()(target : MyValue *) = {
+}
+
+borrow(scheduled)         // borrows the address
+keep(scheduled)           // error at any use: write `as last`
+keep(scheduled as last)   // keep owns the allocation; scheduled is empty
+```
 
 A scheduled raw destination may likewise adopt `unique` ownership or another
 scheduled raw allocation:
@@ -992,8 +1031,8 @@ scheduled = uniqueOwner as last
 scheduled = otherScheduled as last
 ```
 
-The destination first dispositions its old allocation, then adopts the new
-allocation. The accepted source becomes vacant.
+The destination first frees the allocation it already had, then takes over
+the new one. The source is left empty.
 
 Transferring either authority into an ordinary unscheduled raw destination makes
 the allocation open-ended:
@@ -1003,9 +1042,13 @@ raw : MyValue * = uniqueOwner as last
 // requires another proved disposition owner or narrow unsafe responsibility
 ```
 
-An ordinary borrowed raw source can enter a scheduled or managed destination
-only when analysis proves its allocation root, provenance, and sole disposition
-authority. A known-invalid adoption is rejected.
+A raw pointer declared without `= @` only borrows its allocation. It can be
+handed to a pointer declared with `= @`, or to a `unique` or `strong` pointer,
+only with `as last`, and only when the compiler can prove that the pointer
+points at the start of an allocation and is the only owner responsible for
+freeing it; otherwise taking it over needs `unsafe`. After the transfer, the
+raw pointer is empty, just as a pointer declared with `= @` would be. Taking
+over a pointer the compiler knows is not the owner is an error.
 
 ### Shareable unique to shared
 
@@ -1240,6 +1283,10 @@ opaque : OpaqueReferenceObserver = typed
 It always binds one fixed place, cannot be vacant, never rebinds, and has no
 `?`, `!`, reset, vacate, or liveness probe. Copying creates another observer of
 the same place and extends no lifetime.
+
+`typed` above is declared with no stance, so it is a loan. An observer made
+from a loan still carries the loan: a reference recovered from `opaque` is
+also a loan, so it cannot be used to copy or take from `value`.
 
 Direct recovery returns a reference and panics on type mismatch:
 
@@ -1709,6 +1756,9 @@ Representative diagnostics include:
   address, or apply to a managed pointer;
 - raw allocation was dispositioned through a stale alias;
 - scheduled raw adoption lacks sole disposition authority;
+- a raw pointer passed to a `unique` destination without `as last`, which
+  would only borrow it;
+- a raw pointer made from a loan reference outside `unsafe`;
 - scheduled raw result used `copy` where its cleanup must transfer;
 - panicking allocation could not satisfy its request;
 - disabled allocation-failure panic occurred despite its promised-impossible

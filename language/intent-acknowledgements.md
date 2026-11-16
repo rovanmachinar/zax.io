@@ -207,8 +207,9 @@ copying a diagnostic message.
 
 | Category | Meaning acknowledged | Complete behavior owner |
 | --- | --- | --- |
-| `implicit-stance-at-terminal-use` | Keep implicit transfer stance at a proven terminal opportunity where explicit stance could materially change the accepted contract | [Transfer stances](transfer-stances.md#terminal-opportunity-must-be-explicit) |
-| `terminal-source-reuse` | Perform a defined operation after accepted `last` transfer | [Transfer stances](transfer-stances.md#last) |
+| `implicit-stance-at-terminal-use` | Keep the default `copy` at a last use where `as last` would call a different function or run a different operation of the type, including an operation the type's `transfer` list reserves but has not written yet | [Transfer stances](transfer-stances.md#when-a-stance-must-be-written) |
+| `terminal-source-reuse` | Use a variable after `as last`, for an operation its type documents as safe on a finished value | [Transfer stances](transfer-stances.md#last) |
+| `receiver-transfer` | Pass the whole receiver `_` on with `move` or `last`, directly or through a reference made from `_` | [Transfer stances](transfer-stances.md#passing-the-receiver-on) |
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
 | `redundant-outer-tracking` | Deliberately retain optional tracked outer-provenance semantics when the selected contract proves the exact origin | [Zax composition](composition.md#deliberately-retaining-redundant-tracking) |
@@ -479,50 +480,41 @@ Complete behavior belongs to
 ### Implicit stance at terminal use
 
 ```zax
+forward final : ()(input : Resource) = {
+}
+
+resource : Resource   // Resource has a copy and a move constructor
+
 intent<implicit-stance-at-terminal-use>{
-  forward(resource)
+  forward(resource)   // the last use of resource
 }
 ```
 
-This confirms that ordinary implicit transfer behavior should remain in effect
-even though analysis found a material terminal opportunity. It does not offer
-`last`.
+With no stance written, `forward(resource)` copies. Because this is the last
+use of `resource`, `as last` would instead run `Resource`'s move constructor,
+so the call is an intent error until a stance is written or the default is
+acknowledged. The acknowledgement keeps the copy; it does not turn the call
+into `as last`.
 
 The clearer ordinary repair is often to state the desired stance:
 
 ```zax
-forward(resource as last)
-forward(resource as move)
-forward(resource as copy)
-forward(resource as deep)
+// each line below is a separate alternative
+forward(resource as copy)   // a deliberate copy
+forward(resource as move)   // the move constructor runs; resource stays usable
+forward(resource as last)   // the move constructor runs; resource is finished
 ```
 
-The same category applies when an owned by-value result reaches its structurally
-final consumer and its producer left stance implicit:
+The acknowledgement covers only this last-use choice. Where a call with no
+stance cannot work at all, such as a call to a parameter declared `move` or
+`last`, or a copy of a type that has no `copy`, the stance must be written at
+every use, and no acknowledgement can replace it. See
+[when a stance must be written](transfer-stances.md#when-a-stance-must-be-written).
 
-```zax
-intent<implicit-stance-at-terminal-use>{
-  consume(makePayload())
-}
-```
-
-This keeps the implicit `copy` result behavior. It does not offer `last`.
-
-A scheduled raw result also requires this acknowledgement when its declaration
-leaves stance implicit:
-
-```zax
-intent<implicit-stance-at-terminal-use>{
-  makeValue final : (
-    result : MyValue * = @
-  )() = {
-  }
-}
-```
-
-The clearer ordinary declaration is `result : MyValue * last = @`. Explicit
-`copy` or `move` instead states a deliberate borrowed outward contract and
-remains subject to caller lifetime proof.
+This category applies to variables only. A function's by-value result with no
+declared stance is always passed on as `last`, so it never needs this
+acknowledgement; see
+[results with no declared stance](transfer-stances.md#results-with-no-declared-stance).
 
 ### Conditionally unallocated member
 
@@ -557,9 +549,31 @@ intent<terminal-source-reuse>{
 }
 ```
 
-The selected `last` consumer has already established terminal source state.
-Acknowledgement permits a later operation only when the type's terminal contract
-defines that operation.
+After `as last`, `resource` is finished. The acknowledgement allows a later
+call only for an operation the type documents as safe on a finished value.
+
+### Receiver transfer
+
+```zax
+Task :: type {
+  submit final : ()() last = {
+    intent<receiver-transfer>{
+      taskQueue.push(_ as last)   // gives the task to a queue the program owns
+    }
+  }
+}
+
+task : Task
+(task as last).submit()           // reads as the task doing something
+```
+
+A call on a receiver, such as `(task as last).submit()`, reads as the task
+doing something, not as the task being given away. So when a function passes
+its whole receiver `_` on with `move` or `last`, directly or through a
+reference made from `_`, the acknowledgement records that the hand-off is
+deliberate. Calling a function on `_`, taking a member of `_`, and passing
+`_` on with `copy` or `deep` need no acknowledgement. Complete behavior is in
+[passing the receiver on](transfer-stances.md#passing-the-receiver-on).
 
 ### Asymmetric saturating magnitude
 

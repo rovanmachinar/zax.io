@@ -56,7 +56,7 @@ reset present // no-op: the same live wrapper is already absent
 ### Move and last source adapters
 
 `last value` and `move value` are pre-unary optional phrase operators. They
-first change the stance offered to a consumer; they do not transfer a payload by
+only say what the receiving code may do; they do not move a contained value by
 themselves:
 
 ```zax
@@ -73,29 +73,26 @@ moved : MyValue? = move anotherSource
 Both forms preserve the complete optional type:
 
 ```zax
-last source        // MyValue? offered under `last`, plus scheduled cleanup
-move anotherSource // MyValue? offered under `move`
+last source        // passed on with last; source is emptied afterward
+move anotherSource // passed on with move
 ```
 
-They do not produce `source.` or expose a bare `MyValue`. A consumer receives an
-optional source, may observe absence, and must prove presence before postfix
-access. An absent wrapper performs no boxed transfer.
+They do not produce `source.` or expose a bare `MyValue`. The function that
+receives them gets an optional, may find it empty, and must check that it holds
+a value before using `.` on it. An empty optional passes nothing on.
 
-Ordinary `copy` leaves `source` unchanged. When a consumer accepts
-`last source`, `source` immediately enters terminal state for analysis. Its boxed
-state remains available to that consumer until the complete call or lifecycle
-operation finishes. The adapter then removes any remaining boxed value and
-leaves `source` absent.
+Ordinary `copy` leaves `source` unchanged. With `last source`, `source` is
+finished from that point for the rest of the expression, but its contained
+value stays available to the function receiving it until that call, or the
+construction or assignment it is part of, finishes. Then whatever is left of
+the contained value is destroyed, and `source` becomes empty. This happens the
+same way whether the function takes the optional by value or by reference.
 
-When a consumer accepts `move anotherSource`, an absent wrapper stays absent. A
-present wrapper stays present with one live moved-from `MyValue`.
+With `move anotherSource`, an empty optional stays empty, and one that holds a
+value still holds it, moved-from.
 
-Reference- and by-value consumers use the same `last` cleanup boundary: the
-source wrapper becomes absent after the complete singular call, construction,
-assignment, or other consumer finishes.
-
-Later ordinary use during that consumer is a terminal-source reuse error even
-while the represented payload remains physically live:
+Using `source` again inside the same call is an error, even though its
+contained value still exists until the call ends:
 
 ```zax
 observe(
@@ -107,8 +104,8 @@ observe(
 This optional adapter is distinct from generic stance restatement:
 
 ```zax
-source as last // offer `last`; schedule no optional-specific cleanup by itself
-last source    // offer `last` and leave this wrapper absent after completion
+source as last // passed on with last; source is not emptied by this form
+last source    // passed on with last; source is empty after the call
 ```
 
 The operator catalog records that these optional forms are protected from
@@ -1028,21 +1025,25 @@ available. `S` means proof or selected transfer behavior decides it.
 
 ### Transfer stance reference
 
-Generic stance restatement has no state effect until a consumer accepts it:
+Writing a stance changes nothing by itself. The table says what the original
+optional `value` holds after the function or constructor that receives it has
+run. Every form keeps the optional type.
 
-| Accepted source | Optional-specific source effect |
+| Form | What `value` holds afterward |
 | --- | --- |
-| `value as copy` | Produce the same optional type; wrapper and present payload remain unchanged |
-| `value as deep` | Produce the same optional type; wrapper and source payload remain unchanged; a present payload supplies the exact `deep` contract |
-| `value as move` | Produce the same optional type; accepted whole-optional `move` contract determines source state; no optional cleanup is scheduled by the form |
-| `value as last` | Produce the same optional type; accepted whole-optional `last` contract determines terminal source state; no optional cleanup is scheduled by the form |
-| `move value` | Produce the same optional type; preserve absence/presence; leave a present payload live and moved-from |
-| `last value` | Produce the same optional type; mark terminal when accepted; after complete consumer, leave wrapper absent and payload dispositioned |
+| `value as loan` | What it held, possibly changed in place through a `mutable writable` loan: only a parameter or receiver that borrows it as a loan can receive it |
+| `value as copy` | Exactly what it held: the optional and any contained value are unchanged |
+| `value as move` | A usable optional, in whatever state the optional type's own `move` leaves it; unlike `move value`, this form promises nothing about the contained value |
+| `value as last` | A finished optional that can only be destroyed or replaced; the form does not empty the optional |
+| `value as deep` | Exactly what it held; a contained value must have a `deep` operation |
+| `move value` | The same presence as before; a contained value is still there, moved-from |
+| `last value` | An empty optional once the call that received the contained value ends; what was left of the contained value is destroyed then |
 
-Whether an absent qualified optional satisfies a consumer follows that
-consumer's contract. Same-type transfer can propagate absence; a future
-unwrapping consumer may panic or be unavailable. General fallback and accepted
-source state are defined by [Zax transfer stances](transfer-stances.md).
+Passing an empty optional to a function that takes the same optional type
+simply passes an empty optional. Whether a function that unwraps the optional
+panics on an empty one, or cannot be called with it, is not settled yet.
+General fallback and what the original holds afterward are explained in
+[Zax transfer stances](transfer-stances.md).
 
 ## References, pointers, and other boxed types
 
@@ -1176,19 +1177,21 @@ selected contract forwards transfer:
 These generic post-unary forms are current:
 
 ```zax
+source as loan
 source as copy
-source as deep
 source as move
 source as last
+source as deep
 ```
 
 They need no phrase fence. This rule does not imply matching protected
 pre-unary `copy` or `deep` optional adapters.
 
-Custom containing operations own their member policy. `move` or `last` on a custom
-body does not blindly stamp every projected member with destructive stance.
-Complete projection and custom interception are defined by
-[Zax transfer stances](transfer-stances.md#projection-and-aliases).
+A type that writes its own `move` or `last` operation decides what happens to
+each member. Writing `as move` or `as last` on the whole value does not apply
+that stance to every member automatically: each member follows its own
+declared stance, and a stronger transfer from a member must be written. Complete member rules are defined by
+[Zax transfer stances](transfer-stances.md#members-and-bindings).
 
 ## Swapping optional values
 

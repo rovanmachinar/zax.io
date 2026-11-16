@@ -1613,6 +1613,44 @@ Diagnostics should distinguish:
 - a non-compile-time argument for `[<constant>]` or a `$` value parameter; and
 - an exceeded instantiation depth, with the chain.
 
+Whether a last use needs a stated transfer stance is decided for each
+instantiation, from that instantiation's types:
+
+```zax
+Message :: type transfer copy move {
+  text : String
+
+  +++ final : ()(source : Message mutable writable & move) = default
+}
+
+sendEach$ final : (Items ... : type)()(items ... : Items) = {
+}
+
+forwardEach$ final : (Items ... : type)()(items ... : Items) = {
+  sendEach(from items)   // the last use of items, with no stance
+}
+
+forwardEach(1, 2)        // fine: as last would still copy each Integer
+message : Message
+forwardEach(message)     // error: Message has move, so as last would move it
+```
+
+The caller cannot fix that line, so the diagnostic names the line in the
+generic body as the place to fix and shows the call that produced the
+instantiation:
+
+```text
+error: last use of `items` needs a stated stance
+  in forwardEach$(Message), line 2: sendEach(from items)
+  instantiated from: forwardEach(message), main.zax:14
+  this line belongs to forwardEach$; it needs `as copy`, `as move`, or `as last`
+```
+
+A `requires` clause can reject item types, but it cannot exempt the item
+types it accepts: if an accepted type has `move`, the line still needs a
+stance. The complete rule is in
+[when a stance must be written](transfer-stances.md#when-a-stance-must-be-written).
+
 ## Source stability
 
 The following changes are source- or behavior-visible:

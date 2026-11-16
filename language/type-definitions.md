@@ -6,7 +6,7 @@
 | Audience | Human developers defining, constructing, composing, or inspecting Zax types |
 | Applies To | Ordinary named and anonymous type definitions and their programmer-visible organization; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The ordinary type-definition mental model; named and anonymous identity; direct stored shape; type-body storage, behavior, and metadata categories; incomplete self-names, forwards, recursion, completion, and `outer tracked` integration; explicit member layout with `align`, `reorder`, `reserve`, and `void` |
+| Owns | The ordinary type-definition mental model; named and anonymous identity; direct stored shape; type-body storage, behavior, and metadata categories; incomplete self-names, forwards, recursion, completion, and `outer tracked` integration; the position of the type-head `transfer` clause relative to `seal`; explicit member layout with `align`, `reorder`, `reserve`, and `void` |
 | Does Not Own | General declaration syntax ([declarations and bindings](declarations-and-bindings.md)); complete lifecycle behavior ([construction, replacement, and destruction](construction-and-destruction.md)); qualifiers ([qualifiers](qualifiers.md)); composition ([Zax composition](composition.md)); structural compatibility ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); [unions](unions.md); or [variants](variants.md) |
 | Source / Provenance | Reviewed legacy type-definition evidence reconciled with current declaration, lifecycle, lifetime, qualifier, composition, structural, callable, union, and variant design |
 
@@ -333,6 +333,39 @@ replacement constructor retains a resource or leaves bytes at the same address.
 See
 [construction, replacement, and destruction](construction-and-destruction.md)
 and [lifetimes and references](lifetimes-and-references.md).
+
+### Transfer lists
+
+A type definition can list the transfers the type allows, right after the
+`type` keyword:
+
+```zax
+MyOwnedFile :: type transfer move {
+  handle : Integer
+
+  +++ final : ()(source : MyOwnedFile mutable writable & move) = default
+}
+// can be moved, never copied: the list allows move and rules out copy, and
+// = default asks the compiler to write the move constructor
+
+MyCatalog :: type transfer copy move seal open storage close callable {
+  entries : Integer
+}
+// the transfer list comes before the seal clause, described below
+```
+
+The `transfer` clause lists stances in the order `copy move last deep`. It
+names every stance the type allows for building a value from another value of
+the same type, for assignment, and for replacement. Defining an operation for
+a stance that is not listed is an error, including in a partial. Without a
+clause, the type's transfers are whatever operations it currently has.
+
+A type can also have a `seal` clause, which says what
+[partials](partials.md) may add to it. When a type has both clauses,
+`transfer` comes before `seal`: what the type itself allows comes before what
+others may add to it, and `seal`'s categories stay at the end. What each stance allows, how the list affects generated
+operations, and how `= forbidden` works with it are explained in
+[declaring which transfers a type allows](construction-and-destruction.md#declaring-which-transfers-a-type-allows).
 
 ## Qualifications follow the actual path
 

@@ -698,24 +698,50 @@ Commonly provable origins include:
 
 ### Receiver-origin `self`
 
-A reference or pointer result declared `self` promises that every returning path
-returns exactly the invocation receiver `_`:
+A reference result declared `self` promises that every `return` hands back
+exactly the receiver `_`:
 
 ```zax
-tune final : (
-  result self : Engine &
-)(profile : Profile readonly &) = {
-  apply(_, profile)
-  return _
+Engine :: type {
+  tune final : (
+    result self # : Engine &
+  )(profile : Profile readonly &) = {
+    apply(_, profile)
+    return _
+  }
 }
 ```
 
-The compiler verifies the receiver origin. It does not infer `self` into an
-undeclared public contract, and `self` never describes a copied result.
+The compiler checks that promise. It never infers `self` for a function that
+does not declare it, and a function that returns a copy of its receiver does
+not have a `self` result. A `self` result is always a reference, never a
+pointer.
 
-Composition may use this proof to map a contained receiver reference back to an
-outer receiver whose relationship is already known. An arbitrary non-receiver
-reference does not gain that mapping. General contracts stating that a result
+The result refers to the caller's own variable, so it is valid for as long
+as that variable is. It is the variable exactly as the caller wrote it:
+any stance written on the call, any stance declared on the variable, any
+`loan` it was reached through, and its qualifiers all still apply. Using the
+result behaves exactly like writing the receiver again:
+
+```zax
+engine : Engine move
+profile : Profile
+
+engine.tune(profile).start()   // fine: start's receiver has no stance, so it only lends engine
+spare : Engine = engine.tune(profile)
+// error: like spare : Engine = engine, a copy from a place declared move
+moved : Engine = (engine as move).tune(profile)
+// fine: like moved : Engine = engine as move
+```
+
+How the declaration is written is explained in
+[function invocation](function-invocation.md#receiver-origin-self-results),
+and how stances travel along a chain in
+[transfer stances](transfer-stances.md#self-results-carry-the-callers-variable).
+
+Composition may use this promise to map a call on a contained member back to
+the outer value that contains it. An arbitrary non-receiver reference does
+not get that mapping. General contracts stating that a result
 originates from one particular input remain future callable-contract work. See
 [Zax composition](composition.md#the-self-result-contract).
 
@@ -744,33 +770,43 @@ contracts, but that future need does not make an unproved result valid.
 
 ## Capture and stored references
 
-Lambda capture defaults to `copy`, even when the captured name is a reference:
+Lambda capture defaults to `copy`, even when the captured name is a reference
+declared `& copy`:
 
 ```zax
 source : Document
-view : Document readonly & = source
+view : Document readonly & copy = source
 
 callback := [[ view ]] ()() {
-  inspect(view) // observes a Document copied into the capture path
+  inspect(view) // reads the Document copied into the lambda
 }
 ```
 
-The lambda owns that copied `Document` in its capture path. If the referent is
-not copyable, ordinary capture is unavailable.
+The lambda owns that copied `Document`. If the value `view` refers to cannot
+be copied, a copy capture is an error. A reference with no stance is a
+`loan`, which never allows the value it refers to to be copied, so capturing
+it by copy is an error too; capture it by reference instead.
 
 An explicit reference capture instead constructs another reference bound to the
 original place. It:
 
 - does not extend or own the target path;
 - must be proved valid for every invocation;
-- may not silently inherit destructive `move` or `last` stance; and
-- defaults ordinary nested use to `copy`.
+- is a declared reference with its own stance, which is `loan` when no
+  stance is written; it does not take on a `move` or `last` stance declared on
+  the variable it captures, so it cannot take from that variable unless it
+  declares that stance itself; and
+- can never allow more than the captured variable allows: a capture of a
+  `loan` is a `loan`, and a variable declared `move` cannot be captured by a
+  reference that may copy it.
 
 Reference capture states its destination explicitly:
 
 ```zax
-callback := [[ view: borrowed : & ]] ()() {
-  inspect(borrowed)
+loanedView : Document readonly & = source   // unmarked: a loan
+
+callback := [[ loanedView: borrowed : & ]] ()() {
+  inspect(borrowed)                         // fine: borrowed is still a loan
 }
 ```
 
@@ -789,24 +825,26 @@ to
 
 ## `move`, `last`, and reference lifetime
 
-Transfer stance and lifetime validity are independent.
+A stance and a reference's lifetime are separate questions.
 
-A reference-shaped `move` or `last` parameter grants the selected synchronous
-consumer authority over caller-owned storage:
+A `move` or `last` reference parameter lets the function take from the
+caller's value during the call:
 
 ```zax
 consume final : ()(
   input : Resource mutable writable & last
 ) = {
-  inspect(input) // named input ordinarily offers copy
+  inspect(input) // no stance written: copies, or lends if inspect takes a loan
   transfer(input.handle as last)
 }
 ```
 
-`move` and `last` change resource authority and source state. They do not rebind
-the reference or by themselves end the outer place.
+Taking from the value changes what the caller's variable holds afterward. It
+does not make `input` refer to anything else, and it does not end the caller's
+variable.
 
-Explicit renewal may create another terminal-stanced reference:
+A function can make another reference that may take with `last`, by writing
+the stance:
 
 ```zax
 stored :
@@ -814,12 +852,9 @@ stored :
 ```
 
 That declaration is viable only when independent lifetime analysis also proves
-the target outlives `stored`. Named use of `stored` again offers `copy` unless a
-later consumer explicitly renews `as last`.
-
-The legacy `lease` concept has no remaining language role. Fixed reference
-binding, synchronous borrowing, pointer ownership, copy-default named use, and
-explicit destructive renewal cover its useful behavior.
+the value outlives `stored`. Its declared `last` is a requirement: lending
+`stored` needs no stance, but every transfer from it must be written
+`as last`.
 
 ## Thread boundary
 

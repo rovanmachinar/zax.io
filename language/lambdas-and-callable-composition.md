@@ -102,12 +102,12 @@ message = "changed"
 report() // prints ready
 ```
 
-The default is `copy`. If the source name is a reference, ordinary capture
-copies the referent rather than preserving the reference:
+A capture copies by default. If the captured name is a reference declared
+`& copy`, the capture copies the value it refers to, not the reference:
 
 ```zax
 source : Document
-view : Document readonly & = source
+view : Document readonly & copy = source
 
 snapshot := [[ view ]] ()() {
   inspect(view) // a captured Document value
@@ -115,6 +115,30 @@ snapshot := [[ view ]] ()() {
 ```
 
 If the referent cannot be copied, this capture is unavailable.
+
+A reference with no stance is a `loan`: the value is not copied or taken.
+Capturing it by `copy` would copy the value it refers to, so that is
+an error. Capture it by reference instead; the captured reference is still a
+`loan`:
+
+```zax
+loanedView : Document readonly & = source    // unmarked: a loan
+
+copied := [[ loanedView ]] ()() {             // error: a copy capture of a loan
+  inspect(loanedView)
+}
+
+borrowed := [[ loanedView: keptView : & ]] ()() {
+  inspect(keptView)                           // fine: keptView is still a loan
+}
+```
+
+`[[ loanedView: keptView : & ]]` captures `loanedView` by reference under the
+name `keptView`; renaming and reference captures are explained in the next two
+sections.
+
+`inspect` here takes an unmarked `Document readonly &`, so reading through a
+`loan` reference is sufficient.
 
 ### Rename or construct a capture
 
@@ -197,13 +221,17 @@ nothing, never rebinds, and cannot outlive that place. Qualification and
 declaration-side replacement permissions cannot become stronger through
 capture.
 
-Reference capture does not inherit `unsafe pliable` or a destructive declaration
-stance. A capture that deliberately needs either must state its own applicable
-source.
+A reference capture is a declared reference with its own stance. With no
+stance, as here, it is a `loan`: `capturedTotal += delta` changes `total`, as
+the capture's qualifiers allow, but nothing can be copied or taken through
+`capturedTotal`. It does not take on `unsafe pliable` or a declared stance
+from the variable it captures. A capture that needs either must explicitly
+declare what it wants.
 
 ### Source stance and capture stance are separate
 
-A source expression can state how lambda construction consumes it:
+The expression a capture is built from can write a stance, which decides how
+the capture is built when the lambda is created:
 
 ```zax
 callback := [[ value as last: myValue ]] ()() bound strong {
@@ -211,22 +239,26 @@ callback := [[ value as last: myValue ]] ()() bound strong {
 }
 ```
 
-`value as last` is a one-use offer for construction of `myValue`. It does not
-make later body uses terminal automatically.
+`value as last` applies only to building `myValue`. It does not make later
+uses of `myValue` in the body take it automatically.
 
-The completed capture declaration may state its own future stance:
+A capture may declare its own stance. As with a local variable, that stance
+is a requirement on every later transfer from the capture:
 
 ```zax
 callback := [[
   value as last: myValue : MyType move
 ]] ()() bound strong {
-  consume(myValue)
+  consume(myValue)           // error if consume takes MyType by value: myValue was declared move
+  consume(myValue as move)   // fine
 }
 ```
 
-Here the outer source offers `last` during capture construction, while ordinary
-body use of `myValue` offers `move`. A source-relative `anchor` may likewise
-select the captured region under the ordinary structural rules.
+Here the captured variable is passed `as last` when the capture is built.
+In the body, `myValue` may be lent freely, but any transfer from it must write
+`move` or `last`. A source-relative `anchor` may likewise select the captured region
+under the ordinary structural rules. See
+[callable values and captures](transfer-stances.md#callable-values-and-captures).
 
 ### Capture producer results once
 

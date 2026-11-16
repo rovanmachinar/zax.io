@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; the positional cursor and labels at a variadic pack, and `from` expansion in argument lists; transfer-aware value/reference binding, including composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; result packs in result slots; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; the single routing rule for forwarded result sequences into calls, returns, and construction, including collisions, the single-result intent error, and incidental labels; overload viability and preference, including selection rules for variadic candidates; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation, including a function value selecting one processing of a variadic callable; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; the positional cursor and labels at a variadic pack, and `from` expansion in argument lists; transfer-aware value/reference binding, including the declared stance as the least stance a call must write, how by-value parameters are built from the stance the caller writes, and the loan-or-copy requirement, and composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; result packs in result slots; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; the single routing rule for forwarded result sequences into calls, returns, and construction, including collisions, the single-result intent error, and incidental labels; overload viability and preference, including selection rules for variadic candidates; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation, including a function value selecting one processing of a variadic callable; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | The variadic pack model: declaring, walking, counting, indexing, mapping, and holding packs ([variadics](variadics.md)); the `label` directive catalog entry ([compiler directives](compiler-directives.md#directive-catalog)); the cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -223,24 +223,42 @@ receiverless call rather than another implementation slot. `once` does not
 create an overload tie between a hidden type-callable implementation and an
 instance implementation.
 
-The receiverless route synthesizes a `copy`-stanced Nothing receiver before
-selection. An exact `last` receiver declaration therefore remains available to
-an instance source but not to the type call:
+A call on the type has no variable to write a stance on, so it is a call with
+no stance, and its receiver is the type's Nothing instance. Like any call with
+no stance, it uses the version with no receiver stance if there is one,
+otherwise a `copy` version. A version declared with a `last` receiver can
+therefore be called on an instance, but not on the type:
 
 ```zax
-(value as last).consume()
-MyType.consume() // error when consume requires exact last receiver
+MyType :: type {
+  consume final once : ()() last = {
+  }
+}
+
+(value as last).consume()   // fine: the call writes last on the instance
+MyType.consume()            // error: a call on the type writes no stance, and
+                            // consume requires a last receiver
 ```
 
-There is no runtime change from `last` to `copy`. Aliases, forwarding, and
-bound callable values preserve whether they represent receiverless
-lookup or an instance receiver.
+This is decided when the program is compiled, not at run time. An alias, a
+forwarded call, or a stored function value keeps track of whether it was a
+call on the type or on an instance.
 
 `_` is pointer-shaped, while `_.` supplies the dereferenced form. Mapping to an
 expected pointer prefers `_`; mapping to an expected `MyType` may use `_.`.
-Either form may be passed or returned, including through a verified `self`
-result. Pointer dereference remains unchecked unless the type selected trapping
-Nothing behavior.
+Either form may be passed or returned. A `self` result is always a reference,
+so `return _` in a function with a `self` result returns the dereferenced
+form. `_` stands for the receiver itself, not for a pointer the programmer
+made, so passing `_` on passes the receiver with the same permissions. In a
+function whose receiver has no stance, that means passing on a loan, and
+passing it on with `move` or `last` is then an error. In a `move` or `last`
+version, passing `_` on with `move` or `last` is allowed but needs
+`intent<receiver-transfer>`, as
+[passing the receiver on](transfer-stances.md#passing-the-receiver-on)
+explains.
+
+Dereferencing `_` is not checked unless the type chose trapping Nothing
+behavior.
 
 Declaration, `final`, generated default, replacement, and prohibition behavior
 is defined by
@@ -428,68 +446,135 @@ behavior is owned by
 
 ### Transfer-aware value and reference parameters
 
-A transfer stance first changes which parameter contract the argument may
-satisfy. The stance expression performs no transfer because no consumer has been
-selected or run yet. After selection, the parameter's binding form determines
-which object the function may change.
-
-The ordinary contracts are:
+An argument written with no stance means `copy`. A by-value parameter's
+declared stance says the least stance a call must write to use the function:
 
 ```zax
-read final : ()(
-  input : Message readonly & copy
-) = {
+log final : ()(input : Message) = {
 }
 
-consume final : ()(
-  input : Message mutable writable & move
-) = {
+send final : ()(input : Message move) = {
+}
+
+message : Message           // Message has copy and move constructors
+log(message)                // Message's copy constructor builds input
+log(message as move)        // log's parameter has no stance, so it accepts move: the move constructor runs
+send(message)               // error: send requires at least `as move`
+send(message as move)       // the move constructor builds input
+send(message as last)       // Message has no last constructor, so the move constructor runs
+```
+
+Writing `message as move` does not move anything by itself. It allows a move.
+The constructor that builds the parameter decides what actually happens.
+
+For a by-value parameter, three separate things happen:
+
+1. **Choosing the function.** A call must write at least the parameter's
+   declared stance. A by-value parameter with no stance is called a **plain**
+   parameter; it behaves exactly like one declared `copy`. A call with no
+   stance, or with `as copy`, can use only plain and `copy` parameters. A call
+   with `as move` prefers a `move` parameter and can also use a plain or
+   `copy` parameter. A call with `as last` prefers `last`, then `move`, then
+   plain or `copy`. A `deep` parameter can be used only by a call written
+   `as deep`. If a call writes a weaker stance than every overload requires,
+   the call is an error at any use, not only at the variable's last use, which
+   [a later section](#a-last-use-needs-a-stated-stance) explains.
+2. **Building the parameter.** The stance the caller wrote chooses which of the
+   type's constructors builds the parameter. If the type has no constructor
+   for that stance, a weaker one runs: `last` falls back to `move`, then
+   `copy`, as [fallback](transfer-stances.md#fallback) explains. The
+   parameter's declared stance does not change it: a call with `as last` runs
+   the type's `last` constructor if there is one, even for a `move`
+   parameter. That constructor receives a reference to the caller's variable,
+   which is how a `move` or `last` constructor takes the contents out. The
+   caller's variable ends up in whatever state that constructor leaves it,
+   except that after `as last` it always counts as finished: it can only be
+   destroyed or replaced.
+3. **Inside the function.** The parameter is the function's own value. A use
+   of it with no stance is a `copy`, whatever the parameter's declared stance;
+   the declared stance only describes how the value arrived.
+
+`Message` has `copy` and `move`; `MyOwnedFile` has only `move`:
+
+| Type | Parameter | Implicit | `as move` | `as last` |
+| --- | --- | --- | --- | --- |
+| `Message` | plain | `copy` runs | `move` runs | `move` runs (no `last`) |
+| `Message` | `move` | error: requires at least `move` | `move` runs | `move` runs |
+| `Integer` | plain | `copy` runs | `copy` runs | `copy` runs |
+| `Integer` | `move` | error: requires at least `move` | `copy` runs | `copy` runs |
+| `MyOwnedFile` | plain | error: no `copy` | `move` runs | `move` runs |
+| `MyOwnedFile` | `move` | error: requires at least `move` | `move` runs | `move` runs |
+
+Once a function is chosen, its by-value parameter is built exactly like a
+local variable initialized with the same stance. A by-value `deep` parameter
+is built with the type's `deep` constructor, and inside the function a use
+with no stance is still a copy.
+
+Because uses inside the function are copies by default, taking from the
+parameter must be written where it happens:
+
+```zax
+archive final : ()(input : Message move) = {
+  record(input.payload)            // a copy
+  record(input.payload as move)    // the move is visible where it happens
 }
 ```
 
-A reference-shaped `move` or `last` parameter refers directly to caller-owned
-storage. The selected function may take ownership of resources from that value
-during the call:
+A reference parameter builds nothing; it refers directly to the caller's
+variable. Its declared stance says what the function may do to that variable,
+so a call must write at least that stance, for every type and every time:
 
 ```zax
-consume final : ()(
-  input : Message mutable writable & move
-) = {
-  send(input.payload as move)
+show final : ()(input : Message readonly &) = {
 }
-```
+// unmarked: a loan; nothing is copied or taken through input
 
-A by-value `move` or `last` parameter instead constructs an independent
-parameter first. The caller's source is preserved by that copy-in barrier;
-resource transfer affects the local parameter:
-
-```zax
-consume final : ()(
-  input : Message move
-) = {
-  send(input.payload)
+remember final : ()(input : Message readonly & copy) = {
 }
+// may copy from the caller's message
+
+consume final : ()(input : Message mutable writable & move) = {
+  record(input.payload as move)    // takes resources from the caller's message
+}
+
+bump final : ()(value : Integer mutable writable & last) = {
+}
+
+count : Integer
+show(message)              // a loan accepts any call
+remember(message)          // no stance means copy, which remember's & copy accepts
+consume(message)           // error: consume requires at least `as move`
+consume(message as move)
+bump(count)                // error: bump requires `as last`, even for an Integer
+bump(count as last)
 ```
 
-By-value `deep` performs `deep` construction at the binding boundary and retains
-`deep` stance in the body. By-value `copy` performs ordinary `copy`
-construction.
+A reference parameter with no stance is a **loan**: the caller's value as a
+whole cannot be copied, moved, or taken through it, though a
+`mutable writable` loan may change it, and its members, in place. A function
+that copies or takes the whole value through a reference must declare
+`& copy`, `& move`, `& last`, or `& deep`. `bump(count)` is an error even
+though an `Integer` has nothing to take: `bump` declared that it may take over
+`count`, and a call with no stance only allows a `copy`.
 
-For an ordinary writable source and otherwise equal `move`/`last` candidates, the
-normal mutable/writable reference form is better than by value. A readonly
-restatement can make that reference nonviable:
+Suppose a function has a `mutable writable & move` reference overload and a
+by-value `move` overload, and the caller's variable is mutable and writable. A
+call with `as move` uses the reference overload, because it builds no new
+value. Writing `(message as readonly) as move` rules out the reference
+overload; the by-value overload is then used, and its parameter is built by
+copying, because `Message`'s move constructor needs a `mutable writable`
+source.
 
-```zax
-consume((message as readonly) as move)
-```
+When a function has both a loan overload and a by-value overload, a call with
+no stance must choose; see
+[A loan or a copy must be stated](#a-loan-or-a-copy-must-be-stated).
 
-If a readonly-reference variant also remains viable, neither candidate may be
-better overall: the reference may avoid copying, while by value preserves
-caller-owned storage. The later selection model calls this **incomparable**. The
-call is ambiguous rather than silently choosing one ownership effect.
-
-Complete stance meaning, fallback, projection, and source post-state are defined
-by [Zax transfer stances](transfer-stances.md).
+What each stance means, how fallback works, and what state the caller's
+variable is left in are explained in
+[Zax transfer stances](transfer-stances.md#by-value-and-by-reference); the
+body defaults are listed in
+[stances inside a body](transfer-stances.md#stances-inside-a-body), and
+[loan](transfer-stances.md#loan) defines what a loan promises.
 
 ### Array values, bounded references, and slices
 
@@ -891,19 +976,19 @@ If the first parameter copies, it captures `1`. If it references `source`, it
 binds before the mutation but may observe `2` when the body later reads the
 referent.
 
-A by-value `move`, `last`, or `deep` parameter performs its required construction
-during this immediate binding step. A reference-shaped `move` or `last`
-parameter immediately refers to existing storage, but its selected body may take
-resources later during the call.
+A by-value parameter is built at this point, by the constructor that the
+caller's stance chooses. A `move` or `last` reference parameter refers to the
+caller's variable from this point on, but the function may take from it later
+during the call.
 
-Producing `source as move`, `source as last`, or an optional phrase form has no
-effect by itself because it only changes the stance offered to selection. The
-selected consumer decides what transfer, if any, occurs.
+Writing `source as move`, `source as last`, or one of the optional forms does
+nothing by itself; it only says what the call allows. The function that is
+called decides what, if anything, is taken.
 
-When a consumer accepts `last optionalValue`, the optional immediately enters
-terminal source state for analysis but keeps required boxed state live until the
-complete consumer finishes. Complete optional state and cleanup behavior is
-defined by
+The optional forms are `last optionalValue` and `move optionalValue`. With
+`last optionalValue`, the optional counts as finished from that point, but its
+contained value stays available until the call finishes; then the optional is
+emptied. Complete optional behavior is explained in
 [Zax optional values](optional-values.md#move-and-last-source-adapters).
 
 This order is programmer-visible. An optimization may elide storage or operations
@@ -1124,8 +1209,9 @@ replacement-constructor, and non-call operator result shapes cannot declare
 Each ordinary result declaration establishes:
 
 - an ordered result slot;
-- a source-facing label, type, and qualifications; and
-- a transfer stance that becomes active after construction; and
+- a source-facing label, type, and qualifications;
+- a declared stance, which decides how the caller's destination is built from
+  the result; and
 - an obligation to contain one complete value whenever the success outcome is
   selected.
 
@@ -1140,7 +1226,9 @@ An ordinary result slot begins unconstructed:
 ```zax
 make final : (
   result : Item
-)() = {
+)(
+  source : Item readonly & copy
+) = {
   return source
 }
 ```
@@ -1168,21 +1256,60 @@ Neither path first constructs an absent result and assigns over it. Complete
 optional construction and transfer is defined by
 [Zax optional values](optional-values.md#parameters-and-results).
 
-A result's initializer or return expression decides how the result slot is
-constructed. Once the slot exists, the stance written on its declaration decides
-how later consumers see it:
+The `return` expression, or the result's initializer, decides how the result
+itself is built. The stance written on the result's declaration decides how
+the caller's destination is then built from the result, unless the caller
+writes a stance on the call, as in `make(template) as last`; the stance the
+caller writes wins.
 
 ```zax
 make final : (
   result : Item move
-)() = {
+)(
+  source : Item readonly & copy
+) = {
   return source as copy
+}
+
+stored := make(template)   // stored is built from the result with move
+```
+
+`return source as copy` builds `result` by copying `source`. Then `stored` is
+built from `result` with `move`, because `result` is declared `move`. That
+applies only to this one step: `stored` itself has no declared stance and is
+unrestricted.
+
+Inside the function, `result` behaves like a parameter: a use with no stance
+is a copy, and taking from it must be written with a stance at the use:
+
+```zax
+makeMessage final : (
+  result : Message move
+)(
+  source : Message readonly & copy
+) = {
+  result.+++(source as copy)
+  inspect(result)               // lends result if inspect takes a reference;
+                                // copies it if inspect takes a value
+  archive(result as move)       // taking from result is written at the use
 }
 ```
 
-`source as copy` constructs `result`. After construction, ordinary uses of
-`result` in the body offer `move`, and the caller also receives a `move`-stanced
-result.
+A reference result with no stance is a `loan`, like any reference with no
+stance; `& loan` says the same thing explicitly. A `self` result is the one
+exception, as [`self` results](#receiver-origin-self-results) explains:
+
+```zax
+current final : (
+  result : MyDocument readonly & loan
+)() = {
+}
+```
+
+The caller may use the value the result refers to, as its qualifiers allow,
+but may not copy or keep it, and anything made from it is also a loan. The
+usual lifetime rules for returned references apply; see [loan](transfer-stances.md#loan) and
+[results and forwarding](transfer-stances.md#results-and-forwarding).
 
 A function always returns the types written in its selected prototype, even
 when the compiler evaluates the call early. A number literal in `return` can
@@ -1266,36 +1393,119 @@ and how a body builds one item at a time.
 
 ### Receiver-origin `self` results
 
-`self` on a reference or pointer result is an explicit callable-boundary
-contract that every returning path returns exactly the invocation receiver `_`:
+A function that returns its receiver lets callers chain calls. Declaring the
+result `self` says that every `return` hands back exactly the receiver `_`:
 
 ```zax
-tune final : (
-  result self : Engine &
-)(profile : Profile readonly &) = {
-  apply(_, profile)
-  return _
+Engine :: type {
+  tune final : (
+    result self # : Engine &
+  )(profile : Profile readonly &) = {
+    apply(_, profile)
+    return _
+  }
+}
+
+engine : Engine
+engine.tune(profile).start()   // like engine.tune(profile); engine.start()
+engine.tune(profile)           // fine: # lets the caller discard the result
+```
+
+The compiler checks that every `return` really returns `_`. It never infers
+`self` for a function that does not declare it, and a function that returns a
+copy of its receiver does not have a `self` result. Composition relies on this
+check to map a call on a member back to the outer value; see
+[the `self` result contract](composition.md#the-self-result-contract).
+
+A `self` result is written with only the receiver's type, `&`, and optionally
+`#`. It is always a reference, never a pointer. It takes its stance and
+qualifiers from the caller, so writing either on it is an error:
+
+```zax
+Engine :: type {
+  peek final : (result self : Engine &)() readonly = {
+    return _
+  }
+  // fine
+
+  peekRestated final : (result self : Engine readonly & copy)() readonly = {
+    return _
+  }
+  // error: a self result takes its stance and qualifiers from the caller
 }
 ```
 
-The compiler verifies the claim. It is not inferred into a public prototype and
-does not apply to copied results. The contract lets composition forwarding
-preserve receiver provenance without performing a runtime outer cast. Complete
-origin, escape, and lifetime meaning belongs to
+**The result is the caller's variable.** It hands back the receiver exactly
+as the caller wrote it: the same variable, the stance written on the call,
+any stance declared on the variable, any `loan` it was reached through, and
+its qualifiers. Whatever the caller may do with that variable, it may do with
+the result, no more and no less. The chosen function's own receiver stance
+and qualifiers do not change that; they decide only which calls can use the
+function and what its body may do with `_`. So `peek`, although declared
+`readonly`, hands back a writable path when it is called on a writable
+variable:
+
+```zax
+engine.peek().tune(profile)   // fine: peek's result is engine itself, which is writable
+```
+
+The stance written on the call travels with the result too, and a stance
+declared on the variable still applies. Here `restricted` is declared `move`,
+which means every transfer from it must be written with `move` or `last`, as
+[declared stances](transfer-stances.md#locals-aliases-and-members) explains:
+
+```zax
+// install takes an Engine by value
+restricted : Engine move
+// each line below is a separate alternative
+install(restricted.tune(profile))            // error: like install(restricted),
+                                             // a copy from a variable declared move
+install((restricted as move).tune(profile))  // fine: the move written on restricted reaches install
+install(restricted.tune(profile) as move)    // fine: the same, written later in the chain
+```
+
+How stances travel along a chain, including `as last` and a variable's last
+use, is explained in
+[`self` results carry the caller's variable](transfer-stances.md#self-results-carry-the-callers-variable).
+
+**A `self` result must be used unless it is marked `#`.** Like any result
+without `#`, a `self` result the caller ignores is an error. That lets a type
+insist that a chain continues until a finishing call:
+
+```zax
+Request :: type {
+  prepare final : (result self : Request &)() = { … }
+  stageMore final : (result self : Request &)() = { … }
+  send final : ()() = { … }
+}
+
+request.prepare().stageMore().send()   // fine
+request.prepare()                      // error: prepare's result is required and unused
+```
+
+Write `#` after `self`, as `tune` does, when a call is useful on its own and
+callers may ignore the result. An assignment operator, which changes a place,
+declares its result with `#`, so that `a = b` can be written on its own
+without using the result. The generated `=` does the same; see
+[construction and destruction](construction-and-destruction.md#generated-copy-construction-and-assignment).
+
+A function that returns `_` in some other way follows the ordinary result
+rules. When the function declares no receiver stance, `_` is a `loan` inside
+it, so returning `_` through a `& copy` result is an error: the caller could
+then copy a value the function was only lent. Where a `self` result may be used, and how long it stays valid, is
+explained in
 [lifetimes and references](lifetimes-and-references.md#receiver-origin-self).
 
-### Result mapping and terminal opportunity
+### Results with no declared stance
 
-A result's declared stance is part of the producer prototype. Omission means
-implicit `copy`; caller context does not silently rewrite that contract.
-
-An owned by-value result slot is temporary source storage, however. When that
-slot maps into its one complete consumer, selection can determine whether a
-`last` offer would materially change the accepted contract:
+A result's declared stance is part of the function's signature. A by-value
+result holds its own value only until the caller uses it, and nothing can use
+it again after that. So a by-value result with no declared stance is passed
+on as `last`:
 
 ```zax
 consume final : ()(
-  input : Item readonly & copy
+  input : Item readonly &
 ) = {
 }
 
@@ -1306,33 +1516,31 @@ consume final : ()(
 
 make final : (
   result : Item
-)() = {
+)(
+  source : Item readonly & copy
+) = {
   return source
 }
 
-consume(make())
-// error: state the terminal result intent explicitly
+consume(make(template))   // the result is passed on as last: the `& last` consume runs
+item := make(template)    // item is built from the result with last: Item's move
+                          // constructor runs if Item has one
 ```
 
-This intent error requires:
+A function that wants its callers to receive a copy declares
+`result : Item copy`. A caller can write a stance on one call, which replaces
+the result's, as in `consume(make(template) as copy)`. A discarded result is
+destroyed like any unused value. Each result of a function with several
+results follows its own declaration.
 
-- an owned by-value result slot;
-- implicit result stance;
-- structurally final mapping of that slot;
-- and a materially different `last`-capable consumer or source outcome.
+Failure results follow the same rule; see
+[Zax exceptional result flow](except.md#transfer-ownership-and-references).
 
-The producer may declare `result : Item last` or `result : Item copy`. The
-caller may write `make() as last`, or acknowledge deliberately retained implicit
-behavior with `intent<implicit-stance-at-terminal-use>{...}`.
-
-No error is needed when no `move`/`last` consumer is available, `last` would
-accept the same `copy` contract with the same outcome, or the result is discarded.
-Each slot of a multiple-result sequence is considered independently.
-
-A reference result is excluded because its slot owns an access path, not the
-referred-to value. Destroying the result slot does not establish that the
-referent is terminal. Pointer ownership follows the selected pointer contract,
-not temporary result-slot lifetime. See
+A reference result with no stance is a loan, like any other reference with no
+stance, because it only refers to a value someone else holds. A pointer result
+follows the ownership rules of its pointer kind: a raw pointer result that
+allocates with `= @` hands its allocation to the caller unless it declares
+`copy`. See
 [lifetimes and references](lifetimes-and-references.md#returned-references) and
 [pointers and arenas](pointers-and-arenas.md).
 
@@ -1375,9 +1583,9 @@ makeValue final : (
 }
 ```
 
-`= @` establishes the pre-body allocation and scheduled raw result.
-`last` is the recommended result stance because caller mapping must transfer that
-schedule rather than copy only the raw address:
+`= @` allocates the result before the body runs, and the result is
+responsible for freeing it. `last` hands that responsibility to the caller;
+it is also what a result with no stance does:
 
 ```zax
 value : MyValue * = makeValue()
@@ -1396,20 +1604,10 @@ tryMakeValue final : (
 }
 ```
 
-A scheduled raw result with omitted stance defaults to `copy`, but that default
-is suspicious enough to require acknowledgement:
-
-```zax
-intent<implicit-stance-at-terminal-use>{
-  borrowValue final : (
-    result : MyValue * = @
-  )() = {
-  }
-}
-```
-
-The ordinary repair is `last`. Explicit `copy` is also legal and states a
-deliberate borrowed-result contract:
+A result that allocates with `= @` and declares no stance is passed on as
+`last`, like any by-value result with no stance, so the caller takes over the
+allocation. Declaring `copy` instead says on purpose that callers only borrow
+the pointer, and the result frees the allocation after the call:
 
 ```zax
 borrowValue final : (
@@ -1729,7 +1927,8 @@ consumes the leading results. Every unmentioned trailing result must permit
 omission.
 
 Protected assignment forms such as `a = b` and `place .= source` return access
-that is discardable in the same way, so each is a complete statement. Operator
+that is discardable in the same way, so each can be written on its own without
+using the result. Operator
 authors choose the same way for their own results; see
 [Zax operators](operators.md#discardable-access-from-assignment-forms).
 
@@ -3471,29 +3670,95 @@ Neither dominates the other. The call is ambiguous.
 The per-slot better relation must be asymmetric, transitive, and acyclic. It need
 not declare every pair comparable.
 
-Transfer fallback compares accepted stance:
+For each argument, the compiler compares several things: how well the stance
+matches, whether the type needs a conversion, whether the qualifiers match
+exactly, and, separately, how well the receiver's stance matches and how
+well the results fit what the caller expects. Stance is just one of these.
+A better stance match never wins over a worse type or qualifier match.
 
-- `copy` accepts `copy`;
-- `deep` accepts only `deep`;
-- `move` prefers `move`, then falls back to `copy`;
-- `last` prefers `last`, then falls back to `move` and `copy`.
+```zax
+// a Message converts to a Packet
+deliver final : ()(input : Message) = {
+}
 
-Value/reference binding, exact qualification, type conversion, receiver stance,
-and applicable result quality remain independent dimensions. Better stance does
-not automatically defeat worse ownership or qualification behavior.
+deliver final : ()(input : Packet last) = {
+}
 
-An exact mutable/writable `move` or `last` reference is better than ordinary
-copy-in processing when the source is mutable/writable and every other comparison
-is no worse. A readonly reference versus by value, or exact `last` by value
-versus fallback `move` by reference, may have no clear overall winner and remain
-incomparable.
+deliver(message as last)
+// error: ambiguous. The first matches the type exactly but not the stance;
+// the second matches the stance exactly but needs a conversion.
+```
 
-Receiver stance is another slot:
+When comparing stances alone, a parameter whose stance matches what the call
+wrote is best, followed by weaker stances in fallback order. A `loan` reference
+comes last: any call can use it, and a call written `as loan` can use only a
+`loan` parameter.
 
-- exact receiver stance admits only that stance;
-- unstanced receiver declaration is fallback for every stance;
-- exact receiver stance beats fallback when other comparisons permit dominance;
-- receiver matching does not use the source stance fallback ladder.
+| The call writes | Parameters it can use, best first |
+| --- | --- |
+| none, or `as copy` | `copy` or no stance, then `loan` |
+| `as move` | `move`, then `copy` or no stance, then `loan` |
+| `as last` | `last`, then `move`, then `copy` or no stance, then `loan` |
+| `as deep` | `deep`, then `loan` |
+| `as loan` | `loan` only |
+
+There is one exception to this order. When a call with no stance could use
+either a `loan` reference or a by-value parameter, the by-value parameter does
+not win, even though `copy` ranks above `loan`. The caller must write
+`as loan` or `as copy`, as
+[a loan or a copy must be stated](#a-loan-or-a-copy-must-be-stated) explains.
+
+Apart from that, whether a parameter is by-value or by reference does not
+count for or against it in this comparison; it only matters in a later
+tie-breaker, described below. A call with no stance can never use a `move` or
+`last` parameter, so it always uses the plain overload:
+
+```zax
+emit final : ()(input : Message) = {
+}
+
+emit final : ()(input : Message move) = {
+}
+
+emit final : ()(input : Message last) = {
+}
+
+emit(message)           // the plain emit
+emit(message as move)   // the move emit
+emit(message as last)   // the last emit
+```
+
+The receiver is compared separately:
+
+- a version with no receiver stance holds the receiver as a `loan` and
+  accepts any call;
+- a call that writes a stance uses the version with exactly that receiver
+  stance if there is one, otherwise the version with no receiver stance;
+- a call that writes no stance uses the version with no receiver stance if
+  there is one, otherwise the `copy` version, and otherwise it is an error;
+  a stronger version is never chosen without its stance written; and
+- versions with a receiver stance do not fall back to each other: a `move`
+  version is not used for `as last`, and a `copy` version is not used for
+  `as move`.
+
+```zax
+MyValue :: type {
+  refresh final : ()() = { }        // no receiver stance: lends _
+  refresh final : ()() move = { }   // may take resources out of _
+}
+
+myValue : MyValue move
+myValue.refresh()               // the version with no receiver stance: lends myValue
+(myValue as move).refresh()     // the move version
+```
+
+Because a call with no stance prefers the version with no receiver stance,
+adding a `copy` version to a type never changes what existing calls do.
+
+The later tie-breakers still apply. Suppose a function has a
+`mutable writable & move` reference overload and a by-value `move` overload,
+and the caller's variable is mutable and writable. A call with `as move` uses
+the reference overload, because it builds no new value.
 
 Generic candidates fit this structure. Only between otherwise equally good
 matches does a non-generic candidate beat a generic one, and one generic
@@ -3503,6 +3768,35 @@ see [specializations](generics.md#specializations).
 The remaining complete type, qualification, indirection, and
 generated-candidate preference table is future callable-selection work. Its
 eventual rules must fit this partial-order structure.
+
+### A loan or a copy must be stated
+
+A function may have two overloads, one taking a `loan` and one taking a value:
+
+```zax
+adjust final : ()(input : MyType mutable writable & loan) = {
+}
+
+adjust final : ()(input : MyType) = {
+}
+
+adjust(value)           // error: both fit; write `as loan` or `as copy`
+adjust(value as loan)   // the loan overload: adjust may change value in place
+adjust(value as copy)   // the by-value overload: an exact match for copy
+```
+
+Normally `copy` ranks above `loan`, so you might expect the by-value overload
+to win. It does not, because the two overloads can behave quite differently: a
+`mutable` `loan` lets the function change your variable, which a by-value
+`copy` cannot, and a by-value function may keep the value it receives. So when
+both fit a call with no stance, you must write `as loan` or `as copy`. This is
+an ordinary error, not an intent error: there is no default behavior worth
+keeping with an acknowledgement.
+
+So here a call with no stance and a call with `as copy` behave differently: the
+first is an error, the second uses the by-value overload. A stance declared on
+your variable does not decide the choice either, because a reader of the call
+should not have to look up the declaration.
 
 ### Demand-time ambiguity
 
@@ -3532,52 +3826,87 @@ It selects one processing of a variadic function the same way, as
 shows.
 Complete exact-prototype syntax remains later callable-selection work.
 
-### Terminal opportunity requires intent
+### A last use needs a stated stance
 
-**Terminal** means that analysis can prove this is the source's final ordinary
-use before its existing lifetime reaches destruction. It is an opportunity
-because a `last` consumer could take ownership of resources that would otherwise
-be released soon.
-
-Invocation never silently upgrades implicit `copy` or explicit `move` to
-`last`. When analysis proves that an implicit source use is terminal and
-offering `last` could materially change the accepted contract, the call is an
-[intent error](intent-acknowledgements.md):
+A call with no stance means `copy`, and the compiler never adds `move` or
+`last` for a named variable. Two rules follow:
 
 ```zax
-forward(resource)
-// error: state copy, move, last, or deep intent explicitly
+relay final : ()(input : Message) = {
+}
+
+sendCount final : ()(count : Integer) = {
+}
+
+send final : ()(input : Message move) = {
+}
+
+send(message)       // error at any use: send requires at least `as move`
+relay(message)      // copies; at a last use, an intent error: `as last`
+                    // would run Message's move constructor instead
+sendCount(count)    // copies; no error anywhere, because nothing could differ
 ```
 
-The programmer states the stable choice:
+- **Necessity, at any use.** When a call can work only with `move` or `last`,
+  because the parameter requires it or the type has no copy, leaving the
+  stance unstated is an error wherever the call appears.
+- **Intent, at a last use.** When the compiler can prove that this is the
+  last time the variable is used before it is destroyed, it compares the
+  default `copy` with what `as last` would do. If `as last` would call a
+  different function, or run a different constructor, assignment, or
+  replacement, the call is an [intent error](intent-acknowledgements.md).
+  Stances listed in the type's `transfer` list count as if their operations
+  were already written.
+
+The programmer then writes the stance they mean:
 
 ```zax
-forward(resource as last)
-forward(resource as move)
-forward(resource as copy)
-forward(resource as deep)
+relay(message as last)
+relay(message as move)
+relay(message as copy)   // a deliberate copy is a legal answer
 ```
 
-No intent error is needed when `last` would accept the same contract and produce
-the same source post-state. For example, a copy-only function has no
-terminal-aware alternative:
+There is no error when `as last` would call the same function and run the
+same operation. For example, a function that takes a loan has no version that
+would take the value:
 
 ```zax
 inspect final : ()(
-  value : Record readonly & copy
+  value : Record readonly &
 ) = {
 }
 
 inspect(record)
 ```
 
-Decorating this call would not change the selected function or source state. An
-explicit declaration stance is not upgraded.
+Writing a stance here would change neither which function runs nor what
+happens to `record`.
 
-Branches may contain separate path-terminal uses. Loop analysis may recognize
-more cases over time. Improved analysis produces new intent errors rather than
-silently selecting another user body. Destruction does not count as ordinary
-later use.
+A `return` builds its result from a variable, so returning a parameter at its
+last use follows the same rule: `return input` needs a stance when the input's
+type has, or lists in its `transfer` list, a `move` or `last` operation that
+`as last` would run.
+
+A chain of calls that return `self` is still a use of the variable it started
+from. When `prepare` returns `self`, `relay(message.prepare())` passes
+`message` itself to `relay`, so at `message`'s last use it needs a stance
+exactly as `relay(message)` does; see
+[`self` results carry the caller's variable](transfer-stances.md#self-results-carry-the-callers-variable).
+
+Inside a generic function, the rule is checked separately for each
+instantiation. A body that passes on `Integer` items needs no stance, but the
+same body instantiated with `Message` items does. The error message then names
+the generic function's line as the place to fix, and shows the call that
+created the instantiation.
+
+Each branch of an `if` can have its own last use. Later compilers may
+recognize more last uses inside loops; when they do, they report more errors,
+and never start calling different functions. Destruction at the end of a
+scope does not count as a use.
+
+The complete rule, including stances a type has reserved and keeping the
+default with `intent<implicit-stance-at-terminal-use>`, is explained in
+[when a stance must be written](transfer-stances.md#when-a-stance-must-be-written).
 
 If a number literal fits several overloads, ordinary source prefers an
 `Integer` parameter; source with unsigned intent prefers a `UInteger`
@@ -4020,18 +4349,21 @@ inspect(makeBuffer())
 If `inspect` receives `Buffer readonly &`, the temporary remains live throughout
 `inspect`.
 
-A directly constructed compiler-managed unnamed by-value temporary has
-structurally known destruction after its one complete consumer. It inherently
-offers `last`:
+A temporary value built directly in an expression has no name, so it is
+destroyed right after the one call that uses it. It is therefore treated as if
+written `as last`:
 
 ```zax
 result := (: Source).get()
 ```
 
-If `get` has an exact `last` receiver variant, that variant may be selected.
-This is not analysis-dependent upgrading of a named value. A named receiver uses
-its declaration stance, and a programmer can restate another stance on the
-temporary explicitly.
+If `get` has a version with a `last` receiver, that version may be used. The
+unnamed `Source` cannot be used again after this call, so nothing is hidden
+from the reader; this is not the compiler guessing that a named variable is
+finished. A named receiver uses `copy` unless the call writes another stance,
+as in `(value as last).get()`. A stance declared on the variable limits which
+stances you may write, but is never applied for you. You can also write a
+different stance on the temporary explicitly.
 
 This does not permit a reference into the temporary to escape:
 
@@ -4262,7 +4594,12 @@ Invocation diagnostics should distinguish:
 - exhausted or invalid positional cursors;
 - omitted parameters without declared defaults;
 - declared-default omission versus explicit type-default expressions;
-- argument, receiver, result, qualification, or transfer mismatch;
+- argument, receiver, result, qualification, or transfer mismatch, including a
+  call whose stance is weaker than a parameter requires;
+- a call with no stance where both a loan overload and a by-value overload
+  fit;
+- a `self` result written with a stance, qualifiers, or `*`, or a `return`
+  in such a function that does not return `_`;
 - zero results in a value-required context;
 - several mandatory results forced into one expression;
 - parenthesized expression mode where mapping was intended;
@@ -4282,7 +4619,7 @@ Invocation diagnostics should distinguish:
   or fail to converge;
 - incomparable undominated candidates;
 - a uniquely best but unavailable candidate;
-- use after an earlier `move` or `last`;
+- use of a variable after `as last` without `intent<terminal-source-reuse>`;
 - a reference escaping a temporary;
 - redundant explicit continuation; and
 - contradictory continuation indentation.

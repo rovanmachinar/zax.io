@@ -378,9 +378,18 @@ through call completion. Inside the body, `item = @` is ordinary raw allocation
 assignment: it creates an open-ended allocation that the callee must manually
 track because the borrowed parameter has no declaration-attached schedule.
 
-An initializer may state its own transfer stance. If it does not, `copy` is
-still present as the default. A destination declaration stance becomes active
-only after construction:
+You can write a stance on an initializer, as in `copied := original as move`.
+When you write none, how the new variable is built depends on what
+initializes it:
+
+```zax
+copied := original          // from a variable: copies original
+made := makeItem()          // from a function's result: uses the stance the
+                            // result declares, or last if it declares none
+```
+
+The new variable's own declared stance does not affect how it is built; it
+applies afterward, to later transfers from that variable:
 
 ```zax
 makeItem final : (
@@ -392,9 +401,11 @@ makeItem final : (
 item : Item copy = makeItem()
 ```
 
-`makeItem()` offers `move` while constructing `item`. Later ordinary uses of
-`item` offer `copy`. Complete stance meaning and fallback are defined by
-[Zax transfer stances](transfer-stances.md).
+`item` is built from `makeItem()`'s result with `move`, because that result
+is declared `move`. After that, `item`'s declared `copy` requires later
+transfers from `item` to be written as `copy` or stronger, and a use with no
+stance is already a copy. Complete stance meaning and fallback are
+defined by [Zax transfer stances](transfer-stances.md).
 
 Optional declarations preserve the same distinction among same-type
 construction, first-layer construction, and acknowledged additional depth:
@@ -1088,7 +1099,7 @@ value.inspect()
 ```
 
 On a receiverless type call, `_` identifies the containing type's Nothing
-instance and offers `copy`; `?_` is false. On an instance call, `_` identifies
+instance and is used as `copy`; `?_` is false. On an instance call, `_` identifies
 the evaluated receiver and `?_` is true. A body that uses receiver state must
 account for both call forms. `final` prevents reassignment under ordinary
 function declaration rules.
@@ -1289,6 +1300,24 @@ value. `CopyView` cannot bind to a source that does not provide writable access,
 and no alias manufactures mutability, replacement authority, transfer support,
 or structural compatibility.
 
+A transfer stance carried by an alias acts exactly as if each declaration that
+uses the alias had written the stance itself. What a written stance means
+depends on where it is written: on a variable, every later transfer from the
+variable must write at least that stance; on a by-value parameter, a call must
+write at least that stance; on a result, it decides how the caller's
+destination is built. The full list is in
+[declared stances by location](transfer-stances.md#declared-stances-by-location).
+A stance that the type's declared `transfer` list cannot satisfy is an error
+at the alias:
+
+```zax
+MyDeepOnlyDocument :: type transfer deep {
+}
+
+MyCopiedDocument :: alias type MyDeepOnlyDocument copy
+// error: MyDeepOnlyDocument allows only deep, so nothing can satisfy copy
+```
+
 Canonical identity is owned by
 [identity types](identity-types.md#transparent-aliases). The meanings and
 safety checks of overlaid properties remain with
@@ -1465,20 +1494,49 @@ established by [Zax qualifiers](qualifiers.md).
 
 ### Declaration transfer stance
 
-A value declaration may state how the completed value is ordinarily offered to
-future consumers:
+A variable's declared stance says the least stance every later transfer from
+it must write. A **transfer** is any use that builds or assigns a new value
+from the variable, such as passing it to a by-value parameter:
 
 ```zax
-template : Document deep
+consume final : ()(resource : Resource) = {
+}
+
+inspect final : ()(resource : Resource readonly &) = {
+}
+
 resource : Resource move
-stable : Resource copy
+
+inspect(resource)          // fine: an unmarked reference is a loan; nothing is transferred
+consume(resource)          // error: resource was declared move, and no stance means copy
+consume(resource as move)  // fine
+consume(resource as last)  // fine: last is stronger than move
 ```
 
-Omission resolves to `copy`:
+The transfers are: passing to a by-value parameter, initializing, assigning,
+storing in an array element, capturing, and returning. Loaning the place to an unmarked reference or receiver is
+not a transfer, so a variable declared `move` can still be passed to functions
+that take a loan reference, and can call methods whose receiver has no stance.
+The compiler never applies the
+declared stance to a use on your behalf, and the declared stance never decides
+between overloads: each call states what it means.
+
+`deep` is outside the fallback chain, so a declaration such as
+`template : Document deep` requires `as deep` on every transfer. A variable
+declared with no stance has no requirement, so any stance its type supports
+may be written:
 
 ```zax
 ordinary : Resource
-// The declaration's ordinary transfer stance is `copy`.
+consume(ordinary)            // fine: copies
+consume(ordinary as move)    // fine
+```
+
+`loan` is the stance of a reference. On a by-value declaration it would
+restrict nothing, so it is an error there:
+
+```zax
+borrowed : Resource loan   // error: loan applies only to references
 ```
 
 Transfer stance appears after the complete type use. It is one property of the
@@ -1489,37 +1547,51 @@ another declaration-name-side axis:
 resource : Resource mutable writable varying & move
 ```
 
-A use-site `as copy`, `as deep`, `as move`, or `as last` may restate the stance
-for one consumer. Ordinary reference passing aliases a value and is not itself a
-`copy` or `move`.
-
-When member access starts from a by-value declaration, that declaration's stance
-is the default for a member that has no explicit stance of its own:
+A member is governed by its own declared stance, never by the declaration that
+contains it:
 
 ```zax
+Package :: type {
+  label : Label move
+  weight : Integer
+}
+
+ship final : ()(label : Label) = {
+}
+
 package : Package move
 
-ship(package.label) // `label` offers `move` unless it declares another stance
+total := package.weight       // fine: weight declares no stance
+ship(package.label)           // error: label was declared move
+ship(package.label as move)   // fine
 ```
 
-A reference declaration is different. It is an alias to an existing place, but
-the alias has its own stance rather than silently inheriting destructive intent
-from the declaration used to initialize it:
+A reference declaration is a new reference with its own stance. Unmarked, that
+stance is `loan`: the reference reaches the same storage, and mutation through
+it is still governed by its qualifiers, but the whole value cannot be copied,
+moved, or taken through it. Members follow their own stances: they can be
+copied, and through a writable reference also moved or taken. To take the
+whole value through a reference, declare the reference `& move` or `& last`
+and initialize it with that stance:
 
 ```zax
-owner : Buffer move
-alias : Buffer mutable writable & = owner
+consumeBuffer final : ()(buffer : Buffer) = {
+}
 
-consume(alias)         // alias offers `copy`
-consume(alias as move) // explicit `move` through this alias
+owner : Buffer move
+
+alias : Buffer mutable writable & = owner   // unmarked: a loan
+consumeBuffer(alias)                        // error: alias is on loan
+
+taker : Buffer mutable writable & move = owner as move
+consumeBuffer(taker as move)                // fine: Buffer's move constructor runs
 ```
 
-The alias reaches the same storage but has its own declaration stance. Complete
-projection, receiver, fallback, and source-state behavior is defined by
-[Zax transfer stances](transfer-stances.md).
+`consumeBuffer` takes a `Buffer` by value. Complete rules for each place a
+stance can be declared are in
+[declared stances by location](transfer-stances.md#declared-stances-by-location).
 
-An inferred declaration may adopt the concrete value type and transfer stance of
-its initializer:
+An inferred declaration takes its initializer's type, never a declared stance:
 
 ```zax
 makeResource final : (
@@ -1529,12 +1601,16 @@ makeResource final : (
 }
 
 resource := makeResource()
+copied := resource as copy   // fine: resource declares no restriction
 ```
 
-Here `resource` may infer both `Resource` and the produced `move` stance. It does
-not infer `Resource &` or `Resource *`: stance does not say whether a declaration
-is a value, reference, or pointer. Those shapes remain explicit or require
-future dedicated inference rules.
+The result's `move` decides how `resource` is built from it. If `resource`
+also took on that stance, it would be restricted even though its declaration
+shows no stance. To restrict `resource`, write the stance, as in
+`resource : Resource move = makeResource()`.
+Inference also never produces `Resource &` or `Resource *`: a stance does not
+say whether something is a value, a reference, or a pointer. References and
+pointers must be written explicitly until later inference rules cover them.
 
 This design does not classify broader capabilities such as sendability,
 synchronization safety, pinning, known layout, copying, or interior freezing.
@@ -2386,32 +2462,35 @@ producer `except` or explicit forwarding. Complete outcome, handling, and
 cleanup behavior is defined by
 [Zax exceptional result flow](except.md).
 
-A result's initializer decides how that slot is constructed. Once the result
-exists, the stance written on the result declaration decides how later consumers
-see it:
+A result's initializer decides how the result itself is built. The stance
+written on the result's declaration decides how the caller's destination is
+built from it:
 
 ```zax
 make final : (
   result : Item move
-)() = {
+)(
+  source : Item readonly & copy
+) = {
   return source as copy
 }
 ```
 
-`source as copy` controls construction of `result`. After construction,
-ordinary uses of `result` in the body offer `move`, and the caller also receives
-a `move`-stanced result.
+`source as copy` decides how `result` is built, and the caller's destination
+is then built from `result` with `move`. Inside the function, `result` behaves
+like a parameter: a use with no stance is a copy, so a body that takes from
+`result` before returning must write the stance, as in
+`archive(result as move)`.
 
 Forwarding through another result declaration crosses both contracts: the
 producer's stance fills the new slot, and the forwarding result declaration
 controls what its caller receives.
 
-An omitted owned by-value result still has implicit `copy`. At its structurally
-final mapping boundary, invocation may require explicit intent when offering
-`last` could materially change the accepted consumer. Reference results are
-excluded because their slots do not own the referent. Complete behavior is
-defined by
-[Zax function invocation](function-invocation.md#result-mapping-and-terminal-opportunity).
+A by-value result with no declared stance is passed on as `last`, because
+nothing can use it again; a function whose callers should receive a copy
+declares `result : Item copy`. A reference result with no stance is a loan.
+Complete behavior is in
+[Zax function invocation](function-invocation.md#results-with-no-declared-stance).
 
 At a result-routing site, adjacent `name:` selects the result label and may
 introduce a same-named inferred binding:
@@ -2708,8 +2787,8 @@ It establishes constraints that later work must preserve:
 - complete inference may add rules without making later uses determine an
   earlier inferred declaration;
 - complete inference must decide whether `:=` introduces a value or preserves a
-  reference/pointer layer; an inferred value may adopt its producer's transfer
-  stance, but stance does not imply reference shape, and `: & =` remains the
+  reference/pointer layer; an inferred value takes its producer's type but
+  never its transfer stance, and `: & =` remains the
   explicit way to request a reference at the current conceptual depth;
 - named functions and bound lambdas may use their defined recursive binding or
   self receiver without allowing executable ordinary self-initialization;

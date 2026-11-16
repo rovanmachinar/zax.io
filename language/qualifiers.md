@@ -19,7 +19,7 @@ Zax separates three questions that other languages often combine:
 
 Each question has its own qualifier axis:
 
-| Axis | Stances | Governs |
+| Axis | Qualifiers | Governs |
 | --- | --- | --- |
 | Place replacement | `final` / `varying` | `final` promises that the place keeps the same value lifetime; `varying` permits another lifetime in that place, and the declaration side controls whether this path may initiate it |
 | Value mutability | `mutable` / `immutable` | `immutable` promises that the current value's contents do not change through ordinary safe behavior; `mutable` makes no such promise |
@@ -28,24 +28,41 @@ Each question has its own qualifier axis:
 These are called **place-replacement qualifiers**, **value-mutability
 qualifiers**, and **access qualifiers**.
 
-Transfer stance is not a fourth per-layer qualifier axis. `copy`, `deep`, `move`,
-and `last` describe how one complete source or receiver is offered to a
-consumer:
+A transfer stance is not a fourth kind of qualifier. `loan`, `copy`, `move`,
+`last`, and `deep` say how much of a whole value may leave its owner when it
+is used:
 
 ```zax
-source : Buffer mutable readonly final & move
+drainBuffer final : ()(source : Buffer mutable readonly final & move) = {
+}
 ```
 
-This is:
+This parameter describes:
 
 - a mutable current `Buffer` value;
 - readonly access through this path;
 - a final referenced place; and
-- one `move` stance on the complete source.
+- one `move` stance on the whole `Buffer`: `drainBuffer` may move from the
+  caller's value, so a call must write `as move` or `as last`.
 
 `readonly` narrows only access. It does not erase mutable/immutable or
-final/varying truth. Complete transfer meaning, fallback, and projection are
-defined by [Zax transfer stances](transfer-stances.md).
+final/varying truth.
+
+`loan` is the stance of a reference through which the value as a whole is
+never copied, moved, or taken. It is not a qualifier. Whether the value, and
+its members, can be changed through a loan is still decided by `readonly` or
+`writable`; through a `writable` loan a member can also be moved or taken, as
+its own stance allows:
+
+```zax
+fill final : ()(buffer : Buffer mutable writable &, text : String readonly &) = {
+  buffer.append(text)      // fine: buffer is a loan, and its access is writable
+  kept : Buffer = buffer   // error: this would copy from a loan
+}
+```
+
+Complete transfer meaning, fallback, and declared stances are defined by
+[Zax transfer stances](transfer-stances.md#loan).
 
 Begin with omitted value and access defaults:
 
@@ -848,20 +865,21 @@ Function results are governed by the resolved prototype:
 
 - a returned pointer or reference carries the prototype's per-level
   qualifications;
-- a returned by-value value carries its declared value mutability; and
-- a completed result carries its declared transfer stance; and
+- a returned by-value value carries its declared value mutability;
+- a result's declared stance decides how the caller's destination is built
+  from it; and
 - the caller's destination introduces an independently resolved place.
 
 An inferred or generic result ultimately resolves to such a prototype. A
 worked-out generic type keeps the argument's qualifiers; see
 [supplying compile-time arguments](generics.md#supplying-compile-time-arguments).
 
-Captures preserve or strengthen the captured source qualifications and never
-inherit pliability implicitly. A reference capture behaves like an alias and
-does not silently inherit a destructive `move` or `last` declaration stance.
-The source stance used to construct a capture and the completed capture
-declaration's ordinary future stance are independent. Complete examples belong
-to
+A capture keeps the captured variable's qualifiers or makes them stricter, and
+never takes on `unsafe pliable` from it. A reference capture is a declared reference:
+a `loan` when no stance is written, and it does not take on a stance declared
+on the variable it captures. The stance written when building a capture and
+the stance declared on the capture itself are separate; a stance declared on
+the capture is a requirement on later transfers from it. Complete examples belong to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#source-stance-and-capture-stance-are-separate).
 
 Declaration-side replacement permission survives parameter binding, result
@@ -926,16 +944,19 @@ MyType :: type {
 ```
 
 `_` has the declared receiver-operand qualifications like any other qualified
-place. `final` does not prohibit an operator named `=`. An operation involving
-`_` selects only candidates compatible with its final stance. Likewise,
-readonly prevents selection only of a candidate requiring writable access
-through that operand; it does not prohibit arbitrary effects elsewhere.
+place. `final` does not prohibit an operator named `=`. When the receiver is
+declared `final`, as in the example above, a call on `_` can use only
+functions that accept a `final` receiver. Likewise, when the receiver is
+declared `readonly`, a call on `_` cannot use a function that needs writable
+access through `_`; that does not stop the called function changing other
+things.
 
-An exact `move` or `last` receiver normally requires mutable value state through
-writable access when it may extract represented resources. The selected
-implementation receives that authority, but ordinary nested uses of `_` and its
-members return to `copy` stance unless explicitly renewed. Qualifier authority
-never increases merely because a transfer stance was accepted.
+A `move` or `last` version that takes resources out of `_` normally declares
+its receiver `mutable writable`, because taking a resource changes the value.
+Inside that version, a use of `_` or its members with no stance is still a
+copy; taking must be written, as in `_.buffer as move`. Writing a stance never
+changes the qualifiers: a `readonly` receiver stays readonly whatever stance
+the call wrote.
 
 Complete `.=` reconstruction requires type-side varying, declaration-side
 varying, and writable. It may replace a mutable or immutable resident. It is
@@ -1236,20 +1257,23 @@ qualified boxed layer as described above.
 ## Transfer and destruction
 
 A final live place cannot be ordinarily replaced, but final does not freeze the
-resources contained by its current mutable value. A selected `move` or `last`
-consumer may transfer resources from a final place when:
+resources contained by its current mutable value. A `move` or `last`
+constructor or function may take resources from a value in a final place
+when:
 
 - the current value is mutable;
 - the access path is writable; and
-- the exact consumer accepts that stance.
+- the call writes `as move` or `as last`, and the function or constructor
+  chosen accepts that stance.
 
-`move` leaves a live moved-from source. `last` leaves a live destruction-valid
-terminal source. Neither stance itself ends the outer lifetime or replaces its
-place.
+After `move`, the value is still a usable value. After `last`, it is finished:
+it can only be destroyed or replaced. Neither ends the variable's lifetime or
+gives the place a new value.
 
-Readonly or immutable source does not acquire ordinary resource-extraction
-authority merely because `move` or `last` is offered. Unusual readonly contracts
-remain possible only when their actual behavior respects those qualifications.
+Writing `move` or `last` does not let anyone take resources out of a readonly
+or immutable value. A `move` or `last` operation on a readonly source is still
+possible when taking the resource does not change the value, for example
+when the resource lives outside the value and the source only refers to it.
 
 During destruction, the current instance receives terminal mutable and writable
 authority without requiring `unsafe pliable`. Destruction may dismantle the

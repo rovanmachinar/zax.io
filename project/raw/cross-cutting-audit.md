@@ -429,6 +429,72 @@ Each entry preserves:
   that it cannot occur.
 - **Disposition.** Open.
 
+### Keywords written as ordinary words
+
+- **Concern.** Teaching text uses words that are also keywords, such as
+  `copy`, `move`, `last`, `deep`, `loan`, `final`, and `readonly`, sometimes
+  as the keyword and sometimes as an ordinary English word, and often without
+  backticks when the keyword is meant. A reader cannot tell "a copy" in plain
+  English from "the `copy` stance".
+- **Representative example.** "A by-value parameter with no stance … behaves
+  exactly like one declared copy" should read "declared `copy`"; "the
+  original is a copy" stays plain.
+- **Why local review misses it.** Each promotion fixes the sections it changes;
+  the pattern runs through every owner.
+- **Likely owners.** Every current `language/` owner.
+- **Resolution.** Each keyword meant as a keyword is in backticks, and plain
+  English uses are worded so they cannot be read as the keyword.
+- **Activation pressure.** The final teaching review before a specification,
+  or a teaching-refresh work item.
+- **Current constraints.** `construction-and-destruction.md` was swept in work
+  item 038; other owners were not.
+- **Disposition.** Open. Provenance: work item 038 review.
+
+### Unfinished-syntax markers
+
+- **Concern.** Current owners mark some syntax as not final, for example "The
+  exact spelling of a stance after a type such as `Items` is not final" in
+  variadics and transfer stances. Each such marker is a promise that must be
+  resolved before the language is complete.
+- **Why local review misses it.** Markers are written in the owner that met
+  the question and are easy to forget.
+- **Likely owners.** Every current `language/` owner.
+- **Resolution.** Every "not final", "not settled", or "illustrative" marker
+  in current owners is either resolved or tracked by a live future-work owner.
+- **Activation pressure.** The final review before a specification.
+- **Current constraints.** None.
+- **Disposition.** Open. Provenance: work item 038 review.
+
+### Undefined canonical orders
+
+- **Concern.** The principle that the compiler enforces one canonical order for
+  lists of modifiers and clauses applies only where an order is defined. Some
+  lists, such as the words on one indirection layer or the clauses of an
+  identity declaration, may not yet have one.
+- **Why local review misses it.** Each owner defines its own lists.
+- **Likely owners.** [Principles](../../language/principles.md) and every owner
+  that defines a list of modifiers or clauses.
+- **Resolution.** Every such list has a defined order in its owner.
+- **Activation pressure.** The final review before a specification, or a
+  construct's own review.
+- **Current constraints.** Defined orders: transfer stances
+  (`loan copy move last deep`) and `transfer` before `seal` in a type
+  definition.
+- **Disposition.** Open. Provenance: work item 038 review.
+
+### "Automatic fix" language
+
+- **Concern.** The language defines errors, not fixes. A compiler may offer to
+  repair source, but the language does not promise it. Text such as "an error
+  with an automatic fix" turns a tool behavior into language design.
+- **Likely owners.** Every current `language/` owner.
+- **Resolution.** No owner promises automatic fixes; diagnostics owners may
+  describe what a message should suggest.
+- **Activation pressure.** The final review before a specification.
+- **Current constraints.** Removed from `principles.md` and
+  `construction-and-destruction.md` in work item 038.
+- **Disposition.** Open. Provenance: work item 038 review.
+
 ## Activation and retirement
 
 Add an entry when a concrete concern crosses several owners, local review cannot

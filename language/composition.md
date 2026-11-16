@@ -605,7 +605,7 @@ wrapping:
 | Resultless instance function or operator | Eligible when inputs map unambiguously |
 | Result in an orthogonal domain, such as `Boolean` | Eligible; result passes through unchanged |
 | Contained value, reference, or pointer result | Eligible when the exact contained result type passes through unchanged |
-| Receiver reference or pointer result explicitly declared `self` | Eligible; receiver origin is proved |
+| Receiver reference result explicitly declared `self` | Eligible; receiver origin is proved |
 | Mapping a copied contained result to a complete outer value | Ineligible; the outer's remaining state cannot be invented |
 | Constructor, replacement constructor, destructor, generated copy, or generated assignment | Ineligible; lifecycle targets the physical stored shape |
 | Mapping requiring a checked or unsafe outer cast | Omitted |
@@ -623,15 +623,16 @@ Exposure cannot strengthen or launder:
 Automatic exposure also keeps by-copy input types unchanged. An `Engine`
 parameter does not silently become a `Car` parameter merely because the
 operation is exposed. Representation-trivial identity exposure is the one case
-that may additionally substitute by-copy inputs and copied self results; see
+that may additionally substitute by-value inputs, and by-value results of the
+contained type, with the outer identity type; see
 [identity exposure](#identity-exposure).
 
 Unchanged contained results are useful and do not require an outer cast:
 
 ```zax
 Engine :: type {
-  snapshot final : (result : Engine)() = {
-    return copy _
+  snapshot final : (result : Engine)() copy = {
+    return _ as copy
   }
 
   selected final : (result : Engine &)() = {
@@ -642,7 +643,7 @@ Engine :: type {
     return locateSelectedEnginePointer()
   }
 
-  tune final : (result self : Engine &)() = {
+  tune final : (result self # : Engine &)() = {
     calibrate(_)
     return _
   }
@@ -682,8 +683,8 @@ and selection are defined by [operators](operators.md).
 
 ### The `self` result contract
 
-`self` on a reference or pointer result means that every returning path returns
-exactly the invocation receiver `_`:
+`self` on a reference result means that every `return` hands back exactly the
+receiver `_`:
 
 ```zax
 Engine :: type {
@@ -697,9 +698,11 @@ Engine :: type {
 ```
 
 The compiler verifies the contract. It is never inferred into a public
-declaration, and it never applies to a copied result. This receiver-origin proof
-lets an exposed wrapper map a contained receiver reference back to its outer
-receiver without performing a runtime outer cast.
+declaration, and it never applies to a copied result. Because `tune` provably
+returns its own receiver, an exposed wrapper on `Car` can return the `Car` it
+was called on, exactly as the caller wrote it, without a runtime outer cast.
+How a `self` result carries the caller's stance and qualifiers is explained in
+[function invocation](function-invocation.md#receiver-origin-self-results).
 
 Reference origin and escape remain governed by
 [lifetimes and references](lifetimes-and-references.md#returned-references).
@@ -960,32 +963,53 @@ Tank :: type {
   shell : Shell
 
   refill final : ()(source : Tank) = via fuel.refill
-  // `source` is established as a complete Tank. The wrapper offers
-  // `source.fuel` as last, then destroys the remaining terminal Tank.
+  // source is built as a complete Tank. The wrapper passes source.fuel on
+  // with last, then destroys what is left of source.
 }
 ```
 
-The visible outer parameter is constructed according to its declared stance.
-The composition-specific consequence is that the selected member then reaches
-the contained input through its preferred route rather than by changing the
-visible outer contract. `own` alone cannot authorize this automatic input
-projection. A written body remains free to name `source.fuel` directly and
-therefore does not need `preferred`.
+The wrapper's `source` is an ordinary by-value parameter, so it is built the
+same way as any other. The stance the caller writes chooses which `Tank`
+constructor builds `source`. A stance declared on `source` only decides which
+calls can choose this wrapper: if `source` were declared `move`, a call would
+have to write `as move` or `as last`.
 
-For outer `copy`, `move`, and `last`, the projected member is offered as `last`;
-outer `deep` remains `deep`; and reference-shaped mappings preserve the caller's
-exact authorization.
+Once `source` exists, the wrapper passes `source.fuel` to `fuel.refill`. It can
+find `source.fuel` automatically only because `fuel` is marked `preferred`;
+`own` alone does not let the wrapper pick a member for you. A hand-written body
+can name `source.fuel` directly and does not need `preferred`.
 
-The complete fallback, terminal-member destruction requirement, and cost model
-are owned by
-[transfer stances](transfer-stances.md#explicit-composition-wrappers). In
-particular, the mapping can still perform an outer copy followed by another
-member copy; composition does not pretend it is free.
+The generated wrapper writes a stance when it passes the member on, just as a
+hand-written body would. Which stance it writes depends on how the outer
+parameter is declared:
+
+| Outer parameter | Stance the wrapper writes for the member |
+| --- | --- |
+| By value with no declared stance, `move`, or `last` | `last` |
+| By value, declared `deep` | `deep` |
+| By reference | the stance the outer reference parameter declares, for example `move` for `source : Tank mutable writable & move` |
+
+A by-value `source` belongs to the wrapper and is destroyed when the wrapper
+returns, so taking its member with `last` cannot affect the caller. A
+reference `source` refers to the caller's own `Tank`, so the wrapper passes the
+member on with exactly the stance the caller had to write to call it.
+
+For `Tank` above, the generated body behaves like
+`_.fuel.refill(source.fuel as last)`.
+
+The stance the wrapper writes still follows ordinary
+[fallback](transfer-stances.md#fallback): if `Fuel` has no `last` or `move`,
+`refill` receives a copy. When the wrapper returns, it destroys what is left
+of `source`, including the finished `fuel`. So a call with no stance copies
+the whole `Tank` to build `source`, and if the member's operation takes its
+input by value, `fuel` may be copied again; composition does not make
+forwarding free. If the type's destructor cannot cope with a finished member,
+the wrapper cannot be generated, and the type must write its body by hand.
 
 For results:
 
 - orthogonal results pass through unchanged;
-- a declared `self` reference or pointer may map to the outer receiver;
+- a declared `self` result may map to the outer receiver;
 - a contained value, reference, or pointer may pass through with its exact
   declared result type;
 - a copied contained result cannot become a complete outer value;

@@ -611,15 +611,21 @@ Complete panic behavior is defined by
 
 ## Transfer, ownership, and references
 
-Exceptional payload mapping uses ordinary transfer stances. No implicit
-`move` or `last` is added.
+A failure value is passed on like any other result. Nothing can use it again
+once the handler or the outer function has received it, so a by-value failure
+result with no declared stance is passed on as `last`, just as an ordinary
+result with no stance is:
 
-- The producer result stance controls transfer into a handler or forwarding
-  destination.
-- The forwarding result declaration controls what its caller receives.
-- A move-only payload requires a viable declared stance.
-- Terminal-opportunity diagnostics remain ordinary.
-- Provisional cleanup responsibility transfers only after successful mapping.
+- The failure result's declared stance decides how the handler's or the
+  forwarding function's destination is built; with no stance, it is `last`.
+- A function that forwards a failure with `except` decides, with its own
+  failure result, what its caller receives.
+- A function whose callers should receive a copy of the failure declares its
+  failure result `copy`.
+- Inside the handler, the failure value is a named variable, so later uses of
+  it with no stance are copies.
+- A failure value is destroyed like any other result: by its destination when
+  that ends, or at the end of the handler if the handler discards it.
 
 ### Owning payload
 
@@ -637,8 +643,9 @@ openResource final : (
 }
 ```
 
-The selected `failure` result owns its allocation. A handler destination may
-receive it under the declared `last` stance:
+The `failure` result owns its allocation, and the handler receives it with
+`last`. Writing `last` on the failure result says so explicitly; with no
+stance it would be passed on as `last` anyway:
 
 ```zax
 resource := openResource(name) catch failure {

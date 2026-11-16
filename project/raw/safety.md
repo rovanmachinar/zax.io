@@ -7,7 +7,7 @@
 | Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
 | Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
 | Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, `020`, and `032`; Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, `020`, `032`, and `038` (the rejected warning for members `last` may have taken); Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
 
 Current general behavior has moved to
 [Zax safety and analysis](../../language/safety-and-analysis.md). This file
@@ -117,6 +117,39 @@ incomplete destination state, or a source left unsafe to destroy. Failure to
 visibly take a resource is not itself a violation; `copy`, `move`, and `last`
 implementations may legally preserve more source state than their maximum
 authority permits.
+
+### Rejected: warnings for members `last` may have taken
+
+A type's `last` operation may take a member's resource out, leaving the old
+value fit only to be destroyed or replaced. Its destructor and replacement constructor
+(`+++ replacement`) must then handle that state. The compiler can see which
+members `last` transfers out, so it was proposed that it warn when a
+destructor or replacement constructor uses such a member without checking:
+
+```zax
++++ replacement final : ()(nextQuery : Query) = {
+  _.connection.resetSession()   // the proposed warning: last may have taken connection
+}
+```
+
+The type instead decides how it knows whether the resource is present, for
+example with its own method or a member that has a visible empty state:
+
+```zax
++++ replacement final : ()(nextQuery : Query) = {
+  if _.connection.wasTaken() {    // the type's own check; no warning proposed
+    _.connection .= PrivateConnection.open()
+  } else {
+    _.connection.resetSession()
+  }
+  _.query .= nextQuery
+}
+```
+
+*Rejected because:* how a type knows whether a resource is present is part of
+its design, and destructors already carry this responsibility without compiler
+aid. Reopen only with new programmer pressure, such as recurring defects of
+this kind that the type's own design cannot reasonably prevent.
 
 ## Composition-derived diagnostic pressure
 

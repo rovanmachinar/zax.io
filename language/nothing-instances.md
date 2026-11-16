@@ -422,8 +422,8 @@ ordinary selected `?T` operation to the resulting value.
 
 `_` is pointer-shaped. `_.` supplies the dereferenced form. When an input
 expects `T *`, `_` is preferred; when an input expects `T`, mapping may use the
-automatic `_.` upgrade. Either form may be passed or returned, including a
-verified `self` result.
+automatic `_.` upgrade. Either form may be passed or returned. A `self` result
+is always a reference, so `return _` there returns the dereferenced form.
 
 ```zax
 MyMappedValue :: type {
@@ -444,7 +444,9 @@ MyMappedValue :: type {
   ) unbound = {
   }
 
-  demonstrateMapping final once : ()() = {
+  demonstrateMapping final once : ()() copy = {
+    // declared with a copy receiver: with no receiver stance, _ would be a
+    // loan, and neither a raw pointer nor a copy could be made from it
     MyMappedValue.use(_)
     // Both overloads are viable, but exact MyMappedValue * is preferred.
 
@@ -465,8 +467,10 @@ unavailable rather than present or absent.
 
 ### Receiver stance is statically known
 
-A receiverless type call synthesizes a `copy`-stanced Nothing receiver before
-callable selection:
+A call on the type itself has no instance, so the compiler uses the type's
+Nothing instance as the receiver. The call writes no stance, so it follows the
+rule for any call with no stance: it uses the version with no receiver stance
+if there is one, otherwise a `copy` version:
 
 ```zax
 MyResource :: type {
@@ -481,13 +485,15 @@ resource : MyResource
 
 MyResource.inspect()
 (resource as last).consume()
-MyResource.consume() // error: receiverless copy cannot select exact last
+MyResource.consume() // error: a call on the type writes no stance, and consume needs last
 ```
 
-No runtime rule changes `last` into `copy`. `MyResource.consume()` has no source
-receiver declaration and therefore offers `copy`; the instance-qualified call
-uses its actual receiver stance. An unstanced receiver declaration remains the
-ordinary fallback for the receiverless `copy` offer.
+The choice is made when the program is compiled. `MyResource.consume()` has no
+variable to write a stance on, so it cannot reach a version that requires
+`last`; the call on an instance uses the stance written on it, here
+`as last`. `inspect` has no receiver stance, so it lends its receiver and any
+call can use it, including a call on the type. See
+[receiver stance](transfer-stances.md#receiver-stance).
 
 Aliases, forwarding, and bound callable values preserve whether they represent
 receiverless lookup or an installed instance receiver. They cannot erase that

@@ -232,10 +232,15 @@ Ordinary origin and lifetime proof must establish that every borrowed place
 still exists and contains a complete resident instance when disposal occurs.
 Borrowing does not extend the target's owning life path.
 
-Explicit qualification and transfer syntax keeps its ordinary meaning. A stance
-such as `move` offers a transfer posture to the applicable consumer; `using`
-does not reinterpret the spelling as proof that a transfer or new ownership
-occurred.
+Qualifiers and stances keep their usual meaning. A stance written at a use,
+such as `as move`, says what that use allows, and a stance declared on an
+entry, as in `resource : Resource move`, is a requirement on later transfers
+from it. Writing `as move` on a `using` entry does not by itself move anything
+or change who owns the resource; only a function or constructor that
+receives the value can do that. The automatic `dispose` call treats the entry
+like any other call that writes no stance: it uses the version of `dispose`
+with no receiver stance, which takes a loan, as in the examples below, and
+otherwise a `copy` version.
 
 ### Optional values
 

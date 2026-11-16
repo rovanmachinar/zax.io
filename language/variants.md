@@ -482,9 +482,10 @@ state are separate. Moving a payload into another variant therefore leaves the
 source active until reset or another lifecycle operation ends it.
 
 General stance meaning and fallback belong to
-[Zax transfer stances](transfer-stances.md). A case binding reached from a
-by-value selector preserves that selector's projected offered stance but
-performs no transfer merely by binding.
+[Zax transfer stances](transfer-stances.md). The name a `case` gives to the
+payload, introduced in the next section, transfers nothing by being created.
+Using the name is the same as writing the payload member out in full, so a
+transfer from the name needs whatever stance the member itself requires.
 
 ## Select alternatives with variant `switch`
 
@@ -536,8 +537,45 @@ switch message {
 }
 ```
 
-Case bindings are aliases, not copies. They preserve origin, qualifications,
-and the transfer stance projected from the retained selector.
+The name a `case` gives to the payload refers to the payload where it is; it
+is not a copy. Using it behaves exactly like writing the payload member out in
+full. Its qualifiers, any stance the payload member declares, and any loan you
+reached the variant through all apply. Through a `readonly` loan, the payload
+can be copied but not moved or taken; through a writable loan it can also be
+moved or taken, as its own stance allows. A stance declared on the
+variant variable does not apply to the name: if `message` below were declared
+`message : MyOwnerChoice move`, `owner` would still follow only its own rules.
+
+```zax
+MyOwnerChoice :: variant {
+  owner : MyPayload * unique
+  unavailable : MyUnavailable
+}
+
+consume final : ()(owner : MyPayload * unique) = {
+}
+
+message : MyOwnerChoice
+
+switch message {
+  case owner {
+    // each call below is a separate alternative
+    consume(owner as move)   // same as consume(message.owner as move)
+    consume(owner)           // error: no stance means copy, and a unique pointer cannot be copied
+  }
+}
+
+inspect final : ()(message : MyOwnerChoice readonly &) = {
+  switch message {
+    case owner {
+      consume(owner as move) // error: message is a readonly loan, so message.owner cannot be changed
+    }
+  }
+}
+```
+
+The complete rule for names the language creates is in
+[members and bindings](transfer-stances.md#members-and-bindings).
 
 Complete ordering, labels, direct entry, continuation, coverage, and diagnostics
 are defined by

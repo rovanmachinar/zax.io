@@ -7,7 +7,7 @@
 | Applies To | Preserved legacy motivation and a candidate framing for distinct mutable and immutable implementations under one named family |
 | Owns | Provenance, use cases, current constraints, unresolved questions, activation pressure, and retirement criteria |
 | Does Not Own | Accepted indexed-family behavior or current qualifier/structural semantics |
-| Source / Provenance | Distinct mutable/immutable implementation proposals formerly in `mutable.md`, recovered during work item `004` promotion review and reframed through language-maintainer discussion; work item `020` composition constraints |
+| Source / Provenance | Distinct mutable/immutable implementation proposals formerly in `mutable.md`, recovered during work item `004` promotion review and reframed through language-maintainer discussion; work item `020` composition constraints; work item `038` (declaring which qualifiers a type allows) |
 
 ## Reading posture
 
@@ -362,6 +362,33 @@ A differently represented destination may require:
 
 Same family name or structural API compatibility does not establish
 same-storage representation compatibility.
+
+## Declaring which qualifiers a type allows
+
+A type can already list which transfers it allows with a `transfer` clause. A
+type might similarly declare whether its values may be `mutable` or
+`immutable`, and whether they may live in `varying` or `final` places, so that
+a type whose immutable form needs its own shape, or that is meaningless in one
+of those forms, could say so in its definition:
+
+```zax
+// illustrative only; no syntax is proposed
+MyFrozenTable :: type transfer copy qualifiers immutable {
+  // values of this type are always immutable
+}
+
+table : MyFrozenTable mutable   // would be an error
+```
+
+`readonly` and `writable` probably need no such declaration: they describe one
+access path, not what may happen to the value over its lifetime.
+
+This interacts with the generated copy operations, which currently cover every
+allowed combination of a `mutable` or `immutable` source in a `final` or
+`varying` place. A type that rules out a combination would get no generated
+operations for it.
+
+*Provenance:* work item `038` review, maintainer direction.
 
 ## What this input does not decide
 

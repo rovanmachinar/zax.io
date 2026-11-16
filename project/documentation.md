@@ -294,6 +294,71 @@ source and its comments as well as in the surrounding explanation.
   pronoun such as "it" in a rule leaves the reader unsure what the rule
   applies to.
 
+### Write the way you would explain it to a colleague
+
+Programmer-facing text must read like a knowledgeable person explaining the
+language out loud. Dense, abstract, or specification-like phrasing is a defect
+even when it is technically accurate. Apply these rules to every sentence:
+
+- **Say who does what.** Name the actor and the action: the caller writes,
+  the compiler selects, the constructor runs. Avoid sentences where an
+  abstraction acts, such as "the offer is accepted" or "the stance governs".
+- **Name the thing instead of "it", "its", or "this"** whenever more than one
+  thing could be meant.
+- **Do not use metaphors or invented labels.** A type has no "head"; it has a
+  definition. A type does not "gain" an operation; it defines one or is not
+  allowed to. A caller does not grant "authorization"; it writes a stance.
+- **Do not carry discussion vocabulary into teaching.** Words that were useful
+  while designing, such as "least offer", "ceiling", "authority", or
+  "material", must be replaced by the plain claim they stood for, or defined
+  before use.
+- **Pair every rule with source.** Put a short code example next to the rule
+  it demonstrates, with comments that say what happens on each line.
+- **State exceptions where the rule is stated.** When a rule has an
+  exception, give it in the same sentence or the next one, not in a later
+  section. For example, a sentence about stance fallback also says that `deep`
+  never falls back.
+- **Prefer short, common words.** Write "allows" rather than "ever permits",
+  "defines" rather than "acquires", and "is an error" rather than "is
+  unavailable for invocation" when the meaning is the same.
+- **Read it aloud.** If you would not say the sentence to a colleague, rewrite
+  it.
+
+These rules come from one reader problem. A reader learning a rule needs to
+know four things: who acts, what they do, to which value, and what happens as
+a result. A sentence fails when the reader has to reconstruct any of those
+from context the writer had but the reader does not. Abstract verbs ("hand
+out", "accept", "govern"), pronouns with several possible referents ("it",
+"this"), comparisons without a measure ("more", "stronger" without saying
+stronger than what), and words that sound technical but name nothing defined
+all hide one of the four.
+
+For example, "An `=` cannot hand out more than it was given" leaves the
+reader to guess what is handed out (the destination? a reference to it?), to
+whom, more of what (permission? copies?), and what "given" refers to (the
+caller's stance? the receiver?). The writer knew: the `=` returns its
+receiver `_` as a reference, and `_` is a loan when the `=` declares no
+receiver stance, so returning it through a `& copy` result would let the
+caller copy a value the `=` was only lent. Saying exactly that, in that order,
+is the fix. Avoiding the original words is not: a replacement such as "an `=`
+cannot widen its access" fails the same way.
+
+The table shows the pattern, not a list of banned sentences:
+
+| Instead of | Write |
+| --- | --- |
+| The parameter's declared stance only sets the least offer the caller must write. | A parameter declared `move` accepts only calls that write `as move` or `as last`. |
+| The member receives the caller's exact authorization. | The member is passed on with the stance the outer reference parameter declares. |
+| A type may state, in its head, which transfers it ever permits. | A type's definition can list the transfers it allows, right after `type`. |
+| It never gains `move`, `last`, or `deep`. | Defining a `move`, `last`, or `deep` operation for it is an error. |
+| An arbitrary function does not acquire invented behavior merely because the syntax parses. | `= default` works only where Zax defines a default. An ordinary function has none. |
+| Its declared stance does not limit or rewrite that offer. | The parameter's declared stance does not change the stance the caller wrote. |
+| An `=` cannot hand out more than it was given. | When an `=` declares no receiver stance, `_` is a loan inside it, so returning `_` through a `& copy` result is an error: the caller could then copy a value the `=` was only lent. |
+
+When work is delegated, the delegating agent gives these rules to the writer
+and then reads every changed section itself. A search for known bad phrases
+does not replace reading the text.
+
 ### Raw material carries the same obligation
 
 When deferred raw material involves source syntax or programmer-visible

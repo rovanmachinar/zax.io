@@ -973,7 +973,8 @@ ended or moved element place remained valid, and stronger stability must come
 from an exposed provider capability.
 
 Moving an element into unused fresh storage uses construction. The old element
-is offered as `last`, allowing `last -> move -> copy` fallback. Shifting into an
+is passed on with `last`, so `last`, then `move`, then `copy` is used,
+whichever the element type has first. Shifting into an
 already live destination uses ordinary assignment or protected `.=` complete
 reconstruction as required by the selected element contract.
 

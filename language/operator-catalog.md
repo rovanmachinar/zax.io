@@ -49,7 +49,7 @@ Zax recognizes:
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor` |
 | Unchecked reinterpretation | `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
-| Transfer stance | `value as copy`, `value as deep`, `value as move`, `value as last` |
+| Transfer stance | `value as loan`, `value as copy`, `value as move`, `value as last`, `value as deep` |
 | Callable flow | Composition `>|>`, reshape composition `>|> reshape >|>`, and immediate chaining `|>` |
 | Opaque lifetime | `value is type Type` and `unsafe transfer (value as last)` |
 | Literal source/value | Source merge `<\|>` and value join `<+>` |
@@ -591,13 +591,15 @@ These exact post-unary phrases are protected forms at ordinary phrase precedence
 
 | Form | Result role |
 | --- | --- |
-| `value as copy` | Preserve the complete value shape and offer `copy` |
-| `value as deep` | Preserve the complete value shape and offer `deep` |
-| `value as move` | Preserve the complete value shape and offer `move` |
-| `value as last` | Preserve the complete value shape and offer `last` |
+| `value as loan` | Keep the value's type; allow only a parameter or receiver that borrows the value as a loan |
+| `value as copy` | Keep the value's type; ask for a copy |
+| `value as move` | Keep the value's type; allow moving its contents out |
+| `value as last` | Keep the value's type; allow taking everything, leaving the value finished |
+| `value as deep` | Keep the value's type; ask for an independent copy |
 
-The form itself performs no transfer or user-code invocation. A selected
-consumer accepts the stance and owns any source effect.
+The form itself copies, moves, and calls nothing. The function or constructor
+that receives the value does the work and decides what the original holds
+afterward.
 
 Post-unary stance restatement is distinct from binary conversion:
 
@@ -613,11 +615,11 @@ Repeated restatement groups from the left at ordinary phrase precedence:
 
 ```zax
 result := source as move as copy
-// (source as move) as copy; the consumer sees `copy`.
+// (source as move) as copy; result is built with copy
 ```
 
-This is legal but normally pointless: no consumer observes the intermediate
-`move`, so `as copy` replaces it without any transfer occurring.
+This is legal but normally pointless: nothing receives the intermediate
+`move`, so `as copy` replaces it and nothing is moved.
 
 ## Replacement, optional, pointer, and function lifecycle forms
 
@@ -640,8 +642,8 @@ operand domains:
 | `reset value` | Pre-unary phrase at ordinary phrase level | Leave an optional or variant absent, release a pointer relationship and leave vacancy, or release a callable representation and leave an unavailable function |
 | `vacate value` | Pre-unary phrase at ordinary phrase level | Discard a proved non-owning raw pointer address without disposition and leave vacancy |
 | `unsafe vacate value` | Pre-unary phrase at ordinary phrase level | Accept responsibility for an opaque but potentially valid raw-pointer disposition relationship; never available to managed pointers or a proved guaranteed leak |
-| `last value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type, offer `last`, and schedule optional payload cleanup at consumer completion |
-| `move value` | Pre-unary phrase at ordinary phrase level | Produce the same optional type and offer `move` without scheduling wrapper absence |
+| `last value` | Pre-unary phrase at ordinary phrase level | Same optional type; pass it on with `last`, and empty the optional when the call ends |
+| `move value` | Pre-unary phrase at ordinary phrase level | Same optional type; pass it on with `move`, without emptying the optional |
 
 Protected optional forms are distinct from generic post-unary stance
 restatement. Complete optional behavior and source consequences are defined by

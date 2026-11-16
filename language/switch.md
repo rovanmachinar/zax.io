@@ -83,13 +83,34 @@ switch makeResponse() {
 The temporary has no invented source name. Use an initializer when a body or post
 needs to name it.
 
-The selector is the receiver for every selector-relative test. Its receiver
-qualification and transfer stance participate in ordinary operation selection.
-An existing place can therefore be mutated when the selected operation permits
-it. A retained temporary can offer `last` because its lifetime really ends with
-the switch, but receiver stance does not itself transfer the selector as a
-right-hand argument. No test ends the retained selector lifetime before the
-switch exits.
+The selector is the receiver for every selector-relative test, and every test
+lends it: each test calls a function on the selector as a loan, whether the
+selector is a named variable or a temporary. That way no test can copy the
+selector or use it up before later tests run:
+
+```zax
+switch makeReading() {     // a temporary selector
+  case 'is hot'            // lends the selector to `is hot`
+    cool()
+  case < upperBound        // the same temporary, untouched by the test above
+    handleBelow()
+}
+```
+
+So a test operation must have a version with no receiver stance, which takes a
+loan. A version that only accepts a `copy` receiver cannot be used as a test.
+A test may still change the selector through a writable loan, if the
+operation it calls allows that. No test ends the selector's lifetime before
+the `switch` exits.
+
+Because every test lends the selector, writing a stance on it is an error:
+
+```zax
+switch value as move {   // error: tests always lend the selector
+  case 'is hot'
+    cool()
+}
+```
 
 Complete receiver stance and qualification behavior belongs to
 [transfer stances](transfer-stances.md) and [qualifiers](qualifiers.md).
@@ -1137,9 +1158,13 @@ A several-name entry without `bind` only routes control and introduces no
 payload local. This lets several states share behavior that does not inspect the
 payload.
 
-The binding performs no copy. It preserves payload origin, qualifications, and
-the transfer stance projected from the retained selector. An accepted later
-consumer performs any move or terminal transfer.
+The name does not copy anything. It is just another way to write the payload
+member, and behaves exactly like writing it out: the payload's qualifiers, any
+stance the payload member declares, and any `loan` you reached the selector
+through all apply. A transfer through the name writes its stance at the use,
+as in `consume(name as move)`, and the function called decides what is moved
+or taken. See
+[variants](variants.md#select-alternatives-with-variant-switch).
 
 Ordinary local shadowing rules apply. Rename a same-name alternative when
 needed:

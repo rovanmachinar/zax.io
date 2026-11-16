@@ -256,13 +256,15 @@ and [function invocation](function-invocation.md#type-and-instance-calls-to-once
 These exact post-unary phrases are protected forms:
 
 ```zax
+source as loan
 source as copy
-source as deep
 source as move
 source as last
+source as deep
 ```
 
-They restate the complete source value's transfer stance for one consumer. They
+They state the whole value's transfer stance for the one function or
+constructor that receives it. They
 do not invoke a user-defined phrase implementation and perform no transfer by
 themselves.
 
