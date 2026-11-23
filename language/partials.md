@@ -103,14 +103,14 @@ namespace MyGame {
   Module.Geometry.MyPointOps :: expose partial
 
   namespace Scoring {
-    usePoints final : ()(myPoint : Geometry.Point writable &) = {
+    usePoints final : ()(myPoint : Geometry.Point writable loan &) = {
       myPoint.normalizeTo(10.0)   // valid: nested within the grant
     }
   }
 }
 
 namespace MyGame {
-  reusePoints final : ()(myPoint : Geometry.Point writable &) = {
+  reusePoints final : ()(myPoint : Geometry.Point writable loan &) = {
     myPoint.normalizeTo(10.0)     // error: this opening of MyGame has no grant
   }
 }
@@ -165,7 +165,7 @@ namespace Tools {
   }
 }
 
-useIt final : ()(myFoo : MyFoo writable &) = {
+useIt final : ()(myFoo : MyFoo writable loan &) = {
   myFoo.func(100)                            // MyFoo's func(U8)
 
   intent<grant-redirected-selection>{
@@ -220,7 +220,7 @@ does not export stays invisible to importers:
 ```zax
 Shapes :: import Module.GeometryLibrary
 
-usePoints final : ()(myPoint : Shapes.Geometry.Point writable &) = {
+usePoints final : ()(myPoint : Shapes.Geometry.Point writable loan &) = {
   Shapes.Geometry.MyPointOps :: expose partial   // valid only if GeometryLibrary exports MyPointOps
   myPoint.normalizeTo(10.0)
 }
@@ -259,7 +259,7 @@ Outside both, ordinary selection applies to that combined set, and an ambiguity
 is an error:
 
 ```zax
-checkIt final : ()(myType : MyType writable &) = {
+checkIt final : ()(myType : MyType writable loan &) = {
   Module.MyPartial :: expose partial
 
   myType.foo = 2               // error: ambiguous between MyType.foo and MyPartial.foo
@@ -409,7 +409,7 @@ MyHandle :: type transfer move {
 }
 
 MyHandleCopying :: partial MyHandle {
-  +++ final : ()(source : MyHandle readonly & copy) = {
+  +++ final : ()(source : MyHandle readonly copy &) = {
   }
   // error: copy is not in MyHandle's transfer list (transfer move)
 }
@@ -567,7 +567,7 @@ correctly with no further work.
 A hand-written `copy` constructor or `=` does not copy added storage by itself.
 In the example below, `=` returns its destination as a
 [`self` result](function-invocation.md#receiver-origin-self-results) marked
-`#`, so a caller can write `a = b` on its own without using the result. Its source is declared `& copy`
+`#`, so a caller can write `a = b` on its own without using the result. Its source is declared `copy &`
 because an assignment builds its new value by copying from the source, as
 [lifecycle sources](construction-and-destruction.md#lifecycle-sources-are-never-transferred-whole)
 explains:
@@ -579,7 +579,7 @@ MyCatalog :: type seal open storage {
   operator binary '=' final : (
     result self # : MyCatalog &
   )(
-    rhs : MyCatalog readonly & copy
+    rhs : MyCatalog readonly copy &
   ) writable = {
     _.entries = rhs.entries
     // MyTagging's tag is not copied: this body cannot name it
@@ -635,7 +635,7 @@ MyCatalog :: forward type
 
 MyCatalogHooks :: type {
   construct abstract optional : ()()
-  assign abstract : ()(rhs : MyCatalog readonly &) writable
+  assign abstract : ()(rhs : MyCatalog readonly loan &) writable
 }
 
 MyCatalog :: type seal open storage {
@@ -649,7 +649,7 @@ MyCatalog :: type seal open storage {
   operator binary '=' final : (
     result self # : MyCatalog &
   )(
-    rhs : MyCatalog readonly & copy
+    rhs : MyCatalog readonly copy &
   ) writable = {
     _.entries = rhs.entries
     _.hooks.assign(rhs)
@@ -661,7 +661,7 @@ MyTagging :: partial MyCatalog {
   tag : String = "none"
 
   onAssign fulfill hooks.assign private final : ()(
-    rhs : MyCatalog readonly &
+    rhs : MyCatalog readonly loan &
   ) writable = {
     _.tag = rhs.tag
   }
@@ -689,7 +689,7 @@ MyCatalog :: type seal open storage {
 
 MyAuditing :: partial MyCatalog {
   onAudit fulfill auditHooks.assign private final : ()(
-    rhs : MyCatalog readonly &
+    rhs : MyCatalog readonly loan &
   ) writable = {
     // ...
   }

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-facing value construction, reconstructive replacement, and destruction; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; the uses of `.=`, including first construction of explicitly controlled members and the first-construction state rule; construction asserted at an opaque operation; construction packets; lifecycle declaration states; a type's `transfer` list and its effect on generation and `= forbidden`; qualifier-complete generated `copy` families; `= default` for `move`, `last`, and `deep`; lifecycle-source authority; generated assignment's `self` result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
+| Owns | Ordinary constructors and destructors; contextual/explicit constructor participation; automatic and explicit member lifecycle operations; the uses of `.=`, including first construction of explicitly controlled members and the first-construction state rule; construction asserted at an opaque operation; construction packets; lifecycle declaration forms, including how forbidden declarations take part in selection; a type's `transfer` list and its effect on generation and `= forbidden`; qualifier-complete generated `copy` families; constructor receiver stances and constructor selection by source and receiver; `= default` for `move`, `last`, and `deep`; lifecycle-source authority; generated assignment's `self` result; complete reconstructive replacement with protected `.=`; replacement constructors, resource retention, packets, and results; construction/destruction authority; wrapper-owned contained reconstruction with `.=`; optional and variant integration at the common lifecycle depth; automatic local, body, and flow-header lifetime ending and destruction order across normal and abrupt scope exits; proof and checked-access boundaries for conditionally live storage; manual and delayed construction boundaries; lifecycle costs, diagnostics, and formatting |
 | Does Not Own | Complete transfer meaning and fallback ([transfer stances](transfer-stances.md)); composition publication and forwarding ([Zax composition](composition.md)); complete [optional behavior](optional-values.md); complete [variant behavior](variants.md); unmanaged [union behavior](unions.md); integer realization and numeric-source candidate behavior ([integer literals and realization](integer-literals.md)); declaration/qualifier behavior ([declarations and bindings](declarations-and-bindings.md), [qualifiers](qualifiers.md)); shared invocation selection ([function invocation](function-invocation.md)); cohesive [exceptional result flow](except.md); `using` resource enrollment and structural disposal ([Zax `using`](using.md)); flow-transfer/post-operation behavior ([core flow control](core-flow-control.md)); [reference lifetime](lifetimes-and-references.md); or general [safety contracts](safety-and-analysis.md) |
 
 ## Mental model
@@ -323,11 +323,11 @@ places that member under explicit constructor control:
 
 ```zax
 MyType :: type {
-  foo : Foo * = @
-  bar : Bar * = @
+  foo : Foo * last = @
+  bar : Bar * last = @
 
   +++ final : ()(
-    arena : MyArena &
+    arena : MyArena mutable writable loan &
   ) = {
     _.foo = @{ arena }
 
@@ -341,11 +341,10 @@ For this selected constructor:
 
 - the presence of direct `_.foo = @...` suppresses `foo`'s automatic pointee
   allocation before body entry;
-- the pointer member itself is initialized vacant, with its
-  declaration-attached schedule ready to adopt an allocation;
+- the owning raw pointer member starts vacant, ready to hold an allocation;
 - the first reached direct allocation fills that empty slot; and
-- a later reached direct allocation dispositions the current allocation and
-  installs its replacement.
+- a later reached direct allocation frees the current allocation and installs
+  its replacement.
 
 Direct allocation assignment is available for any typed pointer destination.
 The constructor-specific behavior here is only suppression: syntactic
@@ -377,7 +376,7 @@ follows the ordinary replacement requirements:
 ```zax
 MyType :: type {
   label : Label immutable writable varying
-  view : Label readonly varying &
+  view : Label readonly varying loan &
   fixed final : Label
 
   +++ final : ()(first : Label, second : Label) = {
@@ -875,45 +874,34 @@ constructed for it.
 
 ## Declared and generated lifecycle operations
 
-For the lifecycle operations reviewed here, Zax distinguishes five declaration
-states:
+A constructor, destructor, replacement constructor, assignment, or other
+operator declaration ends in one of four ways:
 
 | Form | Meaning |
 | --- | --- |
-| Declaration with a body | Use the programmer-defined implementation |
-| Bodyless declaration | Claim an unavailable shape that blocks weaker selection until later completion supplies an implementation |
+| A body, `= { }` | Use the programmer-defined implementation |
 | `= default` | Require the compiler to supply the language-defined default implementation |
 | `= existing` | Explicitly satisfy this shape using a compatible existing operation |
 | `= forbidden` | Permanently prohibit this operation shape |
 
+A declaration that ends in none of these is an error. A forgotten body is
+reported where it was forgotten:
+
+```zax
+MyValue :: type {
+  +++ final : ()(source : MyValue mutable writable move &)
+  // error: write a body, = default, = existing, or = forbidden
+}
+```
+
 `forbidden` is a hard prohibition. Generation or compatibility fallback cannot
 restore the operation.
 
-### Bodyless declarations
-
-A bodyless declaration claims its signature and suppresses automatic generation
-for that shape. It participates in match-quality comparison while remaining
-unavailable for invocation.
-
-- If it is the best match, selection fails because the type does not currently
-  support the operation. The compiler does not fall through to a weaker
-  candidate.
-- If a latent generated candidate would match better, the compiler requires an
-  explicit declaration for that better shape rather than generating it
-  silently.
-- Later completion may supply the missing implementation.
-
-A bodyless declaration and an abstract composition role answer different
-questions. A bodyless lifecycle declaration reserves an unavailable operation
-on this same type until later completion provides it. An `abstract` role asks an
-immediate container to provide a declaration and requires that declaration to
-name the role with `fulfill`. One form never turns into the other implicitly.
-See
+A type that needs another type in a composition to supply an operation uses an
+`abstract` role, which that container fulfills with `fulfill`; see
 [`abstract` roles and `fulfill`](composition.md#abstract-roles-and-explicit-fulfillment).
-
 Composition also defines `= via member.operation` adapters and
-`= forbidden family` exposure fences. Neither adds another lifecycle
-declaration state to this table.
+`= forbidden family` exposure fences. Neither adds another form to this table.
 
 ### `default`, `existing`, and `forbidden`
 
@@ -943,7 +931,7 @@ behave the same:
 operator binary '=' final : (
   result self # : Value &
 )(
-  source : Value mutable readonly varying & copy
+  source : Value mutable readonly varying copy &
 ) mutable writable varying = {
   // Programmer-defined assignment.
 }
@@ -951,7 +939,7 @@ operator binary '=' final : (
 operator binary '=' final : (
   result self # : Value &
 )(
-  source : Value mutable readonly final & copy
+  source : Value mutable readonly final copy &
 ) mutable writable varying = existing
 // assigning from a source in a final place uses the assignment above
 ```
@@ -967,6 +955,38 @@ source. Writing `= existing` states that the reuse is deliberate.
   ()(source : Source) = forbidden
 ```
 
+**Forbidden declarations take part in selection like any other candidate.**
+The compiler never removes them before comparing candidates. So a forbidden
+declaration blocks every call it would win, and fallback stops when it reaches
+one:
+
+| Where the forbidden candidate stands | Result |
+| --- | --- |
+| It is clearly the best candidate | It is chosen, and the call is an error |
+| Another candidate is clearly better | The better candidate runs; the forbidden one does not matter |
+| It ties with another candidate, each better on a different input | The call is ambiguous: an error that names the forbidden candidate |
+| Fallback reaches it | Fallback stops there and goes no further |
+
+Here `as last` finds no `last` constructor and falls back to `move`. The
+`move` constructor exists and is forbidden, so the line is an error instead of
+falling back further to `copy`:
+
+```zax
+MyValue :: type transfer copy move last {
+  +++ final : ()(source : MyValue mutable writable move &) = forbidden
+}
+
+x : MyValue = other as last   // error: fallback reaches the forbidden move constructor and stops
+y : MyValue = other           // fine: the generated copy constructor runs
+```
+
+A tie with a forbidden candidate stays an error. If the forbidden candidate
+quietly dropped out of a tie, forbidding one shape would change which other
+declaration runs, and the author would never learn that the two declarations
+overlap. A constructor can also be chosen by the stance of the value it
+builds, so the same rules apply to that input;
+[constructor receiver stances](#constructor-receiver-stances) shows them.
+
 ### Demand-driven generation
 
 The programmer declares only operations intended for use. Zax does not require
@@ -979,8 +999,7 @@ compiler does not guess. The programmer resolves the demanded shape by:
 - providing a body;
 - writing `= existing`;
 - writing `= default`;
-- writing `= forbidden`; or
-- leaving a bodyless requirement for later completion.
+- writing `= forbidden`.
 
 No error is required for an unused latent ambiguity.
 
@@ -1009,7 +1028,7 @@ stance. What each stance means, and how fallback works, are explained in
 [Zax transfer stances](transfer-stances.md#fallback).
 
 Reflection must eventually distinguish declared, generated, explicitly
-defaulted, delegated-to-existing, bodyless, and forbidden operations.
+defaulted, delegated-to-existing, and forbidden operations.
 
 ### Declaring which transfers a type allows
 
@@ -1026,7 +1045,7 @@ MyPoint :: type transfer copy {
 MyOwnedFile :: type transfer move {
   handle : Integer
 
-  +++ final : ()(source : MyOwnedFile mutable writable & move) = {
+  +++ final : ()(source : MyOwnedFile mutable writable move &) = {
     // take the handle and leave source vacant
   }
 }
@@ -1036,7 +1055,7 @@ MyOwnedFile :: type transfer move {
 Code that uses these types follows the list:
 
 ```zax
-inspect final : ()(file : MyOwnedFile readonly &) = {
+inspect final : ()(file : MyOwnedFile readonly loan &) = {
 }
 
 useFile final : ()() = {
@@ -1054,14 +1073,14 @@ them in another order is an error.
 `loan` never appears in the list, because lending is not an operation a type
 defines: every type can be lent.
 
-Defining an operation for a stance that is not in the list is an error, whether
-it is defined in the type itself or in a [partial](partials.md):
+Writing any signature for a stance missing from the list is an error, in the
+type itself or in a [partial](partials.md). That includes `= forbidden`:
 
 ```zax
 MyOwnedFile :: type transfer move {
   handle : Integer
 
-  +++ final : ()(source : MyOwnedFile readonly & copy) = {
+  +++ final : ()(source : MyOwnedFile readonly copy &) = {
   }
   // error: copy is not in MyOwnedFile's transfer list (transfer move)
 }
@@ -1070,20 +1089,29 @@ MyPoint :: type transfer copy {
   x : Integer
   y : Integer
 
-  +++ final : ()(source : MyPoint mutable writable & move) = {
+  // each declaration below is a separate alternative
+  +++ final : ()(source : MyPoint mutable writable move &) = {
   }
   // error: move is not in MyPoint's transfer list (transfer copy)
+
+  +++ final : ()(source : MyPoint mutable writable move &) = forbidden
+  // error for the same reason: MyPoint has no move to forbid
 }
 ```
 
-Leaving `move` or `last` out of the list does not stop callers writing that
-stance. Fallback only uses operations that exist, so it falls back past the
-missing one. `deep` is the exception: it never falls back, so `as deep` on a
-type without `deep` is an error.
+Leaving `move` or `last` out of the list means only that the operation does
+not exist. It does not stop callers from writing `as move` or `as last`:
+fallback passes over operations that do not exist. `deep` is the exception: it
+never falls back, so `as deep` on a type without `deep` is an error.
 
 ```zax
 moved : MyPoint = point as move   // fine: MyPoint has no move, so copy runs; point is unchanged
 ```
+
+A programmer who writes the `= forbidden` above usually wants `as move` on a
+`MyPoint` to be an error. Writing it cannot do that: `MyPoint` has no `move`,
+so `as move` copies. To make a type impossible to duplicate, leave `copy` out
+of its list instead.
 
 A type without `copy` can still be lent: it can be passed to `loan`
 references, and its functions with no receiver stance can be called with no
@@ -1106,16 +1134,16 @@ MyConnection :: type transfer copy move last {
 assignment; otherwise the compiler would give it an operation its own list
 does not allow.
 
-**`= forbidden` can still remove a single signature of a listed stance.**
-`= forbidden` also still works everywhere else it is used: on replacement
-constructors, assignment signatures, composition's `forbidden family`
-declarations, and ordinary functions:
+**`= forbidden` can remove a single signature of a listed stance.**
+`= forbidden` works on listed transfer stances, replacement constructors,
+assignment signatures, composition's `forbidden family` declarations, and
+ordinary functions:
 
 ```zax
 MyMixed :: type transfer copy move {
-  +++ final : ()(source : MyMixed readonly & copy) = forbidden
+  +++ final : ()(source : MyMixed readonly copy &) = forbidden
 }
-// copy is allowed in general; this one signature is removed
+// fine: copy is listed; copying from a readonly source is removed
 ```
 
 **A `copy` constructor is a constructor whose only input is another value of the
@@ -1124,14 +1152,14 @@ may have one, even if it reads another value of the type:
 
 ```zax
 MyOwnedFile :: type transfer move {
-  +++ final : ()(source : MyOwnedFile readonly & loan, mode : MyMode) = {
+  +++ final : ()(source : MyOwnedFile readonly loan &, mode : MyMode) = {
     // reopen the file that source names, in another mode
   }
 }
 // fine: not a copy constructor, and source is not duplicated
 ```
 
-`source` is declared `& loan` because the constructor only reads it. `& copy`
+`source` is declared `loan &` because the constructor only reads it. `copy &`
 would allow copying a value that cannot be copied. A named function such as
 `duplicate()` that builds a new value through another constructor is allowed
 too: it is not the `copy` operation, and its name tells the reader what it does.
@@ -1169,7 +1197,7 @@ signature still removes that one generated `copy`, as `MyMixed` shows above.
 whatever operations it has now, and its own definition or a partial may add
 more. Adding `move` to a type that had only `copy` can break code that uses
 it: wherever such code passes a value, at its last use and with no stance, to
-a plain by-value parameter or into a new variable, `as last` would now run the
+a by-value parameter with no `via` or into a new variable, `as last` would now run the
 new operation, so the code must start writing a stance. Declaring
 `transfer copy move` from the start avoids that: a stance in the list counts
 as existing when the compiler decides whether a stance must be written, even
@@ -1190,7 +1218,7 @@ MyFolder :: type transfer move {
   file : MyOwnedFile
   name : String
 
-  +++ final : ()(source : MyFolder mutable writable & move) = default
+  +++ final : ()(source : MyFolder mutable writable move &) = default
   // file moves with MyOwnedFile's move; name moves with String's move
 }
 ```
@@ -1242,14 +1270,14 @@ compiler generates these eight declarations when they are used:
 
 | Generated operation | Source parameter | What it builds or assigns |
 | --- | --- | --- |
-| `copy` constructor | `mutable readonly final & copy` | a new value |
-| `copy` constructor | `mutable readonly varying & copy` | a new value |
-| `copy` constructor | `immutable readonly final & copy` | a new value |
-| `copy` constructor | `immutable readonly varying & copy` | a new value |
-| `=` | `mutable readonly final & copy` | a `mutable writable varying` destination |
-| `=` | `mutable readonly varying & copy` | a `mutable writable varying` destination |
-| `=` | `immutable readonly final & copy` | a `mutable writable varying` destination |
-| `=` | `immutable readonly varying & copy` | a `mutable writable varying` destination |
+| `copy` constructor | `mutable readonly final copy &` | a new value |
+| `copy` constructor | `mutable readonly varying copy &` | a new value |
+| `copy` constructor | `immutable readonly final copy &` | a new value |
+| `copy` constructor | `immutable readonly varying copy &` | a new value |
+| `=` | `mutable readonly final copy &` | a `mutable writable varying` destination |
+| `=` | `mutable readonly varying copy &` | a `mutable writable varying` destination |
+| `=` | `immutable readonly final copy &` | a `mutable writable varying` destination |
+| `=` | `immutable readonly varying copy &` | a `mutable writable varying` destination |
 
 A constructor makes a new value, and whether that value is mutable is decided
 by the variable it initializes, so constructors do not multiply by
@@ -1261,36 +1289,45 @@ Two of the eight, written out:
 
 ```zax
 +++ final : ()(
-  rhs [<label=incidental>] : MyValue mutable readonly final & copy
+  rhs [<label=incidental>] : MyValue mutable readonly final copy &
 ) = default
 
 operator binary '=' final : (
   result self # [<label=incidental>] : MyValue &
 )(
-  rhs [<label=incidental>] : MyValue mutable readonly varying & copy
+  rhs [<label=incidental>] : MyValue mutable readonly varying copy &
 ) mutable writable varying = default
 ```
 
 The parameter and result are named `rhs` and `result`, and marked
 `[<label=incidental>]`, so their names never route arguments. When you write a
 declaration to replace a generated one, only the types, qualifiers, and stances
-must match; your parameter names do not matter. A constructor has no receiver
-stance, because the value it builds does not exist yet.
+must match; your parameter names do not matter.
+
+Generated operations never declare a receiver stance. What that means for a
+constructor you declare with one is explained in
+[receiver stances and generated constructors](#receiver-stances-and-generated-constructors).
 
 Leaving `copy` out of the type's `transfer` list removes all eight. Writing
 `= forbidden` on one exact signature removes only that one. You can also
-forbid a version with a particular receiver stance, which the compiler never
-generates, so that a call written with that stance is an error instead of
-using the generated version:
+forbid a version of `=` with a particular receiver stance. The compiler never
+generates one, so forbidding it makes calls that would choose it an error:
 
 ```zax
 operator binary '=' final : (
   result self # [<label=incidental>] : MyValue &
 )(
-  rhs [<label=incidental>] : MyValue mutable readonly varying & copy
+  rhs [<label=incidental>] : MyValue mutable readonly varying copy &
 ) mutable writable varying last = forbidden
-// (target as last) = source is now an error; target = source still works
+
+(target as last) = source   // error: the forbidden last version is the exact match, so it is chosen
+target = source             // fine: no stance written counts as copy, and a copy call
+                            // can't use a last version, so the generated = runs
 ```
+
+The generated `=` declares no receiver stance, so it could also serve a call
+written `as last`. The forbidden version is chosen only because it is the exact
+match.
 
 If a type's immutable form has its own separate representation, the compiler
 generates nothing between the two forms; each form gets only its own
@@ -1329,7 +1366,7 @@ chain like the generated form; without the `#`, every caller would have to
 use the result, so `a = b` on its own would be an error.
 
 When your `=` declares no receiver stance, `_` is a `loan` inside it. Returning
-`_` through a `& copy` reference result is then an error, because the caller
+`_` through a `copy &` reference result is then an error, because the caller
 could copy a value the `=` was only lent.
 
 Assigning from a source in a `final` place and from a source in a `varying`
@@ -1368,6 +1405,314 @@ nearly matching programmer declaration may coexist with the generated
 declaration and produce demand-time ambiguity. Diagnostics should show the exact
 generated signature and the mismatching layer.
 
+### Constructor receiver stances
+
+A function called on an existing value can declare a receiver stance, as
+[receivers](transfer-stances.md#receivers) explains. A constructor's receiver
+is the value it is building. **The stance declared on the new value is the
+receiver stance given to its constructor:**
+
+```zax
+pinned : MyValue loan = source   // the constructor runs with receiver stance loan
+plain : MyValue = source         // receiver stance copy: an unmarked value is copy
+owned : MyValue move = source    // receiver stance move
+ending : MyValue last = source   // receiver stance last
+```
+
+No `as` is written for the receiver. On an ordinary function call, the receiver
+is an existing variable that the call might empty or finish, so the caller
+writes `as` where a reader can see what happens to it. A constructor builds a
+brand-new variable instead, so its declaration is the only place to write its
+stance. The source is an existing value, so its stance is still written on it:
+
+```zax
+fresh : MyBuffer last = source as copy
+// receiver stance last: from fresh's declaration
+// source stance copy: written on source, which is an existing value being used
+```
+
+#### What a constructor's receiver stance requires
+
+A constructor may declare a receiver stance after its inputs. That stance is a
+requirement on the value it builds: the constructor may build only values
+from which nothing more will ever be built than the stance allows. A receiver
+stance of `move` therefore needs a value that will never be copied. A receiver
+stance of `loan`, or none, places no requirement on the new value; it does not
+demand that the new value be pinned.
+Here the constructor copies from `source` into a value that can never be
+copied again:
+
+```zax
+MyBuffer :: type transfer copy move {
+  bytes : Byte[0..]
+
+  +++ final : ()(source : MyBuffer readonly copy &) move = {
+    // copies into a value that may only be moved from, never copied
+  }
+}
+```
+
+The new value's declared stance decides which constructors may build it:
+
+| The new value is declared | Constructors that may build it, by their receiver stance |
+| --- | --- |
+| `value : MyValue loan` | any |
+| `value : MyValue copy` | none (or `loan`), `copy` |
+| `value : MyValue move` | none (or `loan`), `copy`, `move` |
+| `value : MyValue last` | none (or `loan`), `copy`, `move`, `last` |
+| `value : MyValue deep` | none (or `loan`), `copy`, `deep` |
+
+The source is chosen separately, by the stance written on it. The new value
+always keeps the stance it was declared with; the table only says which
+constructors may build it. A constructor with receiver stance `move` needs a
+value that will never be copied. A value declared `move` or `last` keeps that
+promise, and so does a pinned `loan` value, from which nothing at all is ever
+built. A value declared `copy` would break it.
+
+Two consequences follow:
+
+- **A `loan` value meets every constructor's requirement**, because nothing is
+  ever built from it. Selection still decides which constructor runs, so a
+  forbidden one can still be chosen for it, as
+  [choosing a constructor](#choosing-a-constructor) shows.
+- **A `copy` receiver stance adds no requirement**, because `copy` allows
+  every stance.
+
+Writing no receiver stance and writing `loan` declare the same constructor, so
+declaring both is a duplicate. Writing `loan` on a constructor therefore does
+not limit it to pinned values; a type that allows only pinned values does so
+by forbidding the other receiver stances, as
+[choosing a constructor](#choosing-a-constructor) shows.
+
+#### Receiver stances and generated constructors
+
+Generated constructors declare no receiver stance. A receiver stance is part of
+a constructor's shape:
+
+| You declare | Effect on the generated shape |
+| --- | --- |
+| Exactly a generated shape: the same source, qualifiers, and stance, with no receiver stance or `loan` | Replaces it: your body, `= default`, `= existing`, or `= forbidden` |
+| The same shape plus a receiver stance other than `loan` | Nothing: both exist and compete in selection |
+| A different source, qualifiers, or stance | Nothing: both exist; an unresolved conflict at a use asks you to resolve it |
+
+With `MyBuffer` above:
+
+```zax
+source : MyBuffer
+a : MyBuffer = source        // a copy value: the declared constructor can't build it,
+                             // so the generated copy constructor runs
+b : MyBuffer move = source   // a move value: both may build it; the declared one is exact
+                             // on the receiver, so it wins
+```
+
+A forbidden shape with a receiver stance does not suppress the generated
+constructor. It is chosen, and fails, exactly where it is the better match:
+
+```zax
+MyRecord :: type transfer copy {
+  +++ final : ()(source : MyRecord readonly copy &) move = forbidden
+  // copying into a move value is an error; ordinary copies still use the generated constructor
+}
+
+c : MyRecord = record          // fine: the generated copy constructor
+d : MyRecord move = record     // error: the forbidden shape is exact on the receiver and wins
+```
+
+#### Choosing a constructor
+
+Building a value from a source of the same type chooses a constructor by two
+inputs:
+
+| What is declared or written | Chooses the constructor's |
+| --- | --- |
+| The stance written on the source (at least the parameter's `via`, for a by-value parameter) | Source stance, with the usual fallback |
+| The new value's declared stance | Receiver stance, by the table above |
+
+The receiver competes on equal terms with the source, as every input does in
+[function invocation](function-invocation.md). The compiler:
+
+1. leaves out every constructor whose source can't accept the stance written
+   on the source;
+2. keeps every constructor whose receiver stance can't build the new value,
+   counting it as the worst possible match on the receiver; if such a
+   constructor is chosen, the line is an error;
+3. chooses a candidate only if it is at least as good as every other on every
+   input, and better on at least one;
+4. otherwise reports the call as ambiguous.
+
+Step 2 is what keeps a constructor that exists, but can't build this value,
+from being skipped in favor of a weaker one. Without it, writing `as last`
+could quietly run a `copy` constructor instead of reporting that the `last`
+constructor refuses the destination.
+
+On the receiver, an exact match is best. Otherwise a receiver stance closer to
+the new value's declared stance, along `loan`, `copy`, `move`, `last`, is
+better. `deep` is not on that line: a `deep` receiver stance is the exact match
+for a value declared `deep` and can't build any other value. No input takes
+priority over another, so two candidates that are each better on a different
+input make the call ambiguous:
+
+```zax
+MyValue :: type transfer copy move {
+  +++ final : ()(source : MyValue mutable writable move &) = {
+  }
+  // A: exact source for as move; no receiver stance
+
+  +++ final : ()(source : MyValue readonly copy &) move = {
+  }
+  // B: source reached only by fallback; exact receiver stance for a move value
+}
+
+v : MyValue move = other as move   // error: ambiguous; A is better on the source, B on the receiver
+```
+
+A fixed priority for either input would silently run a constructor the type's
+author may not have intended. The fix is a candidate that is exact on both
+inputs, which then wins:
+
+```zax
+  +++ final : ()(source : MyValue mutable writable move &) move = {
+  }
+  // with this added, v : MyValue move = other as move uses it
+```
+
+The same tie is still an error when one of the tied candidates is forbidden.
+If B above were `= forbidden`, the compiler would not pick A merely because B
+is forbidden, so the author learns that the two declarations overlap.
+
+A forbidden candidate also catches every destination for which it is the
+closest match. Here the forbidden `move` receiver constructor is closer to a
+`last` value than the constructor with no receiver stance:
+
+```zax
+MyValue :: type transfer copy move last {
+  +++ final : ()(source : MyValue readonly copy &) = {
+  }
+  // no receiver stance
+
+  +++ final : ()(source : MyValue readonly copy &) move = forbidden
+}
+
+a : MyValue last = other   // error: both may build a last value; the forbidden one is closer
+                           // to last than no receiver stance, so it is chosen
+b : MyValue = other        // fine: the move receiver constructor can't build a copy value,
+                           // so it is the worse receiver match, and the one with no
+                           // receiver stance wins
+c : MyValue loan = other   // fine: no receiver stance is the exact match for loan
+```
+
+If the constructor with no receiver stance were the forbidden one instead, `c`
+would be the error, because that constructor is the exact match for a `loan`
+value.
+
+To forbid `move` values while letting `last` values be built normally, add an
+exact match for `last`. It then wins instead of the forbidden constructor:
+
+```zax
+  +++ final : ()(source : MyValue readonly copy &) last = default
+  // a last value is built member by member, like an ordinary copy
+```
+
+With that added, `a : MyValue last = other` works, and only values declared
+`move` reach the forbidden constructor.
+
+The same closeness lets a type allow only pinned values. It keeps the generated
+constructor, which is the exact match for `loan`, and forbids a `copy` receiver
+stance, which is closer than no receiver stance to `copy`, `move`, and `last`
+values:
+
+```zax
+MyDevice :: type transfer copy {
+  +++ final : ()(source : MyDevice readonly copy &) copy = forbidden
+  // loan values still use the generated constructor; copy, move, and last values reach this one
+}
+
+pinned : MyDevice loan = original   // fine: no receiver stance is the exact match for loan
+plain : MyDevice = original         // error: the forbidden copy version is the exact match
+owned : MyDevice move = original    // error: copy is closer to move than no receiver stance
+```
+
+A type that also lists `deep` forbids a `deep` receiver stance the same way.
+
+This is how built-in raw pointers keep an allocation out of a borrowing
+pointer: the constructor that takes over an allocation declares a `move`
+receiver stance, so it can't build a `copy` or `loan` pointer, and the line is
+an error rather than falling back to copying the address. The separate rule
+that a borrowing raw pointer can't be written `as last` is explained in
+[owning raw pointers](pointers-and-arenas.md#owning-raw-pointers).
+
+#### Building a value declared `deep` from an ordinary copy
+
+A value's declared stance governs what is built from it later, not how it was
+built. So `shared : MyArchive deep = original` is written as a copy. The type
+decides what happens, through two kinds of `deep` constructor:
+
+- a constructor with a `deep` **source** (`source : MyArchive readonly deep &`)
+  runs when the initializer writes `as deep`;
+- a constructor with a `deep` **receiver stance**
+  (`(source : MyArchive readonly copy &) deep`) runs when a value declared
+  `deep` is built from an ordinary copy.
+
+```zax
+MyArchive :: type transfer copy deep {
+  history : MyHistory * strong
+
+  +++ final : ()(source : MyArchive readonly copy &) = {
+    // ordinary copy: shares history
+  }
+
+  +++ final : ()(source : MyArchive readonly deep &) = {
+    // runs for as deep
+  }
+
+  +++ final : ()(source : MyArchive readonly copy &) deep = {
+    // runs when a deep value is built from a copy: makes its own history
+  }
+}
+
+shared : MyArchive deep = original
+// written as copy. The first and third constructors are both exact on the source,
+// and the third is also exact on the receiver, so it wins: shared is independent
+
+independent : MyArchive deep = original as deep   // the deep source constructor runs
+```
+
+Without the third constructor, `shared : MyArchive deep = original` is not an
+error. The ordinary copy constructor declares no receiver stance, so it may
+build a value declared `deep`, and `shared` then shares `history` with
+`original`. That is the type author's choice, and the compiler gives no
+warning for it.
+
+#### Temporaries
+
+A temporary used as the source for a new value is treated as written
+`as last`, as [temporaries](transfer-stances.md#temporaries) explains, and the
+new value's declared stance is the receiver stance. Building the new value
+directly in place, which skips running the chosen constructor, never skips
+choosing it. The choice must still succeed:
+
+```zax
+MyToken :: type transfer copy last {
+  +++ final : ()(source : MyToken mutable writable last &) move = {
+    // takes the token over; the new value must never be copied
+  }
+}
+
+makeToken final : (result : MyToken)() = {
+}
+
+kept : MyToken move = makeToken()   // fine: the last constructor can build a move value;
+                                    // building in place may skip running it
+loose : MyToken = makeToken()       // error: the last constructor is better on the source and
+                                    // the generated copy constructor on the receiver, so the
+                                    // call is ambiguous; the message names the last constructor,
+                                    // which can't build a copy value
+```
+
+The error stands even though building in place would not have run either
+constructor. Without this rule, building in place would let a temporary bypass
+a constructor's requirement.
+
 ### Lifecycle sources are never transferred whole
 
 A constructor, assignment, or replacement that builds a value from another
@@ -1378,14 +1723,14 @@ MyRecord :: type transfer copy move {
   label : Label
   count : Integer
 
-  +++ final : ()(source : MyRecord readonly & copy) = {
+  +++ final : ()(source : MyRecord readonly copy &) = {
     _.label .= source.label             // fine: copies a member
     _.count .= source.count
     whole : MyRecord = source           // error: would copy the whole source,
                                         // which calls this constructor again
   }
 
-  +++ final : ()(source : MyRecord mutable writable & move) = {
+  +++ final : ()(source : MyRecord mutable writable move &) = {
     _.label .= source.label as move     // fine: takes a member
     _.count .= source.count             // copies: Integer has nothing to take
     whole : MyRecord = source as move   // error: the whole source is never transferred
@@ -1394,16 +1739,16 @@ MyRecord :: type transfer copy move {
 }
 ```
 
-The source's stance (`& copy`, `& deep`, `& move`, or `& last`) says which
-operation this is: `& copy` declares the `copy` constructor, which runs when a
-value is copied, and `& move` declares the `move` constructor, which runs for
+The source's stance (`copy &`, `deep &`, `move &`, or `last &`) says which
+operation this is: `copy &` declares the `copy` constructor, which runs when a
+value is copied, and `move &` declares the `move` constructor, which runs for
 `as move`. It does not let the operation transfer the whole source:
 
 | Source declared | Whole source | Members without their own stance |
 | --- | --- | --- |
-| `& copy` | never transferred | `copy` |
-| `& deep` | never transferred | `deep` |
-| `& move`, `& last` | never transferred | `copy` by default; write `as move` or `as last` to take |
+| `copy &` | never transferred | `copy` |
+| `deep &` | never transferred | `deep` |
+| `move &`, `last &` | never transferred | `copy` by default; write `as move` or `as last` to take |
 
 The table is about what a hand-written body gets when it writes no stance.
 Generated and `= default` operations write the operation's own stance for
@@ -1411,11 +1756,11 @@ each member instead: a defaulted `move` constructor moves each member, and a
 defaulted `last` constructor takes each member with `last`.
 
 When a constructor, assignment, or replacement has a same-type value as its
-only input, declaring that input `& loan` is an error. Such a constructor
+only input, declaring that input `loan &` is an error. Such a constructor
 would just be the `copy` constructor under another name, and if it were used for
 `as deep` it would quietly produce a copy that is not independent. Any other
 parameter of a constructor, assignment, or replacement is an ordinary
-parameter. When the operation only reads it, declare it `& loan`: for example,
+parameter. When the operation only reads it, declare it `loan &`: for example,
 the file to reopen in a constructor, the template a replacement reads, or the
 settings an assignment applies.
 
@@ -1646,12 +1991,12 @@ DatabaseCommand :: type transfer copy move last {
   query : Query
   results : ResultSet
 
-  +++ final : ()(source : DatabaseCommand mutable writable & move) = {
+  +++ final : ()(source : DatabaseCommand mutable writable move &) = {
     // takes source.results and copies source.query; opens a connection of
     // its own, so source keeps its connection and stays fully usable
   }
 
-  +++ final : ()(source : DatabaseCommand mutable writable & last) = {
+  +++ final : ()(source : DatabaseCommand mutable writable last &) = {
     // takes source.results and source.connection; source only needs to
     // survive destruction or replacement
   }
@@ -1777,8 +2122,7 @@ tree matching and the
 protected integer compounds.
 
 When an actual use exposes an existing-versus-generated choice, the programmer
-resolves the demanded shape with a body, `existing`, `default`, `forbidden`, or a
-bodyless declaration.
+resolves the demanded shape with a body, `existing`, `default`, or `forbidden`.
 
 Construction and replacement may be controlled independently:
 
@@ -1806,13 +2150,13 @@ Document :: type {
   text : String
 
   +++ replacement final : ()(
-    source : String readonly & copy
+    source : String readonly copy &
   ) = {
-    _.text = source   // copies through source, so source declares & copy
+    _.text = source   // copies through source, so source declares copy &
   }
 
   stringViewFrom final :
-    (result : String readonly &)() = {
+    (result : String readonly loan &)() = {
     return _.text
   }
 }
@@ -1857,10 +2201,11 @@ Same-storage replacement does not categorically invalidate every raw pointer.
 - Reusing an address does not by itself decide whether the intended pointee
   survives.
 
-Raw pointers carry no ownership or intrinsic lifetime guarantee. A use is safe
-when analysis proves its required origin and lifetime facts; otherwise it needs
-narrow unsafe responsibility. Managed ownership, including interior pointers to
-direct members, is defined by
+A borrowing raw pointer (`*`, `* copy`, or `* loan`) carries no ownership or
+lifetime guarantee. A use is safe when analysis proves its required origin and
+lifetime facts; otherwise it needs narrow unsafe responsibility. Owning raw
+pointers (`* move` or `* last`) and managed ownership, including interior
+pointers to direct members, are defined by
 [pointers and arenas](pointers-and-arenas.md).
 
 ### Representation boundary
@@ -2504,14 +2849,24 @@ Diagnostics should distinguish:
 - label-versus-declaration intent that is unclear;
 - equal viable overloads;
 - unresolved existing-versus-generated behavior at an actual use;
-- use of a `forbidden` operation;
+- a lifecycle or operator declaration with no body, `= default`,
+  `= existing`, or `= forbidden`;
+- use of a `forbidden` operation, including one chosen because it is the
+  closest receiver-stance match, and fallback that stopped at a forbidden
+  operation;
+- a call that is ambiguous between a forbidden candidate and another
+  candidate, naming both;
 - an operation declared, in the type's body or a partial, for a stance missing
-  from the type's transfer list, or a transfer list out of the order
-  `copy move last deep`;
+  from the type's transfer list, including `= forbidden`, with a message
+  explaining that the stance doesn't exist and fallback already applies; or a
+  transfer list out of the order `copy move last deep`;
 - use of a generated operation that is listed but cannot exist, naming the
   member that blocks it;
+- a constructor whose receiver stance can't build the destination's declared
+  stance, including when the destination is built in place from a temporary;
+- a constructor declared both with no receiver stance and with `loan`;
 - a constructor, assignment, or replacement whose same-type source is declared
-  `& loan`, or whose body transfers its whole source;
+  `loan &`, or whose body transfers its whole source;
 - a member that cannot initialize automatically;
 - ordinary `=` on a member whose type cannot be default-constructed, where
   `.=` would construct it;

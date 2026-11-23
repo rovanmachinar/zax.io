@@ -497,10 +497,10 @@ the argument is one, and otherwise binds a reference to the argument's place.
 Either way the parameter is one reference, never a reference to a reference:
 
 ```zax
-inspect$ final : (UseType : type)()(value : UseType readonly &) = {
+inspect$ final : (UseType : type)()(value : UseType readonly loan &) = {
 }
 
-myPointer : Boolean * = @
+myPointer : Boolean * last = @
 
 inspect(myFlag)      // UseType is Boolean: value refers to myFlag
 inspect(myView)      // UseType is Boolean: the written & matches myView's reference
@@ -546,7 +546,7 @@ arguments did not:
 
 ```zax
 parseValue$ final : (ResultType : type = Integer)(result : ResultType)(
-  text : String readonly &
+  text : String readonly loan &
 ) = {
 }
 
@@ -667,7 +667,7 @@ MyVector$(Element : type) :: type {
   operator binary '+' final : (
     result : MyVector$(Element)
   )(
-    other : MyVector$(Element) readonly &
+    other : MyVector$(Element) readonly loan &
   ) readonly = {
   }
 }
@@ -679,7 +679,7 @@ A local alias gives it a shorter name:
 MyVector$(Element : type) :: type {
   ThisVector :: alias type MyVector$(Element)
 
-  operator binary '+' final : (result : ThisVector)(other : ThisVector readonly &) readonly = {
+  operator binary '+' final : (result : ThisVector)(other : ThisVector readonly loan &) readonly = {
   }
 }
 ```
@@ -1163,7 +1163,7 @@ for each instantiation:
 supportsAdd final : (result : Boolean)(UseType : type) = {
   return wellformed{
     // A lambda's parameters need no construction; see below.
-    check := [[]] (result : UseType)(a : UseType readonly &, b : UseType readonly &) {
+    check := [[]] (result : UseType)(a : UseType readonly loan &, b : UseType readonly loan &) {
       return a + b
     }
   }
@@ -1225,7 +1225,7 @@ must accept:
 ```zax
 supportsArithmetic final : (result : Boolean)(UseType : type) = {
   return wellformed{
-    check := [[]] (result : UseType)(a : UseType readonly &, b : UseType readonly &) {
+    check := [[]] (result : UseType)(a : UseType readonly loan &, b : UseType readonly loan &) {
       return (a + b) * a
     }
   }
@@ -1620,7 +1620,7 @@ instantiation, from that instantiation's types:
 Message :: type transfer copy move {
   text : String
 
-  +++ final : ()(source : Message mutable writable & move) = default
+  +++ final : ()(source : Message mutable writable move &) = default
 }
 
 sendEach$ final : (Items ... : type)()(items ... : Items) = {

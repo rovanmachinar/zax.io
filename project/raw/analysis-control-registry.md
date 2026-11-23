@@ -7,7 +7,7 @@
 | Applies To | Discovery and maturity of proposed `unsafe` and panic category identifiers |
 | Owns | The centralized provisional inventory of category names, unnamed category pressure, source occurrences, and disposition state |
 | Does Not Own | Accepted unsafe syntax, accepted panic-control syntax, domain behavior, intent acknowledgements, diagnostic identifiers, or compiler implementation |
-| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work item `028` |
+| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work items `028` and `039` |
 
 ## Purpose and reading posture
 
@@ -74,6 +74,8 @@ a defined panic check merely by sharing a failure condition.
 | `replacement-member-successor` | Illustrative | Deliberately reach the completely established successor resident instance through a continuing member place after replacement | Used illustratively by [safety and analysis](../../language/safety-and-analysis.md#defined-unsafe-permission); lifetime and replacement owners |
 | `possible-nothing-write` | Provisional | Accept a pointer handoff or operation whose downstream write may reach compiler-provided Nothing backing without asserting pointer presence | [Raw analysis controls](analysis-controls.md#proven-errors-versus-suspected-flow) and [Nothing instances](../../language/nothing-instances.md#possible-write-flow-needs-a-future-unsafe-boundary) |
 | `possible-nothing-read-trap` | Provisional | Accept a pointer handoff or operation whose downstream read may reach trapping Nothing backing | [Raw analysis controls](analysis-controls.md#proven-errors-versus-suspected-flow) and [Nothing instances](../../language/nothing-instances.md#possible-write-flow-needs-a-future-unsafe-boundary) |
+| `raw-from-reference` | Provisional | Accept responsibility for forming a raw pointer from a reference whose origin is unseen (a reference parameter, reference result, or `_`), where the reference may reach a `unique` allocation or outlive the checked reference | [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md#raw-pointers) and [raw analysis controls](analysis-controls.md#compiler-verified-unsafe-tags) |
+| `unique-raw-borrow` | Provisional | Defined unsafe permission to form a raw borrowing pointer from a `unique` allocation; programmer takes responsibility that the raw borrower does not outlive or race with the `unique` owner | [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md#unique-ownership) |
 
 ### Illustrative spellings that are not suitable registry entries
 

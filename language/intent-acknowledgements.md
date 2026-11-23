@@ -263,7 +263,7 @@ declaration:
 
 ```zax
 intent<redundant-outer-tracking>{
-  possibleOwner final : (result : Car & ?)() =
+  possibleOwner final : (result : Car loan & ?)() =
     tracked via engine.selectedPeer
 }
 ```
@@ -506,25 +506,25 @@ forward(resource as last)   // the move constructor runs; resource is finished
 ```
 
 The acknowledgement covers only this last-use choice. Where a call with no
-stance cannot work at all, such as a call to a parameter declared `move` or
-`last`, or a copy of a type that has no `copy`, the stance must be written at
+stance cannot work at all, such as a call to a parameter declared `via move`
+or `via last`, or a copy of a type that has no `copy`, the stance must be written at
 every use, and no acknowledgement can replace it. See
 [when a stance must be written](transfer-stances.md#when-a-stance-must-be-written).
 
-This category applies to variables only. A function's by-value result with no
-declared stance is always passed on as `last`, so it never needs this
-acknowledgement; see
-[results with no declared stance](transfer-stances.md#results-with-no-declared-stance).
+This category applies to variables only. A function result the caller doesn't
+name is a temporary, treated as written with the strongest stance its own
+stance allows, so it never needs this acknowledgement; see
+[temporaries](transfer-stances.md#temporaries).
 
 ### Conditionally unallocated member
 
 ```zax
 MyType :: type {
-  member : Member * = @
+  member : Member * last = @
 
   +++ final : ()(
     condition : Boolean,
-    arena : MyArena &
+    arena : MyArena mutable writable loan &
   ) = {
     intent<conditionally-unallocated-member>{
       if condition
@@ -536,7 +536,7 @@ MyType :: type {
 
 The direct member allocation suppresses automatic pointee allocation for this
 constructor. The acknowledgement confirms that a normal path may deliberately
-leave the valid scheduled pointer vacant; it does not permit an
+leave the owning raw pointer vacant; it does not permit an
 indeterminate pointer representation.
 
 ### Terminal-source reuse
@@ -642,7 +642,7 @@ Four categories acknowledge choices that widen what a [partial](partials.md)
 affects. Each encloses the declaration that makes the choice:
 
 ```zax
-useIt final : ()(myFoo : MyFoo writable &) = {
+useIt final : ()(myFoo : MyFoo writable loan &) = {
   myFoo.func(100)
   intent<grant-redirected-selection>{
     Module.Tools.FooWide :: expose partial   // later func(100) now selects FooWide's overload

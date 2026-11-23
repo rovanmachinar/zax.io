@@ -264,12 +264,15 @@ each element : Integer readonly & in values {
 }
 ```
 
-A loop variable written as a reference is a declared reference with its own
-stance. With no stance, as here, it is a `loan`: `inspect` may read the
-element, but nothing can be copied or taken through `element`. A loop
-variable that must copy or take declares `& copy`, `& move`, or `& last`, and
-the loop source must allow it, as in `in values as move` for `& move`. See
-[members and bindings](transfer-stances.md#members-and-bindings).
+A loop variable written as a reference is bound to one visible element, so
+with no stance written it takes its stance from that element, like any
+reference bound to one visible value. The elements here have no declared
+stance, so they are `copy`, and `element` may be copied from. To only lend,
+write `Integer readonly loan &`. A stance that would let the loop variable
+take from the element, `move &` or `last &`, must also be written on the loop
+source, as in `in values as move` for `move &`. See
+[references you declare](transfer-stances.md#references-you-declare) and
+[members](transfer-stances.md#members).
 
 An explicit non-reference type constructs a separate value:
 
@@ -384,7 +387,8 @@ each value : in record {
 }
 
 each value : & in record {
-  // Declares a reference to each member; unmarked, it is a loan.
+  // Declares a reference to each member; unmarked, it takes each member's stance
+  // the way any reference bound to a visible value does.
 }
 
 each value : copy in record {
@@ -563,7 +567,7 @@ The cursor supplies one current value:
 
 ```zax
 operator pre unary 'value at' final : (
-  result : MyValue readonly &
+  result : MyValue readonly loan &
 )() readonly = {
   // ...
 }

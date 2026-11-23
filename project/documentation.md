@@ -172,6 +172,11 @@ file when a concrete consequence makes it relevant. The next applicable
 documentation fit dry run must propose whether each file moves to a
 domain-oriented owner, remains temporary, or retires.
 
+Before retiring or moving a raw file, check the links to it from current
+owners, routers, other raw files, and other promoted material, and update or
+remove each one. Links from numbered work, active or archived, do not count:
+see [retiring files](#retiring-files-never-waits-for-work-item-links).
+
 ### Teaching-debt guidance and log
 
 `project/teaching-debt.md` explains motivated, suggested techniques for a
@@ -541,7 +546,9 @@ edits may become difficult for a cold reader only in combination.
 
 That inevitability is not permission to lower the teaching standard. Agents
 still make a conscientious reader-focused effort in every current `language/`
-section they materially change. The teaching-debt process captures residual
+section they materially change, and every change leaves the edited text clearer
+than it was. New or rewritten material meets the teaching standard, not the
+level of the text around it. The teaching-debt process captures residual
 problems despite that effort or outside the authorized change; it is not a place
 to defer knowingly poor teaching.
 
@@ -795,6 +802,11 @@ naturally. Use explicit maturity labels in prose or local subsections when a
 reader could otherwise confuse an observation, proposal, question, aligned
 finding, or deferral.
 
+Keep the current proposal and the open questions where a reviewer can find
+them, separate from the history of how they were reached. When a working record
+stops being reviewable, restructure it instead of adding to it; Git history
+keeps the earlier layout.
+
 ### Fixed initiating input
 
 The initiating input contains the aligned information known when the work item
@@ -953,6 +965,11 @@ After the dry run:
 Relocate useful content before archiving the working file. Current owners must
 not depend on archived work for meaning.
 
+The agent that holds the discussion writes the promoted teaching itself. The
+subtleties of a finding rarely survive a handoff, so delegation is limited to
+mechanical changes, such as a spelling migration, and to independent review,
+such as the cold-reader check.
+
 The language maintainer may stage changes to preserve a before/after comparison
 boundary. Staging does not imply acceptance, approval, or permission to commit.
 Do not alter the staged boundary without explicit authorization.
@@ -985,6 +1002,18 @@ tree. Their prose and links may name paths that existed when the work was
 performed. A targeted audit uses Git history to recover that repository state.
 Do not retain otherwise valueless compatibility stubs or rewrite archived
 records merely to keep every historical link resolving in the current tree.
+
+### Retiring files never waits for work-item links
+
+Do not hold back retiring, moving, or renaming a file to keep links in any
+numbered work item resolving, including the active one. Git history exists for
+that. A work item's fixed initiating input, reading scope, and record may keep
+naming the old path; a reader recovers it from history. When a work item
+closes, the repository should already be in its proper final state.
+
+The link check that does apply covers promoted material: before retiring or
+moving a file, update or remove every link to it from current owners, routers,
+raw files, and other live documentation, so that no live reading path breaks.
 
 ## Operating-prompt source maintenance
 
@@ -1062,10 +1091,10 @@ For an authorized documentation change, check the applicable items:
 - Moves update destinations, indexes, and references coherently.
 - No obsolete compatibility stub remains without a real constraint.
 - Lower-case naming is followed except for `README.md`.
-- Local links and heading anchors resolve throughout the live tree. Historical
-  links inside `project/archive/` may require Git history and are excluded from
-  live-link validation; the current archive router's own live links must still
-  resolve.
+- Local links and heading anchors resolve throughout the live tree. Links
+  inside numbered work, in `project/work/` or `project/archive/`, may name
+  retired or moved paths, require Git history, and are excluded from live-link
+  validation; the current archive router's own live links must still resolve.
 - Markdown renders coherently.
 - Staged and unstaged review boundaries are preserved, including untracked paths
   when that boundary is being relied upon or reported.

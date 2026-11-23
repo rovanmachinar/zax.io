@@ -55,9 +55,10 @@ producing them.
 - Read [Zax qualifiers](language/qualifiers.md) for place replacement, value
   mutability, access capabilities, defaults, indirection, and unsafe escape
   behavior.
-- Read [Zax transfer stances](language/transfer-stances.md) for why `copy`,
-  `deep`, `move`, and `last` exist; how source and receiver intent select
-  consumers; and how source state changes.
+- Read [Zax transfer stances](language/transfer-stances.md) for what `loan`,
+  `copy`, `deep`, `move`, and `last` say may be built from a value; what owners
+  and borrowers may write; how a stance written at a call selects a function;
+  and how source state changes.
 - Read [Zax lifetimes and references](language/lifetimes-and-references.md) for
   life paths, instance places, fixed reference binding, replacement, borrowing,
   escape, and capture.
@@ -66,8 +67,9 @@ producing them.
   compiler-provided/trapping/custom Nothing policies, and unchecked access
   boundaries.
 - Read [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md) for
-  declaration-bound allocation, raw and managed ownership, allocation policy,
-  control blocks, reset, collection, and arena behavior.
+  declaration-bound allocation, borrowing and owning raw pointers, stances on
+  pointed-to values, managed ownership, allocation policy, control blocks,
+  reset, collection, and arena behavior.
 - Read [Zax execution context](language/execution-context.md) for the per-thread
   `___` context, its application-wide shape, replacement, and context-provided
   default arenas.

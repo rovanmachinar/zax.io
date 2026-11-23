@@ -163,7 +163,7 @@ A `[<synchronous>]` and `[<asynchronous>]` directive are mutually exclusive and 
 
 ````zax
 MyType :: type {
-    value1 : Integer * = @
+    value1 : Integer * last = @
 }
 
 func final : ()(myType : MyType) promise [<synchronous>] = {

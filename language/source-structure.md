@@ -305,27 +305,26 @@ declarations.
 
 ### Allocation-token attachment
 
-`@`, `@!`, `@<`, and `@!<` are exact longest-match allocation tokens. Their
-ordinary source position is a declaration initializer:
+`@` and `@!` are exact longest-match allocation tokens. Their ordinary source
+position is a declaration initializer:
 
 ```zax
 owner : MyValue * unique = @
-maybeManual : MyValue * = @!<
+maybeOwner : MyValue * last = @!
 ```
 
-Any typed pointer destination may also use direct allocation assignment:
+A typed pointer destination that owns its allocation may also use direct
+allocation assignment:
 
 ```zax
-scheduled : MyValue * = @
-reset scheduled
-scheduled = @{ anotherArena }
-
-ordinary : MyValue *
-ordinary = @
+rawOwner : MyValue * last = @
+reset rawOwner
+rawOwner = @{ anotherArena }
 ```
 
-Semantic analysis uses the destination's pointer role and scheduled/open
-contract. An undeclared or otherwise untyped `existing = @` remains invalid.
+Semantic analysis uses the destination's pointer role and stance. Allocation
+into a borrowing raw pointer, and an undeclared or otherwise untyped
+`existing = @`, are invalid.
 
 An allocation-policy enclosure attaches directly to the token:
 

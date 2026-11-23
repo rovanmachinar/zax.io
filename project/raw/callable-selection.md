@@ -7,7 +7,7 @@
 | Applies To | Callable candidate comparison beyond the currently accepted fixed-arity partial-order baseline |
 | Owns | Naturally unselectable declaration pressure, cross-axis comparison, exact-prototype resolution, generic-specialization comparison, generated-versus-declared ambiguity, source compatibility, activation pressure, and retirement criteria |
 | Does Not Own | Accepted current invocation behavior; `switch`/`case` or pattern-like selection; generic syntax; or runtime dispatch implementation |
-| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection; work item `015` minted-implementation refinement; work item `020` composition constraints; work item `036` generic selection |
+| Source / Provenance | Transfer-stance review of value/reference, qualification, stance, result, generated-family, and exact-prototype selection; work item `015` minted-implementation refinement; work item `020` composition constraints; work item `036` generic selection; work item `039` retirement of bodyless declarations |
 
 ## Why this input exists
 
@@ -51,8 +51,7 @@ Exact canonical duplicate signatures remain redeclaration errors.
 A private declaration outside its permitted caller context is ineligible before
 preference. It does not become an unavailable best candidate or block a public
 declaration. **Unavailable** applies only to an eligible visible shape that
-cannot be invoked, such as a bodyless, forbidden, or unsupported generated
-declaration.
+cannot be invoked, such as a forbidden or unsupported generated declaration.
 
 ## Exact-prototype resolution
 
@@ -266,14 +265,15 @@ infer them from runtime state:
 - a contract may promise that a pointer input is present or that a pointer
   result is non-vacant on every normal exit;
 - a closed alias or future generated callable that represents a receiverless
-  type call must preserve that route and its synthesized `copy`-stanced Nothing
-  receiver;
+  type call must preserve that route and its pinned Nothing receiver, which
+  the call lends;
 - an alias representing an instance-qualified call must preserve its evaluated
   receiver route;
 - callable selection must not merge those routes merely because their visible
   parameter and result slots match; and
-- an exact `last` receiver remains unavailable to a receiverless type call even
-  when another candidate accepts unstanced `copy`.
+- a version with any receiver stance, `copy` included, remains unavailable to
+  a receiverless type call, which can use only a version with no receiver
+  stance.
 
 Exact contract syntax, proof, alias metadata, and selection comparison remain
 future work.
@@ -420,10 +420,57 @@ Future selection work must preserve:
 
 - exact generated signature identity;
 - demand-driven generation;
-- body/default/existing/bodyless/forbidden availability;
+- body/default/existing/forbidden availability;
 - unavailable-best behavior;
 - concrete specialization identity;
 - and diagnostics showing the generated and programmer-declared differences.
+
+### Declaring a shape now and implementing it later
+
+Zax previously had a **bodyless declaration**: a lifecycle or operator
+signature written with no body, `= default`, `= existing`, or `= forbidden`.
+It was meant to reserve a shape whose implementation "composition or later
+completion" would supply. It was retired because nothing in the language can
+supply that implementation:
+
+- composition uses `abstract` roles and `fulfill`, a separate mechanism;
+- partials add new declarations but cannot supply the body of a type's
+  existing declaration;
+- `forward` anchors introduce names, and callable forward requirements are
+  still later work.
+
+Without a completion mechanism, a bodyless declaration only blocked selection,
+which `= forbidden` already does, and a forgotten body silently became one. A
+signature that ends in none of the four forms is now an error.
+
+Its intended behavior, preserved for a future completion feature:
+
+```zax
+// retired form, recorded for future completion design only
+MyValue :: type transfer copy {
+  +++ final : ()(source : MyValue readonly copy &) copy
+  // reserved: building a copy value from a copy; a later completion supplies it
+}
+
+w : MyValue = other          // the reserved shape is the exact match: error until completed
+v : MyValue loan = other     // the generated constructor would match better, but the old
+                             // rule required the author to declare that shape explicitly
+                             // rather than generating it next to a reserved one
+```
+
+- **Blocking:** while unimplemented, it took part in selection like
+  `= forbidden`: if chosen, the call was an error, and fallback stopped at it.
+- **No silent neighbor generation:** if a generated shape would match better
+  than the reserved one, the author had to declare that shape explicitly
+  rather than the compiler generating it next to an unfinished design.
+- **Completion:** a later declaration was to supply the body.
+
+Activation: callable `forward` requirements, completion of a type's
+declarations through partials, or another feature that lets a declaration's
+body be supplied after the declaration. Such a feature should reintroduce a
+reserved-shape form only together with that completion mechanism, an explicit
+spelling that cannot be confused with a forgotten body, and a decision on the
+no-silent-neighbor-generation rule above.
 
 ## Source compatibility
 

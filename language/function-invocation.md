@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax calls |
 | Applies To | Programmer-facing synchronous function invocation, argument and default binding, results, and callable selection; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; the positional cursor and labels at a variadic pack, and `from` expansion in argument lists; transfer-aware value/reference binding, including the declared stance as the least stance a call must write, how by-value parameters are built from the stance the caller writes, and the loan-or-copy requirement, and composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; result packs in result slots; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; the single routing rule for forwarded result sequences into calls, returns, and construction, including collisions, the single-result intent error, and incidental labels; overload viability and preference, including selection rules for variadic candidates; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation, including a function value selecting one processing of a variadic callable; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
+| Owns | Ordinary call syntax; visible callable contracts; bound/unbound callable invocation and installed receiver use; instance and narrow type-callable `once` invocation; the parameter/argument distinction; type parameter slots and type arguments at the shared callable depth; concrete result specialization before literal invocation; positional, named, omitted, type-default, and contextual construction-packet inputs; the positional cursor and labels at a variadic pack, and `from` expansion in argument lists; transfer-aware value/reference binding, including a by-value parameter's own stance and its `via`, how by-value parameters are built from the stance the caller writes, the receiver as an input bound implicitly, and the loan-or-copy requirement, and composition preferred projection after an expected type exists; compatibility-posture and source-anchor call/result mapping; evaluation and binding order; ordinary and exceptional completion shapes; result slots, stance, completion, destination ordering, conditional publication, and elision; the callable-facing `self` result contract; multiple-result expression and mapping modes; result packs in result slots; operator result integration; result routing, including structural decomposition, recomposition, transforming groups, catch destinations, and exceptional forwarding; the single routing rule for forwarded result sequences into calls, returns, and construction, including collisions, the single-result intent error, and incidental labels; overload viability and preference, including selection rules for variadic candidates; receiver-slot comparison; minted concrete implementations and compatible visible-prototype adaptation, including a function value selecting one processing of a variadic callable; preservation of declaration-side replacement permission through mapping, results, and captures; synchronous call completion; `operator call` input/result mapping; `inline` hints; caller-location defaults; call/index mixfix parameter segmentation at the shared callable depth; invocation diagnostics, costs, and formatting |
 | Does Not Own | The variadic pack model: declaring, walking, counting, indexing, mapping, and holding packs ([variadics](variadics.md)); the `label` directive catalog entry ([compiler directives](compiler-directives.md#directive-catalog)); the cohesive exceptional-flow model ([exceptional result flow](except.md)); complete transfer meaning ([transfer stances](transfer-stances.md)); uncommitted integer evaluation and realization ([integer literals and realization](integer-literals.md)); literal source, declaration, payload, merge, and join behavior ([literal source and operators](literal-source-and-operators.md)); complete [optional behavior](optional-values.md); lambda/capture representation and callable composition ([lambdas and callable composition](lambdas-and-callable-composition.md)); composition publication, exposure, and route eligibility ([Zax composition](composition.md)); `using` resource enrollment and disposal ([Zax `using`](using.md)); operator forms and selection ([operators](operators.md), [operator catalog](operator-catalog.md)); or complete [reference origin and lifetime](lifetimes-and-references.md) |
 | Source / Provenance | Legacy function material together with current declaration, qualifier, construction, and source-structure constraints |
 
@@ -98,8 +98,8 @@ A bound implementation executes with an installed receiver available through
 ```zax
 Utilities :: type {
   compare final : (result : Boolean)(
-    lhs : String readonly &,
-    rhs : String readonly &
+    lhs : String readonly loan &,
+    rhs : String readonly loan &
   ) unbound = {
   }
 }
@@ -194,6 +194,28 @@ Document :: type {
 Complete receiver qualification is defined by
 [Zax qualifiers](qualifiers.md#receiver-operands).
 
+The receiver behaves like a parameter that is bound implicitly. A function may
+have versions with different receiver stances, and the stance written on the
+receiver chooses among them the same way an argument's stance chooses among
+parameters. A call with no stance written counts as `copy` where the receiver
+allows a copy, and otherwise lends it:
+
+```zax
+Document :: type {
+  publish final : ()() = { }        // no receiver stance: lends _
+  publish final : ()() last = { }   // may finish _
+}
+
+draft : Document
+draft.publish()                     // lends draft: a call with no stance never finishes it
+(draft as last).publish()           // the last version; draft counts as finished
+```
+
+How a call chooses a version is explained in
+[receivers](transfer-stances.md#receivers), and how the receiver is compared
+with the other inputs in
+[partial-order preference](#partial-order-preference).
+
 ### Type and instance calls to `once` functions
 
 A type-owned `once bound` function may be selected through either the type or an
@@ -224,10 +246,24 @@ create an overload tie between a hidden type-callable implementation and an
 instance implementation.
 
 A call on the type has no variable to write a stance on, so it is a call with
-no stance, and its receiver is the type's Nothing instance. Like any call with
-no stance, it uses the version with no receiver stance if there is one,
-otherwise a `copy` version. A version declared with a `last` receiver can
-therefore be called on an instance, but not on the type:
+no stance, and its receiver is the type's Nothing instance. The Nothing
+instance is a shared stand-in that is nobody's value, so it is pinned: nothing
+is ever built from it. A call on the type therefore lends it and uses the
+version with no receiver stance, even when the type also has a `copy` version:
+
+```zax
+MyResource :: type {
+  inspect final once : ()() = { }
+  inspect final once : ()() copy = { }
+}
+
+MyResource.inspect()   // the version with no receiver stance: the Nothing instance is lent
+resource : MyResource
+resource.inspect()     // the copy version: resource is a copy value and no stance is written
+```
+
+A type whose only version declares a receiver stance can't be called on the
+type itself:
 
 ```zax
 MyType :: type {
@@ -236,20 +272,19 @@ MyType :: type {
 }
 
 (value as last).consume()   // fine: the call writes last on the instance
-MyType.consume()            // error: a call on the type writes no stance, and
-                            // consume requires a last receiver
+MyType.consume()            // error: the Nothing instance is pinned, and consume needs a last receiver
 ```
 
 This is decided when the program is compiled, not at run time. An alias, a
 forwarded call, or a stored function value keeps track of whether it was a
 call on the type or on an instance.
 
-`_` is pointer-shaped, while `_.` supplies the dereferenced form. Mapping to an
-expected pointer prefers `_`; mapping to an expected `MyType` may use `_.`.
-Either form may be passed or returned. A `self` result is always a reference,
-so `return _` in a function with a `self` result returns the dereferenced
-form. `_` stands for the receiver itself, not for a pointer the programmer
-made, so passing `_` on passes the receiver with the same permissions. In a
+`_` stands for the receiver, and `_.` names the same value explicitly. A
+`self` result is always a reference, so `return _` in a function with a `self`
+result returns the receiver itself. `_` is not a pointer the programmer made:
+passing `_` on passes the receiver with the same permissions, and making a raw
+pointer from it needs `unsafe`, because the function can't see where its
+receiver came from. In a
 function whose receiver has no stance, that means passing on a loan, and
 passing it on with `move` or `last` is then an error. In a `move` or `last`
 version, passing `_` on with `move` or `last` is allowed but needs
@@ -433,7 +468,7 @@ lifetime cannot regain that authority by being mapped into a parameter,
 forwarded through a result, or captured:
 
 ```zax
-replaceThrough final : ()(target varying : MyType immutable writable varying &)
+replaceThrough final : ()(target varying : MyType immutable writable varying loan &)
 
 restricted final : MyType immutable writable varying & = value
 replaceThrough(restricted) // error: restricted may not delegate replacement authority
@@ -446,20 +481,24 @@ behavior is owned by
 
 ### Transfer-aware value and reference parameters
 
-An argument written with no stance means `copy`. A by-value parameter's
-declared stance says the least stance a call must write to use the function:
+An argument written with no stance means `copy` where the value allows a copy,
+and otherwise the value is lent. A by-value parameter is a new value the
+function owns, and it has two stances. Its **`via` stance** is the least stance
+a call must write; it defaults to `via copy`, which accepts any stance a call
+writes. Its **own stance** says what the function may build from it inside the
+body, like a local variable's stance.
 
 ```zax
 log final : ()(input : Message) = {
 }
 
-send final : ()(input : Message move) = {
+send final : ()(input : Message via move) = {
 }
 
 message : Message           // Message has copy and move constructors
 log(message)                // Message's copy constructor builds input
-log(message as move)        // log's parameter has no stance, so it accepts move: the move constructor runs
-send(message)               // error: send requires at least `as move`
+log(message as move)        // via copy accepts any stance: the move constructor runs
+send(message)               // error: send's input is via move, so the call must write as move or as last
 send(message as move)       // the move constructor builds input
 send(message as last)       // Message has no last constructor, so the move constructor runs
 ```
@@ -470,97 +509,114 @@ The constructor that builds the parameter decides what actually happens.
 For a by-value parameter, three separate things happen:
 
 1. **Choosing the function.** A call must write at least the parameter's
-   declared stance. A by-value parameter with no stance is called a **plain**
-   parameter; it behaves exactly like one declared `copy`. A call with no
-   stance, or with `as copy`, can use only plain and `copy` parameters. A call
-   with `as move` prefers a `move` parameter and can also use a plain or
-   `copy` parameter. A call with `as last` prefers `last`, then `move`, then
-   plain or `copy`. A `deep` parameter can be used only by a call written
-   `as deep`. If a call writes a weaker stance than every overload requires,
-   the call is an error at any use, not only at the variable's last use, which
+   `via` stance:
+
+   | The call writes | `via` stances it satisfies, closest first |
+   | --- | --- |
+   | No stance, or `as copy` | `via copy` |
+   | `as move` | `via move`, then `via copy` |
+   | `as last` | `via last`, then `via move`, then `via copy` |
+   | `as deep` | `via deep`, then `via copy` |
+   | `as loan` | none: a by-value parameter must be built, and lending builds nothing |
+
+   `copy` includes `deep`, so a call written `as deep` satisfies `via copy`
+   too; `via deep` is the closer match. Overloads may differ only in `via`,
+   and the call uses the closest one it satisfies. A call that writes a
+   weaker stance than every overload requires is an error at any use, not
+   only at the variable's last use, as
    [a later section](#a-last-use-needs-a-stated-stance) explains.
 2. **Building the parameter.** The stance the caller wrote chooses which of the
    type's constructors builds the parameter. If the type has no constructor
    for that stance, a weaker one runs: `last` falls back to `move`, then
-   `copy`, as [fallback](transfer-stances.md#fallback) explains. The
-   parameter's declared stance does not change it: a call with `as last` runs
-   the type's `last` constructor if there is one, even for a `move`
-   parameter. That constructor receives a reference to the caller's variable,
-   which is how a `move` or `last` constructor takes the contents out. The
-   caller's variable ends up in whatever state that constructor leaves it,
-   except that after `as last` it always counts as finished: it can only be
-   destroyed or replaced.
-3. **Inside the function.** The parameter is the function's own value. A use
-   of it with no stance is a `copy`, whatever the parameter's declared stance;
-   the declared stance only describes how the value arrived.
+   `copy`, as [fallback](transfer-stances.md#fallback) explains. The `via`
+   stance does not change it: a call with `as last` runs the type's `last`
+   constructor if there is one, even for a `via move` parameter. That
+   constructor receives a reference to the caller's variable, which is how a
+   `move` or `last` constructor takes the contents out. The caller's variable
+   ends up in whatever state that constructor leaves it, except that after
+   `as last` it always counts as finished: it can only be destroyed or
+   replaced.
+3. **Inside the function.** The parameter is the function's own value, and its
+   own stance says what may be built from it. An unmarked parameter is `copy`,
+   so its owner, the function, may write any stance on it. A parameter
+   declared `move` forbids copies, and one declared `loan` is pinned for the
+   length of the call.
 
 `Message` has `copy` and `move`; `MyOwnedFile` has only `move`:
 
-| Type | Parameter | Implicit | `as move` | `as last` |
+| Type | `via` | No stance written | `as move` | `as last` |
 | --- | --- | --- | --- | --- |
-| `Message` | plain | `copy` runs | `move` runs | `move` runs (no `last`) |
+| `Message` | `copy` (the default) | `copy` runs | `move` runs | `move` runs (no `last`) |
 | `Message` | `move` | error: requires at least `move` | `move` runs | `move` runs |
-| `Integer` | plain | `copy` runs | `copy` runs | `copy` runs |
+| `Integer` | `copy` (the default) | `copy` runs | `copy` runs | `copy` runs |
 | `Integer` | `move` | error: requires at least `move` | `copy` runs | `copy` runs |
-| `MyOwnedFile` | plain | error: no `copy` | `move` runs | `move` runs |
+| `MyOwnedFile` | `copy` (the default) | error: no `copy` | `move` runs | `move` runs |
 | `MyOwnedFile` | `move` | error: requires at least `move` | `move` runs | `move` runs |
 
 Once a function is chosen, its by-value parameter is built exactly like a
-local variable initialized with the same stance. A by-value `deep` parameter
-is built with the type's `deep` constructor, and inside the function a use
-with no stance is still a copy.
+local variable initialized with the same stance. A `via deep` parameter is
+built with the type's `deep` constructor.
 
-Because uses inside the function are copies by default, taking from the
-parameter must be written where it happens:
+The two stances are independent. Here the call must hand the message over, and
+the body must not copy it either:
 
 ```zax
-archive final : ()(input : Message move) = {
-  record(input.payload)            // a copy
-  record(input.payload as move)    // the move is visible where it happens
+keep final : ()(input : Message) = {
+}
+
+archive final : ()(input : Message move via move) = {
+  keep(input)              // error: input is move, so nothing may be copied from it
+  keep(input as move)      // fine: the move is visible where it happens
 }
 ```
 
+The complete rules for `via`, including its uses and why it applies only to
+values that are built, are in
+[by-value parameters and `via`](transfer-stances.md#by-value-parameters-and-via).
+
 A reference parameter builds nothing; it refers directly to the caller's
-variable. Its declared stance says what the function may do to that variable,
-so a call must write at least that stance, for every type and every time:
+variable. The stance written before `&` says what the function may do to that
+variable, and a call must write at least that stance, for every type and every
+time. A reference parameter must write its stance, and `via` on a reference is
+an error, because the stance before `&` already does the job:
 
 ```zax
-show final : ()(input : Message readonly &) = {
+show final : ()(input : Message readonly loan &) = {
 }
-// unmarked: a loan; nothing is copied or taken through input
+// nothing is copied or taken through input
 
-remember final : ()(input : Message readonly & copy) = {
+remember final : ()(input : Message readonly copy &) = {
 }
 // may copy from the caller's message
 
-consume final : ()(input : Message mutable writable & move) = {
+consume final : ()(input : Message mutable writable move &) = {
   record(input.payload as move)    // takes resources from the caller's message
 }
 
-bump final : ()(value : Integer mutable writable & last) = {
+bump final : ()(value : Integer mutable writable last &) = {
 }
 
 count : Integer
-show(message)              // a loan accepts any call
-remember(message)          // no stance means copy, which remember's & copy accepts
+show(message)              // lending is always allowed
+remember(message)          // no stance means copy, which remember's copy & accepts
 consume(message)           // error: consume requires at least `as move`
 consume(message as move)
 bump(count)                // error: bump requires `as last`, even for an Integer
 bump(count as last)
 ```
 
-A reference parameter with no stance is a **loan**: the caller's value as a
-whole cannot be copied, moved, or taken through it, though a
-`mutable writable` loan may change it, and its members, in place. A function
-that copies or takes the whole value through a reference must declare
-`& copy`, `& move`, `& last`, or `& deep`. `bump(count)` is an error even
-though an `Integer` has nothing to take: `bump` declared that it may take over
-`count`, and a call with no stance only allows a `copy`.
+A `loan &` reference lets the function use the caller's value but never copy,
+move, or take it as a whole; a `mutable writable loan &` may still change it,
+and its members, in place. A function that copies or takes the whole value
+through a reference declares `copy &`, `move &`, `last &`, or `deep &`.
+`bump(count)` is an error even though an `Integer` has nothing to take: `bump`
+declared that it may take over `count`, and a call with no stance only allows
+a `copy`.
 
-Suppose a function has a `mutable writable & move` reference overload and a
-by-value `move` overload, and the caller's variable is mutable and writable. A
-call with `as move` uses the reference overload, because it builds no new
-value. Writing `(message as readonly) as move` rules out the reference
+Suppose a function has a `mutable writable move &` reference overload and a
+by-value `via move` overload, and the caller's variable is mutable and
+writable. A call with `as move` uses the reference overload, because it builds
+no new value. Writing `(message as readonly) as move` rules out the reference
 overload; the by-value overload is then used, and its parameter is built by
 copying, because `Message`'s move constructor needs a `mutable writable`
 source.
@@ -571,10 +627,10 @@ no stance must choose; see
 
 What each stance means, how fallback works, and what state the caller's
 variable is left in are explained in
-[Zax transfer stances](transfer-stances.md#by-value-and-by-reference); the
-body defaults are listed in
-[stances inside a body](transfer-stances.md#stances-inside-a-body), and
-[loan](transfer-stances.md#loan) defines what a loan promises.
+[Zax transfer stances](transfer-stances.md#by-value-and-by-reference). Which
+stances a reference parameter may pass on to another function is in
+[passing a value to a reference](transfer-stances.md#passing-a-value-to-a-reference),
+and [loan](transfer-stances.md#loan) defines what a loan promises.
 
 ### Array values, bounded references, and slices
 
@@ -656,7 +712,7 @@ Preferred projection begins only after normal callable discovery has found a
 candidate and that candidate supplies an expected input type:
 
 ```zax
-tune final : ()(target : Engine readonly &) = {
+tune final : ()(target : Engine readonly loan &) = {
 }
 
 Car :: type {
@@ -668,7 +724,7 @@ tune(car) // projects the preferred Engine member
 ```
 
 The call first finds `tune`; it does not search through `car`. The selected
-prototype then says that this input needs an `Engine readonly &`. Because `car`
+prototype then says that this input needs an `Engine readonly loan &`. Because `car`
 does not match directly, its `preferred` member may supply `car.engine`.
 
 An exact input match always beats preferred projection. If several projected
@@ -926,7 +982,7 @@ mapping identifies one concrete expected parameter type, however, that parameter
 supplies the packet's destination:
 
 ```zax
-draw final : ()(point : Point &) = {
+draw final : ()(point : Point readonly loan &) = {
 }
 
 draw(point: [{ .x = 4, .y = 5 }])
@@ -1127,54 +1183,43 @@ The default expression evaluates once for each actual omission. A captured
 environment or retained state needed by that delayed expression is a cost of the
 visible contract.
 
-A raw pointer parameter may allocate its omission default:
+A borrowing raw pointer parameter can have a default that allocates a value
+for the length of the call. `@` can only go into a pointer that owns the
+allocation, so the default builds a temporary owner and borrows from it with
+`.`:
 
 ```zax
 useValue final : ()(
-  value : MyValue * = @
+  value : MyValue loan * = (: MyValue * last = @).
 ) = {
-  // value is borrowed raw; the body owns no cleanup obligation.
+  // value is a borrowing raw pointer; the body owns no cleanup obligation
 }
+
+useValue()          // the temporary owner lives through the call and frees the allocation afterward
+useValue(myView)    // a supplied pointer keeps its ordinary ownership and lifetime
 ```
 
-`= @` is a default expression, not a cleanup contract on the parameter slot.
-When the caller omits `value`, caller-side invocation machinery owns the
-scheduled allocation temporary through call completion and binds its raw address
-to the parameter. When the caller supplies a value, that source retains its
-ordinary ownership or lifetime responsibility.
+A temporary lives through the call it is part of, and making a pointer from
+`owner.` copies the address without touching the value, as
+[borrowing through `p.`](pointers-and-arenas.md#borrowing-through-p) explains.
+So the callee borrows, and the allocation ends when the call completes.
 
-General default expressions preserve the same boundary:
-
-```zax
-useValue final : ()(
-  value : MyValue * = makeScheduledValue()
-) = {
-}
-```
-
-If the producer returns a scheduled temporary, that temporary remains alive
-through the call and is dispositioned afterward.
-
-A terminally transferred open-ended default can also be adopted into an
-invocation-owned cleanup obligation:
+A function's owning result works the same way:
 
 ```zax
-makeOpenValue final : (
-  result : MyValue * last = @<
-)() = {
+makeValue final : (result : MyValue * last = @)() = {
 }
 
-useValue final : ()(
-  value : MyValue * = makeOpenValue()
+useMade final : ()(
+  value : MyValue loan * = makeValue().
 ) = {
 }
 ```
 
-The caller-side boundary retains the allocation through call completion and
-resets it afterward. This is valid only when the result carries allocation-root
-and disposition authority. A global or ordinary borrowed result causes no
-cleanup to be invented. The callee sees a borrowed raw parameter in every case.
-Use a managed pointer parameter when ownership must transfer into the callee.
+Writing `value : MyValue * = @` is an error, because a borrowing pointer can't
+hold an allocation. Declaring the parameter `MyValue * last = @` instead would
+make the callee own and free the allocation, which changes what the function
+does. Use an owning parameter only when ownership should pass into the callee.
 
 ## Result slots
 
@@ -1210,8 +1255,8 @@ Each ordinary result declaration establishes:
 
 - an ordered result slot;
 - a source-facing label, type, and qualifications;
-- a declared stance, which decides how the caller's destination is built from
-  the result; and
+- a stance, which says what may be built from the result, inside the function
+  and for the caller alike; and
 - an obligation to contain one complete value whenever the success outcome is
   selected.
 
@@ -1227,7 +1272,7 @@ An ordinary result slot begins unconstructed:
 make final : (
   result : Item
 )(
-  source : Item readonly & copy
+  source : Item readonly copy &
 ) = {
   return source
 }
@@ -1257,59 +1302,65 @@ optional construction and transfer is defined by
 [Zax optional values](optional-values.md#parameters-and-results).
 
 The `return` expression, or the result's initializer, decides how the result
-itself is built. The stance written on the result's declaration decides how
-the caller's destination is then built from the result, unless the caller
-writes a stance on the call, as in `make(template) as last`; the stance the
-caller writes wins.
-
-```zax
-make final : (
-  result : Item move
-)(
-  source : Item readonly & copy
-) = {
-  return source as copy
-}
-
-stored := make(template)   // stored is built from the result with move
-```
-
-`return source as copy` builds `result` by copying `source`. Then `stored` is
-built from `result` with `move`, because `result` is declared `move`. That
-applies only to this one step: `stored` itself has no declared stance and is
-unrestricted.
-
-Inside the function, `result` behaves like a parameter: a use with no stance
-is a copy, and taking from it must be written with a stance at the use:
+is built. When the caller uses the result to start a new variable, the result
+and that variable are the same value. So **a result has one stance, with the
+same meaning inside the function and for the caller**:
 
 ```zax
 makeMessage final : (
   result : Message move
 )(
-  source : Message readonly & copy
+  source : Message readonly copy &
 ) = {
   result.+++(source as copy)
-  inspect(result)               // lends result if inspect takes a reference;
-                                // copies it if inspect takes a value
-  archive(result as move)       // taking from result is written at the use
+  inspect(result)               // fine if inspect takes a reference: lending builds nothing
+  cache.store(result)           // error if store takes a Message by value: result is move
 }
 ```
 
-A reference result with no stance is a `loan`, like any reference with no
-stance; `& loan` says the same thing explicitly. A `self` result is the one
-exception, as [`self` results](#receiver-origin-self-results) explains:
+`via` on a result is the least stance the function's own `return` must write
+when it builds `result`, just as a parameter's `via` is the least stance a call
+must write:
+
+```zax
+makeBig final : (result : MyBigBuffer via move)() = {
+  return cached                 // error: no stance means copy; write as move or as last
+  return cached as move         // fine
+}
+```
+
+The caller's variable may declare its own stance, because a stance describes a
+place, not where its value came from. The exception is a `loan` result.
+Nothing may be built from it, so the caller receives it as that same value,
+in a variable declared `loan`:
+
+```zax
+stored : Message = makeMessage()          // fine: stored is an ordinary copy variable
+pinned : Message loan = makeMessage()     // fine
+
+giveDevice final : (result : MyDevice loan)() = {
+}
+
+device : MyDevice loan = giveDevice()     // fine: the result is built directly into device
+other : MyDevice = giveDevice()           // error: nothing may be built from a loan result
+```
+
+A reference result must write its stance, like any reference that has no
+single value to take a stance from. A `self` result is the one exception, as
+[`self` results](#receiver-origin-self-results) explains:
 
 ```zax
 current final : (
-  result : MyDocument readonly & loan
+  result : MyDocument readonly loan &
 )() = {
 }
 ```
 
 The caller may use the value the result refers to, as its qualifiers allow,
 but may not copy or keep it, and anything made from it is also a loan. The
-usual lifetime rules for returned references apply; see [loan](transfer-stances.md#loan) and
-[results and forwarding](transfer-stances.md#results-and-forwarding).
+usual lifetime rules for returned references apply; see
+[results](transfer-stances.md#results) and
+[lifetimes and references](lifetimes-and-references.md#returned-references).
 
 A function always returns the types written in its selected prototype, even
 when the compiler evaluates the call early. A number literal in `return` can
@@ -1400,7 +1451,7 @@ result `self` says that every `return` hands back exactly the receiver `_`:
 Engine :: type {
   tune final : (
     result self # : Engine &
-  )(profile : Profile readonly &) = {
+  )(profile : Profile readonly loan &) = {
     apply(_, profile)
     return _
   }
@@ -1428,7 +1479,7 @@ Engine :: type {
   }
   // fine
 
-  peekRestated final : (result self : Engine readonly & copy)() readonly = {
+  peekRestated final : (result self : Engine readonly copy &)() readonly = {
     return _
   }
   // error: a self result takes its stance and qualifiers from the caller
@@ -1452,7 +1503,7 @@ engine.peek().tune(profile)   // fine: peek's result is engine itself, which is 
 The stance written on the call travels with the result too, and a stance
 declared on the variable still applies. Here `restricted` is declared `move`,
 which means every transfer from it must be written with `move` or `last`, as
-[declared stances](transfer-stances.md#locals-aliases-and-members) explains:
+[declared stances](transfer-stances.md#locals-and-members) explains:
 
 ```zax
 // install takes an Engine by value
@@ -1491,58 +1542,60 @@ without using the result. The generated `=` does the same; see
 
 A function that returns `_` in some other way follows the ordinary result
 rules. When the function declares no receiver stance, `_` is a `loan` inside
-it, so returning `_` through a `& copy` result is an error: the caller could
-then copy a value the function was only lent. Where a `self` result may be used, and how long it stays valid, is
-explained in
+it, so returning `_` through a `copy &` result is an error: the caller could
+then copy a value the function was only lent. Where a `self` result may be
+used, and how long it stays valid, is explained in
 [lifetimes and references](lifetimes-and-references.md#receiver-origin-self).
 
-### Results with no declared stance
+### Results the caller doesn't name
 
-A result's declared stance is part of the function's signature. A by-value
-result holds its own value only until the caller uses it, and nothing can use
-it again after that. So a by-value result with no declared stance is passed
-on as `last`:
+A result the caller doesn't name is a temporary, and nothing can use it again
+after the expression that uses it. So it is treated as written with the
+strongest stance its own stance allows:
+
+| The result's stance | The unnamed result is treated as written |
+| --- | --- |
+| `copy` (or none), `move`, `last` | `as last` |
+| `deep` | `as deep` |
+| `loan` | nothing can be built from it; it can only be lent, or received as the same value |
 
 ```zax
 consume final : ()(
-  input : Item readonly &
+  input : Item readonly loan &
 ) = {
 }
 
 consume final : ()(
-  input : Item mutable writable & last
+  input : Item mutable writable last &
 ) = {
 }
 
 make final : (
   result : Item
 )(
-  source : Item readonly & copy
+  source : Item readonly copy &
 ) = {
   return source
 }
 
-consume(make(template))   // the result is passed on as last: the `& last` consume runs
-item := make(template)    // item is built from the result with last: Item's move
-                          // constructor runs if Item has one
+consume(make(template))   // written as last: the last & consume is chosen
+existing = make(template) // written as last: Item's move or last assignment can run
 ```
 
-A function that wants its callers to receive a copy declares
-`result : Item copy`. A caller can write a stance on one call, which replaces
-the result's, as in `consume(make(template) as copy)`. A discarded result is
+A caller can still write a stance on the call, as in
+`consume(make(template) as copy)`. That is fine for a `copy` result and an
+error for a `move` result, which forbids copies. A discarded result is
 destroyed like any unused value. Each result of a function with several
-results follows its own declaration.
-
-Failure results follow the same rule; see
+results follows its own declaration, and failure results follow the same
+rules; see
 [Zax exceptional result flow](except.md#transfer-ownership-and-references).
 
-A reference result with no stance is a loan, like any other reference with no
-stance, because it only refers to a value someone else holds. A pointer result
-follows the ownership rules of its pointer kind: a raw pointer result that
-allocates with `= @` hands its allocation to the caller unless it declares
-`copy`. See
-[lifetimes and references](lifetimes-and-references.md#returned-references) and
-[pointers and arenas](pointers-and-arenas.md).
+A pointer result follows the ownership rules of its pointer kind. A raw pointer
+result that allocates with `= @` is declared `* last` or `* move`, so it owns
+the allocation and the caller takes it over, as
+[returning an owning raw pointer](pointers-and-arenas.md#returning-an-owning-raw-pointer)
+explains. Temporaries in general are explained in
+[temporaries](transfer-stances.md#temporaries).
 
 ### Opt-in result initialization
 
@@ -1573,29 +1626,32 @@ After every input and omitted default is complete, opted-in result initializers
 run in result-slot declaration order in the selected callee's visible prototype.
 They may refer to any completed input parameter.
 
-A raw pointer result may allocate and attach disposition to its result slot:
+An owning raw pointer result may allocate before the body runs:
 
 ```zax
 makeValue final : (
   result : MyValue * last = @
 )() = {
-  // result is allocated, constructed, and scheduled before body entry.
+  // result is allocated and constructed before body entry
 }
+
+value : MyValue * last = makeValue()   // value takes over the allocation and will free it
 ```
 
-`= @` allocates the result before the body runs, and the result is
-responsible for freeing it. `last` hands that responsibility to the caller;
-it is also what a result with no stance does:
+The result owns the allocation, because its stance is `last`. The caller's
+owning pointer takes it over; if the caller discards the result, the temporary
+frees it at the end of the statement. A result declared `* move = @` owns its
+allocation the same way. A borrowing result can't hold an allocation:
 
 ```zax
-value : MyValue * = makeValue()
+borrowValue final : (
+  result : MyValue * copy = @
+)() = {
+}
+// error: a raw copy result cannot own an allocation
 ```
 
-The caller declaration adopts the allocation and schedules its disposition. If
-the result is discarded, the result slot retains responsibility and dispositions
-the successful allocation.
-
-Reporting allocation transfers either a successful schedule or vacancy:
+Reporting allocation gives the caller either an allocation or a vacant pointer:
 
 ```zax
 tryMakeValue final : (
@@ -1604,40 +1660,14 @@ tryMakeValue final : (
 }
 ```
 
-A result that allocates with `= @` and declares no stance is passed on as
-`last`, like any by-value result with no stance, so the caller takes over the
-allocation. Declaring `copy` instead says on purpose that callers only borrow
-the pointer, and the result frees the allocation after the call:
-
-```zax
-borrowValue final : (
-  result : MyValue * copy = @
-)() = {
-}
-```
-
-An immediate use may remain inside the producer result slot's lifetime. Retaining
-the copied address beyond that schedule requires another proved owner, a
-use-site `as last`, or narrow unsafe responsibility where the relationship may be
-valid but is opaque. A proved-invalid escape remains an error.
-
-Explicit raw `move` likewise does not transfer the declaration-attached schedule;
-it is subject to the same outward lifetime boundary. `deep` is available only
-when an exact deep-capable consumer exists and never implies built-in raw-pointee
-cloning. Only `last` ordinarily transfers a scheduled raw result's disposition
-responsibility.
-
-For ordinary result declarations, non-reporting `@` and `@<` also promise a
-non-vacant pointer whenever success is selected. The body may temporarily reset
-or replace the result but must restore presence. `@!` and `@!<` permit a vacant
-success result.
+A result declared `= @` promises a non-vacant pointer whenever success is
+selected. The body may reset or replace the result in between, but must
+restore presence before it completes. `= @!` permits a vacant success result.
 
 | Result initializer | Body-entry state | Normal-exit guarantee |
 | --- | --- | --- |
-| `@` | Definitely present, scheduled | Definitely present |
-| `@!` | Possibly vacant, scheduled after success | Possibly vacant |
-| `@<` | Definitely present, open-ended | Definitely present |
-| `@!<` | Possibly vacant, open-ended after success | Possibly vacant |
+| `@` | Definitely present | Definitely present |
+| `@!` | Possibly vacant | Possibly vacant |
 | None | Unconstructed result slot | Body must construct one complete pointer value |
 
 An opaque operation may use narrow unsafe responsibility to assert a
@@ -1650,13 +1680,11 @@ promising presence whenever success is selected. `= @` provides the promise by
 allocating before body entry; an uninitialized pointer or optional result
 permits delayed construction but exposes no presence guarantee to callers.
 
-References provide borrowed inputs with no independent vacancy state, but do
-not preserve pointer ownership or rebinding. Unchecked pointer dereference may
-mechanically bind a reference to Nothing backing; a statically proved vacant
-source is diagnosed. General future callable preconditions and postconditions
-should express contracts such as “this pointer is present on entry” or “this
-optional/owning result is present on normal exit” without inventing
-pointer-only type qualifiers.
+A reference parameter is never vacant, but it can't own or be rebound, so it
+doesn't replace a pointer that must be present. Contracts such as “this
+pointer is present on entry” or “this optional or owning result is present on
+normal exit” are future work, which may express them through callable
+contracts or through pointer types.
 
 Pre-body constructedness is part of body/prototype compatibility. A body that
 expects a live result on entry cannot be reused with a prototype that leaves
@@ -3427,7 +3455,7 @@ would fill its compile-time parameter, which the arguments do not:
 
 ```zax
 parseValue$ final : (ResultType : type = Integer)(result : ResultType)(
-  text : String readonly &
+  text : String readonly loan &
 ) = {
 }
 
@@ -3630,8 +3658,8 @@ does. An error inside a generic body never makes a candidate not viable.
 
 Private declarations outside the caller's permitted context are ineligible
 before preference. Availability of an eligible visible candidate is checked
-after preference so a uniquely best bodyless, forbidden, or unsupported
-generated declaration can report unavailable-best rather than falling through.
+after preference so a uniquely best forbidden or unsupported generated
+declaration can report unavailable-best rather than falling through.
 
 A number literal can directly supply a parameter declared with an integer type:
 
@@ -3681,7 +3709,7 @@ A better stance match never wins over a worse type or qualifier match.
 deliver final : ()(input : Message) = {
 }
 
-deliver final : ()(input : Packet last) = {
+deliver final : ()(input : Packet via last) = {
 }
 
 deliver(message as last)
@@ -3689,76 +3717,89 @@ deliver(message as last)
 // the second matches the stance exactly but needs a conversion.
 ```
 
-When comparing stances alone, a parameter whose stance matches what the call
-wrote is best, followed by weaker stances in fallback order. A `loan` reference
-comes last: any call can use it, and a call written `as loan` can use only a
-`loan` parameter.
+When comparing stances alone, the parameter closest to what the call wrote is
+best. A by-value parameter is compared by its `via` stance, and a reference
+parameter by the stance before its `&`. A `loan &` reference comes last: any
+call can use it, and a call written `as loan` can use only a `loan &`
+parameter.
 
-| The call writes | Parameters it can use, best first |
-| --- | --- |
-| none, or `as copy` | `copy` or no stance, then `loan` |
-| `as move` | `move`, then `copy` or no stance, then `loan` |
-| `as last` | `last`, then `move`, then `copy` or no stance, then `loan` |
-| `as deep` | `deep`, then `loan` |
-| `as loan` | `loan` only |
+| The call writes | By-value parameters it can use, closest first | Reference parameters it can use, closest first |
+| --- | --- | --- |
+| No stance, or `as copy` | `via copy` | `copy &`, then `loan &` |
+| `as move` | `via move`, then `via copy` | `move &`, then `copy &`, then `loan &` |
+| `as last` | `via last`, then `via move`, then `via copy` | `last &`, then `move &`, then `copy &`, then `loan &` |
+| `as deep` | `via deep`, then `via copy` | `deep &`, then `copy &`, then `loan &` |
+| `as loan` | none | `loan &` only |
+
+`copy` includes `deep`, so a call written `as deep` can also use `via copy` and
+`copy &`. A call with no stance on a value that forbids copies lends it, so it
+can use only `loan &`.
 
 There is one exception to this order. When a call with no stance could use
-either a `loan` reference or a by-value parameter, the by-value parameter does
-not win, even though `copy` ranks above `loan`. The caller must write
+either a `loan &` reference or a by-value parameter, the by-value parameter
+does not win, even though `copy` ranks above `loan`. The caller must write
 `as loan` or `as copy`, as
 [a loan or a copy must be stated](#a-loan-or-a-copy-must-be-stated) explains.
 
 Apart from that, whether a parameter is by-value or by reference does not
 count for or against it in this comparison; it only matters in a later
-tie-breaker, described below. A call with no stance can never use a `move` or
-`last` parameter, so it always uses the plain overload:
+tie-breaker, described below. Overloads may differ only in `via`. A call with
+no stance can never use a `via move` or `via last` parameter, so it uses the
+overload with no `via`:
 
 ```zax
 emit final : ()(input : Message) = {
 }
 
-emit final : ()(input : Message move) = {
+emit final : ()(input : Message via move) = {
 }
 
-emit final : ()(input : Message last) = {
+emit final : ()(input : Message via last) = {
 }
 
-emit(message)           // the plain emit
-emit(message as move)   // the move emit
-emit(message as last)   // the last emit
+emit(message)           // the emit with no via
+emit(message as move)   // the via move emit
+emit(message as last)   // the via last emit
 ```
 
-The receiver is compared separately:
-
-- a version with no receiver stance holds the receiver as a `loan` and
-  accepts any call;
-- a call that writes a stance uses the version with exactly that receiver
-  stance if there is one, otherwise the version with no receiver stance;
-- a call that writes no stance uses the version with no receiver stance if
-  there is one, otherwise the `copy` version, and otherwise it is an error;
-  a stronger version is never chosen without its stance written; and
-- versions with a receiver stance do not fall back to each other: a `move`
-  version is not used for `as last`, and a `copy` version is not used for
-  `as move`.
+The receiver is one more input, compared on equal terms with the others. A
+version qualifies when the stance written on the receiver allows what that
+version takes, along `copy`, `move`, `last`, and the receiver's own stance
+allows the version's stance. A version with no receiver stance always
+qualifies. Among the versions that qualify, the closest to the written stance
+wins, with one exception: a `last` version never serves a call written
+`as move`, because the caller expects a usable value afterward. A call with no
+stance counts as `copy` where the receiver allows a copy, and otherwise lends
+it:
 
 ```zax
 MyValue :: type {
   refresh final : ()() = { }        // no receiver stance: lends _
+  refresh final : ()() copy = { }   // may copy from _
   refresh final : ()() move = { }   // may take resources out of _
 }
 
-myValue : MyValue move
-myValue.refresh()               // the version with no receiver stance: lends myValue
-(myValue as move).refresh()     // the move version
+plain : MyValue
+plain.refresh()                 // the copy version: plain allows copies, and no stance means copy
+(plain as last).refresh()       // the move version: it takes no more than last and is closest
+
+locked : MyValue move
+locked.refresh()                // the version with no receiver stance: locked forbids copies, so it is lent
+(locked as move).refresh()      // the move version
 ```
 
-Because a call with no stance prefers the version with no receiver stance,
-adding a `copy` version to a type never changes what existing calls do.
+A `move`, `last`, or `deep` version is chosen only when the call writes that
+stance; a variable's declared stance never chooses a version for it. Adding a
+`copy` version to a type can change which version an existing call with no
+stance uses on a value that allows copies. A `copy` version can't change the
+caller's value, so the caller's code stays correct. Constructors compare their
+receiver the same way; see
+[choosing a constructor](construction-and-destruction.md#choosing-a-constructor).
 
 The later tie-breakers still apply. Suppose a function has a
-`mutable writable & move` reference overload and a by-value `move` overload,
-and the caller's variable is mutable and writable. A call with `as move` uses
-the reference overload, because it builds no new value.
+`mutable writable move &` reference overload and a by-value `via move`
+overload, and the caller's variable is mutable and writable. A call with
+`as move` uses the reference overload, because it builds no new value.
 
 Generic candidates fit this structure. Only between otherwise equally good
 matches does a non-generic candidate beat a generic one, and one generic
@@ -3774,7 +3815,7 @@ eventual rules must fit this partial-order structure.
 A function may have two overloads, one taking a `loan` and one taking a value:
 
 ```zax
-adjust final : ()(input : MyType mutable writable & loan) = {
+adjust final : ()(input : MyType mutable writable loan &) = {
 }
 
 adjust final : ()(input : MyType) = {
@@ -3809,8 +3850,8 @@ At a use:
 - no viable candidate is an error;
 - several nondominated viable candidates are ambiguous;
 - an eligible visible declaration may be uniquely best but unavailable to
-  invoke, for example because it is bodyless, forbidden, or requires generated
-  behavior the language cannot supply;
+  invoke, for example because it is forbidden or requires generated behavior
+  the language cannot supply;
 - that unavailable-best case is an error;
 - and selection does not fall through to a weaker available declaration.
 
@@ -3838,7 +3879,7 @@ relay final : ()(input : Message) = {
 sendCount final : ()(count : Integer) = {
 }
 
-send final : ()(input : Message move) = {
+send final : ()(input : Message via move) = {
 }
 
 send(message)       // error at any use: send requires at least `as move`
@@ -3872,7 +3913,7 @@ would take the value:
 
 ```zax
 inspect final : ()(
-  value : Record readonly &
+  value : Record readonly loan &
 ) = {
 }
 
@@ -4003,8 +4044,8 @@ another candidate's better result, provided its result remains viable.
 No tie is resolved by source, declaration, import, module, or generation order.
 An equal undominated set is an ambiguity error.
 
-Availability remains separate from match quality. A uniquely best bodyless,
-forbidden, unresolved generated-versus-existing, or otherwise unavailable
+Availability remains separate from match quality. A uniquely best forbidden,
+unresolved generated-versus-existing, or otherwise unavailable
 candidate produces an unavailable-operation diagnostic. Selection does not fall
 through silently to a weaker candidate.
 
@@ -4027,8 +4068,8 @@ implementation prototype + body
 ```
 
 A compatible visible prototype reuses that minted implementation. It does not
-reprocess the body, select different internal overloads, change internal
-scheduled assignment into open-ended assignment, or remint the callable.
+reprocess the body, select different internal overloads, change how the body
+builds or frees its results, or remint the callable.
 
 A generic differs. Its body is processed once for each distinct set of
 compile-time inputs, including each qualification of a worked-out type, and each
@@ -4042,7 +4083,7 @@ An exact prototype can select one member of an overload group:
 
 ```zax
 selected final : ()(
-  value : Document readonly &
+  value : Document readonly loan &
 ) = consume
 
 selected(document)
@@ -4113,12 +4154,10 @@ visible inputs/defaults
 The new prototype may:
 
 - relabel compatible slots;
-- replace call-boundary defaults; and
-- change caller result-acknowledgement policy;
-- change outward result transfer stance when the minted result can satisfy that
-  mapping; and
-- expose a scheduled raw result as open-ended, or an open-ended minted result as
-  scheduled, while preserving the minted body's internal cleanup behavior.
+- replace call-boundary defaults;
+- change caller result-acknowledgement policy; and
+- narrow a result's stance, so that callers may do less with it, as described
+  below.
 
 Relabeling may explicitly rename a corresponding exceptional outcome. The
 visible prototype must otherwise preserve each result's
@@ -4140,25 +4179,33 @@ It may not:
 - add, remove, discard, or change the category of an exceptional outcome; or
 - change operations already selected inside the body.
 
-For allocated raw results, presence and outward cleanup are separate:
+**A result's stance may only narrow.** A visible prototype may give a result a
+stance that lets callers do less with the value the body built, never more:
 
 ```zax
 implementation final : (
   result : MyValue * last = @
 )() = {
-  // Minted scheduled-result behavior.
 }
 
-manualResult final : (
-  result : MyValue * last = @<
-)() = implementation
+narrowed final : (result : MyValue * last = @)() = implementation   // fine: the same stance
+
+widened final : (result : MyValue * copy = @)() = implementation
+// error: a copy pointer can't own the allocation the body built; if it could,
+// copies of it could free the allocation twice
 ```
 
-The alias is compatible: both contracts provide and produce a definitely present
-pointer. The minted body retains its scheduled replacement behavior, while the
-visible boundary leaves final cleanup to `manualResult`'s caller.
+- **Narrowing is safe:** callers may do less with a value the body built for
+  them. A `copy` result may be presented as `move` or `last`.
+- **Widening is unsafe:** turning a `MyValue * last` result into
+  `MyValue * copy` would make an owning pointer copyable, so the allocation
+  could be freed twice.
+- **To or from `loan` is not allowed:** a `loan` result must be built directly
+  into the caller's variable, and a visible prototype can't change how the body
+  builds it.
 
-`@` and `@!` are incompatible in either direction:
+Allocation presence follows the same reasoning. `@` and `@!` are incompatible
+in either direction:
 
 ```zax
 maybeEntry final : (
@@ -4169,12 +4216,6 @@ maybeEntry final : (
 
 Conversely, an implementation minted with `@!` may return vacancy, so an alias
 using `@` would overpromise presence to callers.
-
-Changing outward stance does not alter internal stance-driven behavior already
-minted into the body. The boundary change is legal only when the produced result
-can satisfy it. In particular, exposing a scheduled raw result as explicit
-`copy` retains producer cleanup and therefore supports only lifetime-safe
-borrowed uses unless a caller restates `last` or proves another owner.
 
 If entering the original body requires executable adaptation, write a wrapper or
 lambda. The one exception is the compiler-generated glue that binds a fixed
@@ -4195,10 +4236,10 @@ declaration is ambiguous rather than choosing by source order or implementation
 preference. An exact private helper can make that choice explicit:
 
 ```zax
-startExact private final : ()(fuel : Fuel readonly &) =
+startExact private final : ()(fuel : Fuel readonly loan &) =
   via engine.start
 
-start final : ()(tank : Tank readonly &) =
+start final : ()(tank : Tank readonly loan &) =
   via startExact
 ```
 
@@ -4213,11 +4254,11 @@ its provenance mechanism explicit:
 
 ```zax
 // The selected contract proves this result origin.
-knownOwner final : (result : Car &)() =
+knownOwner final : (result : Car loan &)() =
   via engine.selectedPeer
 
 intent<redundant-outer-tracking>{
-  possibleOwner final : (result : Car & ?)() =
+  possibleOwner final : (result : Car loan & ?)() =
     tracked via engine.selectedPeer
 }
 ```
@@ -4230,10 +4271,10 @@ that proof, the complete declaration requires
 Without selected-contract proof, the checked and asserted forms instead remain:
 
 ```zax
-possibleOwner final : (result : Car & ?)() =
+possibleOwner final : (result : Car loan & ?)() =
   tracked via engine.selectedPeer
 
-assertedOwner final : (result : Car &)() =
+assertedOwner final : (result : Car loan &)() =
   unsafe via engine.selectedPeer
 ```
 
@@ -4253,7 +4294,7 @@ Engine :: type {
   reset final : ()() = {
   }
 
-  reset final : ()(profile : Profile readonly &) = {
+  reset final : ()(profile : Profile readonly loan &) = {
   }
 }
 
@@ -4346,8 +4387,8 @@ A temporary bound to a reference parameter survives through that boundary:
 inspect(makeBuffer())
 ```
 
-If `inspect` receives `Buffer readonly &`, the temporary remains live throughout
-`inspect`.
+If `inspect` receives `Buffer readonly loan &`, the temporary remains live
+throughout `inspect`.
 
 A temporary value built directly in an expression has no name, so it is
 destroyed right after the one call that uses it. It is therefore treated as if
@@ -4360,8 +4401,9 @@ result := (: Source).get()
 If `get` has a version with a `last` receiver, that version may be used. The
 unnamed `Source` cannot be used again after this call, so nothing is hidden
 from the reader; this is not the compiler guessing that a named variable is
-finished. A named receiver uses `copy` unless the call writes another stance,
-as in `(value as last).get()`. A stance declared on the variable limits which
+finished. A named receiver with no stance written counts as `copy` where it
+allows a copy and is otherwise lent; taking from it needs a written stance, as
+in `(value as last).get()`. A stance declared on the variable limits which
 stances you may write, but is never applied for you. You can also write a
 different stance on the temporary explicitly.
 
@@ -4574,8 +4616,9 @@ Invocation diagnostics should distinguish:
 - invocation of a provably unavailable function value;
 - a type-qualified call to a non-`once` function;
 - `?_` in a non-`once` bound function;
-- a receiverless type call whose synthesized `copy` receiver cannot select the
-  declaration;
+- a receiverless type call that can't use any version, because the type's
+  pinned Nothing instance can only be lent and every version declares a
+  receiver stance;
 - trapping or unprepared Nothing access through `_`;
 - unknown parameter or result labels;
 - label-versus-declaration intent errors;
@@ -4595,7 +4638,16 @@ Invocation diagnostics should distinguish:
 - omitted parameters without declared defaults;
 - declared-default omission versus explicit type-default expressions;
 - argument, receiver, result, qualification, or transfer mismatch, including a
-  call whose stance is weaker than a parameter requires;
+  call whose stance is weaker than a parameter's `via` or a reference's stance
+  requires;
+- `via` on a reference parameter, a reference result, or a receiver, or
+  `via loan`;
+- a reference parameter or reference result with no stance written;
+- a `loan` result received by a variable that isn't declared `loan`;
+- a `return` whose stance is weaker than the result's `via`;
+- a borrowing raw pointer parameter or result initialized with `= @`;
+- a compatible prototype that widens a result's stance or changes it to or
+  from `loan`;
 - a call with no stance where both a loan overload and a by-value overload
   fit;
 - a `self` result written with a stance, qualifiers, or `*`, or a `return`
@@ -4740,6 +4792,9 @@ Even deterministic selection cannot prevent every API evolution hazard:
 - changing a result type's default-constructibility changes `return #` validity;
 - changing transfer or qualification requirements changes viability, cost, and
   post-call source availability;
+- adding a `copy` receiver version to a type can change which version an
+  existing call with no stance uses, on a value that allows copies; a `copy`
+  version can't change the caller's value, so the caller's code stays correct;
 - adding or removing parentheses can change expression mode versus mapping; and
 - adding or removing `once` changes whether a type-qualified call is available
   and whether one declaration is shared across instances.

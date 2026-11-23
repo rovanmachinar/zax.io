@@ -102,12 +102,12 @@ message = "changed"
 report() // prints ready
 ```
 
-A capture copies by default. If the captured name is a reference declared
-`& copy`, the capture copies the value it refers to, not the reference:
+A capture copies by default. If the captured name is a `copy &` reference, the
+capture copies the value it refers to, not the reference:
 
 ```zax
 source : Document
-view : Document readonly & copy = source
+view : Document readonly copy & = source
 
 snapshot := [[ view ]] ()() {
   inspect(view) // a captured Document value
@@ -116,13 +116,12 @@ snapshot := [[ view ]] ()() {
 
 If the referent cannot be copied, this capture is unavailable.
 
-A reference with no stance is a `loan`: the value is not copied or taken.
-Capturing it by `copy` would copy the value it refers to, so that is
-an error. Capture it by reference instead; the captured reference is still a
-`loan`:
+A `loan` reference lets nothing be copied or taken through it. Capturing it by
+`copy` would copy the value it refers to, so that is an error. Capture it by
+reference instead; the captured reference is still a `loan`:
 
 ```zax
-loanedView : Document readonly & = source    // unmarked: a loan
+loanedView : Document readonly loan & = source    // written loan: nothing may be built through it
 
 copied := [[ loanedView ]] ()() {             // error: a copy capture of a loan
   inspect(loanedView)
@@ -137,8 +136,8 @@ borrowed := [[ loanedView: keptView : & ]] ()() {
 name `keptView`; renaming and reference captures are explained in the next two
 sections.
 
-`inspect` here takes an unmarked `Document readonly &`, so reading through a
-`loan` reference is sufficient.
+`inspect` here takes a `Document readonly loan &`, so reading through a `loan`
+reference is sufficient.
 
 ### Rename or construct a capture
 

@@ -29,11 +29,13 @@ These are called **place-replacement qualifiers**, **value-mutability
 qualifiers**, and **access qualifiers**.
 
 A transfer stance is not a fourth kind of qualifier. `loan`, `copy`, `move`,
-`last`, and `deep` say how much of a whole value may leave its owner when it
-is used:
+`last`, and `deep` say what may be built from a value. A stance attaches to a
+layer the way a qualifier does, and is written last on that layer, after its
+qualifiers. A reference has no layer of its own, so its stance goes before `&`
+and belongs to the value it refers to:
 
 ```zax
-drainBuffer final : ()(source : Buffer mutable readonly final & move) = {
+drainBuffer final : ()(source : Buffer mutable readonly final move &) = {
 }
 ```
 
@@ -48,14 +50,15 @@ This parameter describes:
 `readonly` narrows only access. It does not erase mutable/immutable or
 final/varying truth.
 
-`loan` is the stance of a reference through which the value as a whole is
-never copied, moved, or taken. It is not a qualifier. Whether the value, and
+`loan` says that nothing may be built from the value: it is never copied,
+moved, or taken as a whole. It is the usual stance of a reference parameter, and
+a value declared `loan` is pinned. It is not a qualifier. Whether the value, and
 its members, can be changed through a loan is still decided by `readonly` or
 `writable`; through a `writable` loan a member can also be moved or taken, as
 its own stance allows:
 
 ```zax
-fill final : ()(buffer : Buffer mutable writable &, text : String readonly &) = {
+fill final : ()(buffer : Buffer mutable writable loan &, text : String readonly loan &) = {
   buffer.append(text)      // fine: buffer is a loan, and its access is writable
   kept : Buffer = buffer   // error: this would copy from a loan
 }
@@ -477,11 +480,11 @@ A concrete `alias type` may replace an inherited requested qualification on the
 same axis:
 
 ```zax
-ReadView :: alias type Payload readonly &
+ReadView :: alias type Payload readonly loan &
 WriteView :: alias type ReadView writable
 ```
 
-`WriteView` requests `Payload writable &`; it does not convert a readonly source
+`WriteView` requests `Payload writable loan &`; it does not convert a readonly source
 or claim that every `Payload` place is writable. Alias resolution happens before
 an actual declaration binds its source:
 
@@ -511,15 +514,24 @@ On the type-use side, read outward from the base type:
 1. base type;
 2. value mutability;
 3. access capability;
-4. referent-place replacement; and
-5. optional, pointer, or reference marker;
-6. then the independently qualified outer layer, when another layer follows.
+4. referent-place replacement;
+5. transfer stance, last on the layer;
+6. optional, pointer, or reference marker;
+7. then the independently qualified outer layer, when another layer follows,
+   with its own pointer kind words, qualifiers, and stance;
+8. for a by-value parameter or result, `via` after the stance.
 
 ```zax
 source final : Payload immutable = makePayload()
-view final unpliable : Payload immutable readonly final & = source
+view final unpliable : Payload immutable readonly final loan & = source
 escape final unsafe pliable : Payload immutable readonly final & = source
+owner : Payload copy * unique writable move   // the Payload's stance, then the pointer layer's
+item : MyItem copy via move                   // a by-value parameter: its stance, then via
 ```
+
+A stance that lands after `&` through an alias or a generic applies to the
+nearest layer that can carry one, the referred-to value, as
+[type aliases](transfer-stances.md#type-aliases) explains.
 
 A formatter may normalize ordering, spacing, and layout. It must not add or
 remove explicit qualifiers. A linter may identify compatible restatement or an
@@ -653,7 +665,7 @@ transition with a
 
 ```zax
 +++ replacement final : ()(
-  rhs : Input readonly &
+  rhs : Input readonly loan &
 ) = {
   // `_` initially contains the previous current-instance state.
 }
@@ -887,7 +899,7 @@ routing, and capture. A declaration-final argument cannot regain replacement
 authority merely because the parameter's referent type use remains varying:
 
 ```zax
-replaceThrough final : ()(target varying : MyType immutable writable varying &)
+replaceThrough final : ()(target varying : MyType immutable writable varying loan &)
 
 restricted final : MyType immutable writable varying & = value
 replaceThrough(restricted) // error: restricted may not delegate replacement authority
@@ -915,7 +927,7 @@ representing the instance on which a type-defined function or operator acts.
 All three qualifier axes may constrain it and participate in candidate
 selection. Receiver transfer stance is an independent callable slot whose
 complete behavior is defined by
-[Zax transfer stances](transfer-stances.md#receiver-stance).
+[Zax transfer stances](transfer-stances.md#receivers).
 
 A receiverless type call to a `once bound` declaration uses the same declared
 receiver qualifications; it does not introduce another qualifier system. `_`

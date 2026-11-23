@@ -28,7 +28,7 @@ Car :: type {
   wheels : Integer
 }
 
-prepare final : ()(car : Car mutable writable &) = {
+prepare final : ()(car : Car mutable writable loan &) = {
   car.engine.rpm = 2000
   car.engine.start()
   car.wheels = 4
@@ -46,7 +46,7 @@ Car :: type {
   wheels : Integer
 }
 
-prepare final : ()(car : Car mutable writable &) = {
+prepare final : ()(car : Car mutable writable loan &) = {
   car.engine.rpm = 2000 // physical path
   car.rpm = 2000        // published path to the same place
 }
@@ -123,7 +123,7 @@ Customer :: type {
   address own : Address
 }
 
-printDestination final : ()(customer : Customer readonly &) = {
+printDestination final : ()(customer : Customer readonly loan &) = {
   print(customer.city)
   print(customer.address.postalCode)
 }
@@ -161,7 +161,7 @@ Envelope :: type {
   id : EnvelopeId
 }
 
-inspect final : ()(envelope : Envelope readonly &) = {
+inspect final : ()(envelope : Envelope readonly loan &) = {
   use(envelope.id)         // Envelope.id
   use(envelope.payload.id) // Payload.id
   use(envelope.bytes)      // Payload.bytes
@@ -184,7 +184,7 @@ Sensor :: type {
   backup own : Reading
 }
 
-inspect final : ()(sensor : Sensor readonly &) = {
+inspect final : ()(sensor : Sensor readonly loan &) = {
   use(sensor.primary.value)
   use(sensor.backup.value)
   use(sensor.value) // error: two owned paths publish `value`
@@ -206,7 +206,7 @@ Sensor :: type {
   age via backup.timestamp
 }
 
-inspect final : ()(sensor : Sensor readonly &) = {
+inspect final : ()(sensor : Sensor readonly loan &) = {
   use(sensor.value)             // primary.value
   use(sensor.age)               // backup.timestamp
   use(sensor.primary.timestamp) // physical path still available
@@ -256,7 +256,7 @@ Sprite :: type {
   position own : Position
 }
 
-moveToOrigin final : ()(sprite : Sprite mutable writable &) = {
+moveToOrigin final : ()(sprite : Sprite mutable writable loan &) = {
   sprite.x = 0
   sprite.position.y = 0
   sprite.position.coordinates.x = 0
@@ -280,14 +280,14 @@ Coordinates :: type {
 }
 
 Position :: type {
-  coordinates : Coordinates * = @
+  coordinates : Coordinates * last = @
 }
 
 Sprite :: type {
   position own : Position
 }
 
-draw final : ()(sprite : Sprite readonly &) = {
+draw final : ()(sprite : Sprite readonly loan &) = {
   use(sprite.coordinates) // published path to the stored pointer
   use(sprite.x)           // error: publication does not enter the pointee
 
@@ -412,7 +412,7 @@ Car :: type {
   wheels : Integer
 }
 
-tune final : ()(target : Engine readonly &) = {
+tune final : ()(target : Engine readonly loan &) = {
 }
 
 service final : ()() = {
@@ -450,8 +450,8 @@ ProjectedCar :: type {
 }
 
 compare final : ()(
-  published : PublishedCar readonly &,
-  projected : ProjectedCar readonly &
+  published : PublishedCar readonly loan &,
+  projected : ProjectedCar readonly loan &
 ) = {
   use(published.rpm) // data publication
   tune(published)    // error: `own` creates no Engine projection
@@ -471,13 +471,13 @@ Rig :: type {
   radio preferred : Radio
 }
 
-configure final : ()(target : Engine readonly &) = {
+configure final : ()(target : Engine readonly loan &) = {
 }
 
-configure final : ()(target : Radio readonly &) = {
+configure final : ()(target : Radio readonly loan &) = {
 }
 
-configureRig final : ()(rig : Rig readonly &) = {
+configureRig final : ()(rig : Rig readonly loan &) = {
   configure(rig)        // error: both projected overloads are viable
   configure(rig.engine) // explicit path resolves the choice
 }
@@ -494,13 +494,13 @@ BufferViews :: type {
   working preferred : Buffer mutable
 }
 
-archive final : ()(input : Buffer immutable &) = {
+archive final : ()(input : Buffer immutable loan &) = {
 }
 
-edit final : ()(input : Buffer mutable writable &) = {
+edit final : ()(input : Buffer mutable writable loan &) = {
 }
 
-useViews final : ()(views : BufferViews mutable writable &) = {
+useViews final : ()(views : BufferViews mutable writable loan &) = {
   archive(views) // selects snapshot
   edit(views)    // selects working
 }
@@ -539,7 +539,7 @@ FleetEntry :: type {
   car preferred : Car
 }
 
-tuneEntry final : ()(entry : FleetEntry readonly &) = {
+tuneEntry final : ()(entry : FleetEntry readonly loan &) = {
   tune(entry) // FleetEntry -> Car -> Engine
 }
 ```
@@ -583,7 +583,7 @@ Car :: type {
   engine expose : Engine
 }
 
-drive final : ()(car : Car mutable writable &) = {
+drive final : ()(car : Car mutable writable loan &) = {
   car.start()
   if car.isRunning()
     travel(car)
@@ -635,11 +635,11 @@ Engine :: type {
     return _ as copy
   }
 
-  selected final : (result : Engine &)() = {
+  selected final : (result : Engine loan &)() = {
     return locateSelectedEngine()
   }
 
-  selectedPointer final : (result : Engine *)() = {
+  selectedPointer final : (result : Engine loan *)() = {
     return locateSelectedEnginePointer()
   }
 
@@ -654,7 +654,7 @@ Car :: type {
   wheels : Integer
 }
 
-inspectResults final : ()(car : Car mutable writable &) = {
+inspectResults final : ()(car : Car mutable writable loan &) = {
   snapshot : Engine = car.snapshot()
   selected : Engine & = car.selected()
   selectedPointer : Engine * = car.selectedPointer()
@@ -690,7 +690,7 @@ receiver `_`:
 Engine :: type {
   tune final : (
     result self : Engine &
-  )(profile : Profile readonly &) = {
+  )(profile : Profile readonly loan &) = {
     apply(_, profile)
     return _
   }
@@ -713,15 +713,15 @@ assertion can accept that responsibility. An `intent` acknowledgement cannot.
 
 A direct outer declaration with an exact generated shape wins over exposure.
 It is ordinary container behavior, not an override relationship. This includes
-a bodyless direct declaration: its exact shape remains unavailable rather than
-falling through to an exposed implementation. Use `= existing`, `via`, or a
-body when the direct declaration should supply behavior.
+a direct declaration written `= forbidden`: its exact shape remains unavailable
+rather than falling through to an exposed implementation. Use `= existing`,
+`via`, or a body when the direct declaration should supply behavior.
 
 Equal generated mappings and ordinary overload sets never use declaration or
 generation order as a tiebreaker. An unresolved best set is an ambiguity error.
 
 A `once` function is never exposed automatically. Its receiverless type-call
-mode uses a `copy`-stanced Nothing receiver while its instance-call mode uses
+mode lends the type's pinned Nothing instance while its instance-call mode uses
 the actual receiver source, so one automatic wrapper cannot preserve both
 meanings. A programmer may deliberately provide a mode-specific `via`, select a
 unique existing mapping, or write a
@@ -794,27 +794,27 @@ StartRequest :: type {
 }
 
 Engine :: type {
-  start final : ()(fuel : Fuel readonly &) = {
+  start final : ()(fuel : Fuel readonly loan &) = {
   }
 
-  start final : ()(code : IgnitionCode readonly &) = {
+  start final : ()(code : IgnitionCode readonly loan &) = {
   }
 }
 
 AmbiguousCar :: type {
   engine : Engine
 
-  start final : ()(request : StartRequest readonly &) =
+  start final : ()(request : StartRequest readonly loan &) =
     via engine.start // error: either preferred route could fit an overload
 }
 
 Car :: type {
   engine : Engine
 
-  startExact private final : ()(fuel : Fuel readonly &) =
+  startExact private final : ()(fuel : Fuel readonly loan &) =
     via engine.start
 
-  start final : ()(request : StartRequest readonly &) =
+  start final : ()(request : StartRequest readonly loan &) =
     via startExact
 }
 ```
@@ -859,7 +859,7 @@ Engine :: type {
   reset final : ()() = {
   }
 
-  reset final : ()(profile : Profile readonly &) = {
+  reset final : ()(profile : Profile readonly loan &) = {
   }
 }
 
@@ -924,7 +924,7 @@ Engine :: type {
   reset final : ()() = {
   }
 
-  reset final : ()(profile : Profile readonly &) = {
+  reset final : ()(profile : Profile readonly loan &) = {
   }
 }
 
@@ -954,7 +954,7 @@ project one member declared `preferred` to the selected contained input:
 
 ```zax
 Fuel :: type {
-  refill final : ()(source : Fuel mutable writable & move) = {
+  refill final : ()(source : Fuel mutable writable move &) = {
   }
 }
 
@@ -970,8 +970,8 @@ Tank :: type {
 
 The wrapper's `source` is an ordinary by-value parameter, so it is built the
 same way as any other. The stance the caller writes chooses which `Tank`
-constructor builds `source`. A stance declared on `source` only decides which
-calls can choose this wrapper: if `source` were declared `move`, a call would
+constructor builds `source`. A `via` stance on `source` decides which calls
+can choose this wrapper: if `source` were declared `via move`, a call would
 have to write `as move` or `as last`.
 
 Once `source` exists, the wrapper passes `source.fuel` to `fuel.refill`. It can
@@ -985,9 +985,9 @@ parameter is declared:
 
 | Outer parameter | Stance the wrapper writes for the member |
 | --- | --- |
-| By value with no declared stance, `move`, or `last` | `last` |
+| By value, with any stance except `deep` | `last` |
 | By value, declared `deep` | `deep` |
-| By reference | the stance the outer reference parameter declares, for example `move` for `source : Tank mutable writable & move` |
+| By reference | the stance the outer reference parameter declares, for example `move` for `source : Tank mutable writable move &` |
 
 A by-value `source` belongs to the wrapper and is destroyed when the wrapper
 returns, so taking its member with `last` cannot affect the caller. A
@@ -1023,12 +1023,12 @@ For results:
 
 The last form is a provenance assertion, not an intent acknowledgement.
 
-For example, suppose `Engine.selectedPeer()` returns an `Engine &` whose
+For example, suppose `Engine.selectedPeer()` returns an `Engine loan &` whose
 container relationship is not its invocation receiver:
 
 ```zax
 Engine :: type outer tracked {
-  selectedPeer final : (result : Engine &)() = {
+  selectedPeer final : (result : Engine loan &)() = {
     return locatePeer(_)
   }
 }
@@ -1036,10 +1036,10 @@ Engine :: type outer tracked {
 Car :: type {
   engine own : Engine
 
-  checkedPeerOwner final : (result : Car & ?)() =
+  checkedPeerOwner final : (result : Car loan & ?)() =
     tracked via engine.selectedPeer
 
-  assertedPeerOwner final : (result : Car &)() =
+  assertedPeerOwner final : (result : Car loan &)() =
     unsafe via engine.selectedPeer
 }
 ```
@@ -1130,7 +1130,7 @@ every activating container to implement it:
 
 ```zax
 TelemetryContract :: type {
-  report abstract optional : ()(event : Event readonly &)
+  report abstract optional : ()(event : Event readonly loan &)
 }
 
 SilentService :: type {
@@ -1142,7 +1142,7 @@ ObservedService :: type {
   contract own private : TelemetryContract
 
   report fulfill contract.report final : (
-    event : Event readonly &
+    event : Event readonly loan &
   )() = {
   }
 }
@@ -1339,7 +1339,7 @@ number of partials may fulfill, and which the type calls.
 MyCatalog :: forward type
 
 MyCatalogHooks :: type {
-  assign abstract : ()(rhs : MyCatalog readonly &) writable
+  assign abstract : ()(rhs : MyCatalog readonly loan &) writable
 }
 
 MyCatalog :: type seal open storage {
@@ -1348,7 +1348,7 @@ MyCatalog :: type seal open storage {
   operator binary '=' final : (
     result self : MyCatalog &
   )(
-    rhs : MyCatalog readonly &
+    rhs : MyCatalog readonly loan &
   ) writable = {
     _.hooks.assign(rhs)   // calls every partial's fulfillment of assign
     return _
@@ -1439,7 +1439,7 @@ Car :: type {
   spare : Engine
 }
 
-inspectContainer final : ()(input : Engine &) = {
+inspectContainer final : ()(input : Engine loan &) = {
   asserted : Car & = input unsafe outer cast Car.engine
 
   checked : Car & ? = input tracked outer cast Car.engine
@@ -1545,7 +1545,7 @@ Car :: type {
   engine : Engine
 }
 
-inspectKnownCar final : ()(car : Car readonly &) = {
+inspectKnownCar final : ()(car : Car readonly loan &) = {
   engine : Engine readonly & = car.engine
   sameCar : Car readonly & = engine outer cast Car.engine
   use(sameCar)
@@ -1595,7 +1595,7 @@ TrackedCar :: type {
   engine : TrackedEngine
 }
 
-inspectKnownTrackedCar final : ()(car : TrackedCar &) = {
+inspectKnownTrackedCar final : ()(car : TrackedCar loan &) = {
   engine : TrackedEngine & = car.engine
   knownCar : TrackedCar & = engine outer cast TrackedCar.engine
   use(knownCar)
@@ -1605,7 +1605,7 @@ inspectKnownTrackedCar final : ()(car : TrackedCar &) = {
 A programmer may instead deliberately preserve the tracked optional contract:
 
 ```zax
-inspectPossiblyKnownCar final : ()(car : TrackedCar &) = {
+inspectPossiblyKnownCar final : ()(car : TrackedCar loan &) = {
   engine : TrackedEngine & = car.engine
 
   possibleCar : TrackedCar & ? =
@@ -1642,7 +1642,7 @@ declaration:
 
 ```zax
 intent<redundant-outer-tracking>{
-  possibleOwner final : (result : Car & ?)() =
+  possibleOwner final : (result : Car loan & ?)() =
     tracked via engine.selectedPeer
 }
 ```

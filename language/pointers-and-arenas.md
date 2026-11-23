@@ -6,27 +6,29 @@
 | Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
 | Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | The `@` allocation family and policy enclosure; declaration-attached and open-ended raw allocation; raw, `unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic` behavior; interior pointers and `inner`; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, `strong count probe`, `is allocation root`, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
+| Owns | The `@` allocation family and policy enclosure; borrowing and owning raw pointers; stances on pointer layers and pointed-to values; `unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic` behavior; interior pointers and `inner`; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, `strong count probe`, `is allocation root`, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
 | Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); `unsafe cast` and pointer/integer conversion ([conversions and casts](casting.md)); outer-cast mechanics ([composition](composition.md)); pointee operation thread safety; or arena API/registration |
 | Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
 
 ## Choose ownership separately from allocation
 
-Every dynamic allocation receives storage from an arena. The ordinary process
+Every dynamic allocation gets its storage from an arena. The ordinary process
 heap is one arena; a program may provide others.
 
-The pointer tells readers who owns or observes the allocated life path:
+A pointer's kind and stance tell readers whether it owns the allocation or
+borrows an address:
 
 ```zax
-rawView : MyValue *
-soleOwner : MyValue * unique
-preparedOwner : MyValue * unique shareable
-sharedOwner : MyValue * strong
-weakObserver : MyValue * weak
+rawView : MyValue *                    // borrowing raw pointer (copy by default)
+rawOwner : MyValue * last = @          // owning raw pointer: frees the allocation
+soleOwner : MyValue * unique = @       // exclusive managed owner; no raw borrowers
+preparedOwner : MyValue * unique shareable = @
+sharedOwner : MyValue * strong = @
+weakObserver : MyValue * weak = sharedOwner
 ```
 
-The allocation separately determines:
+The allocation separately chooses:
 
 - when the resident instance is destroyed;
 - when its backing block becomes reusable;
@@ -34,24 +36,99 @@ The allocation separately determines:
 - which arena supplies object storage; and
 - where any ownership control block lives.
 
-Separating these axes prevents one pointer family for every combination of
-ownership, allocator, destruction timing, and thread behavior.
+Separating these choices avoids creating a distinct pointer family for every
+combination of ownership, allocator, destruction timing, and thread behavior.
+
+### Which pointers own what they point to
+
+A pointer is an **owner** of the value it points to when it holds something
+besides an address. Otherwise it is a **borrower**:
+
+| Pointer | Holds besides the address | May the pointer itself be written `as move` or `as last`? | Owner of what it points to? |
+| --- | --- | --- | --- |
+| raw `copy` (or unmarked `*`) | nothing | no; only `as copy`, or lending | no |
+| raw `loan` | nothing | no; only lending (a pinned borrower) | no |
+| raw `move` or `last` | responsibility for freeing the allocation | yes | yes |
+| `unique` or `unique shareable` | sole ownership | yes | yes |
+| `strong` | a share of ownership | yes: hands over that share | yes |
+| `weak` | a weak registration | yes: hands over the registration | only after acquiring a `strong` pointer |
+
+An owner of what a pointer points to follows the owner stance rules; a borrower
+follows the borrower rules. See
+[owners and borrowers](transfer-stances.md#owners-and-borrowers) for the
+complete stance tables:
+
+```zax
+owner : MyValue * unique = @
+keep(owner. as move)              // fine: owner owns the MyValue
+
+view : MyValue copy * = myValue
+keep(view.)                       // fine: view was given copy
+keep(view. as last)               // error: a raw copy pointer only borrows the MyValue
+```
+
+### Stances on pointed-to values
+
+A pointer involves two values: the value it points to, and the pointer itself.
+Each has its own stance, written last on its layer:
+
+```zax
+view : MyValue loan * copy        // nothing may be built from the MyValue;
+                                  // the pointer itself may be copied
+```
+
+On an owning pointer, an unmarked pointed-to value defaults to `copy`, and a
+pinned (`loan`) pointed-to value stays pinned even while the pointer moves:
+
+```zax
+install final : ()(device : MyDevice loan * unique) = {
+  registry.adopt(device as move)  // fine: ownership of the pointer moves
+  relocate(device. as move)       // error: the device itself is pinned
+}
+```
+
+A borrowing raw-pointer parameter, result, member, or type alias must write the
+pointed-to value's stance, as in `target : MyValue loan *`, because it has no
+single value to take one from. An owning pointer, raw `move` or `last`
+included, owns the value it points to, so an unmarked pointed-to value is
+`copy`, as in `owner : MyValue * last = @`. A local raw
+pointer bound to one visible value takes its pointed-to stance from that value
+according to
+[references you declare](transfer-stances.md#references-you-declare). A
+borrowing pointer's pointed-to stance is set when it is formed and can only
+narrow afterward:
+
+```zax
+myValue : MyValue
+view : MyValue copy * = myValue            // formed from the owner
+lent : MyValue loan * = view               // fine: narrows to loan
+taker : MyValue move * = view              // error: view cannot write as move
+taker2 : MyValue move * = myValue as move  // fine: the owner gives move when forming it
+```
 
 ## Allocate through a declaration
 
-Every direct source allocation is a declaration initializer. The declaration
-supplies the resident type and resulting pointer role:
+Every direct allocation is written with `@` or `@!` and goes into a typed
+owning pointer. The declaration supplies the resident type and pointer role:
 
 ```zax
 owner : MyValue * unique = @
 shared : MyValue * strong = @
-scoped : MyValue * = @
+rawOwner : MyValue * last = @
 ```
 
-`@` requests storage from an arena, constructs one `MyValue`, establishes the
-destination pointer's ownership or cleanup relationship, and then publishes the
-pointer. Allocation obtains storage; ordinary construction still establishes
-the resident instance in that storage.
+`@` produces a value whose stance is `last`: only a terminal transfer may be
+built from it. Only a pointer that can hold ownership—a raw `move` or `last`
+pointer, `unique`, `unique shareable`, or `strong`—can receive `@`:
+
+```zax
+plain : MyValue * = @             // error: a raw copy pointer holds no ownership
+held : MyValue * loan = @         // error: a raw loan pointer is a pinned borrower
+```
+
+`@` requests storage from an arena, constructs one `MyValue` in that storage,
+establishes the destination pointer's ownership, and then publishes the
+pointer.
 
 A pointer declaration without `@` does not allocate:
 
@@ -61,83 +138,49 @@ view : MyValue *
 anotherView : MyValue * = view
 ```
 
-`empty` and `view` are vacant. `anotherView` copies the raw address-like value
-from `view`.
+`empty` and `view` start vacant. `anotherView` copies the raw address from
+`view`.
 
-Allocation cannot appear as an independent expression. Assignment requires an
-already typed pointer destination:
+Allocation cannot appear without a typed destination:
 
 ```zax
-ordinary : MyValue *
-ordinary = @ // legal open-ended raw allocation
-
-missing = @ // error: no typed destination
+missing = @                       // error: no typed destination
 ```
 
-A declaration expression can instead supply a destination inside a larger
+A declaration expression can supply a typed destination inside a larger
 expression:
 
 ```zax
-ordinary =
-  (: MyValue * = @) as last
+rawOwner : MyValue * last
+rawOwner = (: MyValue * last = @) as last
 ```
 
-The explicit `last` transfers the temporary declaration's ownership or scheduled
-disposition instead of copying only a pointer value.
+Writing `as last` hands ownership from the temporary declaration to `rawOwner`.
 
 ### Direct allocation assignment
 
-Any typed pointer destination supplies enough pointee and pointer-role context
-for direct allocation assignment:
+Any typed owning pointer supplies enough pointee and ownership context for
+direct allocation assignment:
 
 ```zax
-scheduled : MyValue * = @
-reset scheduled
-scheduled = @{ anotherArena }
-
-ordinary : MyValue *
-ordinary = @
+rawOwner : MyValue * last = @
+reset rawOwner
+rawOwner = @{ anotherArena }
 ```
-
-The destination contract determines the result:
 
 | Destination | Direct allocation behavior |
 | --- | --- |
-| Scheduled raw | Reset the old allocation and install a scheduled replacement |
-| Open-ended raw | Do not reset; install another open-ended allocation |
-| Ordinary undecorated raw | Do not reset or create a schedule; result is open-ended |
-| `unique`, `unique shareable`, or `strong` | Release old ownership and install the new managed allocation |
+| Owning raw (`* move` or `* last`) | Free the old allocation if non-vacant, then install the new one |
+| `unique`, `unique shareable`, or `strong` | Release the old ownership, then install the new managed allocation |
+| Borrowing raw (`*`, `* copy`, or `* loan`) | Error: a borrowing raw pointer cannot hold an allocation |
 
-`ordinary = @` is the direct counterpart of allocating through a typed
-declaration expression and terminally mapping into an undecorated raw
-destination. It is legal, but the resulting allocation must be manually tracked
-and reset.
-
-For an open-ended destination, allocation assignment never performs an implicit
-reset:
+Assigning `@` to an undecorated raw pointer is an error:
 
 ```zax
-open : MyValue * = @<
-open = @<{ anotherArena }
-// error when the prior open allocation is still live
+ordinary : MyValue *
+ordinary = @                      // error: a raw copy pointer cannot hold an allocation;
+                                  // declare it MyValue * last or MyValue * move
 ```
-
-This is safe when analysis proves `open` is already vacant or its previous
-allocation was dispositioned. Overwriting a proved live open allocation is a
-non-acknowledgeable lifecycle error. When opaque code prevents proof of prior
-disposition, narrow unsafe responsibility—not intent acknowledgement—must supply
-the missing fact.
-
-The ordinary repair is explicit:
-
-```zax
-reset open
-open = @<{ anotherArena }
-```
-
-The replacement token must preserve the declaration's scheduled/open contract.
-Using `@<` to refill a scheduled slot or plain `@` to refill an open-ended slot
-is a non-acknowledgeable conflict.
 
 ### Constructor inputs
 
@@ -150,7 +193,7 @@ owner : MyValue * unique =
   }]
 ```
 
-The packet retains its ordinary constructor meaning. Allocation policy does not
+The packet keeps its ordinary constructor meaning. Allocation policy does not
 share that packet's namespace.
 
 Allocation first obtains all required object and control-block storage. Only
@@ -160,27 +203,26 @@ the constructor.
 
 ### Allocation forms
 
-The exact reserved forms are:
+Every allocation has an owner. There are two reserved allocation tokens:
 
-| Form | Storage-request failure | Raw result |
+| Form | Storage-request failure | Result |
 | --- | --- | --- |
-| `@` | Panic | Destination declaration schedules disposition |
-| `@!` | Return a vacant pointer | Destination declaration schedules disposition after success |
-| `@<` | Panic | Open-ended; no automatic disposition owner |
-| `@!<` | Return a vacant pointer | Open-ended after success |
+| `@` | Panic | Owning pointer holding the new allocation |
+| `@!` | Return a vacant pointer | Owning pointer holding the new allocation on success |
 
-These are indivisible tokens, not compositions of independently invoked `@`,
-`!`, and `<` operators. `@!` reports request failure through the pointer's
-ordinary vacancy; plain `@` still checks failure and panics.
+These are indivisible tokens, not compositions of `@` and `!`. `@!` reports
+request failure through the pointer's ordinary vacancy; plain `@` still checks
+for failure and panics.
 
-`@<` and `@!<` apply to raw pointer destinations. They do not make sense for
-`unique` or shared destinations whose pointer role already owns disposition.
-Such a combination is a non-acknowledgeable intent error:
+Manual control over an allocation's lifetime still works through owning raw
+pointers and the explicit `unsafe` escape:
 
-```zax
-invalid : MyValue * unique = @<
-// error: unique ownership and open-ended disposition conflict
-```
+| Need | How |
+| --- | --- |
+| Free an allocation early, by hand | `owner : MyValue * last = @`, then `reset owner`; cleanup at scope end finds it vacant |
+| Hand an allocation to foreign code that frees it | Declare the foreign function parameter `MyValue * last`, and write `as last` at the call |
+| Abandon an allocation without freeing it | `unsafe vacate owner` |
+| Return an allocation the caller manages | `result : MyValue * last = @`; the caller owns it and may `reset` it at any time |
 
 There is no separate unchecked allocation form. A future safety control may
 disable the allocation-failure panic category under a promise that the condition
@@ -297,17 +339,17 @@ The programmer-visible order is:
 6. After every required request succeeds, evaluate construction-packet entries
    from left to right.
 7. Run ordinary member construction and the selected constructor.
-8. Establish ownership or declaration-attached disposition.
+8. Establish ownership.
 9. Publish the complete pointer.
 
-For `@!` and `@!<`, failure of a later storage request releases every earlier
-uncommitted reservation exactly once before producing a vacant pointer.
+For `@!`, failure of a later storage request releases every earlier uncommitted
+reservation exactly once before producing a vacant pointer.
 
-For `@` and `@<`, a failed request enters panic while the operation remains
-blocked. A narrowly applicable helper may repair the condition and allow that
-same request to succeed. Otherwise the program crashes gracefully. Panic does
-not return a substitute result, skip the failed operation, continue with partial
-state, or introduce exception-style unwinding.
+For `@`, a failed request enters panic while the operation remains blocked. A
+narrowly applicable helper may repair the condition and allow that same request
+to succeed. Otherwise the program crashes gracefully. Panic does not return a
+substitute result, skip the failed operation, continue with partial state, or
+introduce exception-style unwinding.
 
 `@!` controls allocation-request failure only. It does not translate a
 constructor or nested-operation panic into vacancy.
@@ -324,16 +366,15 @@ prepared : MyValue * unique shareable =
   @ originalValue as last
 ```
 
-The existing resident instance is preserved. `@` allocates only metadata required
-by the destination role:
+The existing resident instance is preserved. `@` allocates only metadata
+required by the destination role:
 
-- a raw allocation that the compiler can prove has a single owner may become
-  a `unique` pointer when it is passed `as last`, without allocating anything
-  new with `@`;
-- raw or blockless `unique` may use `@` to allocate a detached dormant block for
-  `unique shareable`;
-- raw or blockless `unique` may use `@` to allocate and activate a detached block
-  for `strong`; and
+- an owning raw pointer (`* move` or `* last`) may become a `unique` pointer
+  when passed `as last`, without allocating anything new with `@`;
+- an owning raw pointer or blockless `unique` may use `@` to allocate a
+  detached dormant control block for `unique shareable`;
+- an owning raw pointer or blockless `unique` may use `@` to allocate and
+  activate a detached control block for `strong`; and
 - a source that already satisfies the destination role uses ordinary transfer
   without redundant `@`.
 
@@ -343,12 +384,13 @@ instance is constructed.
 A function result may supply the source directly:
 
 ```zax
+// makeRawOwner returns MyValue * last
 prepared : MyValue * unique shareable =
-  @ makeScheduledRawValue()
+  @ makeRawOwner()
 ```
 
-The producer's declared result stance and disposition authority—not its name—
-determine whether adoption is safe.
+The producer's declared result type and stance—not its name—determine whether
+adoption is valid.
 
 When the source is runtime-vacant, both `@` and `@!` produce a vacant
 destination without requesting metadata or entering panic. Applying this
@@ -375,20 +417,22 @@ The pointer place and pointee place are distinct:
 
 ```zax
 pointer : MyValue * = first
-pointer = second // ordinary unscheduled raw assignment only repoints
+pointer = second                  // borrowing raw assignment only repoints
 ```
 
 Replacing or destroying a pointer instance affects the pointee only when that
-pointer's ownership contract or declaration-attached allocation requires it.
+pointer owns the allocation.
 
-Pointer-value transfer never implies pointee transfer by itself. A raw pointer
-copy or move ordinarily transfers only an address-like value. A `unique` owner
-transfers its owned life path because `unique` explicitly says it does. A
-scheduled raw declaration may transfer its separate disposition responsibility
-through an accepted `last` operation.
+Transferring a pointer value never transfers its pointee. Copying a borrowing
+raw pointer copies only an address. Transferring an owning raw pointer
+(`* move` or `* last`) or a `unique` pointer hands over ownership of the
+allocation.
 
 Auto-allocation does not turn a pointee into a resident member of the
-pointer-containing object:
+pointer-containing object. In this example, `position own` makes `Position`'s
+members reachable directly on a `Sprite` (composition calls this
+*publishing* them), so `sprite.coordinates` means
+`sprite.position.coordinates`. Publishing stops at the pointer:
 
 ```zax
 Coordinates :: type {
@@ -399,15 +443,15 @@ Coordinates :: type {
 }
 
 Position :: type {
-  coordinates : Coordinates * = @
+  coordinates : Coordinates * last = @
 }
 
 Sprite :: type {
   position own : Position
 }
 
-moveSprite final : ()(sprite : Sprite mutable writable &) = {
-  use(sprite.coordinates)                 // published pointer member
+moveSprite final : ()(sprite : Sprite mutable writable loan &) = {
+  inspect(sprite.coordinates)             // lends the published pointer member
 
   if !sprite.position.coordinates
     return
@@ -432,56 +476,217 @@ Complete publication and forwarding eligibility belongs to
 
 ### Raw pointers
 
-An unqualified `*` is raw:
+An unqualified `*` is raw. A raw pointer's own stance decides whether it
+borrows an address or owns an allocation:
+
+- a raw `copy` (or unmarked `*`) or raw `loan` pointer is a **borrower**: it
+  holds only an address, performs no automatic destruction, and may become
+  invalid if its target ends;
+- a raw `move` or `last` pointer is an **owning raw pointer**: it owns one
+  allocation and frees it automatically when the pointer ends or is replaced,
+  unless the pointer is vacant.
 
 ```zax
-view : MyValue *
+view : MyValue *                    // borrowing raw pointer (copy by default)
+pinned : MyValue * loan = view      // pinned borrowing raw pointer
+owner : MyValue * last = @          // owning raw pointer
 ```
 
-A raw pointer:
-
-- may be vacant;
-- may be repointed;
-- owns no life path;
-- performs no automatic pointee destruction;
-- provides no automatic lifetime extension;
-- and may become invalid if its pointee path ends or its provenance is wrong.
-
-Raw pointers are not categorically unsafe. A particular operation is safe when
-analysis proves every required fact. For example, a type may contain a raw
-pointer member whose pointee path is automatically allocated, constructed,
-destroyed, and recovered by the **containing type's declared lifecycle**. The
-raw pointer remains non-owning; the containing lifecycle is the independently
-proved owner responsible for ending the nested path. Access within that bounded
-relationship requires no unsafe marker.
-
-The proof may be lost when the pointer escapes the container, invocation, or
-owner that established it. At that boundary the compiler must prove the extended
-relationship, require narrow unsafe responsibility, or reject a known-invalid
-use.
-
-Creating a dynamic path with no independently tracked owner or containing
-lifecycle—only a raw pointer value—remains unsafe: losing or repointing that
-pointer may leave no authority able to end the path.
-
-A raw pointer cannot record that it was made from a loan, so it cannot carry
-the loan's promise that nothing will be copied or taken. Making a raw pointer from a loan reference is
-therefore an error outside `unsafe`:
+A raw pointer can carry `loan` on its pointed-to layer (`MyValue loan *`), so
+it can borrow a value without allowing copies or moves of that value. Even so,
+making a raw pointer from a reference whose origin the function cannot see—a
+reference parameter, a reference result, or `_`—requires `unsafe`, because the
+reference might reach a `unique` allocation (which forbids raw borrowers):
 
 ```zax
-show final : ()(input : MyValue readonly &) = {
-  view : MyValue * = input   // error outside unsafe: input is on loan
+makePtrFromRef final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
+  return input                      // error outside unsafe: input might reach a unique allocation
+}
+
+// Illustrative unsafe category name; exact unsafe syntax remains unsettled.
+makePtrFromRefUnsafe final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
+  unsafe<raw-from-reference>{
+    return input                    // compiles: programmer takes responsibility for input's origin and lifetime
+  }
 }
 ```
 
-Inside a member function, `_` stands for the receiver itself, not for a
-pointer the programmer made. Passing `_` on passes the receiver with the same
-permissions; if the function's receiver has no stance, that is a loan. See [loan](transfer-stances.md#loan).
+Making a raw pointer from a visible value—a local variable, a member of a
+local, or the value behind an owning raw pointer—needs no `unsafe`. When you
+only need to lend a value safely, pass a reference (`MyValue readonly loan &`)
+instead of a raw pointer. Raw pointers are for lifetimes the compiler cannot
+track: parent links and graphs, addresses stored as data, foreign code,
+hardware addresses, owning raw allocations, and frequent repointing.
 
-`?view` proves only that the raw pointer value is non-vacant. It does not
-by itself prove a live pointee, valid provenance, alignment, or permitted
-access. When origin and lifetime analysis already proves those facts, the
-presence test may complete the safe proof.
+`?view` on a borrowing raw pointer checks only that the pointer is non-vacant.
+It does not prove a live pointee, valid provenance, alignment, or permitted
+access. On an owning raw pointer, `?owner` means the pointer currently owns a
+live allocation.
+
+#### Owning raw pointers
+
+A raw pointer holds cleanup responsibility when and only when its declared
+stance is `move` or `last`:
+
+```zax
+owner : MyValue * last = @           // fine: owner frees the allocation
+other : MyValue * move = @           // fine: other frees the allocation
+plain : MyValue * = @                // error: a raw copy pointer cannot own an allocation
+held : MyValue * loan = @            // error: a raw loan pointer is a pinned borrower
+stray : MyValue * move = myValue     // error: myValue is not an allocation this pointer can free
+taken : MyValue * move = owner as last   // fine: ownership moves to taken; owner is vacant
+```
+
+The compiler frees an owning raw pointer when it ends or is replaced, whenever
+it is non-vacant, decided by its stance alone. Assigning a new owning source
+or a typed default vacant pointer frees the old allocation first:
+
+```zax
+owner = otherOwner as last           // frees owner's old allocation, then takes otherOwner's
+owner = (: MyValue *)                // frees owner's allocation and leaves owner vacant
+```
+
+Like a blockless `unique`, an owning raw pointer holds only one address and no
+control block, so **an owning raw pointer can never point inside an
+allocation**. It can free an allocation only when it points at the
+allocation's start.
+
+**The one built-in raw-pointer rule.** Ordinarily, the owner of a `copy`
+variable may write `as move` or `as last` on it. A raw `copy` or `loan`
+pointer is the one exception: you own the pointer variable itself, yet you
+cannot write `as move` or `as last` on it, because it holds no allocation
+responsibility to hand over:
+
+```zax
+copyPtr : MyMessage * = message
+other : MyMessage * last = copyPtr as last
+// error: copyPtr is a borrowing raw pointer and holds nothing to hand over
+
+count : Integer
+total := count as last               // fine: you own count; Integer falls back to copy
+```
+
+Constructors cannot express this rule on their own, because a constructor sees
+only the stance written at the call (`as last`), not whether the source
+variable was declared `copy` or `last`. This rule exists only for built-in raw
+pointers; a user-defined type whose ownership differs should be two separate
+types rather than relying on a variable's declared stance.
+
+**Escaping the rule with `unsafe cast as last`.** When you know a borrowing
+raw pointer points at an allocation root that nobody else owns—for example,
+after handing off ownership with `unsafe vacate` or receiving a pointer from
+foreign code—use `unsafe cast as last` to change only the pointer's stance,
+then write `as last` to transfer ownership:
+
+```zax
+owner : MyValue * last = @
+view : MyValue * = owner.            // a borrowing raw pointer
+unsafe vacate owner                  // owner drops responsibility without freeing
+restored : MyValue * last = (view unsafe cast as last) as last
+// the cast gives view itself with stance last; writing as last hands ownership
+// to restored, which will free the allocation. view counts as finished afterward.
+```
+
+Writing `unsafe cast as last` asserts that `view` points at an allocation root
+and that no other owner holds responsibility for freeing it. Applying it to an
+interior address is the programmer's unsafe assertion. Complete rules for
+`unsafe cast as S` belong to
+[Zax conversions and casts](casting.md#unchecked-reinterpretation-with-unsafe-cast).
+
+#### Borrowing through `p.`
+
+To make a borrowing raw pointer (`* copy` or `* loan`) from an owning pointer,
+write `p.`. Writing `p.` names the pointed-to value rather than the pointer,
+so the new borrower borrows that value while leaving the owner untouched:
+
+```zax
+movePtr : MyValue * move = @
+lastPtr : MyValue * last = @
+copyPtr : MyValue * copy = movePtr.  // fine: a plain borrower
+pinned  : MyValue * loan = copyPtr   // fine: a pinned borrower
+
+a : MyValue * loan = copyPtr         // fine: copies a borrower's address
+b : MyValue * loan = pinned          // error: nothing may be built from a loan pointer
+c : MyValue * loan = pinned.         // fine: borrows the value pinned points to
+d : MyValue * loan = movePtr         // error: movePtr is move, so it cannot be copied
+e : MyValue * loan = movePtr as move // error: cannot hand ownership to a borrowing pointer
+f : MyValue * loan = movePtr.        // fine: borrows the pointee; movePtr is untouched
+g : MyValue * loan = lastPtr.        // fine: the same for a last owner
+h : MyValue * loan = lastPtr as last // error: cannot hand ownership to a borrowing pointer
+i : MyValue * loan = @               // error: a borrowing pointer cannot own an allocation
+```
+
+| Source | Into a raw `copy` or `loan` pointer |
+| --- | --- |
+| A raw `copy` pointer | Copies the address |
+| A raw `loan` pointer | Error; write `pinned.` |
+| A raw `move` or `last` owner, no stance written | Error; write `owner.` |
+| A raw `move` or `last` owner, written `as move` or `as last` | Error: a borrowing pointer cannot receive ownership |
+| `@` | Error: a borrowing pointer cannot receive an allocation |
+| `p.` from any raw or `strong` pointer, or a visible local | Borrows the pointed-to value |
+
+Making a pointer from `p.` copies `p`'s address as it is, without
+dereferencing:
+
+- if `p` points at a value, the new pointer points at the same value;
+- if `p` is vacant, the new pointer is vacant too—it never points at the
+  pointee type's Nothing instance, touches no memory, and cannot fire a
+  trapping Nothing policy.
+
+```zax
+owner : MyType * last = @
+view : MyType * = owner.             // points at the same value owner points at
+
+reset owner                          // owner is now vacant
+borrowed : MyType * = owner.         // vacant too: no memory access, no trap
+use(owner.x)                         // a member read: traps under a trapping Nothing policy
+```
+
+This address-preserving rule applies only when forming a pointer from `p.`,
+and is recorded in
+[Zax Nothing instances](nothing-instances.md). In ordinary code, test `?owner`
+before using the pointee.
+
+#### Returning an owning raw pointer
+
+A function that allocates and returns an owning raw pointer declares `move` or
+`last` on its result:
+
+```zax
+makeValue final : (
+  result : MyValue * last = @
+)() = {
+  // result is allocated before body entry.
+}
+
+tryMakeValue final : (
+  result : MyValue * last = @!
+)() = {
+  // result is vacant if storage could not be allocated.
+}
+```
+
+A caller receives ownership into an owning pointer:
+
+```zax
+value : MyValue * last = makeValue()
+```
+
+If the caller discards the result (when allowed), the temporary result owns
+the allocation and frees it at the end of the statement. A raw `copy` result
+cannot be initialized with `= @`:
+
+```zax
+broken final : (
+  result : MyValue * = @
+)() = {
+}
+// error: a raw copy result cannot own an allocation
+```
+
+For results, `@` promises a non-vacant allocation on every normal exit; `@!`
+permits vacancy. Complete result construction and mapping are defined by
+[Zax function invocation](function-invocation.md#opt-in-result-initialization).
 
 #### Structural copies and raw pointer casting
 
@@ -500,131 +705,14 @@ Reinterpreting a pointer as another pointee type uses protected `unsafe cast`:
 otherPointer := pointer unsafe cast OtherType *
 ```
 
-It keeps a non-vacant address while providing no pointee identity, provenance,
-alignment, lifetime, or qualification guarantee. A vacant source produces a
-vacant destination. For managed pointers, only the pointee type changes: the
-ownership role, stance, and lifetime rules are those of the ordinary transition.
-Complete behavior, including conversion between pointers and
-pointer-representation integers, belongs to
+A type cast never changes any stance: it keeps the stance on every layer, and
+writing a different stance in the target type is an error. It keeps a
+non-vacant address while providing no pointee identity, provenance, alignment,
+lifetime, or qualification guarantee. A vacant source produces a vacant
+destination. For managed pointers, the ownership role and lifetime rules are
+those of the ordinary transition. Complete behavior, including `unsafe cast as S`
+and pointer/integer conversion, belongs to
 [Zax conversions and casts](casting.md#unchecked-reinterpretation-with-unsafe-cast).
-Deeper pointer-copy and provenance policy remains future pointer work.
-
-#### Scheduled raw allocations
-
-For a raw destination, `@` or `@!` attaches successful allocation disposition to
-the destination declaration's life path:
-
-```zax
-scoped : MyValue * = @
-maybeScoped : MyValue * = @!
-```
-
-The pointer remains raw. The declaration independently schedules disposition
-when its path ends or when the slot replaces the allocation:
-
-```zax
-alias : MyValue * = scoped
-```
-
-`alias` copies only the address. It does not copy the schedule and cannot safely
-outlive the allocation path owned by `scoped`.
-
-Assignment to the scheduled slot dispositions its old allocation and then adopts
-the new source's disposition authority:
-
-```zax
-scoped = uniqueOwner as last
-scoped = otherScheduledRaw as last
-```
-
-The source becomes vacant. Its own scheduled cleanup remains in place but
-later observes vacancy and performs no disposition.
-
-An ordinary borrowed raw source is adoptable only when analysis proves that it
-identifies an allocation root and carries the sole disposition authority.
-Otherwise the adoption requires narrow unsafe responsibility. A known interior,
-ended, or independently owned target is rejected.
-
-Assigning a typed default vacant pointer dispositions a scheduled slot's current
-allocation before emptying it:
-
-```zax
-scoped = (: MyValue *)
-```
-
-#### Open-ended raw allocations
-
-`@<` and `@!<` deliberately create no declaration-attached cleanup owner:
-
-```zax
-manual : MyValue * = @<
-maybeManual : MyValue * = @!<
-```
-
-They are safe only when analysis proves another lifetime/disposition owner or a
-complete manual protocol. Otherwise creation or escape requires narrow unsafe
-responsibility.
-
-Assigning a typed default vacant pointer to an open-ended raw pointer discards
-only the address:
-
-```zax
-manual = (: MyValue *)
-```
-
-It does not disposition the allocation.
-
-#### Returning a scheduled raw allocation
-
-A callable that allocates a raw result should declare terminal transfer in its
-prototype:
-
-```zax
-makeValue final : (
-  result : MyValue * last = @
-)() = {
-  // result is allocated and scheduled before body entry.
-}
-```
-
-`= @` makes the allocation and schedule part of the visible result contract.
-`last` transfers that responsibility to the caller destination:
-
-```zax
-value : MyValue * = makeValue()
-```
-
-The producer result pointer becomes vacant; its scheduled cleanup remains but
-is a no-op. If the result is discarded, its own slot retains responsibility and
-dispositions the allocation.
-
-`@!` produces the same contract with a possibly vacant result:
-
-```zax
-tryMakeValue final : (
-  result : MyValue * last = @!
-)() = {
-}
-```
-
-A result with no stance is passed on as `last`, like any by-value result with
-no stance, so the caller takes over the allocation. Declaring `copy` instead
-says on purpose that callers only borrow the pointer: they may use it only
-until the call's result is destroyed, unless they write `as last` or the
-compiler can prove another owner.
-
-Explicit raw `move` likewise does not transfer declaration-attached disposition
-and remains subject to the borrowed lifetime boundary. `deep` is available only
-when an exact deep-capable consumer exists; it never implies built-in pointee
-cloning.
-
-For results, `@` and `@<` promise presence on every normal exit; `@!` and `@!<`
-permit vacancy. A compatible visible prototype may change scheduled versus
-open-ended outward cleanup without reminting the implementation body, but it
-cannot change definite versus maybe-present guarantees.
-
-Complete result construction and mapping are defined by
-[Zax function invocation](function-invocation.md#opt-in-result-initialization).
 
 #### Allocation roots and records
 
@@ -633,9 +721,13 @@ created directly by one dynamic allocation operation. Its allocation record
 governs the complete allocated storage and final disposition.
 
 ```zax
-container : Container * unique = @
-member : Item * = pointerTo(container.items[0])
+container : Container * last = @
+member : Item * = container.items[0]     // a raw pointer to one element: takes its address
 ```
+
+`container` is an owning raw pointer here, so a raw pointer into its allocation
+needs no `unsafe`. If `container` were `Container * unique`, the same line would
+need `unsafe`, because a `unique` allocation allows no raw borrowers.
 
 `container` targets the allocation root. `member` may target bytes and a live
 place inside that allocation, but the element is not an independently
@@ -646,7 +738,7 @@ The distinction determines:
 - which complete destructor runs;
 - which object arena receives storage recovery;
 - which allocation record applies;
-- whether a pointer may become `unique`;
+- whether a pointer may become `unique` or an owning raw pointer;
 - whether raw `reset` may disposition the allocation; and
 - what an interior pointer keeps alive.
 
@@ -686,11 +778,31 @@ mode, termination state, and collection metadata.
 ### Unique ownership
 
 ```zax
-owner : MyValue * unique
+owner : MyValue * unique = @
 ```
 
 `unique` means one pointer owns the allocation-root life path. Ownership may be
 transferred, but it is never shared concurrently with another owning pointer.
+
+**`unique` allows no raw borrowers.** Outside `unsafe`, nothing unchecked may
+point at a `unique` pointer's value or into its allocation. References and
+slices are checked by lifetime analysis, so they are allowed:
+
+```zax
+owner : MyValue * unique = @
+view : MyValue readonly loan & = owner.   // fine: checked by lifetime analysis
+raw : MyValue * = owner.                  // error outside unsafe
+
+// Illustrative unsafe category name; exact unsafe syntax remains unsettled.
+unsafe<unique-raw-borrow>{
+  raw2 : MyValue * = owner.               // compiles: programmer keeps raw2 within owner's lifetime
+}
+```
+
+This is what separates `unique` from an owning raw pointer (`* move` or
+`* last`): both own their allocation alone with no control block, but only an
+owning raw pointer allows raw borrowers, leaving it to the programmer to keep
+those borrowers valid.
 
 A blockless unique owner has no ownership control block. This is the
 minimum-overhead managed pointer form.
@@ -774,11 +886,11 @@ target fails like a failed claim: the `unique` destination is vacant.
 ### Strong ownership
 
 ```zax
-owner : MyValue * strong
+owner : MyValue * strong = @
 ```
 
 Every nonempty strong pointer participates in one control block. Copying it
-creates another owner:
+creates another owner of the same allocation:
 
 ```zax
 another : MyValue * strong = owner
@@ -786,6 +898,13 @@ another : MyValue * strong = owner
 
 The owned allocation remains available while at least one strong owner exists.
 When strong ownership closes, weak pointers cannot reopen it.
+
+A `strong` pointer is an owner of the value it points to, so a holder of a
+`strong` pointer may write `as move` or `as last` on `owner.` according to the
+pointee's stance. Another `strong` pointer to the same allocation may then see
+a moved-from or finished value, which can be replaced in place with `.=`.
+`deep` is not available on pointer layers and never clones what a pointer
+points to, because a copy cannot name an allocation arena.
 
 `strong` uses local shared accounting. Copies must not cross thread boundaries
 without first passing through unique ownership: `unique` for a pointer that
@@ -804,8 +923,10 @@ A weak pointer:
 - shares the control block;
 - does not increment the strong count;
 - does not keep the target ownership lifetime open;
-- may survive target termination when its control block remains alive; and
-- cannot resurrect ownership after the final strong release.
+- may survive target termination when its control block remains alive;
+- cannot resurrect ownership after the final strong release; and
+- becomes an owner of the pointed-to value only after acquiring a `strong`
+  pointer.
 
 Weak observation breaks strong-reference cycles when the graph does not require
 that edge to own its target.
@@ -816,10 +937,11 @@ Every pointer supports `?`, but its guarantee depends on the pointer role:
 
 | Pointer | Meaning of `?pointer` |
 | --- | --- |
+| Owning raw (`* move` or `* last`) | This pointer currently owns a live allocation |
+| Borrowing raw (`* copy` or `* loan`) | The pointer value is non-vacant; no pointee-validity guarantee |
 | `unique` or `unique shareable` | This pointer currently owns a target |
 | `strong` | This pointer currently participates in live strong ownership |
 | `weak` | This pointer stores a weak relationship, even if strong ownership has closed |
-| Raw | The pointer value is non-vacant; no pointee-validity guarantee |
 
 Weak presence and liveness are separate:
 
@@ -869,94 +991,99 @@ liveness probe remains only a snapshot.
 
 ## Resetting a pointer
 
-Protected pre-unary `reset` ends the relationship for which a pointer or its
-declaration has authority, then leaves the pointer vacant:
+Protected pre-unary `reset` ends the relationship a pointer owns, then leaves
+the pointer vacant:
 
 ```zax
-reset pointer
+owner : MyValue * last = @
+reset owner                       // frees the allocation and leaves owner vacant
 ```
 
 | Pointer | Effect |
 | --- | --- |
-| Scheduled raw | Apply the allocation's recorded disposition |
-| Open-ended raw | Explicitly disposition the allocation; requires allocation-root and authority proof |
-| Borrowed raw | Unavailable unless analysis proves complete disposition authority |
+| Owning raw (`* move` or `* last`) | Apply the allocation's recorded disposition and leave vacant |
+| Borrowing raw (`* copy` or `* loan`) | Error: a borrowing raw pointer holds nothing to free |
 | `unique` | Release unique ownership |
 | `unique shareable` | Release unique ownership and its dormant block |
 | `strong` | Release this strong participation; destroy only when ownership closes |
 | `weak` | Release this weak observation and any final retained block |
 | Already vacant | No-op |
 
-An interior strong or weak pointer follows the same rule: reset releases
+An interior strong or weak pointer follows the same rule: `reset` releases
 participation in the enclosing allocation's control block and leaves the
 pointer vacant. It does not destroy the targeted member as an independent
 allocation.
 
-For raw pointers, safe reset requires proof that the pointer identifies the
-allocation root and that no competing authority will disposition it. An opaque
-but potentially valid relationship may use narrow unsafe responsibility. A
-proved interior pointer, ended allocation, stack/global place, or competing
-owner is known-invalid.
-
-Reset applies the disposition recorded at allocation:
+`reset` applies the disposition recorded at allocation:
 
 - `Prompt` destroys and recovers promptly;
 - `DeferredRecovery` destroys promptly while the arena retains storage; and
 - `AttachedLifespan` closes the pointer's local responsibility while destruction
   and recovery remain attached to arena teardown.
 
-Resetting a vacant pointer is a harmless no-op because this protected operation
-examines the pointer state rather than invoking a member through its pointee.
+Resetting a vacant owning or managed pointer is a harmless no-op because
+`reset` checks the pointer state rather than calling a member on its pointee.
+Resetting the same owning pointer a second time is likewise a no-op.
 
-Assignment to vacancy remains ordinary destination behavior. It releases a
-scheduled or managed destination's current relationship, but for an open-ended
-raw pointer it discards only the address:
+`reset` frees, so calling `reset` on a borrowing raw pointer (`* copy` or
+`* loan`) is an error: a borrower holds nothing to free, and there is no
+`unsafe reset` bypass. To free an allocation reached only through a borrowing
+pointer (for example, after `unsafe vacate` or from foreign code), restore
+ownership through the one escape and `reset` the owning pointer or let it go
+out of scope:
 
 ```zax
-manual : MyValue * = @<
-manual = (: MyValue *) // does not disposition the allocation
+restored : MyValue * last = (view unsafe cast as last) as last
+reset restored
 ```
 
-Resetting the same pointer again is harmless after the first reset leaves it
-vacant. A disposition attempt through a stale alias is rejected when analysis
-proves that the allocation already ended; an unproved alias relationship
-requires narrow unsafe responsibility.
+Assigning a typed default vacant pointer (`(: MyValue *)`) follows the
+destination pointer's role: on an owning raw pointer or managed pointer it
+frees or releases the old ownership; on a borrowing raw pointer it discards
+only the address:
+
+```zax
+owner = (: MyValue *)             // frees the allocation and leaves owner vacant
+borrowed = (: MyValue *)          // discards only the address
+```
 
 ## Vacating a raw pointer
 
-Protected pre-unary `vacate` discards one raw address and installs vacancy
-without disposition:
+Protected pre-unary `vacate` discards a raw pointer's address and leaves it
+vacant without freeing anything:
 
 ```zax
 value : MyValue
 borrowed : MyValue * = value
 
-vacate borrowed
+vacate borrowed                   // always safe: a borrowing raw pointer holds no ownership
 ```
 
-Plain `vacate` requires proof that the pointer is a non-owning raw relationship,
-that no declaration-attached schedule is bypassed, and that discarding the
-address loses no required disposition authority.
+Plain `vacate` is always safe on a borrowing raw pointer (`* copy` or
+`* loan`), because a borrower holds no cleanup responsibility to lose.
 
-When another potentially valid disposition relationship is opaque:
+On an owning raw pointer (`* move` or `* last`), discarding the address drops
+cleanup responsibility without freeing the allocation, so it requires
+`unsafe`:
 
 ```zax
-unsafe vacate opaqueRaw
+owner : MyValue * last = @
+unsafe vacate owner               // drops responsibility without freeing; leaves owner vacant
 ```
 
-This responsibility form is available only for raw pointers. A proved last
-usable address to a live open-ended allocation, or a scheduled raw pointer still
-carrying a live schedule, remains invalid even under `unsafe`.
+Use `unsafe vacate` to abandon an allocation intentionally or as the first
+half of vacating ownership before reclaiming it later through
+`unsafe cast as last`.
 
-Managed and self-accounting pointer roles never support `vacate`:
+Managed and self-accounting pointer roles never support `vacate`, even under
+`unsafe`:
 
 ```zax
-unsafe vacate owner // error: unique ownership must be released or transferred
+unsafe vacate uniqueOwner         // error: unique ownership must be released or transferred
 ```
 
-The same applies to `strong`, `weak`, and future managed roles, including
-interior pointers. Unsafe source may assert an opaque but potentially valid raw relationship; it
-cannot legalize a guaranteed leak or corrupt ownership accounting.
+The same applies to `unique shareable`, `strong`, `weak`, and interior
+pointers. `unsafe vacate` cannot corrupt managed ownership accounting.
 
 ## Pointer-layer `atomic`
 
@@ -985,70 +1112,70 @@ between local and atomic shared families requires exclusive ownership through
 
 ## Ownership transitions
 
-The destination pointer type and ordinary `copy`, `move`, or `last` stance state
-the intended transition.
+The destination pointer type and stance state the intended transition.
 
-### Scheduled raw and managed ownership
+### Owning raw and managed ownership
 
-A raw pointer, whether or not it was declared with `= @`, can become a
-`unique` owner only with `as last`. Without `last`, the destination would only
-borrow the address, and a `unique` pointer cannot borrow:
+Ownership passes between owning raw pointers (`* move` or `* last`) and
+managed owners without `unsafe`:
 
 ```zax
-scheduled : MyValue * = @
-ordinaryRaw : MyValue * = locateValue()           // a raw pointer declared without = @
+rawOwner : MyValue * last = @
+unique1 : MyValue * unique = rawOwner as last  // unique1 takes over; rawOwner is vacant
 
-// each line below is a separate alternative
-owner1 : MyValue * unique = scheduled             // error: unique cannot borrow; write `as last`
-owner2 : MyValue * unique = scheduled as last     // owner2 takes over; scheduled is empty
-owner3 : MyValue * unique = ordinaryRaw as last   // also needs proof that ordinaryRaw is the only owner, or unsafe
+raw1 : MyValue * last = unique1 as last        // raw1 now owns and frees it; unique1 is vacant
+// Once the allocation leaves unique, raw1 may hand out raw borrowers.
+
+shared1 : MyValue * strong = @
+raw2 : MyValue * last = shared1 as last
+// Succeeds only if shared1 is the only strong owner, no weak pointer remains,
+// and shared1 targets the allocation root; otherwise raw2 is vacant.
+
+borrow : MyValue * = unique1 as last           // error: a raw copy pointer cannot take ownership
 ```
 
-On success, `scheduled` becomes vacant; its cleanup remains scheduled but
-later performs no disposition. `owner2` becomes the allocation's unique owner.
+A `unique` pointer cannot borrow an address, so passing an owning raw pointer
+without `as last` (or `as move` from a `move` owner) is an error. Passing a
+borrowing raw pointer to a `unique` or owning raw destination requires
+`unsafe cast as last` first, because a raw `copy` pointer cannot be written
+`as last`:
 
-The same applies when passing a pointer to a function. Borrowing copies only
-the address and leaves ownership where it is, so it needs no stance; taking
-ownership needs `as last`:
+```zax
+rawOwner : MyValue * last = @
+ordinaryRaw : MyValue * = locateValue()        // a borrowing raw pointer
+
+// each line below is a separate alternative
+owner1 : MyValue * unique = rawOwner           // error: unique cannot borrow; write as last
+owner2 : MyValue * unique = rawOwner as last   // owner2 takes over; rawOwner is vacant
+owner3 : MyValue * unique = ordinaryRaw as last
+// error: ordinaryRaw is a raw copy pointer and cannot be written as last
+owner4 : MyValue * unique = (ordinaryRaw unsafe cast as last) as last
+// compiles: asserts ordinaryRaw is an unowned allocation root
+```
+
+The same rules apply when calling functions: borrow through `rawOwner.`, and
+hand ownership over with `as last`:
 
 ```zax
 keep final : ()(target : MyValue * unique) = {
 }
 
-borrow final : ()(target : MyValue *) = {
+borrow final : ()(target : MyValue loan *) = {
 }
 
-borrow(scheduled)         // borrows the address
-keep(scheduled)           // error at any use: write `as last`
-keep(scheduled as last)   // keep owns the allocation; scheduled is empty
+borrow(rawOwner.)         // fine: borrows the pointee; rawOwner keeps ownership
+borrow(rawOwner)          // error: rawOwner is last and cannot be copied
+keep(rawOwner)            // error: write as last to hand over ownership
+keep(rawOwner as last)    // fine: keep owns the allocation; rawOwner is vacant
 ```
 
-A scheduled raw destination may likewise adopt `unique` ownership or another
-scheduled raw allocation:
+Assigning into an existing owning raw pointer frees its previous allocation
+before taking over the new one:
 
 ```zax
-scheduled = uniqueOwner as last
-scheduled = otherScheduled as last
+rawOwner = uniqueOwner as last
+rawOwner = otherRawOwner as last
 ```
-
-The destination first frees the allocation it already had, then takes over
-the new one. The source is left empty.
-
-Transferring either authority into an ordinary unscheduled raw destination makes
-the allocation open-ended:
-
-```zax
-raw : MyValue * = uniqueOwner as last
-// requires another proved disposition owner or narrow unsafe responsibility
-```
-
-A raw pointer declared without `= @` only borrows its allocation. It can be
-handed to a pointer declared with `= @`, or to a `unique` or `strong` pointer,
-only with `as last`, and only when the compiler can prove that the pointer
-points at the start of an allocation and is the only owner responsible for
-freeing it; otherwise taking it over needs `unsafe`. After the transfer, the
-raw pointer is empty, just as a pointer declared with `= @` would be. Taking
-over a pointer the compiler knows is not the owner is an error.
 
 ### Shareable unique to shared
 
@@ -1080,6 +1207,7 @@ hidden side effect of ordinary stance transfer.
 ```zax
 plain : MyValue * unique = sharedOwner as last
 prepared : MyValue * unique shareable = anotherShared as last
+rawOwner : MyValue * last = thirdShared as last
 ```
 
 The claim succeeds only when:
@@ -1087,15 +1215,17 @@ The claim succeeds only when:
 - exactly one strong owner remains;
 - no weak observers remain;
 - an atomic source can claim that state atomically; and
-- for a `unique` destination, the pointer targets its allocation root.
+- for a blockless `unique` or owning raw (`* move` or `* last`) destination,
+  the pointer targets its allocation root.
 
 A `unique shareable` destination keeps the control block, so it may hold an
-[interior pointer](#interior-pointers). A blockless `unique` destination cannot.
+[interior pointer](#interior-pointers). A blockless `unique` or owning raw
+pointer cannot.
 
 On success:
 
 - the source becomes vacant;
-- a `unique` destination retires the block; and
+- a `unique` or owning raw destination retires the block; and
 - a `unique shareable` destination retains the dormant block.
 
 On failure:
@@ -1130,6 +1260,49 @@ Lifetime and origin analysis still apply.
 
 Complete stance fallback and source state are defined by
 [Zax transfer stances](transfer-stances.md).
+
+## Pointers through several layers
+
+When pointers point to other pointers, each layer that owns its value keeps
+owning it however you reach that layer. What changes is what you may write
+through the chain:
+
+- you count as an **owner** of a value only when every layer between you and
+  it is one you own;
+- once your path passes through a **borrower**, you are a borrower of
+  everything beyond it.
+
+Each layer carries one stance. On a borrowed layer, the stance written before
+its `*` is the stance that borrower was given for the inner layer, which may
+narrow what the owner declared:
+
+```zax
+owner : MyType copy * last = @
+
+view : MyType copy * loan * = owner              // 1. borrows owner as loan:
+                                                 //    may only look; owner stays usable
+value : MyType * = (view.).                      // 2. borrows the MyType through the chain:
+                                                 //    no as needed; nobody is finished
+taker : MyType copy * last * = owner as last     // 3. gives last on owner:
+                                                 //    nothing moves yet, but owner counts as finished
+owned : MyType copy * last = (taker.) as last    // 4. takes ownership through taker:
+                                                 //    ownership moves now
+```
+
+Line 3 is valid while `owner as last` into a raw `copy` pointer is an error:
+line 3 builds a pointer *to* `owner` (lending `owner` with permission to take
+it later), whereas `borrow : MyType * copy = owner as last` would try to hand
+`owner`'s allocation to a borrowing pointer.
+
+After line 3, if `taker` takes ownership (line 4), `owner` is vacant and its
+cleanup at scope end finds nothing to free, and `view` and `value` now reach a
+pointer that no longer holds the allocation. If `taker` never takes it,
+`owner` still frees the allocation at the end of its scope. As with any raw
+borrower, `taker` must not outlive `owner`. Write `as last` in a chain only
+when another place truly needs to take ownership; to reach the underlying
+value, use lines 1 and 2.
+
+Several dereferences in a row use brackets: `((x.).).`.
 
 ## Type-erased ownership and observation
 
@@ -1243,11 +1416,12 @@ than a root-only owner to remember the target.
 
 ### `OpaqueObserver`
 
-`OpaqueObserver` erases one raw-pointer-like target without adding ownership:
+`OpaqueObserver` erases one raw-pointer-like target without adding ownership.
+It records the target's type, stance, and qualifiers:
 
 ```zax
-typed : MyType * = obtainPointer()
-opaque : OpaqueObserver = typed
+view : MyValue copy * = myValue
+opaque : OpaqueObserver = view
 ```
 
 It can be vacant and supports `?`/`!`. Non-vacancy proves neither target
@@ -1256,27 +1430,36 @@ global, stack place, or another pointer target and remains subject to ordinary
 raw-pointer lifetime analysis.
 
 A default observer has neither target nor hidden target type. Erasing a vacant
-typed pointer creates a vacant observer that still remembers that pointee type.
+typed pointer creates a vacant observer that still remembers that pointee type,
+stance, and qualifiers.
 
-Safe recovery produces a typed raw pointer and yields vacancy on mismatch:
+Safe recovery must state the type, stance, and qualifiers explicitly. Recovery
+may keep the same stance or narrow to a stance whose permitted operations all
+fit inside what was put in, and may turn `writable` into `readonly`; requesting
+a stance or qualifier that was not put in fails. When both sides are visible,
+the compiler reports a mismatch at compile time. When the observer is truly
+opaque, a type, stance, or qualifier mismatch produces a vacant pointer:
 
 ```zax
-typedAgain : MyType * = opaque
+back : MyValue copy * = opaque       // fine: the same stance
+lent : MyValue loan * = opaque       // fine: loan permits nothing, so it fits inside copy
+taker : MyValue move * = opaque      // error: copy was put in; move was not
 ```
 
-`opaque is type MyType` distinguishes hidden target identity from target
+`opaque is type MyValue` distinguishes hidden target identity from target
 vacancy. `vacate opaque` clears its address without disposition while preserving
-the hidden target type.
+the hidden target type, stance, and qualifiers.
 
 `liveness probe` is unavailable: a raw observation has no ownership mechanism
 that can answer whether an arbitrary target remains alive.
 
 ### `OpaqueReferenceObserver`
 
-`OpaqueReferenceObserver` erases one reference target:
+`OpaqueReferenceObserver` erases one reference target, recording its type,
+stance, and qualifiers:
 
 ```zax
-typed : MyType & = value
+typed : MyType loan & = value
 opaque : OpaqueReferenceObserver = typed
 ```
 
@@ -1284,28 +1467,30 @@ It always binds one fixed place, cannot be vacant, never rebinds, and has no
 `?`, `!`, reset, vacate, or liveness probe. Copying creates another observer of
 the same place and extends no lifetime.
 
-`typed` above is declared with no stance, so it is a loan. An observer made
-from a loan still carries the loan: a reference recovered from `opaque` is
-also a loan, so it cannot be used to copy or take from `value`.
-
-Direct recovery returns a reference and panics on type mismatch:
+Direct recovery must state the type, stance, and qualifiers explicitly. It
+follows the same narrowing rule as `OpaqueObserver`: a loan put into `opaque`
+can only be recovered as `loan`, and recovery may turn `writable` into
+`readonly` but never the reverse. Because a reference cannot be vacant, a
+runtime type, stance, or qualifier mismatch panics (and a statically visible
+mismatch is a compile error):
 
 ```zax
-typedAgain : MyType & = opaque
+typedAgain : MyType loan & = opaque
 ```
 
-Preflight with `is type` establishes a flow fact and avoids a repeated check:
+Preflight with `is type` establishes a flow fact and avoids a repeated type
+check:
 
 ```zax
 if opaque is type MyType {
-  typedAgain : MyType & = opaque
+  typedAgain : MyType loan & = opaque
   use(typedAgain)
 }
 ```
 
-Safe recovery from either observer preserves or reduces qualification and
-access authority. Erasure cannot turn readonly access into writable access,
-change final-place truth, or manufacture ownership.
+Safe recovery from either observer preserves or narrows stance and access
+qualifiers, never manufactures ownership, and requires the recorded `immutable`
+or `final` truth to match.
 
 An `OpaqueOwner` and `OpaqueObserver` may be paired by a programmer-defined
 generic when code needs erased allocation lifetime plus an erased interior
@@ -1428,20 +1613,26 @@ Each outer cast crosses one immediate boundary, so returning from
 `inner car.axle.wheel` takes two casts. Composition owns the proved, tracked,
 and unsafe forms.
 
-### Interior pointers never become blockless `unique`
+### Interior pointers never become blockless `unique` or owning raw pointers
 
-A blockless `unique` pointer records only its target. It has nowhere to
-remember the allocation root it would have to dispose, so a claim to `unique`
-requires the allocation root:
+Neither a blockless `unique` pointer nor an owning raw pointer (`* move` or
+`* last`) has a control block. Each records only one address, so it has
+nowhere to remember the allocation root it would have to dispose. Claiming
+either from an interior pointer therefore fails:
 
 ```zax
 exclusive : Engine * unique = engine as last
-// error when the compiler proves `engine` is interior; otherwise a vacant result
+rawOwner : Engine * last = engine as last
+// both are errors when the compiler proves `engine` is interior; otherwise a vacant result
 ```
 
+Applying `unsafe cast as last` to an interior raw address is the programmer's
+unsafe assertion and does not make the interior address an allocation root.
+
 A `unique shareable` destination keeps the control block and may hold an
-interior target. To claim `unique` after working with an interior pointer,
-return to the root and release the other owners, including the interior ones:
+interior target. To claim `unique` or an owning raw pointer after working with
+an interior pointer, return to the root and release the other owners,
+including the interior ones:
 
 ```zax
 reset engine
@@ -1543,7 +1734,7 @@ participate in cycle collection.
 
 | Value | Destruction | Storage recovery |
 | --- | --- | --- |
-| `AllocationDisposition.Prompt` | When ordinary ownership or scheduled disposition closes | Prompt |
+| `AllocationDisposition.Prompt` | When ownership closes | Prompt |
 | `AllocationDisposition.DeferredRecovery` | Prompt | Arena teardown/reset |
 | `AllocationDisposition.AttachedLifespan` | Arena teardown | Arena teardown/reset |
 
@@ -1694,17 +1885,19 @@ The first transition requires one strong owner, no weak observers, and an
 allocation-root target. Atomic shared ownership may then operate across threads,
 but the pointee remains subject to its separate data-race and affinity contract.
 
-A raw pointer may cross when analysis proves its pointee path, arena,
-provenance, and thread-affinity requirements remain valid. Otherwise the
-boundary requires narrow unsafe responsibility.
+An owning raw pointer (`* move` or `* last`) may cross by transfer under the
+same pointee-affinity and destruction rules as `unique`, provided no raw
+borrower outlives or races with it. A borrowing raw pointer may cross when
+analysis proves its pointee path, arena, provenance, and thread-affinity
+requirements remain valid. Otherwise the boundary requires narrow unsafe
+responsibility.
 
 ## Costs
 
 | Form or policy | Typical cost |
 | --- | --- |
-| Borrowed raw | Address-sized pointer and no ownership work; static proof or unsafe responsibility |
-| Scheduled raw | Address-sized pointer plus declaration-attached disposition tracking and allocation-record access |
-| Open-ended raw | Address-sized pointer; programmer/proved manual disposition responsibility |
+| Borrowing raw (`* copy` or `* loan`) | Address-sized pointer and no ownership work; static proof or unsafe responsibility |
+| Owning raw (`* move` or `* last`) | Address-sized pointer plus automatic cleanup and allocation-record access when destroyed or replaced; no control block |
 | `unique` | Exclusive ownership and final disposition; no control block |
 | `unique shareable` | Reserved inline or detached control block |
 | `strong` / `weak` | Local count updates, control-block storage, possible weak-retained block |
@@ -1728,9 +1921,11 @@ Representative diagnostics include:
 
 - blockless `unique` cannot enter shared ownership without allocating a control
   block;
-- shared-to-unique claim failed and produced an empty destination;
-- interior pointer cannot become blockless `unique`;
-- claim to `unique` from a pointer that is not the allocation root;
+- shared-to-unique or shared-to-owning-raw claim failed and produced a vacant
+  destination;
+- interior pointer cannot become blockless `unique` or an owning raw pointer;
+- claim to `unique` or an owning raw pointer from a pointer that is not the
+  allocation root;
 - `inner` path crosses a pointer, reference, optional payload, variant
   alternative, dynamic array element, unmanaged overlay, or separate allocation;
 - `inner` from a raw, `unique`, or `unique shareable` root;
@@ -1741,25 +1936,29 @@ Representative diagnostics include:
 - object or control-block arena would end while dependent pointers remain;
 - weak acquisition failed and produced an empty strong pointer;
 - opaque owner or observer recovery found another exact type;
-- opaque recovery requested unavailable ownership or stronger access;
+- opaque observer recovery requested a stance or qualifier not present when
+  erased (compile error when statically visible; vacant for `OpaqueObserver`,
+  panic for `OpaqueReferenceObserver`);
 - unsafe opaque transfer contradicts a statically known type;
 - an opaque reference observer would outlive its fixed target;
 - liveness probing was requested for a nonowning opaque observer;
+- allocation (`@` or `@!`) targeted a raw `copy` or `loan` pointer;
+- writing `as move` or `as last` on a borrowing raw pointer (`* copy` or
+  `* loan`);
+- attempting to borrow an owning raw pointer without `.`;
+- raw borrower created from a `unique` allocation outside `unsafe`;
+- raw pointer made from a reference of unseen origin (a reference parameter,
+  reference result, or `_`) outside `unsafe`;
 - raw pointer was statically proved vacant at an access;
 - unchecked raw pointer access may reach Nothing backing;
 - raw pointer has no proved live pointee, provenance, alignment, or access
   permission;
 - raw pointer escaped the container or life path that established its proof;
-- open-ended raw allocation lost its last usable address;
-- raw reset target is not a proved allocation root;
-- `vacate` would bypass a live schedule, lose the last usable allocation
-  address, or apply to a managed pointer;
-- raw allocation was dispositioned through a stale alias;
-- scheduled raw adoption lacks sole disposition authority;
-- a raw pointer passed to a `unique` destination without `as last`, which
-  would only borrow it;
-- a raw pointer made from a loan reference outside `unsafe`;
-- scheduled raw result used `copy` where its cleanup must transfer;
+- `reset` applied to a borrowing raw pointer (`* copy` or `* loan`);
+- `vacate` applied to an owning raw pointer without `unsafe`, or applied to a
+  managed pointer even under `unsafe`;
+- raw owner passed to a `unique` or owning raw destination without `as last`
+  (or `as move` from a `move` owner);
 - panicking allocation could not satisfy its request;
 - disabled allocation-failure panic occurred despite its promised-impossible
   contract;
@@ -1775,6 +1974,7 @@ Representative diagnostics include:
 Diagnostics should distinguish:
 
 - ownership role;
+- pointer-layer stance and pointed-to stance;
 - target place;
 - allocation root, when the target is interior;
 - object arena;
@@ -1782,7 +1982,7 @@ Diagnostics should distinguish:
 - allocation disposition;
 - collection eligibility;
 - contextual, defaulted, or explicit policy origin;
-- declaration-attached or open-ended raw state;
+- borrowing versus owning raw pointer;
 - pointer-layer atomicity; and
 - pointee thread safety.
 

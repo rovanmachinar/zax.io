@@ -93,6 +93,16 @@ The slice can remember a narrower window, but it cannot expand beyond the
 elements it was originally allowed to view. The array must remain alive, and
 operations that move or remove viewed elements can invalidate the slice.
 
+A slice is a borrower of the elements it shows, checked by lifetime analysis
+like a reference. So a slice may view the elements of an array that a `unique`
+pointer owns, where a raw pointer to an element would need `unsafe`:
+
+```zax
+owner : MyMessage[0..] * unique = @
+window : MyMessage[] = owner.[1..<3]     // fine: a slice is checked like a reference
+raw : MyMessage * = owner.[0]            // error outside unsafe: unique allows no raw borrowers
+```
+
 `T[N]`, ranged arrays, and `T[]` slices are built into Zax. Programmers declare
 their own generic types with a `$` list, as described by
 [generics](generics.md#generic-types-and-other-generic-declarations).
@@ -332,7 +342,7 @@ sum final : (result : Integer)(values ... : Integer) = {
 one result to the array:
 
 ```zax
-measureWidth$ final : (UseType : type)(result : IndexSize)(value : UseType readonly &) = { }
+measureWidth$ final : (UseType : type)(result : IndexSize)(value : UseType readonly loan &) = { }
 
 widths$ final : (Items ... : type)(result : IndexSize[Items count])(items ... : Items) = {
   return [ from each item : in items |> measureWidth() ]   // one width per item
@@ -1184,10 +1194,11 @@ Copying or moving a slice affects its window description only. It never
 implicitly copies or moves borrowed elements and cannot transfer the unique
 backing handle.
 
-Storage-assisted transfer of an element range therefore needs a consuming
-operation rooted in the owning array. Future storage work may detach complete
-chunks or fall back to elementwise transfer, but a passive `slice as last`
-cannot authorize either operation.
+A slice is a borrower that was never given `last`, so `slice as last` is an
+error: only the array that owns the storage can hand it over. Storage-assisted
+transfer of an element range therefore needs a consuming operation rooted in
+the owning array. Future storage work may detach complete chunks or fall back
+to elementwise transfer.
 
 ## Joining arrays
 
@@ -1214,11 +1225,16 @@ values <+>= [ oneMore ]
 
 Arrays do not provide intrinsic `+` concatenation.
 
-Ordinary `<+>` preserves both inputs by copying their elements. An explicit
+Ordinary `<+>` preserves both inputs by copying their elements. Each operand
+is an ordinary source, so its own declared stance applies, and an explicit
 stance may permit reuse:
 
 ```zax
-reused := left as last <+> right
+left : MyMessage[0..] move
+right : MyMessage[0..]
+
+joined := left <+> right            // error: no stance means copy, and left is move
+reused := left as last <+> right    // fine: the result may reuse left's storage
 ```
 
 A compatible provider-backed left array may donate its unique backing handle.
@@ -1277,7 +1293,7 @@ An array reference without a storage requirement is storage-erased:
 
 ```zax
 useAnyStorage final : ()(
-  values : Integer[5] &
+  values : Integer[5] loan &
 ) = {
   values[2] = 55
 }
@@ -1310,7 +1326,7 @@ Bounded references additionally retain source size capabilities:
 
 ```zax
 change final : ()(
-  values : Integer[0..10] &
+  values : Integer[0..10] loan &
 ) = {
   values.resize(10)
 }
@@ -1333,16 +1349,16 @@ metadata.
 Different parameter ranges can borrow the same resizable source:
 
 ```zax
-func1 final : ()(values : Integer[100] &) = {
+func1 final : ()(values : Integer[100] loan &) = {
 }
 
-func2 final : ()(values : Integer[..100] &) = {
+func2 final : ()(values : Integer[..100] loan &) = {
 }
 
-func3 final : ()(values : Integer[50..200] &) = {
+func3 final : ()(values : Integer[50..200] loan &) = {
 }
 
-func4 final : ()(values : Integer[..] &) = {
+func4 final : ()(values : Integer[..] loan &) = {
 }
 
 myValues : Integer[100..]
@@ -1376,7 +1392,7 @@ inspect final : ()(
 }
 
 narrow final : ()(
-  values : Integer[] &
+  values : Integer[] loan &
 ) = {
 }
 ```

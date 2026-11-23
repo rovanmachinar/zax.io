@@ -91,7 +91,7 @@ A concrete alias may abbreviate the complete property profile accepted where a
 type is explicitly declared:
 
 ```zax
-DeepView :: alias type MyType readonly & deep
+DeepView :: alias type MyType readonly deep &
 CopyView :: alias type DeepView writable copy
 ```
 
@@ -635,7 +635,7 @@ move-only.
 Converting a lent identity value gives another `loan`:
 
 ```zax
-inspectToken final : ()(token : MyMoveOnlyType readonly &) = {
+inspectToken final : ()(token : MyMoveOnlyType readonly loan &) = {
   view : MyType readonly & = token as MyType   // fine: a loan of the MyType inside
   copied : MyType = token as MyType            // error: would copy through a loan
 }

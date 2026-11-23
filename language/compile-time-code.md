@@ -223,7 +223,7 @@ the function runs, with an execution policy written after the declaration's
 name-side words, such as `final`:
 
 ```zax
-hashName final [<execute=folding>] : (result : U64)(name : String readonly &) = {
+hashName final [<execute=folding>] : (result : U64)(name : String readonly loan &) = {
 }
 
 buildSineTable final [<execute=compile>] : (result : Integer[])(size : Integer) = {
@@ -516,7 +516,7 @@ mySeed : U64 = 0x9E3779B9
 
 MyRandom :: type {
   operator literal 'rand' final : (result : U64)(
-    payload : String immutable readonly final &
+    payload : String immutable readonly final loan &
   ) unbound = {
     mySeed = mix(mySeed, payload)   // a host-world write from a literal body
     return mySeed
@@ -788,7 +788,7 @@ the functions it calls. Code that already exists is trusted to be checked on
 its own:
 
 ```zax
-increment final : ()(value : MyCounter writable &) = {
+increment final : ()(value : MyCounter writable loan &) = {
   value.cuont += 1     // a typo: reported as an error in increment itself
 }
 

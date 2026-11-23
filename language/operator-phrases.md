@@ -769,8 +769,8 @@ source whose caller can see only public operations. The visibility modifier
 follows the declared form rather than preceding `operator`.
 
 The ordinary unavailable-best rule still applies to an eligible *visible*
-declaration that is bodyless, `forbidden`, unsupported generated behavior, or
-otherwise unavailable after selection. The bounded private-member rule and
+declaration that is `forbidden`, unsupported generated behavior, or otherwise
+unavailable after selection. The bounded private-member rule and
 complete visibility behavior are owned by
 [declarations and bindings](declarations-and-bindings.md#bounded-private-eligibility).
 

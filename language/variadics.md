@@ -129,11 +129,11 @@ Because each item is its own parameter, a qualifier or reference in the
 declaration applies to each item separately:
 
 ```zax
-joinAll final : (result : String)(parts ... : String readonly &) = {
+joinAll final : (result : String)(parts ... : String readonly loan &) = {
 }
 // three arguments: three separate reference parameters, not an array of references
 
-inspectAll$ final : (Items ... : type)()(items ... : Items readonly &) = {
+inspectAll$ final : (Items ... : type)()(items ... : Items readonly loan &) = {
 }
 // every item is a readonly reference, whatever its type
 ```
@@ -474,10 +474,10 @@ reference stays a reference.
 
 The rules for when a stance must be written also apply item by item:
 
-- If the function receiving the items declares them `move` or `last`, as
-  `sendAll$` does below, every call must write at least that stance, for every
-  item type. With no stance written, the call means `copy`, and neither
-  `as copy` nor `as move` can be used for a `last` parameter.
+- If the function receiving the items declares them `via move` or `via last`,
+  as `sendAll$` does below, every call must write at least that stance, for
+  every item type. With no stance written, the call means `copy`, and neither
+  `as copy` nor `as move` can be used for a `via last` parameter.
 - If the receiving parameter is an ordinary by-value one, a stance is needed
   at an item's last use only when the item's type has a `move` or `last`
   operation, or lists one in its `transfer` list, because `as last` would
@@ -488,7 +488,7 @@ Because a generic item's type may own resources, the examples on this page
 state a stance whenever they pass generic items on for the last time:
 
 ```zax
-sendAll$ final : (Items ... : type)()(items ... : Items last) = {
+sendAll$ final : (Items ... : type)()(items ... : Items via last) = {
 }
 
 forwardAll$ final : (Items ... : type)()(items ... : Items) = {
@@ -507,14 +507,15 @@ rule reports an error only for item types where `as last` would change what
 happens. An item that is a reference is never at its value's last use, so it
 needs no stance for this rule.
 
-The exact spelling of a stance after a type such as `Items` is not final.
+The exact spelling of a `via` stance after a type such as `Items` is not
+final.
 
 Zax has no silent perfect forwarding. You write the stance, just as you would
 for a single value. To give different items different stances, write the items
 as separate arguments, selected by compile-time index:
 
 ```zax
-sendPair final : ()(header : MyHeader move, body : MyBody) = {
+sendPair final : ()(header : MyHeader via move, body : MyBody) = {
 }
 
 forwardPair$ final : (Items ... : type)()(items ... : Items)
@@ -664,7 +665,7 @@ A mapping is accepted anywhere several values are: in an argument list, or in an
 every item must produce one common element type:
 
 ```zax
-measureWidth$ final : (UseType : type)(result : IndexSize)(value : UseType readonly &) = {
+measureWidth$ final : (UseType : type)(result : IndexSize)(value : UseType readonly loan &) = {
 }
 
 widths$ final : (Items ... : type)(result : IndexSize[Items count])(items ... : Items) = {
@@ -814,7 +815,7 @@ each item, or at the use inside a stage:
 MyMessage :: type { }
 MyPacket :: type { }
 
-encode final : (packet : MyPacket)(message : MyMessage last) = {
+encode final : (packet : MyPacket)(message : MyMessage via last) = {
 }
 
 sendPackets final : ()(packets ... : MyPacket) = {
@@ -851,7 +852,7 @@ parse final : (
   tree : MyTree,
   failure except : MyParseError
 )(
-  text : String readonly &
+  text : String readonly loan &
 ) = {
 }
 

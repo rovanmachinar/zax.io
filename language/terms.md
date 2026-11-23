@@ -66,8 +66,8 @@ It is independent from pointer ownership. See
 
 An **allocation policy** combines an allocation disposition with independent
 choices such as collection eligibility, object and control-block arenas, and
-control-block placement. Failure and open-ended raw behavior are selected by the
-exact `@` allocation form rather than by policy values.
+control-block placement. Failure behavior is selected by the exact allocation
+form, `@` or `@!`, rather than by policy values.
 
 See [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocation-forms).
 
@@ -482,10 +482,11 @@ enclosure cannot make it valid. See
 
 ## Declared stance
 
-A **declared stance** is a transfer stance written in a declaration. Its
-meaning depends on the location. On a local variable, local reference, member,
-or type alias it is a requirement: every [transfer](#transfer) from that place
-must be written with that stance or a stronger one.
+A **declared stance** is a transfer stance written in a declaration. It always
+says what may be built from that value. Where it is written decides whose value
+that is and who may write which stances on it: an [owner](#owner-and-borrower)
+of a `copy` value may write any stance, while a borrower may write only the
+stance it was given.
 
 ```zax
 report : Report move
@@ -494,24 +495,18 @@ archive(report)           // error: report may not be copied
 archive(report as move)   // fine
 ```
 
-On a by-value parameter, it is the least stance a call must write. On a
-reference parameter or receiver, it says what the function may do to the
-caller's value. On a result, it decides how the caller's destination is built
-from the result; a by-value result with no stance is passed on as `last`. The compiler never applies a declared stance to a use on your
-behalf, and an inferred declaration does not take one from its initializer.
+On a local, member, by-value parameter, or result, the stance governs later
+transfers from that value; a result's stance means the same inside the function
+and for the caller. What a call must write for a by-value parameter is a
+separate stance written after it with `via`, as in `item : MyItem via move`. On
+a reference parameter, the stance before `&` says what the function may do to
+the caller's value; a call must write `as move`, `as last`, or `as deep` for a
+`move &`, `last &`, or `deep &` parameter, while a call with no stance can use a
+`loan &` or `copy &` one. A reference or borrowing raw-pointer parameter,
+reference result, member, or type alias of a reference must write its stance; a local reference bound to one visible value takes it from that
+value. The compiler never applies a declared stance to a use on your behalf.
 See
-[Zax transfer stances](transfer-stances.md#declared-stances-by-location).
-
-## Declaration-attached raw allocation
-
-A **declaration-attached raw allocation** uses a raw pointer value while its
-destination declaration's life path independently schedules allocation
-disposition. Copying the raw address does not copy that schedule. An accepted
-terminal transfer leaves the source pointer vacant, so its later scheduled
-cleanup is a no-op.
-
-See
-[Zax pointers, allocation, and arenas](pointers-and-arenas.md#scheduled-raw-allocations).
+[Zax transfer stances](transfer-stances.md#declaring-stances).
 
 ## Confusable-form intent error
 
@@ -826,19 +821,21 @@ A **loan** is the stance of a reference through which the value as a whole
 can never be copied, moved, or taken: the owner keeps the value. The value's
 members follow their own declared stances. Through a `readonly` loan a member
 can only be copied; through a `writable` loan a member can also be changed,
-moved, or taken, as its own stance allows. A reference parameter, receiver, or
-local reference with no stance is a loan; `& loan` says the same thing
-explicitly:
+moved, or taken, as its own stance allows. A reference parameter is a loan
+when it is written `loan &`, and a receiver is a loan in a version with no
+receiver stance. A local reference bound to one value takes its stance from
+that value:
 
 ```zax
-show final : ()(input : MyType readonly &) = {
+show final : ()(input : MyType readonly loan &) = {
   keep(input)   // error if keep takes MyType by value: input is on loan
 }
 ```
 
 Anything made from a loan that can reach the whole value is also a loan.
-A call written `as loan` can use only functions that take a loan. `loan` is
-never written on a by-value declaration or in a
+A call written `as loan` can use only functions that take a loan. A value
+declared `loan` is [pinned](#pinned-value). `loan` is never a by-value
+parameter's `via` stance and never appears in a
 [transfer list](#transfer-list). See
 [Zax transfer stances](transfer-stances.md#loan).
 
@@ -957,6 +954,32 @@ outlives the call. Work with no observable effect may be pre-computed under the
 `auto` execution policy without changing the program's meaning. See
 [Zax compile-time code](compile-time-code.md#auto-stays-invisible).
 
+## Owner and borrower
+
+An **owner** holds its own value: a local variable or member, a by-value
+parameter (the function owns it), or the value an owning pointer points to. A
+**borrower** reaches a value someone else owns: a reference, a raw pointer that
+holds only an address, or the receiver `_`.
+
+The owner of a value decides how much of it to give up: the owner of a `copy`
+value may write any stance on it, and the owner of a `move` value may also
+write `as last`. The exception is a borrowing raw pointer, whose owner may not
+write `as move` or `as last` on the pointer itself, because it holds nothing to
+hand over. A borrower may write only the stance it was given:
+
+```zax
+remember final : ()(input : MyMessage copy &) = {
+  keep(input)                // fine: input was given copy
+  keep(input as last)        // error: a borrower can't take more than it was given
+}
+
+message : MyMessage
+keep(message as last)        // fine: message's owner may write as last
+```
+
+Lending is always allowed, for owners and borrowers alike. See
+[owners and borrowers](transfer-stances.md#owners-and-borrowers).
+
 ## Opaque owner and observers
 
 An **`OpaqueOwner`** retains a managed allocation-root ownership relationship
@@ -1005,14 +1028,18 @@ completed members, rolls work back, or returns partial lifecycle state to
 ordinary execution. See
 [Zax safety and analysis](safety-and-analysis.md#panic-boundary).
 
-## Open-ended raw allocation
+## Owning raw pointer
 
-An **open-ended raw allocation** has no declaration-attached or managed
-disposition owner. Safe use requires another proved owner or a complete manual
-`reset` protocol; otherwise the programmer assumes narrow unsafe responsibility.
+An **owning raw pointer** is a raw pointer declared `move` or `last`, as in
+`owner : MyValue * last = @`. It owns one allocation and frees it when the
+pointer ends or is replaced, unless the pointer is vacant. Whether a raw pointer
+owns is decided by its stance alone. A raw pointer declared `copy` or `loan`,
+or with no stance, only borrows an address. Copying an owning raw pointer's
+address with `owner.` makes a borrower and leaves ownership where it is;
+`as last` hands ownership over and leaves the source vacant.
 
 See
-[Zax pointers, allocation, and arenas](pointers-and-arenas.md#open-ended-raw-allocations).
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#owning-raw-pointers).
 
 ## Operand hole
 
@@ -1143,6 +1170,23 @@ concrete type. Its additions are visible only where a scope grants the partial,
 and the type's `seal` clause decides which kinds of addition are allowed. A
 partial's name identifies the contribution; it is not a type. See
 [Zax partials](partials.md).
+
+## Pinned value
+
+A **pinned** value is one declared `loan`: nothing is ever built from it, so it
+is never copied, moved, or finished, and it keeps the same address for as long
+as it exists. It can still be used and lent, and its members follow their own
+stances:
+
+```zax
+device : MyDevice loan = openDevice()
+configure(device)          // fine if configure takes MyDevice loan &
+keep(device)               // error: nothing may be built from device
+```
+
+A pinned value under an owning pointer stays pinned while the pointer moves.
+The type's Nothing instance is pinned too, so a call on the type lends it. See
+[pinned values](transfer-stances.md#pinned-values).
 
 ## Place
 
@@ -1323,14 +1367,16 @@ document.publish()             // no stance written: uses the version with no
 (document as deep).publish()   // the deep version
 ```
 
-A function declared with no receiver stance takes the receiver as a
-[loan](#loan) and accepts any call; declaring `loan` explicitly means the
-same. A call that writes a stance uses the version with exactly that stance,
-otherwise the version with no receiver stance. A call that writes no stance
-uses the version with no receiver stance, otherwise a `copy` version, and is
-otherwise an error. A function's receiver stance is separate from its
+The receiver is a parameter bound implicitly. A function declared with no
+receiver stance takes the receiver as a [loan](#loan) and accepts any call;
+declaring `loan` explicitly declares the same function. A call with no stance
+written counts as `copy` where the receiver allows a copy, and otherwise lends
+it. Among the versions whose stance the written stance allows, the closest
+wins, and a `last` version never serves a call written `as move`. A call on the
+type lends the type's pinned Nothing instance, so it uses the version with no
+receiver stance. A function's receiver stance is separate from its
 parameter and result stances. See
-[Zax transfer stances](transfer-stances.md#receiver-stance).
+[Zax transfer stances](transfer-stances.md#receivers).
 
 ## Redundant-structure intent error
 
@@ -1668,7 +1714,7 @@ returning it. Passing it to a [loan](#loan) reference, or calling a function
 with a loan receiver on it, is not a transfer. A
 [declared stance](#declared-stance) on a place limits which stances its
 transfers may be written with. See
-[Zax transfer stances](transfer-stances.md#declared-stances-by-location).
+[Zax transfer stances](transfer-stances.md#declaring-stances).
 
 ## Transfer list
 
@@ -1695,23 +1741,25 @@ and
 
 ## Transfer stance
 
-A **transfer stance** says how much of a value may leave its owner when the
-value is used. The five stances, in the standard order, are `loan`, `copy`,
-`move`, `last`, and `deep`. The first four are ordered by how much leaves:
-`loan < copy < move < last`; `deep` is outside that order.
+A **transfer stance** says what may be built from a value. The five stances, in
+the standard order, are `loan`, `copy`, `move`, `last`, and `deep`:
 
-For a variable, the stance used comes from the use itself: an `as <stance>`
-written there, or `copy` when none is written, or a loan when the variable is
-passed to a reference. Inside a function whose `deep` reference or receiver
-makes `deep` the default, uses of that reference with no stance are `deep`.
-Values without a name work differently: a value built directly in an
-expression is treated as `as last`, and so is a function's by-value result,
-unless the function declares another result stance. A
-[declared stance](#declared-stance) on a variable is different from these
-defaults: it is a requirement the code must meet by writing the stance, and
-the compiler never writes it for you. Writing a stance moves or
-copies nothing by itself; the function or constructor that receives the value
-does the work, and decides what state the original is left in.
+| Stance | What may be built from the value |
+| --- | --- |
+| `loan` | nothing; the value can only be used where it is, or lent |
+| `copy` | a copy, or an independent copy (`deep`) |
+| `move` | only a new value that takes its contents |
+| `last` | only a terminal transfer |
+| `deep` | only an independent copy |
+
+A stance is written in a declaration, as a [declared stance](#declared-stance),
+or at a use with `as`. At a use with no stance written, a value that allows a
+copy is copied and any other value is lent. A value without a name is treated
+as written with the strongest stance its own stance allows, usually
+`as last`. A by-value parameter's `via` stance is the least stance a call must
+write. Writing a stance moves or copies nothing by itself; the function or
+constructor that receives the value does the work, and decides what state the
+original is left in.
 
 See [Zax transfer stances](transfer-stances.md).
 
@@ -1866,10 +1914,10 @@ pointee type's Nothing instance rather than an ordinary target. Pointer-role
 presence remains distinct from pointee lifetime and provenance.
 
 `vacate` is the protected raw-pointer operation that discards one address and
-installs vacancy without disposition. Plain use requires proof that no
-disposition authority is lost; `unsafe vacate` accepts responsibility only for
-an opaque but potentially valid raw relationship. Managed pointers and
-guaranteed leaks reject it even under `unsafe`.
+installs vacancy without freeing anything. It is always safe on a borrowing raw
+pointer. On an [owning raw pointer](#owning-raw-pointer) it gives up the
+responsibility for freeing, so it must be written `unsafe vacate`. Managed
+pointers reject it even under `unsafe`.
 
 See [Zax pointers and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
 

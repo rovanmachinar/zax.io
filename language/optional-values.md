@@ -530,7 +530,7 @@ Panel :: type {
   slot own : Slot
 }
 
-inspectPanel final : ()(panel : Panel readonly &) = {
+inspectPanel final : ()(panel : Panel readonly loan &) = {
   inspect(panel.details) // published path to the optional wrapper
 
   if ?panel.slot.details {
@@ -1027,7 +1027,10 @@ available. `S` means proof or selected transfer behavior decides it.
 
 Writing a stance changes nothing by itself. The table says what the original
 optional `value` holds after the function or constructor that receives it has
-run. Every form keeps the optional type.
+run. Every form keeps the optional type. A stance written on the whole optional
+must be one its own stance allows, and the `move value` and `last value` forms
+must be allowed by the contained value's stance; see
+[stances on an optional and its contained value](#stances-on-an-optional-and-its-contained-value).
 
 | Form | What `value` holds afterward |
 | --- | --- |
@@ -1155,26 +1158,34 @@ disposition.
 
 Even a zero-storage boxed type requires a semantic presence distinction.
 
-## Optional interception and payload forwarding
+## Stances on an optional and its contained value
 
-Transfer stance attaches once to the complete optional source:
+An optional has two stances. The stance written before `?` belongs to the
+contained value; the stance written after `?` belongs to the optional itself.
+Copying or moving the whole optional also copies or moves the contained value,
+so the optional's own stance may name only stances that the contained value's
+stance also allows:
+
+| Contained value's stance | Allowed stances for the optional itself |
+| --- | --- |
+| `copy` | any |
+| `move` | `loan`, `move`, `last` |
+| `last` | `loan`, `last` |
+| `deep` | `loan`, `deep` |
+| `loan` | `loan` only |
 
 ```zax
-MyValue readonly? writable * immutable * varying deep
+slot : MyPayload move ? loan     // a pinned slot whose contents may be moved out
+
+keep(last slot)                  // fine: takes the contained value; slot becomes empty
+other := slot as move            // error: the slot itself is pinned
+slot .= makePayload()            // fine: builds a new contained value in place
+
+broken : MyPayload loan ? move   // error: moving the optional would move a pinned value
 ```
 
-The optional layer owns presence and conditional payload lifetime. When its
-selected contract forwards transfer:
-
-- an absent optional performs no boxed transfer;
-- a present optional forwards the accepted stance to its payload as required by
-  the optional operation;
-- nested wrappers intercept at each present layer;
-- wrapper qualifiers do not rewrite boxed qualifications;
-- and pointer or reference payloads retain their own ownership and referent
-  authority.
-
-These generic post-unary forms are current:
+A stance written at a use on the whole optional is limited by the optional's
+own stance. Any of the five can be written, with no phrase fence:
 
 ```zax
 source as loan
@@ -1184,14 +1195,21 @@ source as last
 source as deep
 ```
 
-They need no phrase fence. This rule does not imply matching protected
-pre-unary `copy` or `deep` optional adapters.
+When the optional is copied, moved, or finished as a whole:
+
+- an empty optional has no contained value, so nothing else happens;
+- a present optional passes the same stance on to its contained value;
+- a nested optional does the same at each layer that is present;
+- the optional's own qualifiers do not change the contained value's
+  qualifiers; and
+- a contained pointer or reference keeps its own ownership and the access it
+  gives to what it refers to.
 
 A type that writes its own `move` or `last` operation decides what happens to
 each member. Writing `as move` or `as last` on the whole value does not apply
 that stance to every member automatically: each member follows its own
 declared stance, and a stronger transfer from a member must be written. Complete member rules are defined by
-[Zax transfer stances](transfer-stances.md#members-and-bindings).
+[Zax transfer stances](transfer-stances.md#members).
 
 ## Swapping optional values
 

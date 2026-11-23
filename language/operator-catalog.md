@@ -56,7 +56,7 @@ Zax recognizes:
 | Mutation | Compounds including array `<+>=`, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
 | Delimited/multi-part | Call, index, splice, and [mixfix](mixfix-operators.md) forms |
-| Allocation initializer | `@`, `@!`, `@<`, `@!<`, with optional attached `@{...}` policy |
+| Allocation initializer | `@`, `@!`, with optional attached `@{...}` policy |
 
 A type may overload a recognized form where its operand domain remains open.
 Declarations cannot invent arbitrary punctuation or assign another precedence.
@@ -969,29 +969,28 @@ hook inside the compiler-owned `.=` lifecycle skeleton.
 
 ## Allocation initializers
 
-`@`, `@!`, `@<`, and `@!<` are exact reserved declaration-bound allocation
-tokens:
+`@` and `@!` are exact reserved declaration-bound allocation tokens:
 
-| Form | Request failure | Raw destination behavior |
+| Form | Request failure | Result |
 | --- | --- | --- |
-| `@` | Panic | Declaration-attached disposition |
-| `@!` | Produce a vacant pointer | Declaration-attached disposition on success |
-| `@<` | Panic | Open-ended |
-| `@!<` | Produce a vacant pointer | Open-ended on success |
+| `@` | Panic | An owning pointer holding the new allocation |
+| `@!` | Produce a vacant pointer | An owning pointer holding the new allocation on success |
 
-They are not ordinary open unary operators and require either a declaration
-initializer or an existing typed pointer destination:
+They are not ordinary open unary operators. They require either a declaration
+initializer or an existing typed destination, and that destination must be a
+pointer that owns its allocation: a raw `move` or `last` pointer, `unique`,
+`unique shareable`, or `strong`:
 
 ```zax
 owner : MyValue * unique = @
 ownerInArena : MyValue * unique = @{ myArena }
 
-scheduled : MyValue * = @
-reset scheduled
-scheduled = @{ anotherArena }
+rawOwner : MyValue * last = @
+reset rawOwner
+rawOwner = @{ anotherArena }
 
 ordinary : MyValue *
-ordinary = @
+ordinary = @ // error: a borrowing raw pointer can't hold an allocation
 
 missing = @ // error: no typed destination
 ```

@@ -41,7 +41,7 @@ edit.
 
 | Field | Value |
 | --- | --- |
-| Operating guidance revision | 8 |
+| Operating guidance revision | 9 |
 | Current project phase | Human-readable conceptual language-design refinement |
 | Active numbered work item | `project/work/00n-<concept>.md` |
 | Language-document status | Current conceptual design coexists with legacy design input; not a formal specification |
@@ -198,8 +198,9 @@ analyzing `n+1`. A new session may take over, or the language maintainer may
 explicitly reassign the same session.
 
 During disposition, promotion, and closure, update cross-cutting terminology and
-distinguish a complete operation from its hooks or component mechanisms. Before
-retiring raw input, check every live reading path and preserve provenance.
+distinguish a complete operation from its hooks or component mechanisms.
+Retire, move, and preserve provenance for raw input and legacy material as
+`project/documentation.md` describes.
 Disposition legacy material by value: retain continuing future evidence, and
 retire material or pages after all useful input is promoted, deferred elsewhere,
 rejected, or superseded.

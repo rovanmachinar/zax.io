@@ -383,44 +383,61 @@ Raw-pointer operations require explicit unsafe responsibility only where the
 safe contract requires a fact the compiler cannot prove. A known-invalid
 pointee remains invalid inside unsafe source.
 
-The same boundary governs raw allocation adoption and reset:
+Two such facts concern where a raw pointer comes from:
+
+- **A `unique` allocation allows no raw borrowers.** References and slices into
+  it are checked by lifetime analysis, but a raw pointer is not, so making one
+  is a defined unsafe permission.
+- **A reference whose origin the function can't see** (a reference parameter,
+  a reference result, or `_`) might reach a `unique` allocation, so making a
+  raw pointer from it needs unsafe responsibility for that origin. Raw
+  pointers from visible values, such as a local, a member of a local, or the
+  value behind an owning raw pointer, need none.
 
 ```zax
-manual : MyValue * = @<
-reset manual
+owner : MyValue * unique = @
+raw : MyValue * = owner.          // error outside unsafe: unique allows no raw borrowers
+
+makePtr final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
+  return input                    // error outside unsafe: input might reach a unique allocation
+}
 ```
 
-Safe reset requires proof that `manual` identifies the allocation root and that
-the operation has sole disposition authority. When the relationship may be valid
-but provenance or alias information is opaque, narrow unsafe responsibility may
-assert those facts. A pointer proved to identify an interior member, ended
-allocation, stack/global place, or allocation with a competing disposer remains
-known-invalid.
+The exact unsafe forms are shown in
+[pointers, allocation, and arenas](pointers-and-arenas.md#raw-pointers).
 
-Transfer of scheduled or managed ownership into an ordinary raw destination
-deliberately opens the allocation. It likewise requires another proved
-disposition owner or narrow unsafe responsibility.
-
-Reallocation through an open-ended raw destination does not reset its old
-allocation:
+Whether a raw pointer is responsible for freeing its allocation is decided by
+its stance alone, so allocation, reset, and reassignment need no tracking:
 
 ```zax
-open : MyValue * = @<
-open = @<{ anotherArena }
+owner : MyValue * last = @     // owns the allocation and frees it
+reset owner                    // safe: frees it now and leaves owner vacant
+owner = @{ anotherArena }      // safe: frees any current allocation, then holds the new one
+
+view : MyValue * = owner.      // a borrowing raw pointer
+reset view                     // error: a borrowing pointer holds nothing to free
 ```
 
-This is safe when analysis proves `open` is vacant or its prior allocation
-was dispositioned. A proved live overwrite is a known resource loss and is
-rejected. If opaque code may have reset or transferred the prior allocation,
-narrow unsafe responsibility may assert that missing fact. Intent
-acknowledgement cannot supply lifecycle proof.
+Ownership passes between owning raw pointers and managed owners with `as last`,
+without `unsafe`. Taking ownership through a borrowing raw pointer is the one
+place where the compiler cannot know the facts: whether the address is the
+start of an allocation, and whether anything else will free it. That needs the
+stance cast, which asserts both:
 
-Raw `vacate` follows the same distinction. Plain use requires proof that
-discarding the address loses no required disposition authority. `unsafe vacate`
-may assert an opaque but potentially valid external relationship, but it cannot
-legalize a proved last usable address to a live allocation. Managed pointers
-reject `vacate` even under `unsafe` because bypassing their release guarantees a
-leak or corrupts ownership accounting.
+```zax
+restored : MyValue * last = (view unsafe cast as last) as last
+```
+
+A pointer proved to identify an interior member, an ended allocation, a
+stack or global place, or an allocation another owner will free remains
+known-invalid even under `unsafe`. Intent acknowledgement cannot supply
+lifecycle proof.
+
+Raw `vacate` follows the same distinction. On a borrowing raw pointer it is
+always safe, because no responsibility is lost. On an owning raw pointer,
+`unsafe vacate` gives up the responsibility for freeing without freeing.
+Managed pointers reject `vacate` even under `unsafe` because bypassing their
+release guarantees a leak or corrupts ownership accounting.
 
 ### Opaque owner and observer recovery
 

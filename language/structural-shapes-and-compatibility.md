@@ -25,7 +25,7 @@ KilometerPoint :: type {
 }
 
 drawPixels final : ()(
-  point : PixelPoint readonly &
+  point : PixelPoint readonly loan &
 ) = {
 }
 
@@ -275,7 +275,7 @@ SensorPoint :: type {
 }
 
 drawPoint final : ()(
-  point : RenderPoint readonly &
+  point : RenderPoint readonly loan &
 ) = {
 }
 
@@ -372,7 +372,7 @@ RenderPoint :: type {
 }
 
 drawPoint final : ()(
-  point : RenderPoint readonly &
+  point : RenderPoint readonly loan &
 ) = {
 }
 
@@ -453,7 +453,7 @@ Packet :: type {
 }
 
 consumePayloadSummary final : ()(
-  payload : PayloadSummary readonly &
+  payload : PayloadSummary readonly loan &
 ) = {
 }
 
@@ -481,7 +481,7 @@ anchored collectively. Select one result slot, then anchor within that result:
 
 ```zax
 consumePointAndStatus final : ()(
-  point : RenderPoint readonly &,
+  point : RenderPoint readonly loan &,
   status : Boolean
 ) = {
 }
@@ -703,7 +703,7 @@ consume((makeContainer() anchor .header) as last)    // error: no guarantee cove
 ```
 
 A caller who chooses a different anchor does not get that guarantee. See
-[members and bindings](transfer-stances.md#members-and-bindings) for the
+[members](transfer-stances.md#members) for the
 general rule.
 
 ## `outer tracked` participates in structure
@@ -760,7 +760,7 @@ RawRegisterBlock :: type {
 }
 
 writeRawRegisters final : ()(
-  registers : RawRegisterBlock readonly &
+  registers : RawRegisterBlock readonly loan &
 ) = {
   // Write both words exactly as represented.
 }
@@ -947,7 +947,7 @@ A construction packet can use an already selected concrete parameter type as
 its destination:
 
 ```zax
-draw final : ()(point : PixelPoint &) = {
+draw final : ()(point : PixelPoint readonly loan &) = {
 }
 
 draw(point: [{ .x = 4, .y = 5 }])
@@ -1243,7 +1243,7 @@ DeviceToRender :: reshape {
 }
 
 drawPoint final : ()(
-  point : RenderPoint readonly &
+  point : RenderPoint readonly loan &
 ) = {
 }
 

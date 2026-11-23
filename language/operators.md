@@ -44,7 +44,7 @@ Zax distinguishes:
 - **mixfix operators**, one operation selected from a tree containing several
   recognized components and operand holes.
 
-The reserved `@`, `@!`, `@<`, and `@!<` spellings are
+The reserved `@` and `@!` spellings are
 **declaration-bound allocation initializers**. They use the symbolic token
 catalog but are not ordinary open unary operators: a declaration supplies the
 resident type and pointer result role, and user declarations cannot overload
@@ -568,8 +568,8 @@ Declaration or partial provenance supplies no preference among declarations on
 the receiver: equal or incomparable surviving candidates are ambiguous. A
 granted partial's operators compete with the receiver's own on equal terms.
 
-A uniquely best bodyless, `forbidden`, unsupported generated/default, or
-otherwise unavailable declaration reports an unavailable operation. Selection
+A uniquely best `forbidden`, unsupported generated/default, or otherwise
+unavailable declaration reports an unavailable operation. Selection
 does not silently fall through to a weaker candidate.
 
 The complete shared relation is defined by
@@ -1006,16 +1006,15 @@ reset optionalValue
 (reset optionalValue) .= [{}]
 ```
 
-For a pointer, `reset` releases the allocation, ownership, observation, or
-scheduled-disposition relationship for which the pointer or its declaration has
-authority, then leaves the pointer vacant:
+For a pointer, `reset` releases the allocation, ownership, or observation the
+pointer holds, then leaves the pointer vacant:
 
 ```zax
 reset pointer
 ```
 
-An open-ended raw pointer requires allocation-root and disposition-authority
-proof or narrow unsafe responsibility. Complete pointer behavior is defined by
+`reset` frees, so it is an error on a borrowing raw pointer (`*`, `* copy`, or
+`* loan`), which holds nothing to free. Complete pointer behavior is defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#resetting-a-pointer).
 
 For a varying function value, `reset` releases its callable representation and
@@ -1026,12 +1025,11 @@ false. Complete behavior belongs to
 ### Raw pointer vacate
 
 `vacate pointer` is a protected pre-unary phrase for raw pointers. It discards
-the address and installs vacancy without disposition. Plain use requires a
-proved non-owning relationship; `unsafe vacate` accepts responsibility for an
-opaque but potentially valid external relationship.
+the address and installs vacancy without freeing anything. On a borrowing raw
+pointer it is always safe. On an owning raw pointer (`* move` or `* last`) it
+drops the responsibility for freeing, so it must be written `unsafe vacate`.
 
-Managed pointers and any use that would guarantee a leak reject the form even
-under `unsafe`. Complete behavior belongs to
+Managed pointers reject the form even under `unsafe`. Complete behavior belongs to
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#vacating-a-raw-pointer).
 
 ### Protected transfer-source operations
@@ -1171,7 +1169,7 @@ result marker:
 
 ```zax
 operator binary '+=' final : (
-  total # : MyValue writable &
+  total # : MyValue writable loan &
 )(
   rhs : MyValue
 ) = { … }

@@ -18,7 +18,7 @@ readCount final : (
   count : Integer,
   failure except : MyReadError
 )(
-  source : String readonly &
+  source : String readonly loan &
 ) = {
   if !sourceIsReadable(source)
     except failure: makeReadError(source)
@@ -36,7 +36,7 @@ A caller handles the exceptional outcome where the call is made:
 
 ```zax
 showCount final : ()(
-  source : String readonly &
+  source : String readonly loan &
 ) = {
   count := readCount(source) catch failure {
     report(failure)
@@ -136,7 +136,7 @@ parseRecord final : (
   consumed : IndexSize,
   failure except : MyParseError
 )(
-  source : Bytes readonly &
+  source : Bytes readonly loan &
 ) = {
   // ...
   return parsedRecord, consumedCount
@@ -252,7 +252,7 @@ loadCount final : (
   count : Integer,
   failure except : MyReadError
 )(
-  source : String readonly &
+  source : String readonly loan &
 ) = {
   count := readCount(source) except failure
   return count
@@ -634,7 +634,7 @@ openResource final : (
   resource : MyResource * unique last,
   failure except : MyOpenError * unique last
 )(
-  name : String readonly &
+  name : String readonly loan &
 ) = {
   if cannotOpen(name)
     except failure: makeOpenError(name) as last
@@ -660,10 +660,11 @@ resource := openResource(name) catch failure {
 A reference can be an exceptional payload directly:
 
 ```zax
-failure except : MyError readonly &
+failure except : MyError readonly loan &
 ```
 
-The selected outcome supplies the control distinction. Ordinary origin analysis
+Like any reference result, a reference payload writes its stance. The
+selected outcome supplies the control distinction. Ordinary origin analysis
 must still prove that the referent survives the handler or forwarding consumer.
 `catch` extends no target life path, and forwarding erases no origin.
 
@@ -671,7 +672,7 @@ An optional reference is used only when the payload itself may contain no
 reference:
 
 ```zax
-failure except : MyError readonly & ?
+failure except : MyError readonly loan & ?
 ```
 
 Optional absence is payload state, not the exceptional-outcome discriminator.
@@ -767,7 +768,7 @@ parse final : (
   tree : Tree,
   failure except : ParseError
 )(
-  text : String readonly &
+  text : String readonly loan &
 ) = {
 }
 
@@ -783,7 +784,7 @@ render final : (page : Page)(head : Header, trees ... : Tree, foot : Footer) = {
 publish final : ()(page : Page) = {
 }
 
-report final : ()(problem : ParseError readonly &) = {
+report final : ()(problem : ParseError readonly loan &) = {
 }
 
 buildPage final : ()(docs ... : String) = {

@@ -108,7 +108,7 @@ MyCount :: identity admit expose type U32
 MyState :: type {
   count : Integer
   identityCount : MyCount
-  next : MyState *
+  next : MyState loan *
   choice : MyValue?
   callback : ()()
 }
@@ -158,11 +158,11 @@ has the undefined boundary described below.
 Nothing behavior is not limited to aggregates:
 
 ```zax
-readMe final : (result : U8)(pointer : U8 *) = {
-  return pointer.
+readMe final : (result : U8)(pointer : U8 copy *) = {
+  return pointer.                  // copy *: the U8 it points to may be copied
 }
 
-writeMe final : ()(pointer : U8 *, value : U8) = {
+writeMe final : ()(pointer : U8 loan *, value : U8) = {
   pointer. = value
 }
 
@@ -420,47 +420,48 @@ ordinary final : ()() = {
 Postfix access binds first, so `?_.` instead dereferences `_` and applies the
 ordinary selected `?T` operation to the resulting value.
 
-`_` is pointer-shaped. `_.` supplies the dereferenced form. When an input
-expects `T *`, `_` is preferred; when an input expects `T`, mapping may use the
-automatic `_.` upgrade. Either form may be passed or returned. A `self` result
-is always a reference, so `return _` there returns the dereferenced form.
+`_` stands for the receiver, and `_.` names the same value explicitly. Passing
+`_` to a reference parameter lends the receiver, the way any receiver is lent
+in a version with no receiver stance. A `self` result is always a reference,
+so `return _` there returns the receiver itself.
+
+A raw pointer can't safely be made from `_`. The function can't see where its
+receiver came from, so the receiver might be the value a `unique` pointer owns,
+which allows no raw borrowers. Making a raw pointer from `_` therefore needs
+`unsafe`, exactly as making one from a reference parameter does:
 
 ```zax
 MyMappedValue :: type {
-  use private final : ()(
-    input : MyMappedValue *
-  ) unbound = {
-    print("pointer overload")
+  label : String
+
+  show private final : ()(input : MyMappedValue readonly loan &) unbound = {
   }
 
-  use private final : ()(
-    input : MyMappedValue &
-  ) unbound = {
-    print("reference overload")
+  keepAddress private final : ()(input : MyMappedValue loan *) unbound = {
   }
 
-  takeValue private final : ()(
-    input : MyMappedValue
-  ) unbound = {
-  }
-
-  demonstrateMapping final once : ()() copy = {
-    // declared with a copy receiver: with no receiver stance, _ would be a
-    // loan, and neither a raw pointer nor a copy could be made from it
-    MyMappedValue.use(_)
-    // Both overloads are viable, but exact MyMappedValue * is preferred.
+  demonstrateMapping final once : ()() = {
+    // no receiver stance: _ is lent, so calls on the type can reach this version
+    MyMappedValue.show(_)          // fine: lends the receiver, on the type or on an instance
+    MyMappedValue.keepAddress(_)   // error outside unsafe: a raw pointer can't be made from _
 
     if ?_
-      MyMappedValue.takeValue(_) // expected MyMappedValue automatically uses _.
+      print(_.label)               // a member read: guarded, because on a call on the type
+                                   // _ is the Nothing instance
   }
 }
+
+MyMappedValue.demonstrateMapping()   // ?_ is false: only show runs
+value : MyMappedValue
+value.demonstrateMapping()           // ?_ is true: show runs, then the label is printed
 ```
 
-The overloaded `use(_)` call demonstrates preference: `_` can provide a
-reference through automatic dereference, but the exact pointer parameter wins.
-The programmer can always write `takeValue(_.)` when the dereference should be
-explicit. Automatic promotion does not add presence proof; the example guards
-the value path because it intends an ordinary instance.
+The `?_` guard is meaningful only in a version with no receiver stance. A call
+on the type lends the pinned Nothing instance, so it can reach only such a
+version; a version with a receiver stance is called only on real instances,
+where `?_` is always true. Lending the receiver to a reference parameter adds
+no presence proof either, so the example guards the member read because it
+intends an ordinary instance.
 
 An `unbound` function is different. It has no receiver slot at all, so `_` is
 unavailable rather than present or absent.
@@ -468,9 +469,11 @@ unavailable rather than present or absent.
 ### Receiver stance is statically known
 
 A call on the type itself has no instance, so the compiler uses the type's
-Nothing instance as the receiver. The call writes no stance, so it follows the
-rule for any call with no stance: it uses the version with no receiver stance
-if there is one, otherwise a `copy` version:
+Nothing instance as the receiver. The Nothing instance is a shared stand-in
+that is nobody's value, so it is pinned: nothing is ever built from it. A call
+on the type writes no stance and lends the Nothing instance, so it uses the
+version with no receiver stance. A version that declares any receiver stance,
+`copy` included, can't be called on the type:
 
 ```zax
 MyResource :: type {
@@ -485,7 +488,7 @@ resource : MyResource
 
 MyResource.inspect()
 (resource as last).consume()
-MyResource.consume() // error: a call on the type writes no stance, and consume needs last
+MyResource.consume() // error: the Nothing instance is pinned, and consume needs last
 ```
 
 The choice is made when the program is compiled. `MyResource.consume()` has no
@@ -493,7 +496,7 @@ variable to write a stance on, so it cannot reach a version that requires
 `last`; the call on an instance uses the stance written on it, here
 `as last`. `inspect` has no receiver stance, so it lends its receiver and any
 call can use it, including a call on the type. See
-[receiver stance](transfer-stances.md#receiver-stance).
+[receivers](transfer-stances.md#receivers).
 
 Aliases, forwarding, and bound callable values preserve whether they represent
 receiverless lookup or an installed instance receiver. They cannot erase that
@@ -664,9 +667,9 @@ owner : MyValue * unique = @
 reset owner
 ```
 
-It may release unique or shared ownership, a weak observation, an allocation
-schedule, or proved raw disposition authority. It is unavailable for an
-ordinary borrowed raw pointer that has no disposition authority.
+It may release unique or shared ownership, a weak observation, or the
+allocation an owning raw pointer (`* move` or `* last`) holds. It is an error on
+a borrowing raw pointer, which holds nothing to free.
 
 `vacate` only discards one raw address:
 
@@ -677,25 +680,15 @@ borrowed : MyValue * = value
 vacate borrowed
 ```
 
-It installs vacancy without disposing the target.
-
-Plain `vacate` requires proof that:
-
-- the pointer is raw and non-owning;
-- no declaration-attached disposition responsibility is being bypassed; and
-- discarding this address loses no required disposition authority.
-
-An opaque but potentially valid external relationship can accept explicit
-responsibility:
+It installs vacancy without disposing the target. On a borrowing raw pointer
+it is always safe, because no responsibility is lost. On an owning raw pointer
+it gives up the responsibility for freeing without freeing, so it must be
+written `unsafe vacate`:
 
 ```zax
-opaqueRaw : MyValue * = obtainOpaqueBorrow()
-unsafe vacate opaqueRaw
+rawOwner : MyValue * last = @
+unsafe vacate rawOwner   // the allocation is abandoned, or reclaimed later with unsafe cast as last
 ```
-
-This form is available only for raw pointers. A proved last usable address to a
-live open-ended allocation, or a scheduled raw pointer still carrying the live
-schedule, remains an error even under `unsafe`.
 
 Self-managing pointer roles always reject vacate:
 
@@ -746,6 +739,27 @@ This is the narrow exception to the ordinary teaching that a reference cannot
 target Nothing. The reference representation itself is not nullable, and the
 reference still has one fixed backing place; unchecked pointer dereference may
 bind that place to special Nothing backing.
+
+### Making a pointer from `p.` is not a dereference
+
+Writing `p.` to make another pointer copies `p`'s address as it is. It touches
+no memory, so a trapping Nothing policy cannot fire, and a vacant `p` gives a
+vacant pointer rather than a pointer to the Nothing instance:
+
+```zax
+owner : MyType * last = @
+view : MyType * = owner.      // points at the same value owner points at
+
+reset owner                   // owner is now vacant
+borrowed : MyType * = owner.  // vacant too: no access, no trap
+use(owner.x)                  // a member read: traps under a trapping Nothing policy, as above
+```
+
+Without this rule, `borrowed` would point at the Nothing stand-in and look like
+a real, non-vacant pointer. In ordinary code, test `?owner` first; the rule
+only makes the unchecked form behave sensibly. Borrowing through `p.` is
+taught in
+[pointers and arenas](pointers-and-arenas.md#borrowing-through-p).
 
 ## Hardware-assisted traps are not portable guarantees
 
@@ -843,7 +857,7 @@ Programmers and tools need to expose:
 - whether a member path has a prepared value, generated panic behavior, or a
   target-dependent trap;
 - receiverless versus instance-qualified call mode;
-- the synthesized receiverless `copy` stance;
+- the pinned Nothing receiver, which a call on the type lends;
 - static proof, unchecked access, required panic, or optional debug detection;
 - custom global initialization and synchronization;
 - capture disposition during function reset;
@@ -859,13 +873,15 @@ Representative diagnostics include:
 - use of legacy `Nothing` as a type;
 - type-qualified call to a non-`once` bound function;
 - `?_` in a non-`once` function;
-- receiverless call to an exact non-`copy` receiver;
+- a call on the type to a function whose every version declares a receiver
+  stance, which the pinned Nothing instance can't satisfy;
 - proved vacant pointer dereference or write;
 - unprepared or trapping Nothing access;
 - conflicting Nothing-policy directives on one namespace opening or module;
 - selected target cannot provide a requested trap capability;
 - incomplete custom Nothing preparation;
-- `vacate` on a managed or live scheduled pointer;
+- `vacate` on a managed pointer, or on an owning raw pointer without `unsafe`;
+- `reset` on a borrowing raw pointer;
 - `unsafe vacate` that would guarantee a leak;
 - reset through an ineligible function slot; and
 - raw cast whose represented Nothing is not valid for the destination.
@@ -886,7 +902,7 @@ Later work may refine representation and analysis while preserving:
 - compiler-prepared, hardware-capability trapping, and custom policy choices;
 - namespace-opening and module defaults that explicit type declarations
   override;
-- receiverless `once` calls using a `copy`-stanced Nothing receiver;
+- receiverless `once` calls lending a pinned Nothing instance;
 - pointer vacancy remaining distinct from optional absence and ownership;
 - unavailable function presence and lifecycle-aware reset;
 - unchecked pointer dereference with diagnostics for proved misuse;

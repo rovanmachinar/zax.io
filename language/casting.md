@@ -6,7 +6,7 @@
 | Audience | Human developers converting values between types or reinterpreting memory |
 | Applies To | Choosing among conversion, stance restatement, structural compatibility, container and member navigation, and unchecked reinterpretation; programmer-declared `as`; `unsafe cast`; pointer and integer conversion; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The overview of conversion and cast operations; programmer-declared `as` conversion; `unsafe cast` forms, vacancy, qualification, ownership-role, cost, and diagnostic behavior; conversion between pointers and pointer-representation integers |
+| Owns | The overview of conversion and cast operations; programmer-declared `as` conversion; `unsafe cast` forms, vacancy, qualification, ownership-role, cost, and diagnostic behavior; the rule that a type cast never changes a stance; `unsafe cast as` for changing a stance; conversion between pointers and pointer-representation integers |
 | Does Not Own | Numeric conversion ([integers](integers.md), [fixed-point](fixed-point-scalars.md), [floating-point](floating-point-scalars.md)); admission and projection ([identity types](identity-types.md), [enums](enums.md)); stance restatement ([transfer stances](transfer-stances.md)); compatibility, coercion, and structural applications of `unsafe cast` ([structural shapes](structural-shapes-and-compatibility.md)); outer casting ([composition](composition.md)); interior ownership ([pointers](pointers-and-arenas.md)); dereference ([Nothing instances](nothing-instances.md)); exact forms ([operator catalog](operator-catalog.md)) |
 | Source / Provenance | Legacy casting material from the retired root casting page, refined against current operator, structural, pointer, qualifier, and scalar design |
 | Supersedes | The retired root casting page |
@@ -54,6 +54,7 @@ language-provided conversions of its own scalar types.
 | Take an address, or follow a pointer | `pointer : MyValue * = value`, `view : MyValue & = pointer.` | [declarations](declarations-and-bindings.md), [Nothing instances](nothing-instances.md#pointer-dereference-is-unchecked) |
 | Store an address as an integer | `myAddress : UPointer = myPointer as UPointer` | [Pointers and integers](#pointers-and-integers) below |
 | Reinterpret memory without checks | `header : PacketHeader * = myBuffer unsafe cast PacketHeader *` | [Unchecked reinterpretation](#unchecked-reinterpretation-with-unsafe-cast) below |
+| Use a value with a stance it wasn't declared with | `restored : MyValue * last = (view unsafe cast as last) as last` | [Changing a stance with `unsafe cast as`](#changing-a-stance-with-unsafe-cast-as) below |
 
 Taking an address needs no cast. A pointer initialized from a value takes that
 value's address, and a trailing `.` follows a pointer to its target. Both rules
@@ -258,19 +259,55 @@ qualifications and bypasses them locally for one explicit path, while
 `unsafe cast` creates a differently qualified view that later code cannot
 distinguish from an ordinary one.
 
+### A type cast never changes a stance
+
+The destination type states the type and the qualifiers, but never a stance.
+`x unsafe cast T` keeps every stance `x` has, and writing a different stance in
+`T` is an error:
+
+```zax
+view : MyValue loan * = myValue
+other := view unsafe cast MyOther *           // other is MyOther loan *: the stance is kept
+wrong := view unsafe cast MyOther copy *      // error: a type cast can't change a stance
+```
+
+A cast that changed the type and the stance together would hide mistakes: a
+typo in the type would go unnoticed while the stance changed. Changing a
+stance has its own cast,
+[`unsafe cast as`](#changing-a-stance-with-unsafe-cast-as).
+
 ### Pointer ownership roles
 
-For raw, `unique`, `unique shareable`, `strong`, and `weak` pointers,
-`unsafe cast` changes only the pointee type. The change of ownership role, the
-transfer stance, and every lifetime rule are exactly those of the ordinary
-[pointer conversions](pointers-and-arenas.md#ownership-transitions):
+For raw, `unique`, `unique shareable`, `strong`, and `weak` pointers, a type
+cast may change the pointee type, the qualifiers, and the pointer kind, the
+last under the ordinary transition rules. It never changes a stance. The
+change of pointer kind and every lifetime rule are exactly those of the
+ordinary [pointer conversions](pointers-and-arenas.md#ownership-transitions):
 
 ```zax
 myCar : Car * strong = makeCar()
 
 shared : Truck * strong = myCar unsafe cast Truck * strong               // another strong owner
 observer : Truck * weak = myCar unsafe cast Truck * weak                 // ordinary strong to weak
-exclusive : Truck * unique = myCar as last unsafe cast Truck * unique    // ordinary unique-claim rules
+exclusive : Truck * unique = (myCar as last) unsafe cast Truck * unique  // ordinary unique-claim rules
+```
+
+In the last line, `myCar as last` is evaluated first and the cast applies to
+it. Its `as last` is the stance written for the transfer, as on any
+transfer, not a stance the cast changes.
+
+A raw pointer owns its allocation because of its stance, `move` or `last`, so
+a type cast can't make a borrowing raw pointer into an owner. That takes the
+stance cast:
+
+```zax
+owner : MyValue * last = @
+raw : MyValue * = owner.                  // a borrowing raw pointer
+unsafe vacate owner                       // owner gives up responsibility without freeing
+
+// each line below is a separate alternative
+owned : MyValue * last = raw unsafe cast MyValue * last       // error: a type cast can't change a stance
+owned : MyValue * last = (raw unsafe cast as last) as last    // the stance cast; the type is unchanged
 ```
 
 A pointer with a control block (`strong`, `weak`, or `unique shareable`) still
@@ -282,6 +319,101 @@ valid depends on the program. The compiler cannot tell, which is why the form
 requires `unsafe`. Which type's destruction runs when a retyped blockless
 `unique` releases is not yet specified. Code that retypes one takes
 responsibility for correct disposal.
+
+## Changing a stance with `unsafe cast as`
+
+A stance says what may be built from a value. Sometimes low-level code knows
+more than the stances say: a container managing its own storage, interop where
+a foreign API's real behavior is known, or ownership given up earlier with
+`unsafe vacate` and now taken back. `x unsafe cast as S` gives `x` itself with
+the stance `S` on its outermost layer. The type and the qualifiers stay the
+same:
+
+```zax
+owner : MyValue * last = @
+view : MyValue * = owner.                    // a borrowing raw pointer
+unsafe vacate owner                          // owner gives up responsibility without freeing
+restored : MyValue * last = (view unsafe cast as last) as last
+// the cast gives view itself with the stance last; writing as last hands it
+// over, so restored takes over the allocation and will free it.
+// view counts as finished afterward, so it can't be used by accident.
+```
+
+Writing `unsafe` means the programmer takes responsibility for what the stance
+protected. Here that is the assertion that `view` points at the start of an
+allocation that nothing else will free, as
+[owning raw pointers](pointers-and-arenas.md#owning-raw-pointers) explains.
+The cast works the same way on any stance, including the stance a reference
+parameter was given:
+
+```zax
+remember final : ()(input : MyMessage copy &) = {
+  keep(input as last)                          // error: input was given copy
+  keep((input unsafe cast as last) as last)    // compiles: the function claims last on the
+                                               // caller's value. The caller still believes it
+                                               // is unchanged; keeping that true is now the
+                                               // programmer's responsibility
+}
+```
+
+A reference has no layer of its own, so its outermost stance is the stance of
+the value it refers to. A pointer's inner layers are reached through `.`, one
+layer per cast. Making a pointer from the result keeps the address, vacant
+included:
+
+```zax
+lent : MyValue loan * = myValue
+widened : MyValue copy * = (lent.) unsafe cast as copy
+// the MyValue that lent points to, seen as copy instead of loan
+```
+
+The cast gives the same value with a new stance, not a new value, so a
+transfer still writes its stance, as in `(view unsafe cast as last) as last`.
+Four consequences follow:
+
+1. **It changes the stance, not which operations exist.** The type's
+   `transfer` list still decides what exists, and fallback still applies:
+
+   ```zax
+   MyPoint :: type transfer copy {
+     x : Integer
+   }
+
+   pinned : MyPoint loan
+   moved := (pinned unsafe cast as move) as move   // compiles: MyPoint has no move, so copy runs
+   deeper := (pinned unsafe cast as deep) as deep  // error: MyPoint has no deep, and deep never falls back
+   ```
+
+2. **A cast that only narrows is legal but pointless.** Ordinary binding
+   already narrows a stance. A compiler may warn that the `unsafe` is
+   unnecessary, but it can't reject the cast:
+
+   ```zax
+   plain : MyValue copy * = myValue
+   lent : MyValue loan * = plain                       // ordinary narrowing: no unsafe needed
+   lent2 : MyValue loan * = plain unsafe cast as loan  // legal; may draw a warning
+   ```
+
+3. **It changes stances, never qualifiers.** Making a `readonly` path writable
+   stays with [`unsafe pliable`](qualifiers.md#unsafe-pliable) and the type
+   cast:
+
+   ```zax
+   reader : MyValue readonly copy & = myValue
+   taken := (reader unsafe cast as last) as last   // the stance becomes last, but the path is
+                                                   // still readonly: a last or move constructor
+                                                   // that needs a writable source can't accept
+                                                   // it, so fallback reaches copy, which runs
+   ```
+
+4. **A pinned value can be moved.** Other code may rely on a pinned value's
+   address staying fixed. Having written `unsafe`, the programmer gets what
+   they asked for:
+
+   ```zax
+   device : MyDevice loan
+   relocated := (device unsafe cast as move) as move  // compiles; pointers to device may now be stale
+   ```
 
 ## Pointers and integers
 
@@ -306,6 +438,9 @@ aligned, and live for every use.
   [pointer-representation integer roles](integers.md#pointer-representation-integer-roles).
 - A vacant pointer converts to its raw representation. That value is not
   portable, and converting it back produces a pointer that is not vacant.
+- The pointer it produces is a borrowing raw pointer. To own the allocation
+  at that address, also change its stance with
+  [`unsafe cast as last`](#changing-a-stance-with-unsafe-cast-as).
 - The difference between two addresses uses `PointerDelta`, the exact
   difference type of `UPointer`.
 
@@ -318,6 +453,8 @@ aligned, and live for every use.
   destination use the same vacant representation, or when the compiler proves
   that the source is never vacant.
 - `myPointer as UPointer` and integer-to-pointer `unsafe cast` copy an address.
+- `unsafe cast as` changes only what the compiler allows; it does no work at
+  run time.
 - Every `unsafe` form adds audit cost: a reviewer must confirm the facts the
   compiler did not check, and the result may be less portable across targets.
 
@@ -331,6 +468,12 @@ Useful diagnostics include:
   with `unsafe pliable` and `unsafe cast` shown as the explicit alternatives;
 - a pointer-to-integer conversion whose integer role does not match the
   pointer's memory domain;
+- a type cast whose destination writes a different stance, with
+  `unsafe cast as` shown as the explicit alternative;
+- a transfer after `unsafe cast as` that needs an operation the type doesn't
+  have, such as `as deep` on a type without `deep`, saying that the cast
+  changed the stance but can't create the operation;
+- an `unsafe cast as` that only narrows a stance, as an optional warning;
 - a declared `as` selected for a destination its body cannot produce; and
 - a lint for programmer-declared phrases that begin with `as`.
 

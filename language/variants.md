@@ -565,7 +565,7 @@ switch message {
   }
 }
 
-inspect final : ()(message : MyOwnerChoice readonly &) = {
+inspect final : ()(message : MyOwnerChoice readonly loan &) = {
   switch message {
     case owner {
       consume(owner as move) // error: message is a readonly loan, so message.owner cannot be changed
@@ -575,7 +575,7 @@ inspect final : ()(message : MyOwnerChoice readonly &) = {
 ```
 
 The complete rule for names the language creates is in
-[members and bindings](transfer-stances.md#members-and-bindings).
+[members](transfer-stances.md#members).
 
 Complete ordering, labels, direct entry, continuation, coverage, and diagnostics
 are defined by
@@ -686,7 +686,7 @@ MyPanel :: type {
   content : MyContentChoice
 }
 
-usePanel final : ()(panel : MyPanel readonly &) = {
+usePanel final : ()(panel : MyPanel readonly loan &) = {
   inspect(panel.content)
   inspect(panel.label) // error: no implicit delegation through the variant
 }

@@ -278,11 +278,11 @@ definition appears:
 MyOtherNode :: forward type
 
 MyNode :: type {
-  next : MyOtherNode *
+  next : MyOtherNode loan *
 }
 
 MyOtherNode :: type {
-  next : MyNode *
+  next : MyNode loan *
 }
 ```
 
@@ -343,7 +343,7 @@ A type definition can list the transfers the type allows, right after the
 MyOwnedFile :: type transfer move {
   handle : Integer
 
-  +++ final : ()(source : MyOwnedFile mutable writable & move) = default
+  +++ final : ()(source : MyOwnedFile mutable writable move &) = default
 }
 // can be moved, never copied: the list allows move and rules out copy, and
 // = default asks the compiler to write the move constructor
@@ -427,9 +427,9 @@ MyTrackedCar :: type {
 }
 
 recoverMyCar final : (
-  result : MyTrackedCar & ?
+  result : MyTrackedCar loan & ?
 )(
-  engine : MyTrackedEngine &
+  engine : MyTrackedEngine loan &
 ) = {
   return engine tracked outer cast MyTrackedCar.engine
 }

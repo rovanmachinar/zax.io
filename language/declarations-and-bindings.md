@@ -312,12 +312,14 @@ Dynamic allocation uses the same direct-initialization boundary:
 
 ```zax
 owner : Item * unique = @
-scoped : Item * = @
+rawOwner : Item * last = @
 ```
 
 `@` obtains storage, constructs `Item`, and initializes the pointer declaration.
-It does not first create a vacant pointer and assign over it. A pointer
-declaration without an allocation initializer is vacant:
+It does not first create a vacant pointer and assign over it. The destination
+must be a pointer that owns its allocation: a raw `move` or `last` pointer, or
+a managed owner. A pointer declaration without an allocation initializer is
+vacant:
 
 ```zax
 emptyOwner : Item * unique
@@ -330,53 +332,45 @@ An unbound assignment target still cannot supply a destination:
 existing = @ // error
 ```
 
-A previously declared typed pointer does supply one:
+A previously declared owning pointer does supply one:
 
 ```zax
-existing : Item *
+existing : Item * last
 existing = @
-// Legal open-ended raw allocation; existing must be reset manually.
-```
 
-The explicit long form is also legal:
-
-```zax
 existing =
-  (: Item * = @) as last
+  (: Item * last = @) as last   // the explicit long form
 ```
 
-For raw `@`/`@!` destinations, the declaration's life path schedules allocation
-disposition. `@<`/`@!<` deliberately leaves a successful raw allocation
-open-ended. Complete source, policy, pointer roles, and cleanup behavior are
-defined by
+Complete source, policy, pointer roles, and cleanup behavior are defined by
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#allocate-through-a-declaration).
 
-Direct allocation assignment uses the existing pointer destination's contract:
+Direct allocation assignment frees the destination's current allocation, if
+any, and installs the new one:
 
 ```zax
-scheduled : Item * = @
-reset scheduled
-scheduled = @{ anotherArena }
+rawOwner : Item * last = @
+reset rawOwner
+rawOwner = @{ anotherArena }
 
 ordinary : Item *
-ordinary = @ // legal, but open-ended and not automatically reset
+ordinary = @ // error: a borrowing raw pointer can't hold an allocation
 ```
 
 Input parameters are different. Their initializer syntax declares an omission
-default rather than a cleanup obligation on the parameter slot:
+default rather than a cleanup obligation on the parameter slot. A borrowing
+parameter's default allocates through a temporary owner and borrows from it:
 
 ```zax
 useItem final : ()(
-  item : Item * = @
+  item : Item loan * = (: Item * last = @).
 ) = {
-  // item is an ordinary borrowed raw pointer.
+  // item is a borrowing raw pointer; the temporary owner frees the allocation after the call
 }
 ```
 
-When omitted, invocation machinery owns the scheduled allocation temporary
-through call completion. Inside the body, `item = @` is ordinary raw allocation
-assignment: it creates an open-ended allocation that the callee must manually
-track because the borrowed parameter has no declaration-attached schedule.
+The complete rule is in
+[visible defaults](function-invocation.md#visible-defaults-and-compatible-implementations).
 
 You can write a stance on an initializer, as in `copied := original as move`.
 When you write none, how the new variable is built depends on what
@@ -401,11 +395,13 @@ makeItem final : (
 item : Item copy = makeItem()
 ```
 
-`item` is built from `makeItem()`'s result with `move`, because that result
-is declared `move`. After that, `item`'s declared `copy` requires later
-transfers from `item` to be written as `copy` or stronger, and a use with no
-stance is already a copy. Complete stance meaning and fallback are
-defined by [Zax transfer stances](transfer-stances.md).
+`makeItem()`'s result is a temporary nobody names, so it is treated as written
+`as last`, and `Item`'s `last` or `move` constructor can build `item`. The
+result's own `move` stance only limits what may be built from that result.
+After that, `item`'s declared `copy` governs later transfers from `item`: its
+owner may write any stance on it, and a use with no stance is a copy. Complete
+stance meaning and fallback are defined by
+[Zax transfer stances](transfer-stances.md).
 
 Optional declarations preserve the same distinction among same-type
 construction, first-layer construction, and acknowledged additional depth:
@@ -508,7 +504,7 @@ constructor:
 DeviceBuffer :: type {
   bytes : U8[4096]
 
-  +++ final : ()(device : Device &) = {
+  +++ final : ()(device : Device mutable writable loan &) = {
     unsafe<opaque-construction>{ device.readInto(_.bytes) }
   }
 }
@@ -865,7 +861,7 @@ eligible surface:
 ```zax
 value via primary.value                 // data route to one stored place
 start final : ()() = via engine.start   // callable adapter to one operation
-owner final : (result : Car & ?)() =    // checked outer-result mapping
+owner final : (result : Car loan & ?)() =    // checked outer-result mapping
   tracked via engine.selectedPeer
 ```
 
@@ -908,8 +904,7 @@ begin fulfill contract.start final : ()() = {
 }
 ```
 
-`start abstract` is requirement metadata, not a bodyless callable and not
-storage. `begin` is an ordinary callable declaration whose `fulfill` clause says
+`start abstract` is requirement metadata, not a callable and not storage. `begin` is an ordinary callable declaration whose `fulfill` clause says
 why it exists and identifies the exact role it satisfies.
 
 A private stored contract can still activate roles through `own` without
@@ -937,14 +932,14 @@ fulfillment mandatory:
 
 ```zax
 TelemetryContract :: type {
-  report abstract optional : ()(event : Event readonly &)
+  report abstract optional : ()(event : Event readonly loan &)
 }
 
 Service :: type {
   contract own private : TelemetryContract
 
   report fulfill contract.report final : (
-    event : Event readonly &
+    event : Event readonly loan &
   )() = {
   }
 }
@@ -1019,8 +1014,8 @@ intent should remain visible:
 ```zax
 Utilities :: type {
   compare final : (result : Boolean)(
-    lhs : String readonly &,
-    rhs : String readonly &
+    lhs : String readonly loan &,
+    rhs : String readonly loan &
   ) unbound = {
   }
 }
@@ -1285,7 +1280,7 @@ identity is explicitly used, including qualification, indirection, transfer
 stance, and compatibility posture:
 
 ```zax
-DeepView :: alias type MyType readonly & deep
+DeepView :: alias type MyType readonly deep &
 CopyView :: alias type DeepView writable copy
 ```
 
@@ -1301,21 +1296,27 @@ and no alias manufactures mutability, replacement authority, transfer support,
 or structural compatibility.
 
 A transfer stance carried by an alias acts exactly as if each declaration that
-uses the alias had written the stance itself. What a written stance means
-depends on where it is written: on a variable, every later transfer from the
-variable must write at least that stance; on a by-value parameter, a call must
-write at least that stance; on a result, it decides how the caller's
-destination is built. The full list is in
-[declared stances by location](transfer-stances.md#declared-stances-by-location).
-A stance that the type's declared `transfer` list cannot satisfy is an error
+uses the alias had written the stance itself. A stance always says what may be
+built from the value. Where it is written decides whose value that is: on a
+variable or by-value parameter, it governs later transfers from that value; on
+a result, it holds inside the function and for the caller alike. What a call
+must write for a by-value parameter is its `via` stance. The full list is in
+[declaring stances](transfer-stances.md#declaring-stances). When the alias is
+a reference, its stance applies to the referred-to value, the nearest layer
+that can carry one.
+
+A stance that the type's declared `transfer` list can never satisfy is an error
 at the alias:
 
 ```zax
 MyDeepOnlyDocument :: type transfer deep {
 }
 
-MyCopiedDocument :: alias type MyDeepOnlyDocument copy
-// error: MyDeepOnlyDocument allows only deep, so nothing can satisfy copy
+MyMovedDocument :: alias type MyDeepOnlyDocument move
+// error: the owner may write only as move or as last, and MyDeepOnlyDocument has neither
+
+MyPlainDocument :: alias type MyDeepOnlyDocument copy
+// fine: copy includes deep, so as deep still works
 ```
 
 Canonical identity is owned by
@@ -1502,20 +1503,21 @@ from the variable, such as passing it to a by-value parameter:
 consume final : ()(resource : Resource) = {
 }
 
-inspect final : ()(resource : Resource readonly &) = {
+inspect final : ()(resource : Resource readonly loan &) = {
 }
 
 resource : Resource move
 
-inspect(resource)          // fine: an unmarked reference is a loan; nothing is transferred
+inspect(resource)          // fine: lending is always allowed; nothing is transferred
 consume(resource)          // error: resource was declared move, and no stance means copy
 consume(resource as move)  // fine
 consume(resource as last)  // fine: last is stronger than move
 ```
 
 The transfers are: passing to a by-value parameter, initializing, assigning,
-storing in an array element, capturing, and returning. Loaning the place to an unmarked reference or receiver is
-not a transfer, so a variable declared `move` can still be passed to functions
+storing in an array element, capturing, and returning. Lending the place to a
+`loan &` reference, or to a function whose receiver has no stance, is not a
+transfer, so a variable declared `move` can still be passed to functions
 that take a loan reference, and can call methods whose receiver has no stance.
 The compiler never applies the
 declared stance to a use on your behalf, and the declared stance never decides
@@ -1539,12 +1541,13 @@ restrict nothing, so it is an error there:
 borrowed : Resource loan   // error: loan applies only to references
 ```
 
-Transfer stance appears after the complete type use. It is one property of the
-complete value, not another independently repeated qualifier layer and not
-another declaration-name-side axis:
+A transfer stance is written last on its layer, after that layer's
+qualifiers. For a reference it comes before `&`, because a reference has no
+layer of its own: its stance is the stance of the value it refers to. It is not
+another qualifier and not another declaration-name-side axis:
 
 ```zax
-resource : Resource mutable writable varying & move
+resource : Resource mutable writable varying move &
 ```
 
 A member is governed by its own declared stance, never by the declaration that
@@ -1566,13 +1569,13 @@ ship(package.label)           // error: label was declared move
 ship(package.label as move)   // fine
 ```
 
-A reference declaration is a new reference with its own stance. Unmarked, that
-stance is `loan`: the reference reaches the same storage, and mutation through
-it is still governed by its qualifiers, but the whole value cannot be copied,
-moved, or taken through it. Members follow their own stances: they can be
-copied, and through a writable reference also moved or taken. To take the
-whole value through a reference, declare the reference `& move` or `& last`
-and initialize it with that stance:
+A reference bound to one visible value takes its stance from that value when
+none is written, but only a stance that leaves the owner's value unchanged:
+`copy` from a `copy` value, and `loan` from a value declared `move` or `last`.
+Mutation through the reference is still governed by its qualifiers. Members
+follow their own stances: they can be copied, and through a writable reference
+also moved or taken. To take the whole value through a reference, the owner
+writes that stance where it binds the reference:
 
 ```zax
 consumeBuffer final : ()(buffer : Buffer) = {
@@ -1580,16 +1583,16 @@ consumeBuffer final : ()(buffer : Buffer) = {
 
 owner : Buffer move
 
-alias : Buffer mutable writable & = owner   // unmarked: a loan
+alias : Buffer mutable writable & = owner   // owner is move, so alias gets loan
 consumeBuffer(alias)                        // error: alias is on loan
 
-taker : Buffer mutable writable & move = owner as move
+taker : Buffer mutable writable move & = owner as move
 consumeBuffer(taker as move)                // fine: Buffer's move constructor runs
 ```
 
 `consumeBuffer` takes a `Buffer` by value. Complete rules for each place a
 stance can be declared are in
-[declared stances by location](transfer-stances.md#declared-stances-by-location).
+[declaring stances](transfer-stances.md#declaring-stances).
 
 An inferred declaration takes its initializer's type, never a declared stance:
 
@@ -1604,10 +1607,15 @@ resource := makeResource()
 copied := resource as copy   // fine: resource declares no restriction
 ```
 
-The result's `move` decides how `resource` is built from it. If `resource`
-also took on that stance, it would be restricted even though its declaration
-shows no stance. To restrict `resource`, write the stance, as in
-`resource : Resource move = makeResource()`.
+The result's `move` limits what may be built from the result, not from
+`resource`. If `resource` also took on that stance, it would be restricted even
+though its declaration shows no stance. To restrict `resource`, write the
+stance, as in `resource : Resource move = makeResource()`.
+
+The one exception is a reference or raw pointer bound to one visible value,
+as in `alias : Buffer & = owner`. It takes a stance from that value, limited to
+stances that leave the owner's value unchanged, as
+[references you declare](transfer-stances.md#references-you-declare) explains.
 Inference also never produces `Resource &` or `Resource *`: a stance does not
 say whether something is a value, a reference, or a pointer. References and
 pointers must be written explicitly until later inference rules cover them.
@@ -1766,7 +1774,7 @@ MyType :: type {
   operator literal 'cstyle' final : (
     result : MyType
   )(
-    payload : String immutable readonly final &
+    payload : String immutable readonly final loan &
   ) unbound = {
   }
 }
@@ -1792,7 +1800,7 @@ compile-time input, so the suggested result may depend on it:
 operator literal 'h' final : (
   result uncommitted : UInteger
 )(
-  payload : String immutable readonly final &
+  payload : String immutable readonly final loan &
 ) unbound = {
 }
 ```
@@ -1955,9 +1963,9 @@ still construct values, such as a temporary, a producer's result slot, or the
 pointee of a new allocation:
 
 ```zax
-scheduled : MyValue * = @
-reset scheduled
-scheduled = @{ anotherArena }
+rawOwner : MyValue * last = @
+reset rawOwner
+rawOwner = @{ anotherArena }
 // The pointer place is live and receives assignment.
 // The new MyValue pointee is constructed on the right side.
 ```
@@ -2036,7 +2044,7 @@ A named type becomes visible as an incomplete type before its body is resolved:
 
 ```zax
 Node :: type {
-  next : Node *
+  next : Node loan *
 }
 ```
 
@@ -2085,7 +2093,7 @@ also appear in a function body. Like any local declaration, it is visible from
 that point to the end of its block:
 
 ```zax
-countWords final : (result : Integer)(text : String readonly &) = {
+countWords final : (result : Integer)(text : String readonly loan &) = {
   Entry :: alias type MyPair$(String, Integer)
   myFirst : Entry
   // ...
@@ -2165,11 +2173,11 @@ Forwarding remains useful for out-of-order and mutually recursive names:
 OtherNode :: forward type
 
 Node :: type {
-  next : OtherNode *
+  next : OtherNode loan *
 }
 
 OtherNode :: type {
-  next : Node *
+  next : Node loan *
 }
 ```
 
@@ -2462,35 +2470,33 @@ producer `except` or explicit forwarding. Complete outcome, handling, and
 cleanup behavior is defined by
 [Zax exceptional result flow](except.md).
 
-A result's initializer decides how the result itself is built. The stance
-written on the result's declaration decides how the caller's destination is
-built from it:
+A result's initializer, or the `return` that fills it, decides how the result
+is built. Its stance has one meaning inside the function and for the caller:
 
 ```zax
 make final : (
   result : Item move
 )(
-  source : Item readonly & copy
+  source : Item readonly copy &
 ) = {
-  return source as copy
+  return source as copy          // builds result by copying source
 }
+
+stored : Item = make(template)   // the unnamed result is written as last; stored is an ordinary copy variable
 ```
 
-`source as copy` decides how `result` is built, and the caller's destination
-is then built from `result` with `move`. Inside the function, `result` behaves
-like a parameter: a use with no stance is a copy, so a body that takes from
-`result` before returning must write the stance, as in
-`archive(result as move)`.
+Inside `make`, nothing may be copied from `result`, because it is `move`. The
+caller's variable declares its own stance, as `stored` does. The one exception
+is a `loan` result, which is built directly into a variable declared `loan`.
 
-Forwarding through another result declaration crosses both contracts: the
-producer's stance fills the new slot, and the forwarding result declaration
-controls what its caller receives.
+Forwarding through another result declaration crosses both declarations: the
+inner result's stance limits what may be built from it, and the forwarding
+result's own stance governs what its caller may build.
 
-A by-value result with no declared stance is passed on as `last`, because
-nothing can use it again; a function whose callers should receive a copy
-declares `result : Item copy`. A reference result with no stance is a loan.
-Complete behavior is in
-[Zax function invocation](function-invocation.md#results-with-no-declared-stance).
+A result the caller doesn't name is a temporary, so it is treated as written
+with the strongest stance its own stance allows, usually `as last`. A
+reference result must write its stance. Complete behavior is in
+[Zax function invocation](function-invocation.md#results-the-caller-doesnt-name).
 
 At a result-routing site, adjacent `name:` selects the result label and may
 introduce a same-named inferred binding:

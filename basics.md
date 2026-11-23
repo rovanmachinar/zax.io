@@ -177,8 +177,7 @@ Retained function composition now uses `>|>`, leaving `>>` for shifts, and
 immediate chaining uses `|>`; both are defined by
 [Zax lambdas and callable composition](language/lambdas-and-callable-composition.md#compose-functions-for-later-use).
 
-Allocation now uses the declaration-bound `@`, `@!`, `@<`, and `@!<` family
-defined by
+Allocation now uses the declaration-bound `@` and `@!` family defined by
 [Zax pointers, allocation, and arenas](language/pointers-and-arenas.md#allocation-forms).
 Legacy parallel `@@` is superseded because concurrency is an arena capability.
 Legacy synchronous `@!` is superseded; current `@!` reports allocation failure

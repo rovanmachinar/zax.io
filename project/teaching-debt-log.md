@@ -86,7 +86,11 @@ what happens. Revisit with the owner's teaching refresh.
 - **`language/declarations-and-bindings.md`, "Capability conversions" and
   "`final` and `varying`":** uses "stance" for place qualifiers ("omitted
   type-side stance", "resolves its own independent place stance"), which
-  collides with transfer stances.
+  collides with transfer stances. `language/qualifiers.md` does the same
+  ("the place's final stance", the heading "Inspecting the stance", "Opposing
+  stances applied to the same entity"); the 039 cold read flagged it as the
+  most confusing collision now that stances are central. Say "place
+  qualification" or "final/varying".
 - **`language/optional-values.md`, the reset, move, and last table near the
   top:** "Complete consumer of `last value` | Remaining payload state
   dispositioned".
@@ -111,6 +115,37 @@ what happens. Revisit with the owner's teaching refresh.
   flight … may need different handling" has no example.
 
 - **Provenance:** work item 038 cold reads, 2026-11-14.
+
+### Older passages found by the work-item 039 cold read
+
+Unchanged text near the sections 039 rewrote. Each is one concrete passage
+that a cold reader could not follow; none was rewritten, because it lies
+outside the promotion. Revisit with the owner's teaching refresh.
+
+- **`language/function-invocation.md`, "Minted implementation model", the
+  composition `via` part:** "selected-contract proof", "`outer tracked`
+  capability", "thin adapter", "exact family anchor", and "data `via`" are
+  used without definition. A one-paragraph handoff to composition would serve
+  the reader better.
+- **`language/function-invocation.md`, "Visible defaults and compatible
+  implementations", opening:** "not layered under `configuredTimeout()`" and
+  "a cost of the visible contract", with `callback : … = implementation`
+  unexplained. Say which defaults apply on each call path.
+- **`language/function-invocation.md`, "Type and instance calls to `once`
+  functions":** "`once bound`" where the examples write `final once`, and
+  "missing target trap capability has the undefined boundary defined by the
+  Nothing owner" reads as specification.
+- **`language/pointers-and-arenas.md`, "Shareable unique ownership":** "The
+  legacy pointer qualifier `own` is superseded by `unique shareable` … does
+  not revive the old pointer family" is decision history. Say only that `own`
+  is a composition word, not a pointer kind.
+- **`language/transfer-stances.md`, "Stances and qualifiers":**
+  `drainBuffer(source : Buffer mutable readonly final move &)` "can move from
+  the `Buffer` only in a way that does not change it", which a reader can't
+  reconcile with moving. Show concretely what a readonly move takes, or use a
+  writable example.
+
+- **Provenance:** work item 039 cold read, 2026-11-22.
 
 ### `language/pointers-and-arenas.md`
 

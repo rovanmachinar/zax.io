@@ -190,7 +190,7 @@ Future work must decide:
 - how internal implementation-prototype facts differ from outward alias labels,
   defaults, stance, presence, and scheduled/open presentation;
 - and whether a declaration is programmer-defined, generated, explicitly
-  defaulted, delegated, bodyless, or forbidden.
+  defaulted, delegated, or forbidden.
 
 ### Composition metadata categories
 

@@ -131,31 +131,21 @@ Complete behavior is in [Zax `using`](using.md#resource-entries).
 The details of pointer-owned dynamic paths are in
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md).
 
-A raw pointer still owns no path, but a declaration may independently schedule
-the disposition of an allocation it creates:
+A raw pointer whose stance is `move` or `last` owns its allocation and frees
+it; a borrowing raw pointer only holds an address:
 
 ```zax
-scheduled : Document * = @
-alias : Document * = scheduled
+owner : Document * last = @
+view : Document * = owner.
 ```
 
-The allocation path is bounded by `scheduled`'s declaration life path unless
-its disposition responsibility is transferred. `alias` copies only the raw
-address and cannot safely outlive that path.
+The allocation path is bounded by `owner`'s life path unless its ownership is
+handed over with `as last`. `view` copies only the address and cannot safely
+outlive that path.
 
-Replacing or resetting `scheduled` ends the old allocation path according to its
-recorded disposition and invalidates dependent aliases. A terminal transfer
-leaves `scheduled` vacant; its later scheduled cleanup is therefore a no-op.
-
-An open-ended raw allocation has no declaration-attached owner:
-
-```zax
-manual : Document * = @<
-```
-
-Its lifetime remains safe only when analysis proves another owner or a complete
-manual `reset` protocol. An opaque relationship may require narrow unsafe
-responsibility; a known-ended or known-interior path is rejected.
+Replacing or resetting `owner` ends the old allocation path and invalidates
+borrowers such as `view`. Handing ownership on with `as last` leaves `owner`
+vacant, so its cleanup at the end of its scope frees nothing.
 
 ## References borrow one fixed place
 
@@ -327,14 +317,14 @@ value does not:
 
 ```zax
 Link :: type {
-  target : Node &
+  target : Node loan &
 }
 
 Graph :: type {
   link own : Link
 }
 
-inspectGraph final : ()(graph : Graph readonly &) = {
+inspectGraph final : ()(graph : Graph readonly loan &) = {
   inspect(graph.target)            // published path to the reference member
   inspect(graph.link.target.value) // explicit traversal to the referent
   inspect(graph.value)             // error: publication stops before the referent
@@ -357,7 +347,7 @@ Car :: type {
   engine : Engine
 }
 
-recover final : (car : Car & ?)(engine : Engine &) = {
+recover final : (car : Car loan & ?)(engine : Engine loan &) = {
   return engine tracked outer cast Car.engine
 }
 ```
@@ -379,7 +369,7 @@ LocalCar :: type {
   engine : LocalEngine
 }
 
-inspectCar final : ()(car : LocalCar &) = {
+inspectCar final : ()(car : LocalCar loan &) = {
   engine : LocalEngine & = car.engine
   sameCar : LocalCar & = engine outer cast LocalCar.engine
   inspect(sameCar)
@@ -564,7 +554,7 @@ storage:
 
 ```zax
 inspect final : ()(
-  input : Document readonly &
+  input : Document readonly loan &
 ) = {
 }
 ```
@@ -637,6 +627,19 @@ is elided into a longer-lived outer destination. `resultA` is destroyed when the
 inner result mapping completes. The unified `resultB` survives until the outer
 destination ends, so the observable order is `resultA` before `resultB`.
 
+Elision is usually optional. A `loan` result is the exception: nothing may be
+built from it, so the caller can receive it only as the same value, and the
+result must be built directly into the caller's variable, declared `loan`. Its
+life path is then the caller's variable's path from the start:
+
+```zax
+giveDevice final : (result : MyDevice loan)() = {
+}
+
+device : MyDevice loan = giveDevice()   // built directly into device; destroyed when device ends
+other : MyDevice = giveDevice()         // error: nothing may be built from a loan result
+```
+
 Elision does not reorder visible-prototype pre-body construction or the
 implementation's explicitly sequenced body and return construction. It changes
 which life path owns the unified value. Complete result-slot, destination-order,
@@ -668,7 +671,7 @@ The same rule applies to an exceptional reference result. Selecting its named
 outcome supplies the control distinction but grants no target lifetime:
 
 ```zax
-failure except : MyError readonly &
+failure except : MyError readonly loan &
 ```
 
 Its origin must survive the complete handler or forwarding consumer. `catch`
@@ -679,9 +682,9 @@ The compiler tracks the returned target place and its origin:
 
 ```zax
 returnInput final : (
-  result : MyValue readonly &
+  result : MyValue readonly loan &
 )(
-  input : MyValue readonly &
+  input : MyValue readonly loan &
 ) = {
   return input
 }
@@ -705,7 +708,7 @@ exactly the receiver `_`:
 Engine :: type {
   tune final : (
     result self # : Engine &
-  )(profile : Profile readonly &) = {
+  )(profile : Profile readonly loan &) = {
     apply(_, profile)
     return _
   }
@@ -749,7 +752,7 @@ A local cannot escape its invocation path:
 
 ```zax
 badView final : (
-  result : MyValue readonly &
+  result : MyValue readonly loan &
 )() = {
   local : MyValue
   return local // error: local is destroyed when this call completes
@@ -770,12 +773,12 @@ contracts, but that future need does not make an unproved result valid.
 
 ## Capture and stored references
 
-Lambda capture defaults to `copy`, even when the captured name is a reference
-declared `& copy`:
+Lambda capture defaults to `copy`, even when the captured name is a `copy &`
+reference:
 
 ```zax
 source : Document
-view : Document readonly & copy = source
+view : Document readonly copy & = source
 
 callback := [[ view ]] ()() {
   inspect(view) // reads the Document copied into the lambda
@@ -783,19 +786,20 @@ callback := [[ view ]] ()() {
 ```
 
 The lambda owns that copied `Document`. If the value `view` refers to cannot
-be copied, a copy capture is an error. A reference with no stance is a
-`loan`, which never allows the value it refers to to be copied, so capturing
-it by copy is an error too; capture it by reference instead.
+be copied, a copy capture is an error. A `loan` reference never allows the
+value it refers to to be copied, so capturing it by copy is an error too;
+capture it by reference instead.
 
 An explicit reference capture instead constructs another reference bound to the
 original place. It:
 
 - does not extend or own the target path;
 - must be proved valid for every invocation;
-- is a declared reference with its own stance, which is `loan` when no
-  stance is written; it does not take on a `move` or `last` stance declared on
-  the variable it captures, so it cannot take from that variable unless it
-  declares that stance itself; and
+- takes its stance from the captured variable when no stance is written,
+  like any reference bound to one visible value: `copy` from a `copy`
+  variable, and `loan` from a variable declared `move` or `last`, so it
+  cannot take from such a variable unless its owner writes that stance at
+  the capture; and
 - can never allow more than the captured variable allows: a capture of a
   `loan` is a `loan`, and a variable declared `move` cannot be captured by a
   reference that may copy it.
@@ -803,10 +807,10 @@ original place. It:
 Reference capture states its destination explicitly:
 
 ```zax
-loanedView : Document readonly & = source   // unmarked: a loan
+loanedView : Document readonly loan & = source   // written loan: nothing may be built through it
 
 callback := [[ loanedView: borrowed : & ]] ()() {
-  inspect(borrowed)                         // fine: borrowed is still a loan
+  inspect(borrowed)                              // fine: borrowed is still a loan
 }
 ```
 
@@ -832,9 +836,9 @@ caller's value during the call:
 
 ```zax
 consume final : ()(
-  input : Resource mutable writable & last
+  input : Resource mutable writable last &
 ) = {
-  inspect(input) // no stance written: copies, or lends if inspect takes a loan
+  inspect(input) // no stance written: input was given last, which forbids a copy, so it is lent
   transfer(input.handle as last)
 }
 ```
@@ -848,7 +852,7 @@ the stance:
 
 ```zax
 stored :
-  Resource mutable writable & last = (input as last)
+  Resource mutable writable last & = (input as last)
 ```
 
 That declaration is viable only when independent lifetime analysis also proves

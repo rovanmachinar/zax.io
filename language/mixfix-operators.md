@@ -306,13 +306,13 @@ a[b * scale] = value
 
 A longer skeleton does not automatically win.
 
-A viable uniquely best bodyless, `forbidden`, unsupported `default`, or otherwise
+A viable uniquely best `forbidden`, unsupported `default`, or otherwise
 unavailable mixfix produces an unavailable-operation diagnostic and blocks
 decomposition.
 
 When no direct mixfix candidate is viable, ordinary decomposition may proceed.
-A bodyless or `forbidden` declaration may deliberately claim a shape and prevent
-that fallback.
+A `forbidden` declaration may deliberately claim a shape and prevent that
+fallback.
 
 ## Holes and operator fallback
 

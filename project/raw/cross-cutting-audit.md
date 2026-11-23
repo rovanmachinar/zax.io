@@ -495,6 +495,33 @@ Each entry preserves:
   `construction-and-destruction.md` in work item 038.
 - **Disposition.** Open. Provenance: work item 038 review.
 
+### Owners that contradict themselves
+
+- **Concern.** A cold reader found two current owners that state a rule and,
+  nearby, its opposite. The design question in each has to be answered before
+  the text can be fixed:
+  - `language/qualifiers.md`, "Defaults and resolution": "These defaults are
+    the same everywhere. No directive or source context changes them." A few
+    paragraphs later: "If `immutable` and `writable` are configured
+    simultaneously as defaults … allows a project to force an explicit choice
+    in selected contexts." Can qualifier defaults be configured, or is that a
+    lint?
+  - `language/casting.md`: "Writing your own `as`" shows a working destination
+    constraint (`DestinationType : isTemperature`), while "Your types and the
+    language's scalars" says a partial `as` becomes practical "only once a
+    declaration can restrict its destination type", and "Boundaries and
+    maturity" lists "restricting which destination types one `as` declaration
+    accepts" as future work. What is still missing, if anything?
+- **Why local review misses it.** Each owner was reviewed for the concern its
+  work item changed; the contradictory passages lay outside that concern.
+- **Likely owners.** Qualifiers; conversions and casts; generics for the
+  constraint question.
+- **Resolution.** Each contradiction is decided and the owner says one thing.
+- **Activation pressure.** Any review of qualifier defaults, `as`
+  declarations, or partials adding conversions.
+- **Current constraints.** None.
+- **Disposition.** Open. Provenance: work item 039 cold read, 2026-11-22.
+
 ## Activation and retirement
 
 Add an entry when a concrete concern crosses several owners, local review cannot

@@ -4,11 +4,11 @@
 | --- | --- |
 | Status | Current conceptual design |
 | Audience | Human developers reading, writing, or evaluating Zax |
-| Applies To | Programmer-visible `loan`, `copy`, `move`, `last`, and `deep`, and when a stance must be written; not a formal specification |
+| Applies To | Programmer-visible `loan`, `copy`, `move`, `last`, and `deep`; who may write which stance; when a stance must be written; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The transfer-stance mental model; the five stances, their order, and fallback; `loan` and what stays on loan; source state after a transfer; when a stance must be written, including at a last use, in generic bodies, and per item of an expanded pack; what a declared stance means in each location; stances inside a body; receiver stance, passing the receiver on, and `self` results; member and binding stances; result stances; common costs, diagnostics, and source stability |
-| Does Not Own | Exact callable selection and parameter binding ([function invocation](function-invocation.md)); a type's `transfer` list, generated and defaulted operations, and lifecycle sources ([construction, replacement, and destruction](construction-and-destruction.md)); identity `transfer` lists ([identity types](identity-types.md)); inferred declarations ([declarations and bindings](declarations-and-bindings.md)); cohesive [exceptional result flow](except.md); composition publication and wrapper eligibility ([Zax composition](composition.md)); qualifier axes ([qualifiers](qualifiers.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
-| Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, and documentation design |
+| Owns | The transfer-stance mental model; what each stance says may be built from a value; owners and borrowers and which stances each may write; pinned values; writing a stance at a use; fallback; source state after a transfer; when a stance must be written, including at a last use, in generic bodies, and per item of an expanded pack; declared stances on locals, members, references, receivers, by-value parameters (`via`), results, and type aliases; receivers as parameters bound implicitly; temporaries; member and binding stances; common costs, diagnostics, and source stability |
+| Does Not Own | Exact callable selection ([function invocation](function-invocation.md)); a type's `transfer` list, generated and defaulted operations, constructor receiver stances, and lifecycle sources ([construction, replacement, and destruction](construction-and-destruction.md)); identity `transfer` lists ([identity types](identity-types.md)); inferred declarations ([declarations and bindings](declarations-and-bindings.md)); cohesive [exceptional result flow](except.md); composition publication and wrapper eligibility ([Zax composition](composition.md)); qualifier axes ([qualifiers](qualifiers.md)); `unsafe cast` ([conversions and casts](casting.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
+| Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, pointer, and documentation design |
 
 ## Why transfer stance exists
 
@@ -32,8 +32,7 @@ leave several questions open:
 - What does it cost in allocation, copying, and destruction?
 
 Zax answers these questions with one word written after `as`, called a
-**transfer stance**. The stance says how much of a value may leave the place
-that owns it:
+**transfer stance**:
 
 ```zax
 ordinary := source              // copy: source keeps its value
@@ -56,7 +55,9 @@ Stances are promises about intended use, and the compiler helps you keep
 them: it reports a call that copies a value you said must only be moved, or
 takes from a value that was only lent. They are not a security barrier. Code
 with writable access to a value can still change its members in ordinary
-ways, and stances do not try to stop that.
+ways, and stances do not try to stop that. Where a program must go beyond
+what its stances allow, `unsafe` provides an explicit escape, described in
+[conversions and casts](casting.md).
 
 ### Reading the examples
 
@@ -69,7 +70,7 @@ The examples use a few Zax forms that other documents teach in full:
 | `---` | A destructor | [construction, replacement, and destruction](construction-and-destruction.md) |
 | `place .= value` | Reconstructive replacement: end the old value in place and build a new one | [construction, replacement, and destruction](construction-and-destruction.md) |
 | `_` | The receiver: the instance a type's function was called on | [function invocation](function-invocation.md#receiver-operands) |
-| `Type &` | A reference to an existing place rather than a new value | [lifetimes and references](lifetimes-and-references.md) |
+| `Type loan &` | A reference to an existing place rather than a new value; the word before `&` is the stance of the value it refers to | [lifetimes and references](lifetimes-and-references.md) |
 | `readonly`, `mutable writable` | Qualifiers saying whether a path may change the value; after a function's inputs, as in `()() readonly`, they apply to the receiver | [qualifiers](qualifiers.md) |
 | `+++ replacement` | A replacement constructor: what `.=` runs to give an existing variable a new value | [construction, replacement, and destruction](construction-and-destruction.md#custom-replacement) |
 | `(: Source)`, `[{ … }]` | A new value built in place: `(: Source)` builds a default `Source`; `[{ … }]` lists the constructor's inputs | [construction, replacement, and destruction](construction-and-destruction.md#construction-packets) |
@@ -77,83 +78,93 @@ The examples use a few Zax forms that other documents teach in full:
 | `result # : Type` | A result the caller may ignore; without `#`, ignoring a result is an error | [function invocation](function-invocation.md#required-and-discardable-results) |
 | `once` | A function that can be called on the type itself, as in `MyType.inspect()`, without an instance | [Nothing instances](nothing-instances.md) |
 
-## Five stances: how much of the value leaves its owner
+## What a stance says
 
-Zax has five stances. They differ in how much of the value leaves its owner,
-and in what the owner still holds afterward:
+A stance belongs to a value, and says **what may be built from that value**:
 
-| Stance | What leaves the owner | What the owner holds afterward |
-| --- | --- | --- |
-| `loan` | nothing: the consumer uses the value where it is | the same value, possibly changed if the reference allows changes |
-| `copy` | a duplicate | its value, unchanged |
-| `move` | the contents | a usable value, emptied or reset as the type's `move` defines |
-| `last` | everything | a finished value that can only be destroyed or replaced |
-| `deep` | a duplicate that shares nothing with the original | its value, unchanged |
+| Stance | What may be built from the value |
+| --- | --- |
+| `loan` | nothing; the value can only be used where it is, or lent |
+| `copy` | a copy, or an independent copy (`deep`) |
+| `move` | only a new value that takes its contents |
+| `last` | only a terminal transfer, after which the value is finished |
+| `deep` | only an independent copy |
 
-`loan`, `copy`, `move`, and `last` are ordered by how much leaves the owner:
-`loan < copy < move < last`. `deep` is not part of that order. Like `copy`, it
-leaves the owner unchanged, but it also promises that the duplicate shares
-nothing with the original.
+"Built from a value" means one of three things: a copy of it, a new value
+that takes its contents, or a terminal transfer that finishes it. Reading a
+value to compute something new is not building from it.
+`size := buffer.size()` makes a new `Integer` by reading `buffer`, and is
+fine even when `buffer` is pinned.
 
-When stances are listed together, they are written in this order:
+A stance does not say how the value itself was built. It only restricts what
+may later be built from it:
+
+```zax
+myValue : MyValue copy      // copies may be built from myValue
+report : MyReport move      // anything built from report must take its contents
+pinned : MyDevice loan      // nothing may ever be built from pinned
+archive : MyArchive deep    // only independent copies may be built from archive
+```
+
+`copy` includes `deep`. A deep copy is still a copy that leaves the original
+unchanged; it just shares nothing with it. The reverse does not hold: a value
+declared `deep` refuses an ordinary copy, because an ordinary copy might share
+resources with it.
+
+A value declared `loan` is called **pinned**. It can be used and lent, but
+nothing is ever copied, moved, or finished out of it. Its address stays the
+same for as long as it exists. Pinning applies to the value as a whole; its
+members follow their own stances, as [members](#members) explains.
+
+When stances are listed together, they are written in the order
 `loan copy move last deep`. A type's `transfer` list uses the same order but
 never includes `loan`.
 
-Three habits cover most code:
+### Where a stance is written
 
-- **No stance means `copy`.** A reader who sees `send(message)` assumes that
-  `send` received a copy and `message` is unchanged. So the compiler never adds
-  `move` or `last` for you; you write them.
-- **A reference only borrows unless it says otherwise.** A reference with no
-  stance is a `loan`: the function can use the value where it is, but cannot
-  copy it or take anything from it.
-- **Write `as move` when you will use the variable again, and `as last` when
-  you are done with it.** This is for variables that hold their own value.
-  Through a reference to someone else's value, you can pass the value on with
-  at most the stance you were given, as
-  [references pass on at most their stance](#references-pass-on-at-most-their-stance)
-  explains.
+A stance is written in the same place as a layer's qualifiers, last among that
+layer's words. For a reference, the stance is written before `&`, because a
+reference has no layer of its own: its stance is the stance of the value it
+refers to.
 
 ```zax
-Message :: type transfer copy move {
-  text : String
-
-  +++ final : ()(source : Message mutable writable & move) = default
-}
-
-show final : ()(message : Message readonly &) = {
-}
-// unmarked reference: a loan
-
-keep final : ()(message : Message) = {
-}
-// by value: builds keep's own Message
-
-message : Message
-show(message)           // lends message; nothing leaves it
-keep(message)           // copies message
-keep(message as move)   // Message's move constructor runs; message is empty but usable
-keep(message as last)   // message is finished
+source : MyArchive readonly copy &           // a reference: the stance is the referred-to value's
+value : MyValue loan * unique                // a pointer: MyValue's stance before *, the pointer's after it
 ```
 
-`Message :: type transfer copy move` says that `Message` allows only the `copy`
-and `move` operations. Callers can still write `as last`: `Message` has no
-`last` operation, so its `move` constructor runs instead, as
-[fallback](#fallback) explains. `= default` asks the compiler to write the
-`move` constructor by moving each member. Both are explained in
-[construction, replacement, and destruction](construction-and-destruction.md#declaring-which-transfers-a-type-allows).
+A pointer has two values, the pointer and what it points to, so it can carry
+two stances. [Pointers](#pointers) summarizes what that means.
 
-## One stance on one complete value
+## Writing a stance at a use
 
-A stance applies to the whole value you write it on. It does not apply
-separately to each pointer, reference, or member inside that value:
+`as` is how a use says what it allows to happen to a value. It does not change
+any stance; it states, for this one use, what may be built:
 
 ```zax
-source : MyValue
+keep(report as move)        // this use may take report's contents
+keep(myValue)               // no stance written
+```
 
-moved := source as move
-// MyValue's move constructor receives the whole source; that constructor
-// decides what happens to each member
+**No stance means `copy` where the value allows a copy, and otherwise the
+value is lent.** A reader who sees no stance can rely on nothing having been
+moved out of the value, and on the value not being finished. A function given
+writable access may still change its contents. The compiler never adds `move`
+or `last` for you.
+
+```zax
+show final : ()(value : MyReport readonly loan &) = {
+}
+
+keep final : ()(value : MyReport) = {
+}
+
+plain : MyReport            // no stance declared: copy
+report : MyReport move
+
+keep(plain)                 // copies plain
+show(report)                // lends report, although it forbids copies
+keep(report)                // error: keep must build a copy, and report forbids copies
+keep(report as move)        // fine
 ```
 
 You may write several stances in a row. Each one replaces the one before it,
@@ -170,17 +181,186 @@ Two stance words need two `as` keywords:
 result := source as move copy // error: write `as move` or `as copy`
 ```
 
-A member can declare its own stance, and that stance controls transfers from
-that member, as [members and bindings](#members-and-bindings) explains. A
-stance written on the containing value does not pass down to its members.
-
 A stance can also be written on an expansion of several arguments, such as
 `from items as last`. It then applies to each item separately, as
 [a stance on several items](#a-stance-on-several-items) explains.
 
+## Owners and borrowers
+
+Who holds a value decides which stances may be written on it.
+
+An **owner** holds its own value: a local variable or member you declared, a
+by-value parameter (the function owns it), or the value an owning pointer
+points to. A **borrower** reaches a value someone else owns: a reference, a
+raw pointer that holds only an address, or the receiver `_`.
+
+The owner of a value decides how much of it to give up. The owner of a `copy`
+value may also write `as move` or `as last` on it, and the owner of a `move`
+value may also write `as last`. The one exception is a borrowing raw pointer:
+its owner may not write `as move` or `as last` on the pointer itself, because
+it holds nothing to hand over, as
+[pointers, allocation, and arenas](pointers-and-arenas.md#owning-raw-pointers)
+explains:
+
+| Owner's value stance | The owner may write |
+| --- | --- |
+| `loan` | nothing; only lend it |
+| `copy` | `as copy`, `as deep`, `as move`, `as last` |
+| `move` | `as move`, `as last` |
+| `last` | `as last` |
+| `deep` | `as deep` |
+
+A borrower may write only the stance it was given, and nothing else:
+
+| Borrower's stance | The borrower may write |
+| --- | --- |
+| `loan` | nothing; only lend it |
+| `copy` | `as copy`, `as deep` |
+| `move` | `as move` |
+| `last` | `as last` |
+| `deep` | `as deep` |
+
+Lending is always allowed, for owners and borrowers alike. The owner of a
+`loan`, `last`, or `deep` value may write only that same stance, so a pinned
+value stays pinned even for its owner.
+
+```zax
+report : MyReport move
+keep(report as move)       // fine
+keep(report as last)       // fine: the owner of a move value may also write as last
+```
+
+**Why a borrower can't take more than it was given.** The caller relies on
+the stance it wrote to know what state its variable is in afterward:
+
+```zax
+remember final : ()(input : MyMessage copy &) = {
+  stash(input as last)       // error: input was given copy
+}
+
+message : MyMessage
+remember(message)            // the caller expects message unchanged
+message.send()               // would find a finished message if stash could take it
+```
+
+**Why a borrower given `move` can't copy.** The value it reaches might be
+declared `move`, which forbids copies, and the borrower can't see how that
+value was declared:
+
+```zax
+drain final : ()(input : MyMessage move &) = {
+  keep(input as move)        // fine
+  log(input)                 // error if log takes MyMessage by value: input was given move
+}
+
+report : MyMessage move      // its owner said: never copy report
+drain(report as move)        // if drain could copy input, report would be copied after all
+```
+
+So "you may keep copying, but you can't take it over" is simply a `copy`
+reference:
+
+```zax
+looksLikeANormalCopy final : ()(value : MyValue copy &) = {
+  keep(value)                // fine: copies
+  keep(value as last)        // error: only copy was given
+}
+```
+
+Inside a function, the receiver `_` is a borrower too. In a version declared
+`last`, `_` may only be lent or written `as last`:
+
+```zax
+MyDocument :: type {
+  publish final : ()() last = {
+    _.inspect()                // no stance: _ forbids a copy here, so it is lent
+    (_ as copy).snapshot()     // error: _ was given last
+  }
+}
+```
+
+## Passing a value to a reference
+
+A value can be passed to a reference parameter when the parameter's stance is
+one its holder may write. From a value you own:
+
+| Source you own | to `loan &` | `copy &` | `move &` | `last &` | `deep &` |
+| --- | --- | --- | --- | --- | --- |
+| `MyType loan` | yes | no | no | no | no |
+| `MyType copy` | yes | yes | yes | yes | yes |
+| `MyType move` | yes | no | yes | yes | no |
+| `MyType last` | yes | no | no | yes | no |
+| `MyType deep` | yes | no | no | no | yes |
+
+From a reference parameter you hold, passed on to another function:
+
+| Your reference | to `loan &` | `copy &` | `move &` | `last &` | `deep &` |
+| --- | --- | --- | --- | --- | --- |
+| `MyType loan &` | yes | no | no | no | no |
+| `MyType copy &` | yes | yes | no | no | yes |
+| `MyType move &` | yes | no | yes | no | no |
+| `MyType last &` | yes | no | no | yes | no |
+| `MyType deep &` | yes | no | no | no | yes |
+
+The two tables differ only in the `copy &` and `move &` rows, because the
+second holder is a borrower.
+
+A reference parameter that may change the caller's value needs its stance
+written at the call, so a reader sees it: `as move` for `move &`, `as last`
+for `last &`. A `deep` value needs `as deep`:
+
+```zax
+drain final : ()(value : MyType move &) = {
+}
+
+myType : MyType move
+drain(myType)                // error: a reader assumes myType is unchanged
+drain(myType as move)        // fine: shows that myType may be emptied
+```
+
+**A reference stance is a permission, not a promise.** The function may or
+may not use it, so the caller plans for the most the parameter allows:
+
+| Parameter | The caller assumes afterward |
+| --- | --- |
+| `loan &` or `copy &` | nothing was moved out and it is not finished; through writable access its contents may have changed |
+| `move &` | still usable, possibly emptied |
+| `last &` | finished: it may only be destroyed or replaced |
+
+```zax
+finish final : ()(value : MyType last &) = {
+  // may finish value, or may not
+}
+
+myType : MyType last
+finish(myType as last)       // fine: myType counts as finished, whatever finish did
+finish(myType as last)       // error: myType was already given up
+```
+
+The second call is an error because the caller gave `myType` up, not because
+`myType` is known to be empty. That prevents finishing a value twice. The
+destructor at the end of the scope handles both states, as destructors
+already must.
+
+A call may write a stance that would allow the function to take the whole
+value, even when the parameter only asks to copy it:
+
+```zax
+notTakingOver final : ()(value : MyValue copy &) = {
+}
+
+myValue : MyValue
+notTakingOver(myValue as last)
+// notTakingOver can still only copy myValue, because its parameter says copy &.
+// myValue counts as finished afterward, because the call said as last.
+```
+
+If `notTakingOver` later becomes `last &`, this call still matches, and
+nothing the caller assumed becomes false.
+
 ## Copy
 
-`copy` is what you get when you write no stance:
+`copy` is what you get when you write no stance on a value that allows it:
 
 ```zax
 source : Document
@@ -232,6 +412,15 @@ external state may keep some of that shared. A member declared with its own
 deep-copied by a generated `deep` operation, so it stays shared. The type's
 author decided that, and callers cannot override it.
 
+A value declared `deep` allows only independent copies. A use with no stance
+written is an error, because it would make an ordinary copy:
+
+```zax
+archive : MyArchive deep
+keep(archive)              // error: no stance means copy, and archive allows only deep
+keep(archive as deep)      // fine
+```
+
 `deep` never falls back to `copy`:
 
 ```zax
@@ -267,10 +456,16 @@ MyFileId :: identity admit expose transfer copy type U64   // no deep
 MyFile :: type transfer copy deep {
   id : MyFileId
 
-  +++ final : ()(source : MyFile readonly & deep) = default
+  +++ final : ()(source : MyFile readonly deep &) = default
   // error: MyFileId has no deep, so a default deep cannot be built
 }
 ```
+
+A value declared `deep` but initialized with an ordinary copy, as in
+`shared : MyArchive deep = original`, is built by whatever constructor the
+type provides for that case. A type can make such values independent with a
+constructor that declares a `deep` receiver stance; see
+[construction, replacement, and destruction](construction-and-destruction.md).
 
 ## Move
 
@@ -296,11 +491,10 @@ When `MyBuffer`'s `move` constructor runs:
 So after the type's `move` operation, the original value still behaves like a
 normal value of its type. A type that cannot leave a fully usable value
 behind should not define `move`; it can define `last` instead, as
-[`last` without `move`](#last-without-move) shows. A function that receives a
-`& move` reference may also change the caller's members through ordinary
-writable access, as
-[references pass on at most their stance](#references-pass-on-at-most-their-stance)
-explains; this guarantee is about what the type's own `move` leaves.
+[`last` without `move`](#last-without-move) shows. A function given a `move`
+reference may also change the caller's members through ordinary writable
+access, as [members](#members) explains; this guarantee is about what the
+type's own `move` leaves.
 
 `as move` permits taking the contents; it does not force it. A type's `move`
 constructor may keep some resources in the original, or copy them, as long as
@@ -430,6 +624,21 @@ For a type like `MyShared`, `as move` falls back to `copy`: the caller said it
 will use the variable again, and a copy keeps that promise. At a last use,
 `as last` avoids the copy.
 
+An unmarked variable of a type that allows only `last` is still `copy`: the
+stance says which stances may be written, and the type's `transfer` list says
+which operations exist. For such a variable only `as last` actually works:
+
+```zax
+MyTicket :: type transfer last {
+  id : Integer
+}
+
+ticket : MyTicket         // unmarked: copy
+keep(ticket)              // error: written as copy, and MyTicket has no copy
+keep(ticket as move)      // error: MyTicket has no move, and move can't fall back to last
+keep(ticket as last)      // fine
+```
+
 ### Refreshing a value with `move` and `.=`
 
 The difference between `move` and `last` pays off when a value is reused. A
@@ -443,12 +652,12 @@ DatabaseCommand :: type transfer copy move last {
   query : Query
   results : ResultSet
 
-  +++ final : ()(source : DatabaseCommand mutable writable & move) = {
+  +++ final : ()(source : DatabaseCommand mutable writable move &) = {
     // takes source.results and copies source.query; opens a connection of
     // its own, so source keeps its connection and stays fully usable
   }
 
-  +++ final : ()(source : DatabaseCommand mutable writable & last) = {
+  +++ final : ()(source : DatabaseCommand mutable writable last &) = {
     // takes source.results and source.connection; source only needs to
     // survive destruction or replacement
   }
@@ -484,63 +693,58 @@ empty. The rules for replacement constructors are in
 
 ## Loan
 
-A `loan` lets a function use a value where it is. The value as a whole stays
-with its owner: the function cannot copy the whole value, move it, or take it.
-Whether the function may change the value is a separate question, answered by
-`readonly` or `mutable writable`. A `mutable writable` loan may change the
-caller's value in place, including its members, but still cannot keep or copy
-the whole value.
+A `loan` lets a function use a value where it is. Nothing is built from the
+value: the function cannot copy it, move it, or take it. Whether the function
+may change the value is a separate question, answered by `readonly` or
+`mutable writable`. A `mutable writable` loan may change the caller's value in
+place, including its members, but still cannot keep or copy the whole value.
 
-Most functions only read or change their reference inputs, so a reference with
-no stance is a loan:
+Most functions only read or change their reference inputs, so most reference
+parameters are written `loan`:
 
 ```zax
 retain final : ()(input : MyType) = {
 }
 
-display final : ()(input : MyType readonly &) = {
-  print(input.label)      // fine: reading a member does not transfer input
-  retain(input)             // error: input is on loan; retain would copy it
+display final : ()(input : MyType readonly loan &) = {
+  print(input.label)        // fine: reading a member builds nothing
+  retain(input)             // error: input is a loan; retain would copy it
 }
 
-fill final : ()(buffer : MyBuffer mutable writable &) = {
-  buffer.append(data)     // fine: a mutable loan may be changed in place
+fill final : ()(buffer : MyBuffer mutable writable loan &) = {
+  buffer.append(data)       // fine: a mutable loan may be changed in place
 }
 ```
 
-Writing `input : MyType readonly & loan` means the same thing. A reference that
-needs to copy the value, or take from it, must declare `& copy`, `& move`,
-`& last`, or `& deep`:
+A reference that needs to copy the value, or take from it, is written
+`copy &`, `move &`, `last &`, or `deep &` instead:
 
 ```zax
-retainCopy final : ()(input : MyType readonly & copy) = {
+retainCopy final : ()(input : MyType readonly copy &) = {
   retain(input)             // fine: this reference may copy
 }
 ```
 
-The same holds for receivers: a receiver with no stance is a loan, and a
-function that copies or takes its receiver must declare a receiver stance, as
-[receiver stance](#receiver-stance) shows.
-
 ### Writing `as loan`
 
-`as loan` restricts a call to consumers that take a loan, so a reader sees that
-the call takes nothing from the value:
+`as loan` restricts a use to consumers that build nothing, so a reader sees
+that the call takes nothing from the value. Any value may be lent. A lent
+value can only be passed to a reference parameter, or used as the receiver of
+a function that declares no receiver stance:
 
 ```zax
 display(value as loan)
 ```
 
 It matters when a function has two overloads, one taking a loan and one taking
-a value, and the call writes no stance. When the compiler compares stances,
-`copy` normally ranks above `loan`, as [fallback](#fallback) shows, so you
-might expect the by-value overload to win. It does not: you must write
-`as loan` or `as copy`. The two overloads can behave quite differently. A
-mutable loan lets the function change your variable, which a by-value copy
-cannot, and a by-value function may keep the value it receives:
+a value, and the call writes no stance. You might expect the by-value overload
+to win. It does not: you must write `as loan` or `as copy`. The two overloads
+can behave quite differently. A mutable loan lets the function change your
+variable, which a by-value copy cannot, and a by-value function may keep the
+value it receives:
 
 ```zax
-update final : ()(input : MyType mutable writable &) = {
+update final : ()(input : MyType mutable writable loan &) = {
 }
 
 update final : ()(input : MyType) = {
@@ -551,8 +755,47 @@ update(value as loan)   // the loan overload
 update(value as copy)   // the by-value overload
 ```
 
+A by-value parameter can't accept a lent value, because it would have to be
+built from that value:
+
+```zax
+byValue final : ()(value : MyValue) = {
+}
+
+byValue(myValue as loan)     // error: a by-value parameter must be built, and a loan builds nothing
+```
+
 Complete selection is taught by
 [function invocation](function-invocation.md#a-loan-or-a-copy-must-be-stated).
+
+### Pinned values
+
+A variable you own may be declared `loan`. It is then pinned: it can be used
+and lent, but nothing is ever built from it, and it stays at the same address
+for as long as it exists:
+
+```zax
+device : MyDevice loan = openDevice()
+configure(device)                    // fine if configure takes MyDevice loan &
+keep(device)                         // error: nothing may be built from device
+keep(device as move)                 // error: the owner of a loan value may only lend it
+```
+
+A by-value parameter may be pinned too. The caller still decides how it is
+built; inside the function, nothing is built from it:
+
+```zax
+registerDevice final : ()(device : MyDevice loan) = {
+  configure(device)                  // fine if configure takes MyDevice loan &
+  devices.add(device)                // error if add takes MyDevice by value: device is pinned
+}
+
+registerDevice(myDevice)             // fine: device is built by copy
+registerDevice(myDevice as move)     // fine: device is built by move
+```
+
+A value the caller doesn't name can be pinned only by building it directly
+into a pinned variable, as [results](#results) explains.
 
 ### Everything derived from a loan stays on loan
 
@@ -560,24 +803,24 @@ A loan would be easy to get around if you could make a new reference from it
 that allows copying. So anything made from a loan that can reach the whole
 value is also a loan:
 
-- a reference initialized from it must be a `loan`;
+- a reference initialized from it is a `loan`;
 - a lambda that captures it by reference also holds a loan, and a lambda
   cannot capture a copy of it;
 - converting it to the underlying type of an
   [identity type](identity-types.md) gives another loan, so a conversion that
   would copy is an error;
 - passing `_` on from a loan receiver passes on a loan; and
-- making a raw pointer from it is an error outside `unsafe`, because a raw
-  pointer cannot carry the loan.
+- a raw pointer to its value carries the loan on the value it points to, as
+  [pointers](#pointers) explains.
 
 ```zax
-display final : ()(input : MyType readonly &) = {
-  other : MyType readonly & copy = input   // error: a reference that may copy, bound from a loan
+display final : ()(input : MyType readonly loan &) = {
+  other : MyType readonly copy & = input   // error: a reference that may copy, bound from a loan
   later := [[ input ]] ()() {              // error: [[ input ]] captures a copy of input
     show(input)
   }
   kept := [[ input: view : & ]] ()() {     // fine: captures a reference, which is still a loan
-    retain(view)                           // error: view is on loan; retain would copy it
+    retain(view)                           // error: view is a loan; retain would copy it
   }
 }
 ```
@@ -586,47 +829,16 @@ display final : ()(input : MyType readonly &) = {
 reference named `view`. Captures are taught in
 [lambdas and callable composition](lambdas-and-callable-composition.md).
 
-### Where `loan` may appear
-
-- **References, receivers, and reference results only.** A by-value parameter
-  always builds a new value, so `input : MyType loan` by value is an error, as
-  is `loan` on a by-value local or member.
-- **Never in a `transfer` list.** `loan` is not an operation a type defines;
-  every type can be lent.
-- **Not as the same-type source of a constructor, assignment, or
-  replacement.** A constructor that builds a value from a loaned value of the
-  same type would just be the copy constructor under another name.
-- **As a function result.** A `loan` result lets the caller use the value, as
-  its qualifiers allow, but not copy or keep it. The usual lifetime rules for
-  returned references apply:
-
-  ```zax
-  current final : (result : MyDocument readonly & loan)() = {
-  }
-  ```
+`loan` is never in a type's `transfer` list: it is not an operation a type
+defines, and every type can be lent. Nor is it the stance of a constructor's
+same-type source: a constructor that built a value from a lent value of the
+same type would just be the copy constructor under another name.
 
 ### What a loan does not promise
 
 A loan stops the value being copied, moved, or taken as a whole. It does not
-protect the value's members. Each member follows its own declared stance:
-through a `readonly` loan a member can be copied, and through a writable loan
-it can also be moved or taken, just as it could be changed:
-
-```zax
-keepPayload final : ()(payload : Payload) = {
-}
-
-refresh final : ()(input : Message mutable writable &) = {   // a loan
-  keepPayload(input)                    // error: the whole message is on loan
-  keepPayload(input.payload as move)    // fine: payload follows its own stance,
-                                        // and the loan is writable
-}
-
-inspectOnly final : ()(input : Message readonly &) = {
-  keepPayload(input.payload)            // fine: copies the member
-  keepPayload(input.payload as move)    // error: readonly access cannot change payload
-}
-```
+protect the value's members, as [members](#members) explains: through a
+writable loan, a member can be moved or taken, just as it could be changed.
 
 So someone with a loan can copy the members one by one and build a new value
 from them. If a kind of value must never be duplicated, give the type a
@@ -641,12 +853,11 @@ compiler does not warn about this; it reports any later use as usual.
 Fallback happens when something is built or assigned: initializing a
 variable, building a by-value parameter, assigning, or replacing. If the type
 has no operation for exactly the stance you wrote, the compiler uses one that
-takes less instead. For each stance you can write, the table lists what the
-compiler can use, best match first:
+takes less instead:
 
 | You write | What can receive it, best match first |
 | --- | --- |
-| Implicit, or `as copy` | `copy`, then `loan` |
+| No stance, or `as copy` | `copy`, then `loan` |
 | `as move` | `move`, then `copy`, then `loan` |
 | `as last` | `last`, then `move`, then `copy`, then `loan` |
 | `as deep` | `deep`, or a `loan` consumer that builds nothing; otherwise error |
@@ -657,23 +868,17 @@ next : Message = message as last    // Message has no last constructor:
                                     // its move constructor builds next
 ```
 
-A reference parameter builds nothing, so there is nothing to fall back
-between. Its declared stance is what the function may do to the caller's
-value, and a call must write at least that stance:
-
-```zax
-hold final : ()(input : Message mutable writable & last) = {
-}
-
-hold(message as move)   // error: hold requires `as last`; nothing falls back
-hold(message as last)   // fine
-```
-
-Two more rules apply to choosing a function. A by-value parameter declared
-`move` or `last` accepts only calls that write at least that stance, as
-[by-value parameters](#by-value-parameters) explains. And when a function has
-both a loan overload and a by-value overload, a call with no stance must choose
-with `as loan` or `as copy`, as [writing `as loan`](#writing-as-loan) shows.
+Fallback passes over an operation that can't accept the source, never over one
+that can and then refuses. An operation can't accept the source when it doesn't
+exist, or when its source parameter's qualifiers rule the source out, as a
+`mutable writable` source parameter rules out a readonly path; fallback then
+continues to a weaker operation. An operation that accepts the source but
+refuses the use, because it is `= forbidden` or because its receiver stance
+can't build the new value, makes the use an error instead of falling back
+further. Leaving a stance out of a type's `transfer` list means the operation
+doesn't exist, so fallback applies as normal. The full rules for forbidden operations, and for how a constructor is
+chosen, are in
+[construction, replacement, and destruction](construction-and-destruction.md).
 
 What happens to the original afterward depends on the stance you wrote and the
 operation that ran. A stance is **reserved** when the type lists it in its
@@ -698,7 +903,7 @@ For example, `Ledger` initially has only a `copy` constructor:
 ```zax
 Ledger :: type {
   +++ final : ()(
-    source : Ledger readonly & copy
+    source : Ledger readonly copy &
   ) = {
   }
 }
@@ -714,12 +919,12 @@ If `Ledger` later defines a `move` constructor, the same line runs it:
 ```zax
 Ledger :: type {
   +++ final : ()(
-    source : Ledger readonly & copy
+    source : Ledger readonly copy &
   ) = {
   }
 
   +++ final : ()(
-    source : Ledger mutable writable & move
+    source : Ledger mutable writable move &
   ) = {
   }
 }
@@ -737,7 +942,8 @@ type should not use different stances to do unrelated things.
 
 ## When a stance must be written
 
-No stance means `copy`. Two separate rules decide when that is not enough.
+No stance means `copy`, or a loan where the value forbids a copy. Two
+separate rules decide when that is not enough.
 
 1. **Necessity, at any use.** If a use can only work with `move` or `last`,
    leaving the stance unstated is an error wherever it appears, not only at a
@@ -755,22 +961,22 @@ Message :: type transfer copy move {
   text : String
   payload : Payload
 
-  +++ final : ()(source : Message mutable writable & move) = default
+  +++ final : ()(source : Message mutable writable move &) = default
 }
 
 MyOwnedFile :: type transfer move {
   handle : Integer
 
-  +++ final : ()(source : MyOwnedFile mutable writable & move) = default
+  +++ final : ()(source : MyOwnedFile mutable writable move &) = default
 }
 
 relay final : ()(input : Message) = {
 }
 
-sendMessage final : ()(input : Message move) = {
+sendMessage final : ()(input : Message via move) = {
 }
 
-hold final : ()(input : Message mutable writable & last) = {
+hold final : ()(input : Message mutable writable last &) = {
 }
 
 archive final : ()(file : MyOwnedFile) = {
@@ -785,7 +991,7 @@ sendCount final : ()(input : Integer) = {
 ```zax
 // each line below is a separate alternative
 archive(file)               // error: MyOwnedFile has no copy; write `as move` or `as last`
-sendMessage(message)        // error: sendMessage requires at least move
+sendMessage(message)        // error: sendMessage's parameter is via move
 hold(message)               // error: hold's reference requires last
 
 archive(file as last)       // fine
@@ -798,7 +1004,7 @@ reader who sees no stance assumes the function took a copy and `message` is
 unchanged. This applies even when the type has nothing to take:
 
 ```zax
-bump final : ()(value : Integer mutable writable & last) = {
+bump final : ()(value : Integer mutable writable last &) = {
 }
 
 count : Integer
@@ -840,14 +1046,14 @@ intent<implicit-stance-at-terminal-use>{
 Any explicit stance satisfies the rule, including `as copy`.
 
 The intent rule applies only to variables that hold their own value: by-value
-locals and parameters. A function's result with no declared stance needs no
-check, because it is always passed on as `last`, as
-[unnamed values](#unnamed-values-are-already-treated-as-last) explains. A
-reference only points at a value someone else holds, so the last use of a reference is not the last use of
+locals and parameters. A function's result needs no check, because a result
+the caller doesn't name is a temporary, as
+[temporaries](#temporaries) explains. A reference only points at a value
+someone else holds, so the last use of a reference is not the last use of
 that value. The rule applies where the value itself is held:
 
 ```zax
-forwardMessage final : ()(input : Message readonly & copy) = {
+forwardMessage final : ()(input : Message readonly copy &) = {
   relay(input)    // fine: copies the referent; the caller's message lives on
 }
 ```
@@ -862,7 +1068,7 @@ happen with `as last`. You must write a stance when `as last` would:
 
 Both depend only on how the function's parameters are declared and on which
 operations the type has. A stance listed in the type's `transfer` list counts
-as if its operation were already written, even when only `copy` exists today,
+as if its operation were already written, even when only `copy` is written so far,
 as [reserved stances](#reserved-stances-count-as-implemented) shows. So "nothing
 could differ" holds only for a type such as `Integer`, which has no `move` or
 `last` and reserves neither.
@@ -871,13 +1077,13 @@ Here is the first case. With no stance, the call works, but `as last` would
 call the other overload:
 
 ```zax
-store final : ()(value : Integer readonly & copy) = {
+store final : ()(value : Integer readonly copy &) = {
 }
 
-store final : ()(value : Integer mutable writable & last) = {
+store final : ()(value : Integer mutable writable last &) = {
 }
 
-store(total)   // selects the & copy store; at a last use: error, because
+store(total)   // selects the copy & store; at a last use: error, because
                // `as last` would call the other store
 ```
 
@@ -904,7 +1110,7 @@ MyHandle :: type transfer copy move last {
 logHandle final : ()(input : MyHandle) = {
 }
 
-sendHandle final : ()(input : MyHandle move) = {
+sendHandle final : ()(input : MyHandle via move) = {
 }
 
 useHandle final : ()() = {
@@ -924,9 +1130,9 @@ reuseHandle final : ()() = {
 Code written this way keeps compiling when the type's author adds the real
 operations. A type without a `transfer` list reserves nothing. If such a type
 later adds `move`, code that passes one of its values, at a last use and with
-no stance, to a plain by-value parameter or into a new variable, stops
-compiling until a stance is written. Declaring `transfer copy move` from the
-start avoids that.
+no stance, to a by-value parameter or into a new variable, stops compiling
+until a stance is written. Declaring `transfer copy move` from the start
+avoids that.
 
 ### Returning at a last use
 
@@ -942,28 +1148,6 @@ relayCount final : (result : Integer)(input : Integer) = {
   return input   // fine: Integer has no move or last
 }
 ```
-
-### Unnamed values are already treated as `last`
-
-A value with no name cannot be used again after the expression that uses it,
-so it is treated as if written `as last`. That covers a value built directly in
-an expression, such as `(: Source)`, and a function's by-value result that
-declares no stance:
-
-```zax
-fromTemporary := (: Source).get()   // the unnamed Source is treated as `as last`
-item := makeItem()                  // makeItem declares no result stance:
-                                    // item is built from the result with last
-```
-
-"No stance means `copy`" is about variables you can use again. An unnamed
-value has no name, so nobody can use it again and nothing is hidden from the
-reader. A function that wants its callers to receive a copy declares
-`result : Item copy`, and a caller can write a stance on the call, as in
-`makeItem() as copy`.
-[Receiver stance](#compiler-created-temporary-receivers) shows the receiver
-case in full, and [results with no declared stance](#results-with-no-declared-stance)
-shows results.
 
 ### Generic bodies are checked per instantiation
 
@@ -998,6 +1182,12 @@ A library can test representative instantiations with
 can reject item types, but cannot make a stance unnecessary for a type it
 accepts.
 
+A generic reference parameter writes its stance like any other reference
+parameter, as in `items : T readonly loan &`. A stance applied to a type
+parameter lands on the nearest layer that can carry one: with `T` bound to
+`MyValue &`, `T move` means `MyValue move &`; with `T` bound to
+`MyValue * unique`, it applies to the pointer.
+
 ### A stance on several items
 
 A function that accepts any number of arguments receives them as a
@@ -1007,9 +1197,9 @@ expansion applies to each item separately, and both rules above apply to each
 item:
 
 ```zax
-sendAll$ final : (Items ... : type)()(items ... : Items last) = {
+sendAll$ final : (Items ... : type)()(items ... : Items via last) = {
 }
-// each item's parameter is declared last, as `input : Message last` is for one value
+// each item's parameter is via last, as `input : Message via last` is for one value
 
 forwardAll$ final : (Items ... : type)()(items ... : Items) = {
   sendAll(from items)
@@ -1022,8 +1212,8 @@ forwardLast$ final : (Items ... : type)()(items ... : Items) = {
 }
 ```
 
-`items ... : Items last` writes the stance after the pack's type parameter, the
-same way as for a single parameter.
+`items ... : Items via last` writes the requirement after the pack's type
+parameter, the same way as for a single parameter.
 [Variadics](variadics.md#a-stance-applies-to-each-item) uses the same
 position. The exact spelling is not final yet.
 
@@ -1035,7 +1225,7 @@ Sometimes each item must go through a call before it is passed on. Here each
 message is encoded into a packet, and the packets are sent together:
 
 ```zax
-encode final : (packet : Packet)(message : Message last) = {
+encode final : (packet : Packet)(message : Message via last) = {
 }
 
 sendPackets final : ()(packets ... : Packet) = {
@@ -1066,7 +1256,7 @@ different stances, write the items as separate inputs, selecting each one by
 compile-time index:
 
 ```zax
-sendPair final : ()(header : Header move, body : Body) = {
+sendPair final : ()(header : Header via move, body : Body) = {
 }
 
 forwardPair$ final : (Items ... : type)()(items ... : Items)
@@ -1078,176 +1268,32 @@ forwardPair$ final : (Items ... : type)()(items ... : Items)
 [Passing items on](variadics.md#passing-items-on) teaches the complete pack
 model.
 
-## Declared stances by location
+## Declaring stances
 
-A stance written in a declaration means something different depending on where
-it is written. A parameter's stance is a contract with the caller about how the
-value arrives. A local's stance is its author restricting how that variable may
-later be used. A result's stance decides how the caller's destination is built
-from it.
+A stance written in a declaration always says what may be built from that
+value. Where it is written decides whose value it is, and whether it may be
+left out:
 
-| Location | Example | What the declared stance means |
+| Declaration | Example | When no stance is written |
 | --- | --- | --- |
-| By-value parameter | `input : Message move` | A call must write at least this stance to use this function |
-| Reference parameter | `input : Message mutable writable & last` | What the function may do to the caller's value; a call must write at least this stance |
-| Reference with no stance | `input : Message readonly &` | `loan` |
-| Receiver | `publish final : ()() deep` | The stance a call must write on the receiver to use this function; none means `loan` |
-| Source of a constructor, assignment, or replacement | `source : Message readonly & copy` | Which operation this is: here, the copy constructor |
-| Local, alias, or member | `report : Report move` | Every transfer from it must be written with this stance or a stronger one |
-| Type alias | `CopyView :: alias type DeepView copy` | The same requirement, for every declaration that uses the alias |
-| Result | `result : Message move` | The stance the caller's destination is built with; with none, a by-value result is passed on as `last` |
-| Type or identity `transfer` list | `MyOwnedFile :: type transfer move` | Every transfer the type allows |
+| A local, member, or by-value parameter (you own it) | `report : Report move` | `copy`: its owner may write every stance |
+| The value an owning pointer points to | `owner : MyValue * unique` | `copy` |
+| A reference or raw pointer bound from one visible value | `alias : Buffer & = owner` | taken from that value; see [references you declare](#references-you-declare) |
+| A reference or borrowing raw-pointer parameter, a reference result, a member, or a type alias of a reference | `show final : ()(value : MyValue readonly loan &)` | must be written |
+| The receiver `_` | `describe final : (result : String)() = { }` | `loan` |
+| A by-value parameter's `via` | `item : MyItem via move` | `via copy`: any stance the call writes |
+| A result | `result : Message move` | `copy` |
 
-As a reminder, a **transfer** is any use that builds or assigns a new value
-from a place: passing it to a by-value parameter, initializing a variable,
-assigning, storing it in an array, capturing it in a lambda, or returning it.
-Passing it to a `loan` reference, or calling a function with a `loan`
-receiver on it, is not a transfer.
+### Locals and members
 
-### By-value parameters
-
-A by-value parameter's stance says the least a call must write to use the
-function. A by-value parameter with no stance is called a **plain**
-parameter; it behaves exactly like one declared `copy`. A call with no stance,
-or with `as copy`, can use only plain and `copy` parameters. A call with
-`as move` prefers a `move` parameter and can also use a plain one. A call with
-`as last` prefers `last`, then `move`, then plain:
-
-```zax
-emit final : ()(input : Message) = {
-}
-
-emit final : ()(input : Message move) = {
-}
-
-emit final : ()(input : Message last) = {
-}
-
-emit(message)           // plain emit
-emit(message as move)   // move emit
-emit(message as last)   // last emit
-```
-
-With only the `move` overload, `emit(message)` is an error at any use: the
-function asked for at least `move`. A by-value parameter declared `deep`,
-such as `input : Message deep`, can be used only by a call written `as deep`,
-because `deep` is outside the `copy`, `move`, `last` order and nothing else
-counts as stronger.
-
-The parameter's stance only decides which function a call can use. It does
-not decide how the parameter is built: the stance the caller writes chooses
-which constructor builds it, as
-[by value and by reference](#by-value-and-by-reference) explains. Inside the
-function, uses of the parameter with no stance are copies again.
-
-### Reference parameters
-
-A reference parameter refers to the caller's own value. Its stance says what
-the function may do to that value, and the function's body depends on it. So a
-call must write at least that stance, every time and for every type:
-
-```zax
-hold final : ()(input : Message mutable writable & last) = {
-}
-
-remember final : ()(input : Message readonly & copy) = {
-}
-
-show final : ()(input : Message readonly &) = {
-}
-
-// each line below is a separate alternative
-hold(message)            // error: hold requires `as last`
-hold(message as last)    // fine
-remember(message)        // fine: no stance means copy
-show(message)            // fine: a loan accepts any call
-```
-
-A reference parameter with no stance is a `loan`. Declare `& copy` only when
-the function copies the value through the reference.
-
-### Receivers
-
-A receiver's stance says which stance a call must write on the receiver to use
-that function. A receiver with no stance is a `loan`, and the version with no
-receiver stance is used when no version with a matching receiver stance
-exists.
-[Receiver stance](#receiver-stance) covers the details, including temporaries
-and calls on a type rather than an instance.
-
-```zax
-Document :: type {
-  describe final : (result : String)() = {
-  }
-  // no receiver stance: _ is on loan
-
-  snapshot final : (result : Document)() copy = {
-    return _ as copy
-  }
-  // copies its receiver, so declares a copy receiver
-}
-```
-
-### Lifecycle sources
-
-A constructor, assignment, or replacement that builds a value from another
-value of the same type declares that source with `& copy`, `& move`,
-`& last`, or `& deep`. Here the stance says which operation this is:
-`& copy` declares the copy constructor, which runs when a value is copied, and
-`& move` declares the move constructor, which runs for `as move`:
-
-```zax
-Archive :: type transfer copy move last deep {
-  history : History
-
-  +++ final : ()(source : Archive readonly & copy) = {
-    // copy construction
-  }
-
-  +++ final : ()(source : Archive mutable writable & move) = {
-    // may take resources from source, leaving it fully usable
-  }
-
-  +++ final : ()(source : Archive mutable writable & last) = {
-    // may take everything; source only needs to survive destruction
-  }
-
-  +++ final : ()(source : Archive readonly & deep) = {
-    // independent construction
-  }
-}
-```
-
-A `move` or `last` source is usually `mutable writable`, because taking a
-resource means changing the source so that it no longer owns that resource.
-A `readonly` `move` or `last` source is allowed when the operation really does
-not change the source, for example when the resource it takes lives somewhere
-outside the value.
-
-Inside these operations, the source as a whole is never transferred; doing so
-would call the same operation again. The operation works on the source's
-members instead: a copy constructor copies them, and a move constructor may
-take them. The other parameters of a constructor are ordinary parameters. Many
-of them are only read, so `& loan` is often the right stance for them. The full
-rules are in
-[construction, replacement, and destruction](construction-and-destruction.md#lifecycle-sources-are-never-transferred-whole).
-
-### Locals, aliases, and members
-
-A stance declared on a local variable, a local reference, or a member is a
-requirement: every transfer from that place must be written with the declared
-stance or a stronger one.
+A stance declared on a local variable or member says what may be built from
+it, and its owner may write the stances in the owner table:
 
 ```zax
 byValue final : ()(input : MyType) = {
 }
 
-inspectCopying final : ()(input : MyType readonly & copy) = {
-  byValue(input)   // copies the referent
-}
-
-display final : ()(input : MyType readonly &) = {
-  byValue(input)   // error: input is on loan
+display final : ()(input : MyType readonly loan &) = {
 }
 
 myType : MyType move
@@ -1255,109 +1301,261 @@ myType : MyType move
 // each line below is a separate alternative
 byValue(myType)              // error: myType must not be copied
 byValue(myType as move)      // fine
-byValue(myType as last)      // fine: stronger than move
+byValue(myType as last)      // fine: the owner of a move value may also write as last
 byValue(myType as copy)      // error: myType was declared move
-display(myType)              // fine: display takes a loan; nothing is transferred
-myType.describe()            // fine: describe's receiver has no stance, so it only lends myType
-inspectCopying(myType)       // error: & copy could copy a move-restricted value
+display(myType)              // fine: display takes a loan; nothing is built
+myType.describe()            // fine: describe's receiver has no stance, so it lends myType
 ```
 
-`input` inside `inspectCopying` is a reference, so passing it on is never the
-last use of the caller's value, and the intent rule does not apply there.
-
-The reason for the requirement is the same as for the necessity rule: a reader
-who sees no stance assumes a copy, and the author of `myType` has said it must
-not be copied. Lending is still allowed. Otherwise a variable declared `move`
-could not be passed to most functions, and most of its methods could not be
-called.
-
-The requirement controls only which stance you may write. What actually runs
-still follows the fallback rules. If `MyPoint` has only `copy`,
+The stance controls only which stance you may write. What actually runs still
+follows the fallback rules. If `MyPoint` has only `copy`,
 `point : MyPoint move` is still allowed: writing `as move` runs `copy`.
 
-A function that wants the restriction on its input rebinds it, because a
-parameter's stance describes only how the value arrives:
+A declared stance the type can never satisfy is an error. If the type's
+`transfer` list rules out every stance the declaration would allow, the
+declaration itself is an error. A type without a `transfer` list can still add
+operations later, so for such a type the error is reported where a transfer
+is attempted:
 
 ```zax
-process final : ()(input : MyType move) = {
-  restricted : MyType mutable writable & move = input as move
-  // `as move` is needed: input starts from copy in the body. Binding a
-  // reference moves nothing; restricted refers to input itself.
-  // each call below is a separate alternative
-  something(restricted)          // error if something takes MyType by value
-  something(restricted as move)  // fine
-  something(input as copy)       // fine if MyType has copy: input itself is unrestricted
+MyDeepOnly :: type transfer deep {
 }
+
+shared : MyDeepOnly move   // error: the owner may write only as move or as last,
+                           // and MyDeepOnly has neither
+other : MyDeepOnly         // fine: copy includes deep, so other as deep works
+point : MyPoint move       // fine: MyPoint has copy; `as move` falls back to it
 ```
 
-The remaining rules for declared places:
-
-- **A place declared `deep`** requires every transfer to be `as deep`. `deep`
-  is outside the chain, so nothing counts as stronger.
-- **A place's restriction does not extend to its members.** A member is
-  governed by its own declared stance, as
-  [members and bindings](#members-and-bindings) shows.
-- **A declared stance never settles an overload choice.** A place declared
-  `copy` still needs `as loan` or `as copy` at a call where both a loan and a
-  by-value function fit. The reader of the call should not need to look up a
-  declaration.
-- **`loan` on a by-value local or member is an error.** Lending is not a
-  transfer, so a `loan` requirement would have nothing to govern.
-- **A declared stance the type can never satisfy is an error.** If the type's
-  `transfer` list rules out every stance the declaration would accept, the
-  declaration itself is an error. A type without a `transfer` list can still
-  add operations later, so for such a type the error is reported where a
-  transfer is attempted.
-
-  ```zax
-  DeepOnly :: type transfer deep {
-  }
-
-  shared : DeepOnly copy   // error: copy, move, and last are all unavailable on DeepOnly
-  point : MyPoint move     // fine: MyPoint has copy; `as move` falls back to it
-  ```
-
-The bodies of `display` and `inspectCopying` show why the restriction cannot leak
-through a call. A restricted place may be lent but not bound to a reference
-that could copy it, and nothing derived from a loan can be copied as a whole.
+A declared stance never settles an overload choice. A variable declared `copy`
+still needs `as loan` or `as copy` at a call where both a loan and a by-value
+function fit. The reader of the call should not need to look up a declaration.
 
 The restriction covers only declared places. Values stored in array elements,
 or in members that declare no stance, are governed by their type. A guarantee
 for every value of a kind, wherever it is stored, comes from a `transfer` list
 on the type or an identity.
 
-### Same spelling, different location
-
-The same declaration text means different things on a parameter and on a local
-reference. On a parameter, `& move` says what the function may do to the
-caller's value: take its contents. Inside the function, uses with no stance
-are still copies, and the function may write any stance up to `move` on
-`input`, but nothing stronger:
+**Stances describe places, not every value built from them.** When the owner
+of a `move` variable hands its contents to a function, the new value belongs
+to that function, which may treat it however its own declarations say:
 
 ```zax
-drain final : ()(input : Message mutable writable & move) = {
-  relay(input)              // fine: copies the referent
-  relay(input as move)      // fine: takes from the caller's message
-  relay(input as last)      // error: the caller allowed only move
+func3 final : ()(value : MyType via last) = {
+  keep(value)                // fine: the function owns value, a copy value
+}
+
+myType2 : MyType move
+func3(myType2 as last)       // fine: myType2's stance restricted that variable, not the value afterward
+```
+
+### References you declare
+
+A reference or raw pointer you bind to one visible value can take its stance
+from that value, but only when the stance leaves the owner's value unchanged.
+A stance that would let the borrower change the owner's value must be written
+by the owner at the binding:
+
+| Owner's stance | An unmarked borrower bound to it gets | To let the borrower change the owner's value |
+| --- | --- | --- |
+| `loan` | `loan` | not possible |
+| `copy` | `copy` | write `as move` or `as last` |
+| `deep` | `deep` | not possible |
+| `move` | `loan` | write `as move` |
+| `last` | `loan` | write `as last` |
+
+```zax
+consume final : ()(buffer : Buffer) = {
+}
+
+owner : Buffer move
+alias : Buffer & = owner                // owner is move, so alias gets loan
+mover : Buffer move & = owner as move   // the owner grants move when binding
+
+consume(alias as move)              // error: alias was given loan
+consume(mover as move)              // fine: owner's contents leave; owner is now moved-from
+consume(mover as last)              // error: mover isn't the owner
+consume(owner as last)              // fine: the owner of a move value may write as last
+
+plain : Buffer
+view : Buffer & = plain             // plain is copy, so view gets copy
+consume(view)                       // fine: copies; plain is unchanged
+consume(view as move)               // error: view isn't the owner
+```
+
+Why `alias` gets `loan` and not `move`: a `move` stance on `owner` says the
+only thing that may be built from `owner` is a value that takes its contents.
+If an alias bound with nothing written also got `move`, the alias could take
+`owner`'s contents, and no line near `owner` would show it. With a raw
+pointer, that alias can be passed far away:
+
+```zax
+// what inheriting move would allow
+emptyIt final : ()(target : Buffer move * copy) = {
+  keep((target.) as move)           // takes the buffer's contents
+}
+
+owner : Buffer move
+view : Buffer * = owner              // if view inherited move...
+emptyIt(view)                        // ...this would empty owner, and nothing at this line says so
+owner.read()                         // owner would be unexpectedly empty
+```
+
+The owner learns its variable's state from the stances it writes. So an
+unmarked borrower gets only a stance that leaves the owner's value unchanged:
+`loan`, `copy`, or `deep`. For a `move` owner, that leaves only `loan`. To let
+a borrower take the contents, the owner says so where it binds:
+`mover : Buffer move & = owner as move`.
+
+Typed loop bindings are references you declare too, and follow the same
+table:
+
+```zax
+each value : MyValue readonly & from values {
+  // elements have no declared stance, so they are copy, and value gets copy
+  showValue(value)
 }
 ```
 
-On a local reference, the same spelling is a requirement on every transfer from
-that reference:
+Array elements are governed by their type and can't be declared with a stance
+of their own, so a loop binding over elements of a type with `copy` gets
+`copy`.
+
+### References that stand alone
+
+A reference or borrowing raw-pointer parameter, a reference result, a member
+that is a reference or borrowing raw pointer, and a type alias of a reference
+have no single value to take a stance from. Their stance must be written; for a
+raw pointer, that is the stance of the value it points to, before `*`. An
+owning pointer, raw `move` or `last` included, owns what it points to, so its
+pointed-to value is `copy` when unmarked:
 
 ```zax
-message : Message
-taker : Message mutable writable & move = message as move
-relay(taker)                // error: taker requires `as move` or `as last`
-relay(taker as move)        // fine
+show final : ()(value : MyValue &) = {                 // error: write a stance, for example MyValue loan &
+}
+
+show final : ()(value : MyValue readonly loan &) = {   // fine
+}
+
+current final : (result : MyDocument readonly loan &)() = {
+}
+
+MyNode :: type {
+  parent : MyNode loan *
+}
 ```
+
+When code takes something by reference, it is usually trying to avoid a
+duplicate, so `loan` is the common answer. A `self` result is the exception:
+it takes its stance from the call, as [results](#results) explains.
+
+### Receiver stances
+
+A function's receiver is a parameter bound implicitly. A version with no
+receiver stance takes `_` as `loan`, and writing `loan` there declares the
+same version: declaring both is a duplicate. [Receivers](#receivers) covers
+how a call chooses a version.
+
+### By-value parameters and `via`
+
+A by-value parameter is a new value the function owns. It has two stances:
+
+- **The parameter's stance** says what the function may build from the
+  parameter inside its body, exactly like a local's stance. It may be `loan`,
+  which pins the parameter for the length of the call.
+- **The `via` stance** says the least stance a call must write. The default is
+  `via copy`, which accepts any stance. `via loan` is an error, because lending
+  builds nothing.
+
+The stance the call writes still chooses which constructor builds the
+parameter, with the usual fallback. Three declarations decide such a call:
+
+- the parameter's `via` stance says which stances the call must write;
+- the stance declared on the caller's variable says which stances the call is
+  allowed to write;
+- the parameter's own stance says what the function may build from the
+  parameter inside its body.
+
+```zax
+myType1 : MyType copy
+myType2 : MyType move
+myType3 : MyType last
+
+func1 final : ()(value : MyType copy via move) = {
+  passByValue(value)              // fine: the function owns a copy value
+  passByValue(value as last)      // fine
+}
+
+func2 final : ()(value : MyType move via copy) = {
+  passByValue(value)              // error: the parameter's stance is move
+  passByValue(value as move)      // fine
+}
+
+func1(myType1)              // error: via move needs as move or as last
+func1(myType1 as move)      // fine
+func1(myType2)              // error: via move needs as move or as last
+func1(myType3 as last)      // fine
+
+func2(myType1)              // fine: copied into place
+func2(myType2)              // error: myType2 forbids copy
+func2(myType2 as move)      // fine
+func2(myType3 as last)      // fine
+```
+
+`via` is useful when a function needs its argument to arrive a certain way:
+
+```zax
+MyArchive :: type transfer copy deep {
+  history : MyHistory * strong      // copy shares history; deep makes its own
+}
+
+sendToWorker final : ()(archive : MyArchive via deep) = {
+  // archive shares nothing with the caller, so it may cross threads
+}
+
+sendToWorker(local)                 // error: via deep needs as deep
+sendToWorker(local as deep)         // fine
+
+push final : ()(item : MyBigBuffer via move) = {
+  // refuses silent copies of an expensive value
+}
+```
+
+`via` is only for something that is built: by-value parameters, including
+pointers passed by value, and results. A reference is never built, so `via`
+on a reference parameter, a reference result, or a receiver is an error; the
+stance before `&` already requires the call to write it:
+
+```zax
+take final : ()(item : MyItem copy via move) = {
+}
+// by value: the call must write as move or as last
+
+hold final : ()(item : MyItem move &) = {
+}
+// reference: move & already requires as move
+
+broken final : ()(item : MyItem loan & via move) = {
+}
+// error: a reference isn't built, so via has nothing to constrain
+```
+
+Overloads may differ only in `via`. A call uses the most specific `via` it
+satisfies: a call written `as last` prefers `via last` over `via copy`, and a
+call with no stance uses `via copy`.
+
+`via` is needed only where one author writes the stance and another declares
+the value. A lambda capture such as `[[ source as last: captured ]]` and a
+loop source such as `each … in source as last` write both in one place, so
+they have no `via`. A lambda's own parameters are ordinary parameters.
+
+Composition also uses the word `via`, as in `= via fuel.refill`, always after
+`=` in a function definition; a parameter's `via` always follows a type.
 
 ### Type aliases
 
 A type alias can carry a stance, so a project can name a kind of variable
-once instead of repeating the stance on every declaration. Every declaration
-that uses the alias gets the stance as a requirement, as if it had written the
-stance itself:
+once instead of repeating the stance on every declaration:
 
 ```zax
 OwnedPayload :: alias type Payload move
@@ -1367,69 +1565,32 @@ send final : ()(payload : Payload) = {
 }
 
 draft : OwnedPayload
-send(draft)            // error: draft was declared through OwnedPayload, which requires move
+send(draft)            // error: draft was declared through OwnedPayload, which is move
 send(draft as move)    // fine
 ```
 
-An alias can also be built from another alias, replacing its stance:
+An alias can also be built from another alias, replacing its stance. When the
+alias is a reference, the stance applies to the referred-to value, the
+nearest layer that can carry one:
 
 ```zax
-DeepView :: alias type Payload readonly & deep
-CopyView :: alias type DeepView copy
+DeepView :: alias type Payload readonly deep &
+CopyView :: alias type DeepView copy        // CopyView is Payload readonly copy &
 ```
 
-`CopyView` is still a readonly reference to a `Payload`, but its stance is
-`copy` instead of the `deep` it would otherwise get from `DeepView`. Declaring
-or using an alias copies nothing; it only changes what declarations that use
-it require. The order in which alias properties combine is explained in
+Declaring or using an alias copies nothing; it only changes what declarations
+that use it allow. The order in which alias properties combine is explained in
 [declarations and bindings](declarations-and-bindings.md#exact-aliases-and-property-overlays).
 
-### Results
+### Inferred declarations
 
-A result's declared stance says how the caller's destination is built from it.
-It is part of the function's signature, and it is not a restriction on the
-caller:
-
-```zax
-makeMessage final : (result : Message move)() = {
-}
-
-stored := makeMessage()   // stored is built from the result with move
-copied := stored          // fine: stored is unrestricted
-show(stored)              // stored is used again, so the copy above was not its last use
-```
-
-Inside the function that produces it, `result` behaves like a parameter: a use
-with no stance is a copy, and anything stronger must be written. [Results and forwarding](#results-and-forwarding)
-covers result mapping, forwarding, and `self` results.
-
-### Written `copy` versus no stance
-
-Writing `copy` in a declaration does different things by location:
-
-- **On a result**, `result : Payload copy` is the function's author saying
-  that callers receive a copy. With no stance, the result would be passed on
-  as `last`, as
-  [results with no declared stance](#results-with-no-declared-stance) shows.
-- **On a local, alias, or member**, a declared `copy` is a requirement, like any
-  declared stance. It does not state intent at a use, so it does not remove a
-  last-use intent error:
-
-  ```zax
-  useMessage2 final : ()() = {
-    message : Message copy
-    relay(message)   // error: last use; `as last` would run Message's move
-                     // constructor, so write the stance here
-  }
-  ```
-
-### Inferred declarations take the type only
-
-An inferred declaration takes its initializer's type, never a declared stance.
-In the example above, `stored` is a `Message` with no declared stance. Because
-a declared stance is a requirement, inheriting one through inference would
-restrict a variable whose declaration shows no stance. To restrict `stored`,
-write the stance: `stored : Message move = makeMessage()`. Complete inference belongs to
+An inferred declaration such as `stored := makeMessage()` takes its
+initializer's type, never a declared stance, so `stored` is an ordinary `copy`
+variable. To restrict it, write the stance:
+`stored : Message move = makeMessage()`. The exception is a reference or raw
+pointer bound to one visible value, which takes a stance from that value as
+[references you declare](#references-you-declare) describes. Complete
+inference belongs to
 [declarations and bindings](declarations-and-bindings.md).
 
 ### Transfer lists on types and identities
@@ -1441,12 +1602,12 @@ MyOwnedFile :: type transfer move {
   handle : Integer
 }
 
-inspectFile final : ()(file : MyOwnedFile readonly &) = {
+inspectFile final : ()(file : MyOwnedFile readonly loan &) = {
 }
 
 useFile final : ()() = {
   file : MyOwnedFile
-  inspectFile(file)                    // fine: a loan duplicates nothing
+  inspectFile(file)                    // fine: a loan builds nothing
   other : MyOwnedFile = file           // error: MyOwnedFile has no copy
   owner : MyOwnedFile = file as last   // fine: falls back to move; file is finished
 }
@@ -1454,8 +1615,9 @@ useFile final : ()() = {
 
 What this means for code that uses the type:
 
-- an operation for a stance missing from the list can never exist: writing it
-  in the type, or adding it from a partial, is an error;
+- a stance left out of the list doesn't exist for the type: writing an
+  operation for it in the type, or adding one from a partial, is an error,
+  and fallback passes over it;
 - you can still lend the value, call its functions that take a loan, and use
   its other constructors;
 - listing a stance allows the operation but does not create it: if a member
@@ -1472,530 +1634,10 @@ into a move-only kind wherever its values are stored, as
 [transfer lists on identities](identity-types.md#transfer-lists-on-identities)
 explains.
 
-## Stances inside a body
+## Members
 
-A parameter's declared stance says how the value arrives. Inside the function,
-a use with no stance gets a default, and each default is the safest choice
-given what the caller allowed. You can always write a different stance
-explicitly.
-
-| Inside the body of | Whole value | Members without their own stance |
-| --- | --- | --- |
-| By-value parameter, any stance | `copy` | `copy` |
-| `result` slot | `copy` | `copy` |
-| Reference with no stance or `& loan`, or receiver with no stance | no transfer | `copy`; through writable access, `move` or `last` when written |
-| `& copy` reference, or `copy` receiver | `copy` | `copy` |
-| `& move` or `& last` reference, or `move` or `last` receiver | `copy` | `copy` |
-| `& deep` reference, or `deep` receiver | `deep` | `deep` |
-| Source of a constructor, assignment, or replacement | never transferred as a whole | depends on the operation, as described below |
-
-A member that declares its own stance follows its declaration instead of this
-table: the declared stance is a requirement on every transfer from that
-member, as [members and bindings](#members-and-bindings) explains.
-
-The safest choice is not always `copy`:
-
-- **A `move` or `last` reference or receiver** defaults to `copy`. Nothing is
-  taken unless the function writes `as move` or `as last`, so a helper call in
-  the middle of the function cannot take the value by accident.
-- **A `deep` reference or receiver** defaults to `deep`. The caller asked for
-  any duplicate to be independent, and an ordinary copy might share the
-  caller's resources. Writing `as copy` explicitly is allowed, so a function
-  that chooses to share shows it.
-- **A by-value parameter**, including a `deep` one, is the function's own
-  value, so copying it later cannot affect the caller.
-- **A loan** never transfers the whole value. Its members follow their own
-  stance: they may be copied, and through writable access also moved or taken
-  when the function writes that stance.
-
-```zax
-dispatch final : ()(input : MyType move) = {
-  something(input)           // copies, because no stance is written; MyType must have copy here
-  something(input as move)   // the transfer is visible where it happens
-}
-
-prepareForSend final : ()(input : Message mutable writable & move) = {
-  log(input)                         // copies or lends; input is untouched
-  sendPayload(input.payload as move) // the payload is taken deliberately here
-}
-
-publishArchive final : ()(input : Archive readonly & deep) = {
-  stored : Archive = input            // deep by default
-  scratch : Archive = input as copy   // allowed: the callee visibly chose to share
-  archiveHistory(input.history)       // deep: an unstanced member through a deep reference
-}
-```
-
-If `log(input)` were passed `move` automatically, it could call a version of
-`log` that takes the message, and `input` would be empty before `sendPayload`
-runs. For the same reason, you cannot make another reference that may take
-with `last` from `input` without writing the stance:
-
-```zax
-handOver final : ()(input : Message mutable writable & last) = {
-  stored : Message mutable writable & last = input
-  // error: a use of input with no stance is a copy; the reference requires last
-
-  explicit : Message mutable writable & last = input as last
-}
-```
-
-`explicit` refers to the same message as `input` and may take it with `last`.
-The usual lifetime checks for references still apply to it.
-
-Inside a constructor, assignment, or replacement, the source as a whole is
-never transferred. Its members are copied from a `& copy` source, deep-copied
-from a `& deep` source, and copied from a `& move` or `& last` source unless
-the operation writes `as move` or `as last` to take them. See
-[lifecycle sources are never transferred whole](construction-and-destruction.md#lifecycle-sources-are-never-transferred-whole).
-
-### References pass on at most their stance
-
-A reference or receiver reaches someone else's value, and the stance the caller
-wrote is what the caller expects to happen to that value. So a function can
-pass the whole value on with the stance it was given, or a weaker one, but
-never a stronger one:
-
-```zax
-keep final : ()(message : Message) = {
-}
-
-drain final : ()(input : Message mutable writable & move) = {
-  keep(input as last)      // error: the caller allowed only move
-  keep(input as move)      // fine
-}
-
-message : Message
-drain(message as move)
-message.send()             // fine: after move, message is still a usable message
-```
-
-If `drain` could write `input as last`, the caller's `as move` would promise
-nothing: `message` could be finished when `drain` returns. A by-value
-parameter, a local, or a result is different. It is the function's own value,
-so the function may pass it on with any stance.
-
-Passing on less than you were given is always allowed, and each use chooses
-its own stance:
-
-```zax
-process final : ()(source : Message mutable writable & move) = {
-  show(source)                                // lends it
-  view : Message readonly & copy = source     // a reference that may only copy
-  snapshot := source                          // copies: no stance means copy
-  keep(source as move)                        // still allowed afterward
-}
-```
-
-The limit is on the whole value. Members follow their own declared stance.
-Through a writable reference, a function may already change a member's
-contents however it likes, including emptying it, so it may also take a
-member with `last`:
-
-```zax
-keepPayload final : ()(payload : Payload) = {
-}
-
-drainPayload final : ()(input : Message mutable writable & move) = {
-  keepPayload(input.payload as last)   // fine: payload follows its own stance
-}
-```
-
-At the call site, the compiler cannot see that `payload` was left finished,
-just as it cannot see that a function emptied a member through ordinary
-writable access. `as move` promises a usable `Message`; what is left in its
-members is up to the function and the type. Destructors and replacement
-constructors already have to cope with whatever `last` leaves behind.
-
-## By value and by reference
-
-A by-value parameter gives the function its own value. A reference parameter
-gives it access to the caller's value. A function may have either, or
-overloads with both.
-
-For a by-value parameter, three separate things happen when the function is
-called:
-
-1. **Choosing the function.** A call must write at least the parameter's
-   declared stance, as [by-value parameters](#by-value-parameters) shows.
-2. **Building the parameter.** The stance the caller wrote chooses which of
-   the type's constructors builds the parameter, with the usual fallback. A
-   `move` parameter called with `as last` still runs the `last` constructor
-   if the type has one.
-3. **Inside the function.** A use of the parameter with no stance is a copy,
-   whatever the parameter's declared stance.
-
-The type's constructor builds the parameter, and that constructor receives a
-reference to the caller's variable. That is how a `move` or `last` constructor
-takes the contents out of the caller's variable. By-value parameters are built
-exactly the way local variables are:
-
-```zax
-MyMoveOnlyType :: type transfer move {
-  handle : Integer
-
-  +++ final : ()(source : MyMoveOnlyType mutable writable & move) = {
-    // source refers to the caller's variable; take the handle and leave
-    // source empty
-  }
-}
-
-take final : ()(input : MyMoveOnlyType) = {
-}
-
-myMoveOnlyType : MyMoveOnlyType
-// each call below is a separate alternative
-take(myMoveOnlyType as move)   // the move constructor builds input; myMoveOnlyType is empty
-take(myMoveOnlyType)           // error: no copy constructor exists
-```
-
-With the declarations from
-[when a stance must be written](#when-a-stance-must-be-written):
-
-| Type | Parameter | Implicit | `as move` | `as last` | Last use needs a stance? |
-| --- | --- | --- | --- | --- | --- |
-| `Message` | plain | copy runs | move runs | move runs (no `last`) | Yes: `last` would move instead of copy |
-| `Message` | `move` | error: requires at least `move` | move runs | move runs | Already required at any use |
-| `Integer` | plain | copy runs | copy runs | copy runs | No |
-| `Integer` | `move` | error: requires at least `move` | copy runs | copy runs | Already required at any use |
-| `MyOwnedFile` | plain | error: no copy | move runs | move runs | Already required at any use |
-| `MyOwnedFile` | `move` | error: requires at least `move` | move runs | move runs | Already required at any use |
-
-The caller's variable ends in the state left by the operation that ran, except
-that `as last` always leaves it finished.
-
-A reference parameter refers directly to the caller's variable. Nothing is
-built, and the function may change or take from the caller's value as far as
-the reference's stance allows:
-
-```zax
-prepareForSend final : ()(input : Message mutable writable & move) = {
-  sendPayload(input.payload as move)   // takes from the caller's message
-}
-```
-
-A by-value `deep` parameter is built as a complete independent copy before the
-function starts. A readonly `& deep` reference is often better: nothing is
-copied up front, and the function makes independent copies of just the parts
-it needs:
-
-```zax
-prepareTemplate final : ()(input : Archive readonly & deep) = {
-  archiveHistory(input.history)   // deep: the body default for a deep reference
-}
-```
-
-### Choosing value or reference
-
-Suppose a function has two overloads, one taking a `mutable writable & move`
-reference and one taking a by-value `move` parameter, and the caller's variable
-is mutable and writable. A call with `as move` could use either. The reference
-overload is chosen, because it does not build another value:
-
-```zax
-prepareForSend final : ()(input : Message mutable writable & move) = {
-}
-
-prepareForSend final : ()(input : Message move) = {
-}
-
-prepareForSend(message as move)   // the reference form
-```
-
-`as` can also take a qualifier: `message as readonly` is `message` seen
-through a readonly path. Writing it rules out the mutable reference overload.
-The by-value overload is then used, and its parameter is built by copying,
-because `Message`'s move constructor takes a `mutable writable` source and
-cannot be used through a readonly path:
-
-```zax
-prepareForSend((message as readonly) as move)
-```
-
-Matching the stance is only one of the things the compiler compares when it
-chooses between overloads, alongside the argument's type and qualifiers. A
-better stance match never wins over a worse type match:
-
-```zax
-send2 final : ()(input : Message) = {
-}
-
-send2 final : ()(input : Packet last) = {
-}
-// a Message converts to a Packet
-
-send2(message as last)
-// error: ambiguous; the first matches the type exactly, the second matches
-// the stance exactly, and neither is better at both
-```
-
-The complete overload rules are in
-[function invocation](function-invocation.md#transfer-aware-value-and-reference-parameters).
-
-## Receiver stance
-
-A function defined in a type has a hidden input: the instance it is called on,
-written before the dot in `draft.publish()`. That instance is the **receiver**.
-A type may want different versions of a function depending on whether the
-receiver is lent, copied, moved, or finished, so a function can declare a
-receiver stance after its signature:
-
-```zax
-Document :: type {
-  publish final : ()() = {
-    // no receiver stance: _ is on loan; used when no other version matches
-  }
-
-  publish final : ()() deep = {
-    // exact deep receiver
-  }
-}
-
-draft : Document
-draft.publish()               // unmarked publish
-(draft as deep).publish()     // exact deep publish
-```
-
-The version with no receiver stance takes the receiver as a `loan`, so it
-accepts any call. Three rules decide which version runs:
-
-- **The receiver's stance comes from the call, never from the variable's
-  declaration.** A variable declared `document : Document deep` still needs
-  `(document as deep).publish()` to call the `deep` version.
-- **A call that writes a stance** uses the version with exactly that receiver
-  stance, otherwise the version with no receiver stance. In the example above,
-  `(draft as deep).publish()` uses the `deep` version. Versions with a
-  receiver stance do not fall back to each other: a `move` version is not
-  used for a call written `as last`, and a `last` version is not used for
-  `as move`.
-- **A call that writes no stance** uses the version with no receiver stance,
-  which lends the receiver. If the type has no such version, it uses the
-  `copy` version; otherwise the call is an error. A stronger version is never
-  chosen without its stance written.
-
-Calling a function on a value therefore lends the value unless the call says
-otherwise:
-
-```zax
-Report :: type {
-  render final : (result : String)() = {
-  }
-
-  render final : (result : String)() copy = {
-  }
-
-  drain final : ()() move = {
-  }
-}
-
-report : Report
-report.render()                  // the version with no receiver stance: lends report
-(report as copy).render()        // the copy version, written on purpose
-
-restricted : Report move
-// each call below is a separate alternative
-restricted.render()              // fine: lends restricted
-(restricted as copy).render()    // error: restricted may not be copied
-restricted.drain()               // error: drain requires `as move`
-(restricted as move).drain()     // fine
-```
-
-Adding a `copy` version to a type never changes what existing calls with no
-stance do, because they still use the version with no receiver stance. When a
-type has only a `copy` version, a call with no stance uses it, and the
-variable's declared stance must allow copying:
-
-```zax
-Counter :: type {
-  snapshot final : (result : Counter)() copy = {
-    return _ as copy
-  }
-}
-
-counter : Counter
-counter.snapshot()               // fine: the copy version
-locked : Counter move
-locked.snapshot()                // error: the copy version would copy locked,
-                                 // which is declared move
-```
-
-Parameters have one rule that receivers do not: when a function has both a
-loan overload and a by-value overload, a call with no stance must choose with
-`as loan` or `as copy`, as [writing `as loan`](#writing-as-loan) shows. A
-by-value overload gets a separate value, so the choice matters. Every receiver
-version works on the caller's own object, so receivers lend by default
-instead.
-
-At a last use, the intent rule applies to receivers just as to arguments: if
-`as last` would call a different version, a call with no stance must state
-one.
-
-A function's receiver stance, parameter stances, and result stances are
-separate; each describes its own input or output.
-
-### `_` is the receiver path
-
-Inside the function, `_` stands for the receiver exactly as the caller wrote
-it, with the same permissions. Passing `_` on passes the receiver with the
-receiver's stance. From a version with no receiver stance, that is a loan:
-
-```zax
-keepShape final : ()(shape : Shape) = {
-}
-
-showShape final : ()(shape : Shape readonly &) = {
-}
-
-Shape :: type {
-  describe final : ()() readonly = {
-    showShape(_)    // fine: lends the receiver on
-    keepShape(_)    // error: _ is on loan; keepShape would copy it
-  }
-}
-```
-
-The defaults for each receiver stance are in
-[stances inside a body](#stances-inside-a-body). Inside a `move` or `last`
-version, a call that uses `_` with no stance copies or lends it; taking from
-`_` must be written:
-
-```zax
-Document :: type {
-  publish final : ()() last = {
-    _.inspect()                      // no stance: copies or lends _
-    (_ as last).finishPublishing()   // calls finishPublishing's last version on _
-  }
-}
-```
-
-A version's receiver stance also limits what it may pass on: `_ as last` can
-be written only in a `last` version, and `_ as move` only in a `move` or
-`last` version, as
-[references pass on at most their stance](#references-pass-on-at-most-their-stance)
-explains.
-
-### Passing the receiver on
-
-A call on a receiver reads as the value doing something, not as the value
-being given away. A reader of `(task as last).submit()` cannot tell that
-`submit` hands `task` to a queue. So when a function passes the whole `_` on
-with `move` or `last`, it states that the hand-off is deliberate, with an
-[intent acknowledgement](intent-acknowledgements.md):
-
-```zax
-Task :: type {
-  submit final : ()() last = {
-    intent<receiver-transfer>{
-      queue.push(_ as last)        // gives the task to the queue
-    }
-  }
-
-  snapshot final : (result : Task)() copy = {
-    return _ as copy               // copy leaves _ unchanged: no acknowledgement
-  }
-}
-```
-
-Without the acknowledgement, `queue.push(_ as last)` is an intent error. The
-same applies through a reference made from `_`:
-
-```zax
-// inside a last version
-myself : Task mutable writable & last = _ as last
-myself.prepare()                   // a call on myself, not a hand-off: fine
-intent<receiver-transfer>{
-  adopt(myself as last)            // passes _ on
-}
-```
-
-The acknowledgement is not needed for:
-
-- **a call on `_`**, such as `(_ as last).finishPublishing()` above. If
-  `finishPublishing` passes `_` on, its own body has the acknowledgement, so
-  every hand-off is acknowledged once, where it happens;
-- **members**, such as `send(_.buffer as last)`, which follow their own
-  stance;
-- **`copy` and `deep`**, which leave `_` unchanged.
-
-Where `_` is a loan, passing it on with `move` or `last` is an error, and an
-acknowledgement does not change that.
-
-### Receiverless `once` calls
-
-A `once` function can be called on the type itself, as in
-`MyResource.inspect()`, with no instance. There is then no variable to write a
-stance on, so it is a call with no stance and follows the rules above. The
-receiver is the type's Nothing instance, a stand-in value that every type has
-for calls like this:
-
-```zax
-MyResource :: type {
-  inspect final once : ()() = {
-  }
-
-  consume final once : ()() last = {
-  }
-}
-
-MyResource.inspect()  // the version with no receiver stance
-MyResource.consume()  // error: a call on the type writes no stance, and consume requires last
-```
-
-A call on an instance uses the stance written on that instance:
-
-```zax
-(resource as last).consume()
-```
-
-The compiler decides the receiver's stance from how the call is written, not
-at run time, and an alias or stored function value keeps the same decision.
-Calls on a type and Nothing instances are explained in
-[Zax Nothing instances](nothing-instances.md#receiver-stance-is-statically-known).
-
-### Compiler-created temporary receivers
-
-A temporary value built directly in an expression has no name, so nothing can
-use it after the call it is passed to. It is therefore treated as if written
-`as last`, even though no stance is written:
-
-```zax
-Source :: type {
-  get final : (
-    result : Payload copy
-  )() copy = {
-    // keeps a named receiver unchanged and returns a copy
-  }
-
-  get final : (
-    result : Payload last
-  )() last = {
-    // reuse resources from a receiver whose temporary lifetime is ending
-  }
-}
-
-fromTemporary := (: Source).get()
-
-source : Source
-fromNamed := source.get()
-source.reset()   // source is used again, so the get above was not its last use
-```
-
-The unnamed `(: Source)` is treated as `as last`, so the `last` version of `get`
-runs, and it may move the temporary's resources into its result. The named
-`source` has no stance written, so the `copy` version runs.
-
-You can still write a different stance on a temporary:
-
-```zax
-fromTemporaryCopy := ((: Source) as copy).get()
-```
-
-## Members and bindings
-
-A member's own declared stance is a requirement, just like a local variable's.
-A member with no stance follows the defaults in
-[stances inside a body](#stances-inside-a-body), based on how you reached it.
-A stance on the containing variable does not pass down to its members:
+A member follows its own declared stance, whoever reaches it. A stance on the
+containing value does not pass down to its members:
 
 ```zax
 Package :: type {
@@ -2006,40 +1648,52 @@ Package :: type {
 package : Package move
 total := package.weight            // fine: weight declares no stance
 // each call below is a separate alternative
-ship(package.label)                // error: label's own declaration requires move;
+ship(package.label)                // error: label's own declaration is move;
                                    // write `as move` or `as last`
 ship(package.label as move)        // fine
 ```
 
+Whether a member can be moved or finished through a reference depends on
+writable access, not on owning the whole value. The limit on a borrower
+protects what the caller tracks, which is its whole variable. A caller that
+grants writable access has already accepted that members may change in any
+way, including being emptied by assignment:
+
+```zax
+keepPayload final : ()(payload : Payload) = {
+}
+
+refresh final : ()(input : Message mutable writable copy &) = {
+  keepPayload(input)                     // error: only copy was given for the whole message
+  keepPayload(input.payload as move)     // fine: writable access already allows emptying payload
+}
+
+inspectOnly final : ()(input : Message readonly copy &) = {
+  keepPayload(input.payload)             // fine: copies the member
+  keepPayload(input.payload as move)     // error: readonly access can't change payload
+}
+```
+
+At the call site, the compiler cannot see that `payload` was left emptied,
+just as it cannot see that a function emptied a member through ordinary
+writable access. What is left in the members is up to the function and the
+type. Destructors and replacement constructors already have to cope with
+whatever `last` leaves behind.
+
+Pinning applies to the whole value, not its members:
+
+```zax
+MyTank :: type {
+  fuel : MyFuel
+}
+
+pinned : MyTank loan
+keep(pinned)                  // error: nothing may be built from pinned
+keep(pinned.fuel as move)     // fine: fuel follows its own stance
+```
+
 Array elements are governed by their type. A declared stance on the array
 variable restricts transfers of the array, not copies of its elements.
-
-### References you declare
-
-A reference you declare is a new reference with its own stance. Unmarked, that
-stance is `loan`, as for parameters and receivers:
-
-```zax
-consumeBuffer final : ()(buffer : Buffer) = {
-}
-
-owner : Buffer move
-
-alias : Buffer mutable writable & = owner              // unmarked: a loan
-consumeBuffer(alias)                                   // error: alias is on loan
-taker : Buffer mutable writable & move = owner as move
-consumeBuffer(taker as move)                           // fine: Buffer's move constructor runs
-```
-
-Binding a restricted place to a reference that could copy it is an error,
-because the restriction would otherwise leak. Typed loop bindings are declared
-references too:
-
-```zax
-each value : MyValue readonly & from values {   // declared reference: a loan
-  showValue(value)   // showValue takes a loan
-}
-```
 
 ### Bindings the language creates
 
@@ -2068,7 +1722,7 @@ switch message {
   }
 }
 
-inspectChoice final : ()(message : MyOwnerChoice readonly &) = {
+inspectChoice final : ()(message : MyOwnerChoice readonly loan &) = {
   switch message {
     case owner {
       adopt(owner as move) // error: message is a readonly loan, so message.owner cannot be changed
@@ -2138,9 +1792,9 @@ makePacket final : (
 
 `compatible layout` lets callers view the result as another type with the same
 layout, as `compatible shape` does for a variable. A caller of `makePacket`
-may take the `payloadSize` region with `last`. If the
-caller picks a different anchor, the guarantee does not apply. Compatible
-shapes and anchors are explained in
+may take the `payloadSize` region with `last`. If the caller picks a different
+anchor, the guarantee does not apply. Compatible shapes and anchors are
+explained in
 [Zax structural shapes and compatibility](structural-shapes-and-compatibility.md#transfer-stance-and-anchored-regions).
 
 ### Explicit composition wrappers
@@ -2161,24 +1815,26 @@ Tank :: type {
 the body. It can find `source.fuel` automatically because `fuel` is marked
 `preferred`, which names it as the member to use when the wrapper needs one.
 [Composition](composition.md) explains `preferred` and the related `own`. A
-hand-written body can always pass `source.fuel` itself. The generated wrapper writes a stance when it passes
-the member on, chosen by how the outer parameter is declared:
+hand-written body can always pass `source.fuel` itself. The generated wrapper
+writes a stance when it passes the member on, chosen by how the outer
+parameter is declared:
 
 | Outer parameter | Stance the wrapper writes for the member |
 | --- | --- |
-| By value with no declared stance, `move`, or `last` | `last` |
+| By value, with any stance except `deep` | `last` |
 | By value, declared `deep` | `deep` |
-| By reference | the stance the outer reference parameter declares |
+| By reference | the stance the outer reference was given |
 
 A by-value `source` belongs to the wrapper, and passing its member on is its
 last use, so the wrapper writes `last` and the member's operation may reuse
-its resources. The usual fallback applies, and nothing is free: if `source` is
-a plain parameter and the call writes no stance, building `source` copies the
-`Tank`, and the member's operation may copy `fuel` again.
+its resources. That holds even for a pinned `source`, because members follow
+their own stance. The usual fallback applies, and nothing is free: if the
+call writes no stance, building `source` copies the `Tank`, and the member's
+operation may copy `fuel` again.
 
 An outer `deep` parameter passes its member on as `deep`, never as `last`. An
-outer `& move` reference passes its member on as `move`, never as anything
-stronger.
+outer `move` reference passes its member on as `move`, never as anything
+else.
 
 When the wrapper returns, it destroys what is left of `source`, including the
 finished member. When the wrapper can be generated, and how results are
@@ -2187,72 +1843,448 @@ passed back, are explained in
 If the type's destructor cannot handle a finished member, the wrapper cannot
 be generated, and the type must write the wrapper's body by hand.
 
-## Results and forwarding
+## By value and by reference
 
-A result's declared stance says how the caller's destination is built from
-it. Inside the function, `result` behaves like a parameter: a use with no
-stance is a copy:
+A by-value parameter gives the function its own value. A reference parameter
+gives it access to the caller's value. A function may have either, or
+overloads with both.
 
-```zax
-makeMessage final : (
-  result : Message move
-)(
-  template : Message readonly & copy
-) = {
-  result.+++(template as copy)   // runs Message's copy constructor to build result
-  show(result)           // show takes a loan: nothing leaves result
-  keep(result)           // keep takes Message by value: copies, since no stance is written
-}
+For a by-value parameter, three separate things happen when the function is
+called:
 
-stored := makeMessage(template)   // stored is built from the result with move
-```
+1. **Choosing the function.** A call must write at least the parameter's
+   `via` stance, as [by-value parameters](#by-value-parameters-and-via)
+   shows.
+2. **Building the parameter.** The stance the caller wrote chooses which of
+   the type's constructors builds the parameter, with the usual fallback. A
+   `via move` parameter called with `as last` still runs the `last` constructor
+   if the type has one.
+3. **Inside the function.** The parameter's own stance says what the function
+   may build from it.
 
-A function's body is written once, against its own declared result stance. You
-can give the same body a second name with a different result stance, and
-callers of that name receive the result with the new stance. The body does
-not change. For example, a function can allocate its result and hand ownership
-of the allocation to the caller:
+The type's constructor builds the parameter, and that constructor receives a
+reference to the caller's variable. That is how a `move` or `last` constructor
+takes the contents out of the caller's variable. By-value parameters are built
+exactly the way local variables are:
 
 ```zax
-makeValue final : (
-  result : MyValue * last = @
-)() = {
-  // = @ allocates the result before the body runs; last hands the
-  // allocation to the caller
+MyMoveOnlyType :: type transfer move {
+  handle : Integer
+
+  +++ final : ()(source : MyMoveOnlyType mutable writable move &) = {
+    // source refers to the caller's variable; take the handle and leave
+    // source empty
+  }
 }
 
-peekValue final : (
-  result : MyValue * copy = @
-)() = makeValue
-// the same body; a caller of peekValue borrows the pointer by default, and
-// the allocation is freed after the call unless the caller takes it over
+take final : ()(input : MyMoveOnlyType) = {
+}
+
+myMoveOnlyType : MyMoveOnlyType
+// each call below is a separate alternative
+take(myMoveOnlyType as move)   // the move constructor builds input; myMoveOnlyType is empty
+take(myMoveOnlyType)           // error: no copy constructor exists
 ```
 
-A caller of `peekValue` may use the pointer only while the allocation is still
-alive, and the compiler rejects a caller that keeps it longer. A caller that
-writes `peekValue() as last` takes ownership after all. When a second
-name like this is allowed is explained in
-[compatible visible prototypes](function-invocation.md#compatible-visible-prototypes).
+With the declarations from
+[when a stance must be written](#when-a-stance-must-be-written):
+
+| Type | Parameter | Implicit | `as move` | `as last` | Last use needs a stance? |
+| --- | --- | --- | --- | --- | --- |
+| `Message` | no `via` | copy runs | move runs | move runs (no `last`) | Yes: `last` would move instead of copy |
+| `Message` | `via move` | error: requires at least `move` | move runs | move runs | Already required at any use |
+| `Integer` | no `via` | copy runs | copy runs | copy runs | No |
+| `Integer` | `via move` | error: requires at least `move` | copy runs | copy runs | Already required at any use |
+| `MyOwnedFile` | no `via` | error: no copy | move runs | move runs | Already required at any use |
+| `MyOwnedFile` | `via move` | error: requires at least `move` | move runs | move runs | Already required at any use |
+
+The caller's variable ends in the state left by the operation that ran, except
+that `as last` always leaves it finished.
+
+A reference parameter refers directly to the caller's variable. Nothing is
+built, and the function may change or take from the caller's value as far as
+the reference's stance allows:
+
+```zax
+prepareForSend final : ()(input : Message mutable writable move &) = {
+  sendPayload(input.payload as move)   // takes from the caller's message
+}
+```
+
+A by-value parameter declared `via deep` is built as a complete independent
+copy before the function starts. A readonly `deep &` reference is often
+better: nothing is copied up front, and the function makes independent copies
+of just the parts it needs:
+
+```zax
+prepareTemplate final : ()(input : Archive readonly deep &) = {
+  archiveHistory(input.history as deep)
+}
+```
+
+### Choosing value or reference
+
+Suppose a function has two overloads, one taking a `mutable writable move &`
+reference and one taking a by-value `via move` parameter, and the caller's
+variable is mutable and writable. A call with `as move` could use either. The
+reference overload is chosen, because it does not build another value:
+
+```zax
+prepareForSend final : ()(input : Message mutable writable move &) = {
+}
+
+prepareForSend final : ()(input : Message via move) = {
+}
+
+prepareForSend(message as move)   // the reference form
+```
+
+`as` can also take a qualifier: `message as readonly` is `message` seen
+through a readonly path. Writing it rules out the mutable reference overload.
+The by-value overload is then used, and its parameter is built by copying,
+because `Message`'s move constructor takes a `mutable writable` source and
+cannot be used through a readonly path:
+
+```zax
+prepareForSend((message as readonly) as move)
+```
+
+Matching the stance is only one of the things the compiler compares when it
+chooses between overloads, alongside the argument's type and qualifiers. A
+better stance match never wins over a worse type match:
+
+```zax
+send2 final : ()(input : Message) = {
+}
+
+send2 final : ()(input : Packet via last) = {
+}
+// a Message converts to a Packet
+
+send2(message as last)
+// error: ambiguous; the first matches the type exactly, the second matches
+// the stance exactly, and neither is better at both
+```
+
+The complete overload rules are in
+[function invocation](function-invocation.md#transfer-aware-value-and-reference-parameters).
+
+## Receivers
+
+A function defined in a type has a hidden input: the instance it is called on,
+written before the dot in `draft.publish()`. That instance is the
+**receiver**, and it behaves like a parameter that is bound implicitly. A
+type may want different versions of a function depending on whether the
+receiver is lent, copied, moved, or finished, so a function can declare a
+receiver stance after its signature:
+
+```zax
+Document :: type {
+  publish final : ()() = {
+    // no receiver stance: _ is a loan
+  }
+
+  publish final : ()() deep = {
+    // _ was given deep
+  }
+}
+
+draft : Document
+draft.publish()               // the version with no receiver stance
+(draft as deep).publish()     // the deep version
+```
+
+A call chooses a version the same way an argument chooses a parameter:
+
+- **No stance written:** the receiver is treated as written `copy` where the
+  value allows a copy, and otherwise it is lent. A version with no receiver
+  stance always qualifies.
+- **A stance written:** a version qualifies when the call's stance allows what
+  that version takes, along `copy`, `move`, `last`, and the value's own stance
+  allows the version's stance. A `last` version never serves a call written
+  `as move`, because the caller expects a usable value afterward.
+- **Among the versions that qualify, the closest to the written stance wins.**
+
+```zax
+MyCounter :: type {
+  foo final : ()() = {
+  }
+
+  foo final : ()() copy = {
+  }
+}
+
+plain : MyCounter            // copy
+locked : MyCounter move
+
+plain.foo()                  // the same as (plain as copy).foo(): the copy version
+locked.foo()                 // locked forbids copies, so it is lent: the version with no receiver stance
+```
+
+If a type has only a `copy` version, a call with no stance on a value that
+allows copies uses it. On a value that forbids copies, that call is an error.
+
+**`move`, `last`, and `deep` versions are chosen only when the call writes the
+stance.** The variable's declared stance only limits what may be written:
+
+```zax
+MyDocument :: type {
+  doSomething final : ()() = {
+  }
+  // lends _
+
+  doSomething final : ()() move = {
+  }
+  // may move from _
+}
+
+document : MyDocument
+document.doSomething()                 // no stance written: the copy rule applies, and the
+                                       // version with no receiver stance lends document
+(document as move).doSomething()       // the move version
+(document as last).doSomething()       // the move version: it takes no more than last, and it
+                                       // is closer than the version with no receiver stance
+
+fixed : MyDocument last
+fixed.doSomething()                    // lends fixed
+(fixed as last).doSomething()          // the version with no receiver stance: fixed doesn't allow a move
+```
+
+A call with no stance never finishes or empties the receiver, whatever the
+variable was declared with. A reader of `document.doSomething()` can rely on
+nothing having been moved out of `document`, and on it not being finished; a
+version with writable access may still change its contents.
+
+Adding a `copy` version to a type can change which version an existing call
+with no stance uses, on a value that allows copies. A `copy` version cannot
+change the caller's value, so the caller's code stays correct.
+
+At a last use, the intent rule applies to receivers just as to arguments: if
+`as last` would call a different version, a call with no stance must state
+one.
+
+A function's receiver stance, parameter stances, and result stances are
+separate; each describes its own input or output.
+
+### `_` is the receiver path
+
+Inside the function, `_` stands for the receiver exactly as the caller wrote
+it, with the same permissions. `_` is a borrower: it may be written with the
+stance its version was given, or lent:
+
+```zax
+keepShape final : ()(shape : Shape) = {
+}
+
+showShape final : ()(shape : Shape readonly loan &) = {
+}
+
+Shape :: type {
+  describe final : ()() readonly = {
+    showShape(_)    // fine: lends the receiver on
+    keepShape(_)    // error: _ is a loan; keepShape would copy it
+  }
+}
+```
+
+Inside a `move` or `last` version, a use of `_` with no stance lends it,
+because `_` was not given `copy`; taking from `_` must be written:
+
+```zax
+Document :: type {
+  publish final : ()() last = {
+    _.inspect()                      // no stance: lends _
+    (_ as last).finishPublishing()   // calls finishPublishing's last version on _
+  }
+}
+```
+
+### Passing the receiver on
+
+A call on a receiver reads as the value doing something, not as the value
+being given away. A reader of `(task as last).submit()` cannot tell that
+`submit` hands `task` to a queue. So when a function passes the whole `_` on
+with `move` or `last`, it states that the hand-off is deliberate, with an
+[intent acknowledgement](intent-acknowledgements.md):
+
+```zax
+Task :: type {
+  submit final : ()() last = {
+    intent<receiver-transfer>{
+      queue.push(_ as last)        // gives the task to the queue
+    }
+  }
+
+  snapshot final : (result : Task)() copy = {
+    return _ as copy               // copy leaves _ unchanged: no acknowledgement
+  }
+}
+```
+
+Without the acknowledgement, `queue.push(_ as last)` is an intent error. The
+same applies through a reference made from `_`:
+
+```zax
+// inside a last version
+myself : Task mutable writable last & = _ as last
+myself.prepare()                   // a call on myself, not a hand-off: fine
+intent<receiver-transfer>{
+  adopt(myself as last)            // passes _ on
+}
+```
+
+The acknowledgement is not needed for:
+
+- **a call on `_`**, such as `(_ as last).finishPublishing()` above. If
+  `finishPublishing` passes `_` on, its own body has the acknowledgement, so
+  every hand-off is acknowledged once, where it happens;
+- **members**, such as `send(_.buffer as last)`, which follow their own
+  stance;
+- **`copy` and `deep`**, which leave `_` unchanged.
+
+Where `_` is a loan, passing it on with `move` or `last` is an error, and an
+acknowledgement does not change that.
+
+### `self` chains
+
+A function declared with a `self` result returns its receiver, so calls can be
+chained. The stance written at the start of the chain is carried along, and
+the variable counts as finished only once the whole expression is done:
+
+```zax
+MyFoo :: type {
+  process final : (result self : MyFoo &)() last = {
+    return _
+  }
+
+  doSomething final : (result self : MyFoo &)() last = {
+    return _
+  }
+
+  myOhMy final : (result : MyValue)() last = {
+    // the end of the chain: may take everything from _
+  }
+}
+
+foo : MyFoo
+takeTheLast := (foo as last).process().doSomething().myOhMy()
+// each call gets foo written as last and picks its last version;
+// foo counts as finished once the whole expression is done
+```
+
+A version that returns `self` must leave `_` usable for the next call in the
+chain. [Results](#self-results-carry-the-callers-variable) covers `self`
+results in full.
+
+### Receiverless `once` calls
+
+A `once` function can be called on the type itself, as in
+`MyResource.inspect()`, with no instance. There is then no variable to write a
+stance on, so it is a call with no stance. The receiver is the type's Nothing
+instance, a stand-in value that every type has for calls like this. It is
+nobody's value, so it is pinned: a call on the type lends it and uses the
+version with no receiver stance, even when the type also has a `copy`
+version:
+
+```zax
+MyResource :: type {
+  inspect final once : ()() = {
+  }
+
+  consume final once : ()() last = {
+  }
+}
+
+MyResource.inspect()  // the version with no receiver stance: the Nothing instance is lent
+MyResource.consume()  // error: the Nothing instance is pinned, and consume requires last
+```
+
+A call on an instance uses the stance written on that instance:
+
+```zax
+(resource as last).consume()
+```
+
+The compiler decides the receiver's stance from how the call is written, not
+at run time, and an alias or stored function value keeps the same decision.
+Calls on a type and Nothing instances are explained in
+[Zax Nothing instances](nothing-instances.md#receiver-stance-is-statically-known).
+
+## Results
+
+A result is a value the function owns and fills in. When the caller uses the
+result to start a new variable, the two are the same value. So **a result has
+one stance, with the same meaning inside the function and for the caller**.
+The function may never do with `result` what the caller couldn't do with it:
+
+```zax
+makeMessage final : (result : Message move)(source : Message readonly copy &) = {
+  result.+++(source as copy)   // fill it in
+  cache.store(result)          // error: result is move, so nothing may be copied from it
+}
+
+makeFree final : (result : Message)(source : Message readonly copy &) = {
+  result.+++(source as copy)
+  cache.store(result)          // fine: an unmarked result is copy
+}
+// cache.store takes a Message by value
+```
+
+**`via` on a result** names the least stance the function's own `return` must
+write when it builds `result`. That is the same meaning as on a parameter,
+where the call builds the value. The function may also build `result`
+directly with `result.+++()`:
+
+```zax
+giveMeResult final : (result : MyType loan via copy)() = {
+  builtUpValue : MyType move
+  doStuff(builtUpValue)
+  return builtUpValue as last    // via copy accepts last
+}
+
+makeBig final : (result : MyBigBuffer via move)() = {
+  return cached                  // error: no stance means copy; the return must write as move or as last
+  return cached as move          // fine
+}
+```
+
+**The caller's variable may declare its own stance,** because stances
+describe places. The exception is a `loan` result: nothing may be built from
+it, so the caller's variable must be that same value, declared `loan`, and
+the result is built directly into it:
+
+```zax
+stored : Message = makeMessage()             // fine: stored is an ordinary copy variable
+pinned : Message loan = makeMessage()        // fine
+myResult : MyType loan = giveMeResult()      // fine: the same value; nothing is built from result
+kept : MyType = giveMeResult()               // error: nothing may be built from a loan result
+```
+
+Building a result straight into the caller's variable is otherwise optional,
+so a `loan` result is the one case where it is required. Chaining in one
+expression, as in `giveMeResult().fooize().streamline()`, and a
+[`using`](using.md) block also work with a `loan` result.
 
 When a function returns another function's result, two declarations are
 involved:
 
 - the inner function's result stance decides how the outer function's result
   is built;
-- the outer function's result stance decides what its own caller receives.
+- the outer function's result stance decides what its own caller may build
+  from it.
 
 Result construction, mapping, and completion are defined by
 [function invocation](function-invocation.md).
 
 A failure result works the same way. Here the failure value is a `unique`
-pointer, which cannot be copied, and the failure result is declared `last`:
+pointer, which cannot be copied:
 
 ```zax
 openResource final : (
   resource : MyResource * unique last,
   failure except : MyOpenError * unique last
 )(
-  name : String readonly &
+  name : String readonly loan &
 ) = {
   if cannotOpen(name)
     except failure: makeOpenError(name) as last
@@ -2261,21 +2293,19 @@ openResource final : (
 }
 
 resource := openResource(name) catch failure {
-  error : MyOpenError readonly & = failure.   // failure. is the value the pointer refers to
+  error : MyOpenError readonly loan & = failure.   // failure. is the value the pointer refers to
   report(error)
   return
 }
 ```
 
-The `catch` block receives the failure value with the `last` stance that
-`openResource` declares. With no stance on the failure result it would still
-receive it with `last`, because a failure result with no stance is passed on
-as `last`, like any [result with no declared stance](#results-with-no-declared-stance).
-Declaring the failure result `copy` would be an error here, because a
-`unique` pointer cannot be copied. A function that passes a failure on to
-its own caller with `except` decides, with its own failure result, how its
-caller receives it. Failures are explained in full in
+The `catch` block receives the failure value as a temporary, as
+[temporaries](#temporaries) describes. Failures are explained in full in
 [Zax exceptional result flow](except.md#transfer-ownership-and-references).
+
+A reference result is a borrower and must write its stance, as in
+`current final : (result : MyDocument readonly loan &)()`. The usual lifetime
+rules for returned references apply.
 
 ### `self` results carry the caller's variable
 
@@ -2287,7 +2317,7 @@ Builder :: type {
   name : String
   size : Integer
 
-  setName final : (result self : Builder &)(name : String readonly &) = {
+  setName final : (result self : Builder &)(name : String readonly loan &) = {
     _.name = name
     return _
   }
@@ -2312,9 +2342,8 @@ qualifiers. So the `move` written at the start of the chain reaches `build`,
 the call at the end. `setName` and `setSize` only pass `builder` along; they
 do not use up the `move`. A `readonly` function that returns `self`, called on
 a writable variable, likewise hands back a writable path, because the result
-is the caller's own variable. This is why `result self : Builder &` is not a
-loan, although other references written with no stance are: a `self` result
-takes its stance from the call.
+is the caller's own variable. A `self` result therefore declares no stance:
+it takes its stance from the call.
 
 Because a `self` result is the variable, everything that applies to a use of
 the variable applies at the end of the chain:
@@ -2366,144 +2395,118 @@ How to declare a `self` result, and when its result may be discarded, are
 explained in
 [function invocation](function-invocation.md#receiver-origin-self-results).
 
-### Results with no declared stance
+## Temporaries
 
-A by-value result holds its own value only until the caller uses it, and
-nothing can use it again after that. So a result whose declaration writes no
-stance is passed on as `last`:
+A value with no name cannot be used again after the expression that uses it,
+so it is treated as written with the strongest stance its own stance allows.
+That covers a value built directly in an expression, such as `(: Source)`,
+and a function's result that the caller doesn't name:
+
+| The temporary's stance | Treated as written |
+| --- | --- |
+| `copy` (or none), `move`, `last` | `as last` |
+| `deep` | `as deep` |
+| `loan` | nothing can be built from it; it can only be lent, or received as the same value |
 
 ```zax
-consumePayload final : ()(input : Payload readonly &) = {
+makePayload final : (result : MyPayload)() = {
 }
 
-consumePayload final : ()(input : Payload mutable writable & last) = {
+existing : MyPayload
+existing = makePayload()          // the result is written as last, so the move or last
+                                  // assignment can run instead of a copy
+
+consume final : ()(input : MyPayload loan &) = {
 }
 
-makePayload final : (result : Payload)() = {
+consume final : ()(input : MyPayload last &) = {
 }
 
-consumePayload(makePayload())
-// the result is passed on as last, so the `& last` consumePayload is used
+consume(makePayload())            // written as last: the last & version is chosen
+
+convert : MyOtherType = makePayload()   // a converting constructor may take the payload's resources
+
 ```
 
-A function that wants its callers to receive a copy says so:
+"No stance means `copy`" is about variables you can use again. A temporary has
+no name, so nobody can use it again and nothing is hidden from the reader. A
+caller can still write a stance on the call: `makePayload() as copy` is fine
+for a `copy` result, and an error for a `move` result, which forbids copies.
+
+A temporary's own stance is always declared somewhere, or is the unmarked
+`copy`. A function or operator result takes its declaration. An expression
+such as `(: MyValue)` takes its own. A temporary made by an implicit
+conversion to bind a reference is a value the call expression owns, so it is
+`copy`.
+
+A temporary used as a receiver picks its version the same way:
 
 ```zax
-makePayload final : (result : Payload copy)() = {
+MyBuffer :: type {
+  bytes : Byte[0..]
+
+  contents final : (result : Byte[0..])() copy = {
+    return _.bytes as copy       // the buffer keeps its bytes
+  }
+
+  contents final : (result : Byte[0..])() last = {
+    return _.bytes as last       // the buffer is ending, so its bytes are moved out
+  }
 }
 
-consumePayload(makePayload())   // the result is passed on as copy: the loan
-                                // consumePayload is used
-```
-
-A caller can also write a stance for one call, which replaces the result's:
-
-```zax
-consumePayload(makePayload() as copy)
-```
-
-A result with no stance never needs a stance written at the call, because it
-is always passed on as `last`. A discarded result is destroyed like any
-unused value.
-
-Reference results are different. A returned reference only refers to a value
-someone else holds, so a reference result with no stance is a loan, like any
-other reference with no stance. Pointer results follow their own ownership
-rules: a raw pointer result that allocates with `= @`, like `makeValue`'s in
-[results and forwarding](#results-and-forwarding), hands the allocation to
-its caller unless it declares `copy`. See
-[Zax pointers, allocation, and arenas](pointers-and-arenas.md).
-
-## Pointer ownership transitions
-
-Pointers use the same stances. The destination's pointer type says what kind
-of ownership you want to end up with:
-
-```zax
-shared : MyValue * strong = prepared as last
-```
-
-Here `prepared` must be a `MyValue * unique shareable`: a single owner whose
-allocation was made so that it can later be shared. The transfer turns its
-unique ownership into shared ownership and leaves `prepared` empty. Like any
-variable after `as last`, `prepared` then counts as finished.
-
-A raw pointer can become a `unique` owner only with `as last`. Without `last`,
-the destination would only borrow the pointer, and a `unique` pointer cannot
-borrow. When a raw pointer is declared with `= @`, the declaration, not the
-pointer type, is responsible for freeing the allocation:
-
-```zax
-scheduled : MyValue * = @
-// each line below is a separate alternative
-owner1 : MyValue * unique = scheduled            // error: unique cannot borrow; write `as last`
-owner2 : MyValue * unique = scheduled as last    // owner2 takes over; scheduled is empty
-```
-
-After the transfer, `scheduled` is empty. Its cleanup still runs at the end of
-its scope, but finds nothing to free. `owner2` now owns the allocation. A raw
-pointer declared without `= @` also needs `as last`, and in addition the
-compiler must be able to prove that it is the only owner of the start of the
-allocation; otherwise the transfer needs `unsafe`.
-
-The same rule applies to parameters:
-
-```zax
-keepTarget final : ()(target : MyValue * unique) = {
+makeBuffer final : (result : MyBuffer)() = {
 }
 
-borrowTarget final : ()(target : MyValue *) = {
+fromTemporary := makeBuffer().contents()   // the temporary buffer is written as last:
+                                           // the last version moves the bytes out
+buffer : MyBuffer
+fromNamed := buffer.contents()             // no stance on a copy variable: the copy version
+buffer.append(moreBytes)                   // fine: buffer still has its bytes
+```
+
+## Pointers
+
+A pointer involves two values: the pointer, and the value it points to. Each
+has its own stance, in its own position:
+
+```zax
+view : MyValue loan * copy      // nothing may be built from the value;
+                                // the pointer itself may be copied
+```
+
+The rules above apply to both. Whether a pointer is an owner or a borrower of
+the value it points to depends on its kind:
+
+- a `unique` pointer, a `strong` pointer, and a raw pointer declared `move` or
+  `last` are owners of the value they point to;
+- a raw `copy` or `loan` pointer holds only an address, so it is a borrower,
+  and a `weak` pointer becomes an owner only by acquiring a `strong` one.
+
+So the owner rules apply through owning pointers, and the borrower rules
+apply through raw `copy` pointers:
+
+```zax
+func1 final : ()(value : MyValue copy * unique) = {
+  callByValueMove(value. as move)    // fine: an owner
 }
 
-borrowTarget(scheduled)         // borrows the address
-// each line below is a separate alternative
-keepTarget(scheduled)           // error at any use: write `as last`
-keepTarget(scheduled as last)   // keepTarget owns the allocation; scheduled is vacant
+borrowOnly final : ()(value : MyValue copy * copy) = {
+  keep(value.)                       // fine: copy was given
+  keep(value. as last)               // error: a raw copy pointer is a borrower
+}
+
+install final : ()(device : MyDevice loan * unique) = {
+  registry.adopt(device as move)     // fine: ownership of the pointer moves
+  relocate(device. as move)          // error: the device is pinned
+}
 ```
 
-A raw pointer declared with `= @` can also take over an allocation from a
-`unique` pointer or from another such raw pointer:
+A pinned value owned by a movable pointer stays at the same address while the
+pointer is handed around.
 
-```zax
-scheduled = uniqueOwner as last
-scheduled = otherScheduled as last
-```
-
-It first frees the allocation it already had. The source is left empty.
-
-A raw pointer declared without `= @` cannot take over ownership, because
-nothing would free the allocation:
-
-```zax
-raw : MyValue * = uniqueOwner as last
-// error unless the compiler can prove another owner frees it, or the code uses unsafe
-```
-
-Going the other way, from shared to unique, works only sometimes:
-
-```zax
-owner : MyValue * unique = shared as last
-```
-
-It succeeds only when `shared` is the only strong pointer to the allocation and
-no weak pointer remains. Otherwise `owner` is empty, and `shared` keeps its
-ownership until it is destroyed.
-
-Turning a weak pointer into a strong one is a `copy`:
-
-```zax
-owner : MyValue * strong = observer
-```
-
-This adds `owner` as another strong owner of the same allocation; it does not
-copy the value pointed to. If the allocation is already gone, `owner` is
-empty.
-
-Making a raw pointer from a `loan` is an error outside `unsafe`, because a raw
-pointer cannot carry the loan. An observer built from a loan reference is
-also a loan, like everything else made from a loan.
-
-Pointer kinds, shared ownership, arenas, and failures are explained in
+Allocation, how ownership passes between pointer kinds, the one rule that
+applies only to raw pointers, borrowing through `p.`, and why a `unique`
+pointer allows no raw borrowers are explained in
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md).
 
 ## Callable values and captures
@@ -2519,16 +2522,17 @@ callback := [[ source as last: captured ]] ()() bound strong {
 
 `source as last` decides how `captured` is built, and that happens once, when
 the lambda is created. Capturing a variable declared with a stance requires
-writing that stance, like any other transfer. `bound strong` is separate from
-the captures: it says how the lambda holds the object its function is called
-on, here as another strong owner.
+writing a stance its owner may write, like any other transfer. `bound strong`
+is separate from the captures: it says how the lambda holds the object its
+function is called on, here as another strong owner.
 
-A loan cannot be captured as a copy, because copying from a loan is not
-allowed. If the lambda captures it by reference instead, the lambda holds a
-loan too:
+A loan cannot be captured as a copy, because nothing may be built from a loan.
+If the lambda captures it by reference instead, the lambda holds a loan too. A
+reference capture of a visible variable takes its stance from that variable,
+as [references you declare](#references-you-declare) describes:
 
 ```zax
-view : Document readonly & = source        // unmarked: a loan
+view : Document readonly loan & = source
 callback := [[ view ]] ()() {              // error if this captures a copy of view
   showDocument(view)
 }
@@ -2557,8 +2561,31 @@ can prove are invalid. Lambdas are explained in full in
 
 ## Optional values
 
-An optional value accepts the ordinary stances, and also two forms written
-before it, `last source` and `move source`:
+An optional has two stances. The stance before `?` belongs to the contained
+value; the stance after `?` belongs to the optional itself. Copying or moving
+the whole optional also copies or moves the contained value, so the
+optional's own stance may name only stances the contained value also allows:
+
+| Contained value's stance | Allowed stances for the optional itself |
+| --- | --- |
+| `copy` | any |
+| `move` | `loan`, `move`, `last` |
+| `last` | `loan`, `last` |
+| `deep` | `loan`, `deep` |
+| `loan` | `loan` only |
+
+```zax
+slot : MyPayload move ? loan     // a pinned slot whose contents may be moved out
+
+keep(last slot)                  // fine: takes the contained value; slot becomes empty
+other := slot as move            // error: the slot itself is pinned
+slot .= makePayload()            // fine: builds a new contained value in place
+
+broken : MyPayload loan ? move   // error: moving the optional would move a pinned value
+```
+
+An optional also accepts two forms written before it, `last source` and
+`move source`, which act on the contained value:
 
 ```zax
 source as last // the ordinary last stance on the optional value
@@ -2632,16 +2659,22 @@ Elements are governed by their type, not by a stance declared on the array
 variable. An element type with a `transfer move` list makes every element
 move-only wherever the array is stored.
 
-Copying or moving a slice only copies or moves the slice's description of
-which elements it shows; the elements themselves are not copied or moved. Only
-the array that owns the storage can hand it over; `slice as last` cannot hand
-over storage the slice does not own.
+A slice is a borrower of the elements it shows. Copying or moving a slice only
+copies or moves the slice's description of which elements it shows; the
+elements themselves are not copied or moved. Only the array that owns the
+storage can hand it over; `slice as last` is an error, because a slice is a
+borrower that was not given `last`.
 
-You can write stances on the arrays you join:
+You can write stances on the arrays you join. Each operand follows the usual
+rules:
 
 ```zax
-combined := left <+> right
-reused := left as last <+> right   // the result may reuse left's storage
+left : MyMessage[0..] move
+right : MyMessage[0..]
+
+joined1 := left <+> right            // error: no stance means copy, and left is move
+joined2 := left as move <+> right    // fine
+joined3 := left as last <+> right    // fine: the result may reuse left's storage
 ```
 
 When the result's storage provider is not specified, a `copy` or `deep` join
@@ -2653,11 +2686,10 @@ The join operation decides whether storage can be reused, which elements are
 copied or moved, and how large the result is. Arrays are explained in full in
 [Zax arrays and slices](arrays-and-slices.md#copy-deep-move-and-last).
 
-## Stances do not change qualifiers
+## Stances and qualifiers
 
-A stance is not a qualifier, and `loan` is a reference's stance, not a
-qualifier either. Qualifiers make three separate promises, and stances do not
-change them:
+A stance is written in a qualifier's position, but it is not a qualifier.
+Qualifiers make three separate promises, and stances do not change them:
 
 | Axis | Meaning |
 | --- | --- |
@@ -2668,7 +2700,7 @@ change them:
 For example, this parameter:
 
 ```zax
-drainBuffer final : ()(source : Buffer mutable readonly final & move) = {
+drainBuffer final : ()(source : Buffer mutable readonly final move &) = {
 }
 ```
 
@@ -2678,7 +2710,7 @@ describes:
 - readonly access through this path;
 - a final referenced place; and
 - permission for `drainBuffer` to move from the caller's `Buffer`, so a call
-  must write `as move` or `as last`.
+  must write `as move`.
 
 Because the access is `readonly`, `drainBuffer` can move from the `Buffer`
 only in a way that does not change it, for example when the resource it takes
@@ -2689,12 +2721,12 @@ describes one exact combination of qualifiers:
 
 ```zax
 consume final : ()(
-  source : Buffer mutable readonly final & copy
+  source : Buffer mutable readonly final copy &
 ) = {
 }
 
 consume final : ()(
-  source : Buffer mutable readonly varying & copy
+  source : Buffer mutable readonly varying copy &
 ) = {
 }
 ```
@@ -2712,10 +2744,10 @@ Qualifiers are explained in full in [Zax qualifiers](qualifiers.md).
 The compiler generates only `copy` automatically:
 
 - it generates one `copy` operation for each combination of qualifiers the
-  type supports;
+  type supports, with no receiver stance;
 - declaring one of those exact operations yourself, whether with a body or
-  with `= default`, `= existing`, `= forbidden`, or no body, replaces only that
-  one generated operation;
+  with `= default`, `= existing`, or `= forbidden`, replaces only that one
+  generated operation;
 - if a type's `transfer` list leaves out `copy`, nothing is generated, so a
   `transfer move` type has no copy;
 - if a member cannot be copied, the generated copy does not exist, and that is
@@ -2733,7 +2765,7 @@ MyFolder :: type transfer move {
   file : MyOwnedFile
   name : String
 
-  +++ final : ()(source : MyFolder mutable writable & move) = default
+  +++ final : ()(source : MyFolder mutable writable move &) = default
   // file moves with MyOwnedFile's move; name moves with String's move
 }
 ```
@@ -2741,12 +2773,20 @@ MyFolder :: type transfer move {
 Without that declaration, a structure holding a move-only member cannot be
 transferred: its generated copy is unavailable and no `move` exists.
 
+A constructor may also declare a receiver stance, so that a type can build a
+value differently, or refuse to build it, depending on the stance the new
+value is declared with. A constructor declared with a receiver stance other
+than `loan` never replaces a generated one; it competes with it as a more
+specific candidate. Writing `loan` is the same as writing no receiver stance,
+so a constructor with an explicit `loan` receiver stance is exactly a
+generated shape and replaces it.
+
 If you write an operation meant to replace a generated one but get its
 signature slightly wrong, both exist, and a call may become ambiguous. The
 error message should show the exact generated signature you missed.
 
-Generated operations, `= default`, assignment, replacement, and destruction
-are explained in
+Generated operations, constructor receiver stances, `= default`, assignment,
+replacement, and destruction are explained in
 [construction, replacement, and destruction](construction-and-destruction.md#opting-in-to-default-move-last-and-deep).
 
 ## Assigning a value from itself
@@ -2813,6 +2853,9 @@ The costs to keep in mind:
 - checking lifetimes, aliases, generic instantiations, and last uses takes
   compile time.
 
+Stances themselves cost nothing at run time: they are checked by the compiler
+and leave no trace in the program.
+
 Each type documents what its own operations cost.
 
 ## Diagnostics
@@ -2821,30 +2864,33 @@ Error messages should name the rule and the declaration that caused them. They
 cover:
 
 - an unstated stance where the use needs `move` or `last`: a type without
-  `copy`, a by-value parameter requiring at least `move`, or a reference
-  parameter that requires a stronger stance than the call wrote;
+  `copy`, a by-value parameter whose `via` requires more, or a reference
+  parameter that requires a stance the call didn't write;
 - a last use where `as last` would call another function or run another
   operation, counting stances the type's `transfer` list includes as written,
   including for each item of an expanded pack and at the end of a chain of
   `self` results;
 - a last use inside a generic body, naming the generic body as the place to
   fix and the instantiating call;
-- a transfer from a restricted local, alias, or member written with a weaker
-  stance, or bound to a reference that could copy it;
+- a stance written that the value's holder may not write: an owner writing a
+  stance its declaration doesn't allow, or a borrower writing a stance it
+  wasn't given, saying which;
+- a reference bound with a stance its source doesn't allow;
+- a reference or raw-pointer parameter, reference result, member, or type
+  alias with no stance written;
 - a declared stance the type's `transfer` list can never satisfy;
-- a transfer, copy capture, or copy-capable reference from a `loan`, and a raw
-  pointer formed from one outside `unsafe`;
-- `loan` on a by-value parameter, local, or member;
-- a reference or receiver passed on whole with a stronger stance than it was
-  given, such as `input as last` from a `& move` reference;
+- `via` on a reference, `via loan`, or `loan` written into a by-value
+  parameter at a call;
 - `_`, or a reference made from it, passed on with `move` or `last` without
   `intent<receiver-transfer>`;
 - an unstated call that both a `loan` and a by-value function fit;
-- unavailable `deep` behavior with no fallback;
+- unavailable `deep` behavior with no fallback, and a value declared `deep`
+  used with no stance;
 - use of a finished source without `intent<terminal-source-reuse>`;
-- a call that is ambiguous between a by-value and a reference overload, and
-  any mismatch in qualifiers or stance, saying exactly which one;
+- a call that is ambiguous between candidates, and any mismatch in qualifiers
+  or stance, saying exactly which one;
 - a variable or result used again after it was finished or passed on;
+- a `loan` result received by a variable that isn't `loan`;
 - a failure value whose stance does not let it be passed to its handler or
   returned outward;
 - a declaration meant to replace a generated one whose signature does not
@@ -2866,14 +2912,11 @@ error: MyBox has no copy: generated copy needs MyBox.file, and MyOwnedFile
 
 ## Source stability
 
-- A use of a variable with no stance is a `copy`, or a loan when it goes to a
-  reference. The only other exception is inside a function whose `deep`
-  reference or receiver makes `deep` the default, and that only makes copies
-  more independent. The compiler never adds `move` or `last` to a variable:
-  only unnamed values, which nothing can use again, are treated as `as last`:
-  a value built directly in an expression, and a by-value result with no
-  declared stance. A variable's declared stance is never
-  applied to a use on your behalf.
+- A use with no stance written is a `copy` where the value allows a copy, and
+  otherwise a loan. The compiler never adds `move` or `last` to a variable:
+  only temporaries, which nothing can use again, are treated as written with
+  the strongest stance their own stance allows. A variable's declared stance
+  is never applied to a use on your behalf.
 - If a later compiler recognizes more last uses, it reports more errors; it
   never starts calling different functions.
 - `as last` leaves the variable finished for every type, so your code stays
@@ -2882,11 +2925,14 @@ error: MyBox has no copy: generated copy needs MyBox.file, and MyOwnedFile
   `move` or `last` keeps compiling once the operation is written. Adding `move`
   to a type without a `transfer` list can make existing code that uses the
   type stop compiling until stances are written at its last uses.
+- Reference and borrowing raw-pointer parameters, reference results, and
+  members must write their stance. A later version may give them a default
+  without changing what any existing program means.
 - Adding another version of a function may make a call ambiguous, and the
   compiler reports that. The new version never wins because of where it was
-  declared or imported.
-- Results, including failure results, are passed on as `last` only when their
-  declaration writes no stance; a declared stance is always used as written.
+  declared or imported. Adding a `copy` version to a type can change which
+  version an existing call with no stance uses, but a `copy` version cannot
+  change the caller's value.
 - Generated operations exist only for the exact signatures they cover, and only
   when something uses them.
 - Formatters and other tools keep every stance and intent acknowledgement, and
@@ -2901,10 +2947,11 @@ compatibility contract, conformance specification, or compiler mapping.
 
 Focused future work remains for:
 
-- how overloads are compared when stance, type, and qualifiers favor different
-  candidates, and how generic specializations are compared;
+- how generic specializations are compared;
 - qualifier-generic syntax and constraints;
-- detailed pointer provenance and casting beyond the current ownership model;
+- stances on each element of an array, slice parameters, and optional
+  references;
+- detailed pointer provenance beyond the current ownership model;
 - which last uses analysis proves across loops and other control flow beyond
   straight-line code and branches;
 - async suspension and cancellation;

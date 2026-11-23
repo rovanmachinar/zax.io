@@ -155,7 +155,7 @@ MyType :: type {
   operator literal 'cstyle' final : (
     result : MyType
   )(
-    payload : String immutable readonly final &
+    payload : String immutable readonly final loan &
   ) unbound = {
     // Compile-time parsing.
   }
@@ -427,7 +427,7 @@ A non-generic literal declaration states its concrete result directly.
 operator literal 'h' final : (
   result uncommitted : UInteger
 )(
-  payload : String immutable readonly final &
+  payload : String immutable readonly final loan &
 ) unbound = {
   // The body is processed under the one selected concrete result type.
 }
@@ -484,7 +484,7 @@ from it:
 operator literal 'h' final : (
   result uncommitted : suggestHexInteger(payload)   // illustrative suggestion
 )(
-  payload : String immutable readonly final &
+  payload : String immutable readonly final loan &
 ) unbound = {
 }
 ```
@@ -758,7 +758,7 @@ as a constant.
 ```zax
 MyColor :: type {
   operator literal 'rgb' final : (result : MyColor)(
-    payload : String immutable readonly final &
+    payload : String immutable readonly final loan &
   ) unbound = {
     // Runs while compiling. Integer here is the build machine's Integer.
   }

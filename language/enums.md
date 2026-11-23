@@ -614,7 +614,7 @@ all instances:
 fromString final once : (
   result : Color?
 )(
-  source : String readonly &
+  source : String readonly loan &
 ) = default
 ```
 
@@ -645,13 +645,13 @@ signature:
 fromString final once : (
   result : Color?
 )(
-  source : String readonly &
+  source : String readonly loan &
 ) = default
 
 fromStringIgnoringCase final once : (
   result : Color?
 )(
-  source : String readonly &
+  source : String readonly loan &
 ) = default
 ```
 

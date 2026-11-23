@@ -7,7 +7,7 @@
 | Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
 | Owns | Preservation of construction-derived category behavior, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
 | Does Not Own | The centralized provisional category inventory ([analysis-control registry](analysis-control-registry.md)); current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
-| Source / Provenance | Work items `005`, `006`, `007`, `012`, `015`, `032`, `034`, and `036`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, panic-category, intent-naming, compile-time error, and generic-extension pressure |
+| Source / Provenance | Work items `005`, `006`, `007`, `012`, `015`, `032`, `034`, `036`, and `039`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, panic-category, intent-naming, compile-time error, generic-extension, and compiler-verified unsafe-tag pressure |
 
 ## Reading posture
 
@@ -350,6 +350,77 @@ if ?optionalValue
 // Advisory when the contract does not mandate this proof;
 // a hard error under a contract that mandates recognizing the case.
 ```
+
+### Compiler-verified unsafe tags
+
+Between "keep plain `unsafe` everywhere" and "opt into a non-portable
+extension contract that drops `unsafe`", there is a useful middle ground:
+keep the standard `unsafe` marker for portability under the baseline contract,
+and attach a directive naming one or more compilers or extension analyzers
+that **must actually prove the site safe**:
+
+```zax
+// illustrative syntax (using Zax's [<...>] directive brackets)
+makePtrFromRef final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
+  [<safe=x-my-compiler>]
+  unsafe<raw-from-reference>{
+    return input
+  }
+}
+```
+
+Intended behavior:
+
+- **Compilers that do not implement `x-my-compiler`:** ignore the unknown tag
+  (optionally with an informational note) and accept the standard `unsafe`
+  underneath, so the program stays portable under the baseline spec contract.
+- **Compilers that do implement `x-my-compiler`:** do not treat the site as
+  unchecked trust—they must prove it safe. If a later refactor breaks the
+  proof, `x-my-compiler` rejects the site as an **error** instead of silently
+  falling back to trusting `unsafe`.
+- **Auditability and spec upgrades:** human reviewers can tell genuinely
+  unchecked `unsafe` sites apart from portable sites verified by a named
+  analyzer. When a later language contract adopts the proof natively, the
+  ordinary redundant-`unsafe` error prompts removing both the tag and the
+  `unsafe`.
+- **Multiple verifiers:** a tag should be able to list more than one
+  compiler/extension identifier (for example `[<safe=x-compiler-a, x-compiler-b>]`)
+  so portable libraries can verify the same site across toolchains.
+
+**Naming candidates and concerns (undecided):**
+
+- **`safe=...`** (current lean): avoids reading as "proved unsafe", though by
+  itself `safe` can slightly sound as if the tag *makes* the code safe rather
+  than claiming a named verifier proves it.
+- **`proved=...`**: next to `unsafe<...>`, reads dangerously like "proved
+  unsafe" from context; rejected on its own unless paired with a word that
+  makes the polarity explicit.
+- **Explicit-polarity alternatives** to consider alongside `safe=...`:
+  `proved-safe=...` or `verified-safe=...` (unambiguous polarity, slightly
+  longer).
+
+**Open questions for future work:**
+
+- Exact keyword/key spelling and whether it shares the `[<...>]` directive
+  form with `[<panic=...>]`.
+- Whether an unknown verifier tag is ignored silently by default or emits a
+  configurable lint, and whether a strict build/CI option can require listed
+  verifiers to run.
+- Interaction with the compiler-agreement principle: without the tag, every
+  compiler on the same contract agrees on accept/reject; with the tag, the
+  programmer explicitly opts in to having the named verifier reject the site
+  if its proof fails.
+
+### Diagnostics must name the required `unsafe` form
+
+When a rejected operation can be made valid with `unsafe`, the compiler error
+must tell the programmer **what is required to mark it as `unsafe`**—naming
+the exact `unsafe` category or form (for example `unsafe<raw-from-reference>`,
+`unsafe<unique-raw-borrow>`, or `unsafe cast as last`) and the fact the
+programmer is taking responsibility for. Programmers should never have to
+search documentation or guess category identifiers to write a narrow unsafe
+boundary. When the operation is known-invalid and no `unsafe` escape exists,
+the error should say so instead of suggesting `unsafe`.
 
 ## Lint suppression is a separate mechanism
 
@@ -725,6 +796,8 @@ This file does not establish:
 - which analyses are mandatory in each contract;
 - language-version syntax;
 - extension namespaces;
+- compiler-verified unsafe-tag syntax and name (`safe=...` vs explicit-polarity
+  alternatives);
 - lint severity or suppression syntax;
 - runtime instrumentation; or
 - compiler analysis algorithms.
