@@ -198,6 +198,31 @@ final : ()(
 Exact endpoint source, normalization, empty ranges, and intrinsic result
 behavior belong to [Zax arrays and slices](arrays-and-slices.md#slicing).
 
+A type that wants its own `take` declares it the same way, with a pre-unary
+phrase component and one splice component:
+
+```zax
+MySequence :: type {
+  operator mixfix
+    pre-unary 'take'
+    splice 1
+  final : (
+    result : MySequence
+  )(
+    start : IndexSize?,
+    endExclusive : IndexSize?
+  ) writable = {
+  }
+}
+```
+
+A type never declares `last values[range]` separately. Writing
+`last values[range]` always calls the type's `take` and then passes the result
+on with `as last`. So it works for any type that declares `take`, and no type
+can make it mean anything else.
+What intrinsic `take` does is described in
+[Zax arrays and slices](arrays-and-slices.md#taking-elements-out-with-take).
+
 ```zax
 CustomCallable :: type {
   operator mixfix

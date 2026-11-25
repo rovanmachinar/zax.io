@@ -220,12 +220,41 @@ nothing, never rebinds, and cannot outlive that place. Qualification and
 declaration-side replacement permissions cannot become stronger through
 capture.
 
-A reference capture is a declared reference with its own stance. With no
-stance, as here, it is a `loan`: `capturedTotal += delta` changes `total`, as
-the capture's qualifiers allow, but nothing can be copied or taken through
-`capturedTotal`. It does not take on `unsafe pliable` or a declared stance
-from the variable it captures. A capture that needs either must explicitly
-declare what it wants.
+A reference capture is a reference bound to one visible variable, so with no
+stance written it takes its stance from that variable, like any
+[reference you declare](transfer-stances.md#references-you-declare). `total`
+declares no stance, so it is `copy`, and `capturedTotal` gets `copy`:
+
+```zax
+log final : ()(value : Integer) = {
+}
+
+accumulate := [[ total: capturedTotal : & ]] ()(delta : Integer) {
+  capturedTotal += delta        // changes total through the reference
+  next := capturedTotal + 1     // reading a value doesn't copy or move it
+  log(capturedTotal)            // fine: the capture is copy, so log may copy the value
+}
+```
+
+A capture of a variable declared `move` or `last` gets `loan`: the lambda can
+use the variable but can't move its contents out. To let the lambda move the
+contents out, write the stance on the source and on the capture, as for any
+reference:
+
+```zax
+buffer : Buffer move
+drainer := [[ buffer as move: mover : move & ]] ()() {
+  consume(mover as move)
+}
+```
+
+The lambda may run long after it is created, so from the capture onward, and
+for as long as `drainer` exists, code that uses `buffer` must treat it as
+possibly moved-from. A capture written `as last` with `last &` finishes
+`buffer` when it is captured.
+
+A reference capture never takes on `unsafe pliable` from the variable it
+captures; a capture that needs `unsafe pliable` must declare it explicitly.
 
 ### Source stance and capture stance are separate
 

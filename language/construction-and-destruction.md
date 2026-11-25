@@ -444,7 +444,7 @@ A loop is rejected, even when it would construct only once:
 make final : (
   result : Item
 )(
-  candidates : Item[]
+  candidates : Item copy[]
 ) = {
   each candidate : in candidates {
     if candidate.matches() {
@@ -2011,7 +2011,7 @@ DatabaseCommand :: type transfer copy move last {
   }
 }
 
-runBatch final : ()(queries : Query[]) = {
+runBatch final : ()(queries : Query copy[]) = {
   command : DatabaseCommand
   command.prepare(queries[0])
   submit(command as move)        // the move constructor runs: results move out; the connection stays

@@ -654,8 +654,11 @@ the caller's elements and storage.
 
 When the parameter names a provider instance, the local array uses that
 provider. When it names only `storage type MyStorage`, construction obtains a
-provider of that type. With no storage requirement, construction may reuse a
-compatible source provider or choose the destination context's default.
+provider of that type. With no storage requirement, a provider-backed source
+passed `as last`, or `as move` when its minimum length is zero, may hand its
+whole storage block over;
+otherwise construction uses the destination context's default, never the
+source's provider implicitly.
 
 A source array using another provider remains acceptable because this by-value
 boundary constructs new destination storage.
@@ -699,9 +702,13 @@ does not need the source to support every size named by the parameter. A future
 no-panic callable capability may request stronger static range containment;
 ordinary writable references remain dynamically adapting.
 
-A by-value `T[]` parameter copies only the slice's window description; it does
-not copy the viewed elements. `T[] &` refers to that description and may bind
-to a temporary slice created from an array for the duration of the call.
+A by-value slice parameter, such as `values : T loan[]`, copies only the
+slice's window description; it does not copy the viewed elements. A slice has
+no stance of its own, so the parameter's declaration includes the stance it
+needs for each element before `[]`. A reference to a slice, such as `values : T loan[] &`,
+refers to that description and may bind to a temporary slice created from an
+array for the duration of the call. A slice is never converted into a by-value
+array parameter; `[ from window ]` builds an array explicitly.
 Complete identity, construction, storage selection, qualification, and failure
 behavior belongs to
 [Zax arrays and slices](arrays-and-slices.md#array-and-slice-parameters).
@@ -3716,6 +3723,24 @@ deliver(message as last)
 // error: ambiguous. The first matches the type exactly but not the stance;
 // the second matches the stance exactly but needs a conversion.
 ```
+
+The same happens when an array argument fits both a by-value array parameter
+and a slice parameter, because passing an array as a slice is a conversion:
+
+```zax
+drain final : ()(values : MyMessage[0..]) = {      // exact type, via copy
+}
+
+drain final : ()(values : MyMessage move[]) = {    // needs a slice, but matches move
+}
+
+drain(messages as move)       // error: ambiguous
+drain(messages[..] as move)   // the slice version: the argument is already a slice
+```
+
+The two versions would leave `messages` differently, so the compiler does not
+pick one; [arrays and slices](arrays-and-slices.md#when-an-array-fits-both-an-array-and-a-slice-parameter)
+explains the choices.
 
 When comparing stances alone, the parameter closest to what the call wrote is
 best. A by-value parameter is compared by its `via` stance, and a reference

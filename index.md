@@ -92,7 +92,8 @@ producing them.
   same-storage replacement, and destruction.
 - Read [Zax arrays and slices](language/arrays-and-slices.md) for fixed and
   resizable arrays, array expressions, usable capacity, storage strategies,
-  indexing, slicing, element places, joining, and traversal.
+  indexing, slicing, element and slice stances, `take`, element places,
+  joining, and traversal.
 - Read [Zax `using`](language/using.md) for
   parenthesized `using` resource lists, structural `dispose`, disposal and
   destruction order, and explicit disposal bypass.

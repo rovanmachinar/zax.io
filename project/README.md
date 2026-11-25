@@ -20,8 +20,8 @@ reading path.
 
 | Field | Value |
 | --- | --- |
-| Active work item | [040: Element and contained stances](work/040-element-and-contained-stances.md) |
-| Next work number | `041` |
+| Active work item | [041: Compiler-verified unsafe](work/041-compiler-verified-unsafe.md) |
+| Next work number | `042` |
 
 Agents receive either the handoff block or the rehydration block in chat. They
 must not proactively read either source file during normal work. Read them only

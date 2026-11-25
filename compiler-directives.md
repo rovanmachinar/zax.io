@@ -67,7 +67,7 @@ generateSomething1 final [<execute=generate>] : (result : String)(...) = {
 generateSomething2 final [<execute=delegate>] : (
     result : String
 )(
-    inputs : String[]
+    inputs : String readonly loan[]
 ) = {
     // this specific form of `delegate` causes each value passed into the string
     // to not be resolved and the output string result is parsed into tokens

@@ -6,7 +6,7 @@
 | Audience | Human developers reading, writing, or evaluating Zax |
 | Applies To | Programmer-visible `loan`, `copy`, `move`, `last`, and `deep`; who may write which stance; when a stance must be written; not a formal specification |
 | Implementation State | Not established by this repository |
-| Owns | The transfer-stance mental model; what each stance says may be built from a value; owners and borrowers and which stances each may write; pinned values; writing a stance at a use; fallback; source state after a transfer; when a stance must be written, including at a last use, in generic bodies, and per item of an expanded pack; declared stances on locals, members, references, receivers, by-value parameters (`via`), results, and type aliases; receivers as parameters bound implicitly; temporaries; member and binding stances; common costs, diagnostics, and source stability |
+| Owns | The transfer-stance mental model; what each stance says may be built from a value; owners and borrowers and which stances each may write; pinned values; writing a stance at a use; fallback; source state after a transfer; when a stance must be written, including at a last use, in generic bodies, and per item of an expanded pack; declared stances on locals, members, references, receivers, by-value parameters (`via`), results, and type aliases; one stance per layer, including array elements and slices; an unmarked outer stance taking the inner stance; stances written inside reference types; finishing elements through a borrowed array; receivers as parameters bound implicitly; temporaries; member and binding stances; common costs, diagnostics, and source stability |
 | Does Not Own | Exact callable selection ([function invocation](function-invocation.md)); a type's `transfer` list, generated and defaulted operations, constructor receiver stances, and lifecycle sources ([construction, replacement, and destruction](construction-and-destruction.md)); identity `transfer` lists ([identity types](identity-types.md)); inferred declarations ([declarations and bindings](declarations-and-bindings.md)); cohesive [exceptional result flow](except.md); composition publication and wrapper eligibility ([Zax composition](composition.md)); qualifier axes ([qualifiers](qualifiers.md)); `unsafe cast` ([conversions and casts](casting.md)); optional wrapper cleanup ([optional values](optional-values.md)); complete [variant transfer](variants.md#copy-deep-move-and-last) or [union transfer](unions.md#whole-union-operations); [reference lifetime](lifetimes-and-references.md); or [pointer ownership and allocation](pointers-and-arenas.md) |
 | Source / Provenance | Legacy function, pointer, casting, and constructor input, reconciled with current invocation, construction, qualifier, optional, operator, pointer, and documentation design |
 
@@ -130,10 +130,23 @@ refers to.
 ```zax
 source : MyArchive readonly copy &           // a reference: the stance is the referred-to value's
 value : MyValue loan * unique                // a pointer: MyValue's stance before *, the pointer's after it
+slot : MyPayload move? loan                  // an optional: the payload's stance before ?, the optional's after it
+messages : MyMessage move[4] move            // an array: each element's stance before [, the array's after ]
+window : MyMessage loan[]                    // a slice: only the elements' stance; a slice has none of its own
 ```
 
 A pointer has two values, the pointer and what it points to, so it can carry
-two stances. [Pointers](#pointers) summarizes what that means.
+two stances. [Pointers](#pointers) summarizes what that means. An optional
+and an array likewise carry one stance for what they hold and one for
+themselves; a slice, like a reference, carries only the stance of what it
+reaches. [Optional values](#optional-values) and
+[arrays and slices](#arrays-and-slices) explain them.
+
+When the outer stance of an optional or array is left out, it is the same as
+the stance of what it holds: `MyMessage move[4]` is a `move` array, and
+`MyPayload move?` is a `move` optional. That is always allowed, and it means a
+stance arriving through an alias or a generic type parameter never makes a
+declaration fail merely because the outer stance is unmarked.
 
 ## Writing a stance at a use
 
@@ -357,6 +370,36 @@ notTakingOver(myValue as last)
 
 If `notTakingOver` later becomes `last &`, this call still matches, and
 nothing the caller assumed becomes false.
+
+### Stances inside the referred-to type
+
+The value a reference refers to may itself hold values: an array holds
+elements, and an optional holds a payload. A stance written on those inner
+values inside a reference type says what the function may do with them. The
+caller's inner values must allow it, by the table above for passing a value
+you own:
+
+```zax
+inspect final : ()(values : MyMessage loan[4] readonly loan &) = {
+}
+drain final : ()(values : MyMessage move[4] mutable writable loan &) = {
+}
+copyAll final : ()(values : MyMessage[4] readonly loan &) = {
+}
+
+messages : MyMessage move[4] move
+inspect(messages)          // fine: move elements allow loan
+drain(messages)            // fine: move elements allow move
+copyAll(messages)          // error: unmarked elements are copy, and move elements forbid copies
+```
+
+An unmarked inner stance means `copy`, as it does everywhere else, so
+`MyMessage[4] readonly loan &` accepts only arrays whose elements allow
+copying. Naming `loan` for the inner values accepts any caller and only looks.
+The same rule applies to the payload of an optional (`MyPayload move? loan &`)
+and, for a pointer to a pointer, to the value the inner pointer points to. Arrays passed this way are covered
+in full by
+[element stances in an array reference](arrays-and-slices.md#element-stances-in-an-array-reference).
 
 ## Copy
 
@@ -672,7 +715,7 @@ DatabaseCommand :: type transfer copy move last {
   }
 }
 
-runBatch final : ()(queries : Query[]) = {
+runBatch final : ()(queries : Query copy[]) = {
   command : DatabaseCommand
   command.prepare(queries[0])
   submit(command as move)        // the move constructor runs: results move out; the connection stays
@@ -1278,8 +1321,10 @@ left out:
 | --- | --- | --- |
 | A local, member, or by-value parameter (you own it) | `report : Report move` | `copy`: its owner may write every stance |
 | The value an owning pointer points to | `owner : MyValue * unique` | `copy` |
-| A reference or raw pointer bound from one visible value | `alias : Buffer & = owner` | taken from that value; see [references you declare](#references-you-declare) |
-| A reference or borrowing raw-pointer parameter, a reference result, a member, or a type alias of a reference | `show final : ()(value : MyValue readonly loan &)` | must be written |
+| Each element of an array, or an optional's payload | `messages : MyMessage move[4]` | `copy` |
+| An array or optional itself | `messages : MyMessage move[4] move` | the stance of its elements or payload |
+| A reference, raw pointer, or slice bound from one visible value | `alias : Buffer & = owner` | taken from that value; see [references you declare](#references-you-declare) |
+| A reference, borrowing raw-pointer, or slice parameter; a reference or slice result; a member that is a reference, borrowing raw pointer, or slice; a type alias of a reference; or an optional reference | `show final : ()(value : MyValue readonly loan &)` | must be written |
 | The receiver `_` | `describe final : (result : String)() = { }` | `loan` |
 | A by-value parameter's `via` | `item : MyItem via move` | `via copy`: any stance the call writes |
 | A result | `result : Message move` | `copy` |
@@ -1331,10 +1376,10 @@ A declared stance never settles an overload choice. A variable declared `copy`
 still needs `as loan` or `as copy` at a call where both a loan and a by-value
 function fit. The reader of the call should not need to look up a declaration.
 
-The restriction covers only declared places. Values stored in array elements,
-or in members that declare no stance, are governed by their type. A guarantee
-for every value of a kind, wherever it is stored, comes from a `transfer` list
-on the type or an identity.
+The restriction covers only declared places. Array elements and members that
+declare no stance are `copy`, so only their type limits what may be built from
+them. A guarantee for every value of a kind, wherever it is stored, comes from
+a `transfer` list on the type or an identity.
 
 **Stances describe places, not every value built from them.** When the owner
 of a `move` variable hands its contents to a function, the new value belongs
@@ -1407,19 +1452,21 @@ unmarked borrower gets only a stance that leaves the owner's value unchanged:
 a borrower take the contents, the owner says so where it binds:
 `mover : Buffer move & = owner as move`.
 
-Typed loop bindings are references you declare too, and follow the same
-table:
+Typed loop bindings and slices are references you declare too, and follow the
+same table:
 
 ```zax
 each value : MyValue readonly & from values {
-  // elements have no declared stance, so they are copy, and value gets copy
+  // values' elements declare no stance, so they are copy, and value gets copy
   showValue(value)
 }
+
+messages : MyMessage move[8]
+window := messages[1..<4]       // the elements are move, so window gets loan for each
 ```
 
-Array elements are governed by their type and can't be declared with a stance
-of their own, so a loop binding over elements of a type with `copy` gets
-`copy`.
+A loop binding over elements declared `move` would likewise get `loan`,
+unless the loop source writes `as move`.
 
 ### References that stand alone
 
@@ -1448,6 +1495,35 @@ MyNode :: type {
 When code takes something by reference, it is usually trying to avoid a
 duplicate, so `loan` is the common answer. A `self` result is the exception:
 it takes its stance from the call, as [results](#results) explains.
+
+Two more kinds of borrower stand alone in the same way:
+
+- **A slice parameter, member, or result:** its declaration includes the
+  stance it needs for each element, before `[]`, because a slice has no stance
+  of its own: `values : Integer loan[]`. A reference to a slice includes it in
+  the same place: `values : Integer loan[] &`.
+- **An optional reference:** its declaration always includes a stance before
+  `&`, even for a local with an initializer. A plain reference bound to one value can only
+  ever refer to that value, so it can take that value's stance. An optional
+  reference can later refer to a different value, which may allow different
+  things, so its stance is never taken from the first one:
+
+```zax
+view : MyValue readonly loan & ?           // fine: absent now; any later reference is a loan
+view .= [{ firstValue }]                   // refers to firstValue
+view .= [{ secondValue }]                  // a new reference, to a different value, same stance
+
+guess : MyValue & ? = firstValue           // error: write the stance before &
+```
+
+And for a slice parameter:
+
+```zax
+total final : (result : Integer)(values : Integer[]) = {       // error: write an element stance
+}
+total final : (result : Integer)(values : Integer loan[]) = {   // fine: total only reads
+}
+```
 
 ### Receiver stances
 
@@ -1587,11 +1663,26 @@ that use it allow. The order in which alias properties combine is explained in
 An inferred declaration such as `stored := makeMessage()` takes its
 initializer's type, never a declared stance, so `stored` is an ordinary `copy`
 variable. To restrict it, write the stance:
-`stored : Message move = makeMessage()`. The exception is a reference or raw
-pointer bound to one visible value, which takes a stance from that value as
-[references you declare](#references-you-declare) describes. Complete
+`stored : Message move = makeMessage()`. The exception is a reference, raw
+pointer, or slice bound to one visible value, which takes a stance from that
+value as [references you declare](#references-you-declare) describes. Complete
 inference belongs to
 [declarations and bindings](declarations-and-bindings.md).
+
+The same holds for the elements of a new array. Its elements are new places,
+so they start unmarked, even when they were built by moving:
+
+```zax
+messages : MyMessage move[4]
+moved := messages as move              // moved is a MyMessage[4]: its elements are copy
+kept : MyMessage move[4] = messages as move   // write the stance to keep the restriction
+```
+
+A generic type parameter deduced from an argument works the same way: it gets
+the argument's type, not the stance declared on the argument's variable.
+`keepAll(messages as move)` deduces `MyMessage` for an element type, not
+`MyMessage move`. A stance reaches a type parameter only when the type argument
+is stated explicitly as an alias that carries one.
 
 ### Transfer lists on types and identities
 
@@ -1692,8 +1783,29 @@ keep(pinned)                  // error: nothing may be built from pinned
 keep(pinned.fuel as move)     // fine: fuel follows its own stance
 ```
 
-Array elements are governed by their type. A declared stance on the array
-variable restricts transfers of the array, not copies of its elements.
+Array elements behave like members: each follows the element stance written
+before `[`, and a stance on the array covers only transfers of the whole
+array. One rule is stricter for elements. Through a writable reference to
+someone else's array, a function may move an element out, but may not finish
+it with `as last` unless the caller gave up the whole array:
+
+```zax
+refreshFirst final : ()(values : MyMessage[0..] mutable writable loan &) = {
+  consume(values[0] as move)               // fine: the element stays usable
+  consume(values[0] as last)               // error: a borrowed array allows move, not last
+}
+```
+
+The difference is in who defines the code that later uses the finished
+value. A finished member sits inside a value whose type defines how it is
+copied, replaced, and destroyed, and those operations must already cope with
+a member left finished, as described above. A finished element would sit
+inside an array, and the language itself implements copying, iterating, and
+destroying an array; those operations expect every element to be live. A member of an element is
+still a member, and follows the member rule: the element's type must cope
+with it.
+[Finishing elements in place](arrays-and-slices.md#finishing-elements-in-place)
+explains what a function does instead.
 
 ### Bindings the language creates
 
@@ -2528,18 +2640,38 @@ function is called on, here as another strong owner.
 
 A loan cannot be captured as a copy, because nothing may be built from a loan.
 If the lambda captures it by reference instead, the lambda holds a loan too. A
-reference capture of a visible variable takes its stance from that variable,
-as [references you declare](#references-you-declare) describes:
+reference capture is a reference bound to one visible variable, so with no
+stance written it takes its stance from that variable, as
+[references you declare](#references-you-declare) describes: `copy` from a
+`copy` variable, and `loan` from a variable declared `move` or `last`.
 
 ```zax
 view : Document readonly loan & = source
-callback := [[ view ]] ()() {              // error if this captures a copy of view
+copied := [[ view ]] ()() {               // error: copying the document would build from a loan
   showDocument(view)
+}
+borrowed := [[ view: kept : & ]] ()() {   // fine: a reference capture of a loan is a loan
+  showDocument(kept)
 }
 ```
 
-The spelling of a reference capture belongs to
-[Zax lambdas and callable composition](lambdas-and-callable-composition.md).
+To let a lambda move the contents out of a `move` variable, write the stance
+on the source and on the capture, as for any reference:
+
+```zax
+buffer : Buffer move
+drainer := [[ buffer as move: mover : move & ]] ()() {
+  consume(mover as move)
+}
+// while drainer exists, code using buffer must treat it as possibly moved-from
+```
+
+A captured `move &` may empty `buffer` during any later call of the lambda, so
+from the capture onward, and for as long as `drainer` exists, code that uses
+`buffer` must treat it as possibly moved-from. A capture written `as last`
+with `last &` finishes `buffer` when it is captured.
+Capture spelling belongs to
+[Zax lambdas and callable composition](lambdas-and-callable-composition.md#explicit-reference-capture-borrows).
 
 Copying or moving `callback` later never re-runs its captures:
 
@@ -2575,22 +2707,29 @@ optional's own stance may name only stances the contained value also allows:
 | `loan` | `loan` only |
 
 ```zax
-slot : MyPayload move ? loan     // a pinned slot whose contents may be moved out
+slot : MyPayload move? loan      // a pinned slot whose contents may be moved out
 
 keep(last slot)                  // fine: takes the contained value; slot becomes empty
 other := slot as move            // error: the slot itself is pinned
 slot .= makePayload()            // fine: builds a new contained value in place
 
-broken : MyPayload loan ? move   // error: moving the optional would move a pinned value
+broken : MyPayload loan? move    // error: moving the optional would move a pinned value
 ```
 
+When the optional's own stance is left out, it is the contained value's
+stance: `MyPayload move?` is a `move` optional.
+
 An optional also accepts two forms written before it, `last source` and
-`move source`, which act on the contained value:
+`move source`. Each writes a stance on the contained value, so the contained
+value's stance must allow it:
 
 ```zax
 source as last // the ordinary last stance on the optional value
-last source    // optional-specific: take the contained value, then empty source
-move source    // optional-specific: move from the contained value; source keeps it
+last source    // last on the contained value, then source becomes empty
+move source    // move on the contained value; source keeps it, moved-from
+
+frozen : MyPayload loan?
+keep(move frozen)              // error: nothing may be built from a pinned contained value
 ```
 
 When `last source` is used:
@@ -2604,6 +2743,24 @@ When `last source` is used:
 
 `move source` passes the contained value on with `move` and does not empty
 `source`.
+
+A function given a writable reference to someone else's optional may use
+both forms: `move cache` leaves the contained value usable, and `last cache`
+empties the optional, so nothing finished is left in it. Writing `last` on
+the contained value directly, as `cache. as last`, is an error through a
+reference, because it would leave a finished value inside the caller's
+optional; this is the same rule as for
+[array elements reached through a borrowed array](#members).
+
+```zax
+refill final : ()(cache : MyPayload? mutable writable loan &) = {
+  keep(move cache)          // fine: the contained value stays usable
+  keep(last cache)          // fine: the contained value leaves, and cache becomes empty
+  if ?cache {
+    keep(cache. as last)    // error: would leave a finished value in the caller's optional
+  }
+}
+```
 
 Optional values are explained in full in [Zax optional values](optional-values.md).
 
@@ -2638,32 +2795,49 @@ value. See
 
 ## Arrays and slices
 
-Copying an array that owns its elements creates another array with its own
-storage, and copies each element with that element's `copy`. `deep` does the
-same, but every element must have a `deep` operation; it never falls back to
-`copy`.
+An array has a stance for each element, written before `[`, and a stance for
+itself, written after `]`. Elements behave like members: each follows its own
+stance, and the array's owner may write stances on them. The array's stance
+covers only transfers of the whole array, and the element stance limits it by
+the same table as an optional's:
 
-An array whose elements are stored inside it cannot hand its storage to another
-array, so `move` and `last` move the elements one by one. An array can instead
-get its storage from a separate storage provider, such as an arena, as in
-`Integer[50] storage provider`. Such an array, even a fixed-length one, can
-hand its whole block of storage to the new array, when the new array can use
-storage from that provider. The new array then takes the elements without
-moving them one by one.
-[Storage providers](arrays-and-slices.md) are explained with arrays.
+```zax
+messages : MyMessage move[4] move    // each element: move; the array: move
+consume(messages[0] as move)         // fine: the owner may move an element out
+other := messages as move            // fine: moves the array, and each element with it
+```
 
-After `move`, the original must still be a usable, empty array. After `last`,
-it only needs to be safe to destroy, so less has to be left behind.
+An element type with a `transfer move` list makes every element move-only
+wherever the array is stored, whatever stance is written.
 
-Elements are governed by their type, not by a stance declared on the array
-variable. An element type with a `transfer move` list makes every element
-move-only wherever the array is stored.
+Copying an array creates another array with its own storage and copies each
+element. `deep` does the same, but every element must have a `deep` operation;
+it never falls back to `copy`. `move` moves every element out and leaves the
+source at its declared minimum length, with the elements it keeps moved-from;
+a fixed array, and an immutable one, keep all of them. An array whose storage comes from a storage
+provider and whose minimum length is zero may instead hand its whole block
+over on `move`, without moving any element. After `last`, the source only
+needs to be safe to destroy, so a provider-backed array may always hand its
+block over.
 
-A slice is a borrower of the elements it shows. Copying or moving a slice only
-copies or moves the slice's description of which elements it shows; the
-elements themselves are not copied or moved. Only the array that owns the
-storage can hand it over; `slice as last` is an error, because a slice is a
-borrower that was not given `last`.
+A slice has no stance of its own. Each element it shows is reached as if
+through a `<stance> &` reference, and the stance written before `[]` is what
+the slice was given for each element. A slice parameter's declaration must
+include it, and `as` written on a slice applies to its elements:
+
+```zax
+drainSome final : ()(values : MyMessage mutable writable move[]) = {
+  consume(values[0] as move)         // fine: the slice was given move for each element
+  consume(values[0] as last)         // error: a slice given move may pass on only move
+}
+```
+
+Writing `last` on elements that stay in their array leaves the array
+partially finished: it no longer works as a whole, and only elements the
+compiler can prove unfinished may still be used. `take` instead removes
+elements from the array, or from a slice, and hands them on. Both are
+explained, with element stances, slices, storage, and what `move` leaves, in
+[Zax arrays and slices](arrays-and-slices.md#stances-on-elements-and-slices).
 
 You can write stances on the arrays you join. Each operand follows the usual
 rules:
@@ -2677,10 +2851,10 @@ joined2 := left as move <+> right    // fine
 joined3 := left as last <+> right    // fine: the result may reuse left's storage
 ```
 
-When the result's storage provider is not specified, a `copy` or `deep` join
-may use the same provider and ask it for new storage. A `move` or `last` join
-may take over `left`'s storage, leaving `left` as `move` or `last` normally
-does.
+A `move` or `last` join may take over `left`'s whole storage block, leaving
+`left` as `move` or `last` normally does. Otherwise the result gets new
+storage from the destination's storage clause, or from the `___` context's
+default, never implicitly from `left`'s provider.
 
 The join operation decides whether storage can be reused, which elements are
 copied or moved, and how large the result is. Arrays are explained in full in
@@ -2876,8 +3050,13 @@ cover:
   stance its declaration doesn't allow, or a borrower writing a stance it
   wasn't given, saying which;
 - a reference bound with a stance its source doesn't allow;
-- a reference or raw-pointer parameter, reference result, member, or type
-  alias with no stance written;
+- a reference, raw-pointer, or slice parameter, reference or slice result,
+  member, type alias, or optional reference with no stance written;
+- an array or optional stance that its element or contained-value stance
+  does not allow, and a reference parameter whose inner stance the caller's
+  value does not allow;
+- `last` written on an element reached through a borrowed array, or on an
+  optional's contained value reached through a reference;
 - a declared stance the type's `transfer` list can never satisfy;
 - `via` on a reference, `via loan`, or `loan` written into a by-value
   parameter at a call;

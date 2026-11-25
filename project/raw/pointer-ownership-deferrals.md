@@ -127,6 +127,41 @@ shared : MyValue deep * strong deep = @
 
 - **Reactivates:** a use that can name an allocation arena for the copy.
 
+## A default stance for stand-alone references and slice parameters
+
+A reference parameter must write its stance, and so must a slice parameter,
+for each element: `values : Integer copy[]` or `values : Integer loan[]`. A
+learner therefore meets `loan` and `copy` early. A default would remove the
+word, but each candidate default fails somewhere a learner will notice:
+
+```zax
+// if an unmarked reference parameter meant loan:
+show final : ()(value : MyReport &) = {
+  keep(value)            // error inside the function just written: a loan can't be copied
+}
+
+// if it meant copy:
+show final : ()(value : MyReport &) = {
+}
+report : MyReport move
+show(report)             // error at the caller: report forbids copies
+```
+
+A `loan` default moves errors into the learner's own function bodies; a
+`copy` default moves them to call sites, often in someone else's code.
+Requiring the word puts the choice where it is made, once. The maintainer's
+position: requiring the word is more honest than a default that frustrates
+elsewhere, and the diagnostic ("write `loan` if `show` only looks, or `copy`
+if it keeps a copy") is where the upfront cost is repaid.
+
+- **Why it can wait:** requiring the word is coherent and consistent across
+  references and slices.
+- **Reactivates:** learner evidence, such as the beginner-corpus test in
+  [learning routes](learning-routes.md), showing that the required word costs
+  more than the errors a default would cause.
+- **Constraint on current design:** none; a later default must be weighed
+  against the two failure examples above.
+
 ## Retirement
 
 Retire each item when a work item decides it, moving the result into its

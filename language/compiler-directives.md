@@ -309,7 +309,7 @@ Options refine where and how the warning appears:
 
 ```zax
 [<deprecate, context=all, error>]
-legacyChecksum final : (result : U32)(data : Byte[] readonly &) = {
+legacyChecksum final : (result : U32)(data : Byte readonly loan[] readonly &) = {
 }
 
 [<deprecate, max="1.1">]

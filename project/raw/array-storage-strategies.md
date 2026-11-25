@@ -7,7 +7,7 @@
 | Applies To | Raw backing providers, unique array handles, slot/chunk lookup, alignment, stability tracking, provider sharing, storage-erased references, provider-specific access, strategy changes, and array/context integration |
 | Owns | Preserved programmer-visible constraints and protocol pressure whose exact storage-provider contract and syntax remain unresolved |
 | Does Not Own | Current intrinsic array behavior ([arrays and slices](../../language/arrays-and-slices.md)); general pointer ownership and arenas ([pointers, allocation, and arenas](../../language/pointers-and-arenas.md)); general execution context ([execution context](../../language/execution-context.md)); general transfer stances ([transfer stances](../../language/transfer-stances.md)); or accepted generic/reflection/analysis-control syntax |
-| Source / Provenance | Array and slice review after the initial flat/adaptive model exposed the need for replaceable programmer-provided backing strategies |
+| Source / Provenance | Array and slice review after the initial flat/adaptive model exposed the need for replaceable programmer-provided backing strategies; work item `040` (element and contained stances) for `take` and the default-profile question |
 
 ## Why this input exists
 
@@ -328,21 +328,61 @@ comparison, and source/destination storage requirement matching.
 A complete-array `last` may transfer provider participation and the unique
 backing handle without moving elements.
 
-A passive slice owns neither elements nor the unique handle. `slice as last`
-therefore transfers only slice descriptor/window state.
+A passive slice owns neither elements nor the unique handle, and has no stance
+of its own; a stance written on a slice applies to its elements. Current
+behavior is in
+[stances on elements and slices](../../language/arrays-and-slices.md#stances-on-elements-and-slices).
 
-Storage-assisted range transfer requires a consuming operation rooted in the
-owning source array. Future design may support:
+The consuming range operation rooted in the owning array is now current
+design: [`take`](../../language/arrays-and-slices.md#taking-elements-out-with-take)
+extracts a range into a new owning array, removes it from the source, and
+moves each element. Storage work may still let `take` avoid moving each
+element:
 
 - detaching whole chunks;
-- removing the transferred range from the source;
 - transferring chunk/region handles;
 - updating index mappings and stability versions;
-- elementwise fallback when chunk transfer is impossible; and
+- falling back to elementwise transfer when chunk transfer is impossible; and
 - explicit failure when source/destination providers cannot cooperate.
 
-Representative source is not established. Any future spelling must make source
-element consumption visible rather than disguising it as passive slice transfer.
+## Handing over a storage block whose elements are pinned
+
+Pinned (`loan`) elements forbid relocation, and the element-stance table lets
+an array of pinned elements be only `loan` itself, because moving an array
+normally moves each element. A provider-backed array can instead hand its
+whole storage block to another array without moving any element, so the
+elements' addresses would not change:
+
+```zax
+// illustrative: not allowed today
+devices : MyDevice loan[0..] move storage type MyStorage
+handed := devices as move    // would hand the block over; no pinned element moves
+```
+
+Decide with the provider and handle protocol whether such a hand-over counts
+as preserving pinning, and if so, whether the table relaxes for
+provider-backed arrays whose minimum length is zero.
+
+## The default storage profile
+
+An array declared without a storage clause resolves a default storage
+profile. An array with no maximum must be provider-backed, because inline
+storage needs a fixed amount of room. For fixed and bounded arrays, current
+design does not say which profile the default is, yet a programmer needs it to
+predict whether `move` can hand storage over and what the array costs:
+
+```zax
+grid : Integer[9]                    // inline or provider-backed? not stated today
+recent : MyMessage[0..8]             // a bounded resizable array: either is possible
+samples : Integer[0..]               // no maximum: must be provider-backed
+pooled : Integer[0..] storage type MyStorage   // explicit today
+```
+
+The maintainer's direction: likely an explicit keyword where the choice is
+unclear, or a default with an explicit keyword override. An arena-backed
+profile may take its provider from the `___` context. Until this is decided,
+current teaching must not state which profile an unmarked fixed or bounded
+array gets.
 
 ## Provider factories and shared defaults
 
@@ -396,6 +436,33 @@ provider-backed or otherwise alter its self-contained size.
 
 Exact context hook names, override precedence, caching, error behavior, and
 compiler-host/target behavior remain future work.
+
+### Overriding the default for one scope
+
+A new array built without a written destination type, such as the result of
+`take` or a join, gets its storage from the context's default, never
+implicitly from the source's provider, because that provider may serve only
+the source. To choose different storage, code can write the destination's
+type, or replace the context, but replacement today has no automatic
+restoration (`currentThread.___ = myReplacement`; the execution-context owner
+lists restoring prior contexts as future work).
+
+The maintainer's suggestion: a scoped block that swaps a default arena in the
+context and puts the previous one back afterward. `using` fits, because it
+already promises cleanup at scope exit, including early exits:
+
+```zax
+// illustrative
+using (defaultArena(myArena)) {
+  batch := take messages[2..<5]   // built in myArena
+}
+// the previous default arena is back here
+```
+
+The maintainer considers context defaults workable rather than ideal, and has
+no better mechanism in mind yet. Open: the exact form; whether it overrides
+array storage providers, object and control-block arenas, or both; and how it
+interacts with threads and async work, which inherit or capture contexts.
 
 ## Provider and handle access
 
@@ -480,7 +547,8 @@ Future review must coordinate:
 - function invocation for earlier-parameter provider dependencies and
   storage-relaxed versus exact parameters;
 - qualifiers and lifetimes for erased reference authority and stability;
-- transfer stances for handle reuse and consuming range transfer;
+- transfer stances for handle reuse, and arrays and slices for letting `take`
+  detach chunks;
 - structural compatibility for storage-profile layout;
 - generics for provider/capability constraints and associated handles;
 - reflection for logical type versus resolved storage profile;
@@ -499,7 +567,7 @@ This file does not establish:
 - exact default provider factory names;
 - context hook names;
 - capability constraint syntax;
-- consuming range-transfer syntax;
+- which storage profile an array without a storage clause gets;
 - provider-specific reflection APIs;
 - concurrency contracts; or
 - implementation algorithms.

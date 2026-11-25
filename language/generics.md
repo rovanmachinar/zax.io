@@ -486,6 +486,32 @@ keep(myFlag)   // UseType is Boolean: value is a copy
 keep(myView)   // UseType is Boolean &: value is a reference, under reference lifetime rules
 ```
 
+A worked-out type never includes a
+[stance](transfer-stances.md#declaring-stances) declared on the argument's
+variable or on its elements. A stance restricts what may be built from one
+place, not the type of values that come from it, so it does not travel into
+the generic:
+
+```zax
+keepAll$ final : (ElementType : type)()(values : ElementType[4]) = {
+}
+
+report : MyReport move
+keep(report as move)       // UseType is MyReport, not MyReport move
+
+messages : MyMessage move[4]
+keepAll(messages as move)  // ElementType is MyMessage: inside, the elements are copy
+```
+
+A stance reaches a type parameter only when you state the type argument as an
+alias that carries one:
+
+```zax
+OwnedPayload :: alias type Payload move
+batch : OwnedPayload[4]
+keepAll$(OwnedPayload)(batch as move)   // ElementType is OwnedPayload, so its elements are move
+```
+
 A parameter that looks by-value can therefore refer to the caller's storage
 when the argument is a reference. A generic that always wants a value removes
 the reference explicitly; type reflection owns the operations that strip

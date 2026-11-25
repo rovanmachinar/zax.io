@@ -264,7 +264,7 @@ only at runtime declares an array or slice parameter instead. Below,
 whose length may change between 0 and 100 at runtime:
 
 ```zax
-sumAll final : (result : Integer)(values : Integer[]) = {
+sumAll final : (result : Integer)(values : Integer loan[]) = {
   total := 0
   each value : in values {
     total += value

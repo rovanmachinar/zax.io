@@ -135,9 +135,15 @@ alignment, and storage stability. One provider may serve several arrays; each
 array owns one unique handle for its backing region and independently manages
 its element lifetimes.
 
-The **resolved storage profile** records the provider type/instance and
-capabilities that affect one owning array's representation and operations.
-Storage does not change logical array identity. See
+The **resolved storage profile** records whether an owning array uses inline
+or provider-backed storage and, for a provider-backed array, the provider
+type/instance and capabilities that affect its representation and operations.
+Storage does not change logical array identity.
+
+An array with **inline storage** keeps its elements inside the array value
+itself, so it cannot hand its storage to another array. A
+**provider-backed** array holds a handle to a block a storage provider
+manages, and can hand that whole block over. See
 [Zax arrays and slices](arrays-and-slices.md#storage-strategies).
 
 ## Storage-erased array reference
@@ -154,12 +160,16 @@ layout or provider-specific APIs. See
 ## Slice and splice
 
 A **slice** is a non-owning descriptor over selected array element places. It
-owns no element and cannot widen beyond its current view.
+owns no element and cannot widen beyond its current view. A slice has no
+stance of its own: the stance written before `[]` is what it was given for
+each element, as in `MyMessage readonly loan[]`.
 
 A **splice** is bracket source containing inclusive `..` or half-open `..<`
 range components. It may produce a slice or another custom declared result.
 Direct splice assignment is one mixfix mutation rather than assignment through
-a hidden slice proxy. See [Zax arrays and slices](arrays-and-slices.md#slicing).
+a hidden slice proxy, and `take values[range]` is likewise one operation that
+removes the range and hands it on. See
+[Zax arrays and slices](arrays-and-slices.md#slicing).
 
 ## Binding
 
@@ -502,9 +512,14 @@ separate stance written after it with `via`, as in `item : MyItem via move`. On
 a reference parameter, the stance before `&` says what the function may do to
 the caller's value; a call must write `as move`, `as last`, or `as deep` for a
 `move &`, `last &`, or `deep &` parameter, while a call with no stance can use a
-`loan &` or `copy &` one. A reference or borrowing raw-pointer parameter,
-reference result, member, or type alias of a reference must write its stance; a local reference bound to one visible value takes it from that
-value. The compiler never applies a declared stance to a use on your behalf.
+`loan &` or `copy &` one.
+
+These must always write their stance: reference, borrowing raw-pointer, and
+slice parameters; reference and slice results; members that are references,
+borrowing raw pointers, or slices; type aliases of references; and optional
+references. A local reference or slice bound to one visible value takes its
+stance from that value. An array or optional whose own stance is left out
+takes the stance of its elements or contained value. The compiler never applies a declared stance to a use on your behalf.
 See
 [Zax transfer stances](transfer-stances.md#declaring-stances).
 
@@ -957,9 +972,10 @@ outlives the call. Work with no observable effect may be pre-computed under the
 ## Owner and borrower
 
 An **owner** holds its own value: a local variable or member, a by-value
-parameter (the function owns it), or the value an owning pointer points to. A
-**borrower** reaches a value someone else owns: a reference, a raw pointer that
-holds only an address, or the receiver `_`.
+parameter (the function owns it), or the value an owning pointer points to.
+An array's owner also owns its elements. A **borrower** reaches a value
+someone else owns: a reference, a raw pointer that holds only an address, a
+slice, or the receiver `_`.
 
 The owner of a value decides how much of it to give up: the owner of a `copy`
 value may write any stance on it, and the owner of a `move` value may also
@@ -1171,6 +1187,22 @@ and the type's `seal` clause decides which kinds of addition are allowed. A
 partial's name identifies the contribution; it is not a type. See
 [Zax partials](partials.md).
 
+## Partially finished
+
+An array or slice is **partially finished** when some of its elements were
+given `last` while staying in place. It can no longer be copied, moved, or
+passed as a whole, and only elements the compiler can prove unfinished may
+still be used:
+
+```zax
+consumeAll(messages[2..<5] as last)
+messages[0].send()        // fine: element 0 is proven unfinished
+other := messages         // error: messages is partially finished
+```
+
+`take` avoids this by removing the elements instead. See
+[finishing elements in place](arrays-and-slices.md#finishing-elements-in-place).
+
 ## Pinned value
 
 A **pinned** value is one declared `loan`: nothing is ever built from it, so it
@@ -1185,7 +1217,9 @@ keep(device)               // error: nothing may be built from device
 ```
 
 A pinned value under an owning pointer stays pinned while the pointer moves.
-The type's Nothing instance is pinned too, so a call on the type lends it. See
+The type's Nothing instance is pinned too, so a call on the type lends it.
+Pinned array elements forbid any operation that could relocate them, such as
+growing a resizable array into new storage. See
 [pinned values](transfer-stances.md#pinned-values).
 
 ## Place

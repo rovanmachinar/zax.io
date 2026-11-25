@@ -6,7 +6,7 @@
 | Audience | Human developers storing, reading, changing, viewing, or traversing ordered data |
 | Applies To | Programmer-facing intrinsic arrays, array expressions, indexing, slicing, capacity, layout, and element lifetime; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | Fixed and resizable array identities; logical length and usable capacity; array expressions and inference; intrinsic index and splice behavior; borrowed slices; direct splice mutation; element-place stability; programmer-visible storage selection and capabilities; array transfer and joining; storage-erased array references; array parameter behavior; array-specific costs, diagnostics, reflection facts, and future boundaries |
+| Owns | Fixed and resizable array identities; logical length and usable capacity; array expressions and inference; intrinsic index and splice behavior; borrowed slices; stances on elements and slices; element and array qualifiers; direct splice mutation; taking elements with `take` and `last X[range]`; element-place stability and relocation; inline and provider-backed storage; programmer-visible storage selection and capabilities; array transfer, what `move` and `last` leave, and joining; finishing elements in place; storage-erased array references; array and slice parameter behavior; array-specific costs, diagnostics, reflection facts, and future boundaries |
 | Does Not Own | General construction packets and lifecycle machinery ([construction, replacement, and destruction](construction-and-destruction.md)); reusable reference lifetimes ([lifetimes and references](lifetimes-and-references.md)); pointer ownership and arenas ([pointers, allocation, and arenas](pointers-and-arenas.md)); exact array storage-provider/handle protocols; shared operator and mixfix selection ([operators](operators.md), [mixfix operators](mixfix-operators.md)); general traversal protocol behavior ([iteration](iteration.md)); qualifier meaning ([qualifiers](qualifiers.md)); transfer-stance meaning ([transfer stances](transfer-stances.md)); general integer roles ([integers](integers.md)); general structural transformation ([structural shapes and compatibility](structural-shapes-and-compatibility.md)); runtime string APIs; user-defined generics ([generics](generics.md)); variadic packs ([variadics](variadics.md)); or implementation layout and lowering |
 
 ## Start with an ordinary array
@@ -325,7 +325,7 @@ you need the arguments as an array, perhaps to hand them to an API that takes
 one, you can use `from` to turn the items into array elements:
 
 ```zax
-sumAll final : (result : Integer)(values : Integer[]) = {
+sumAll final : (result : Integer)(values : Integer loan[]) = {
   total := 0
   each value : in values {
     total += value
@@ -700,32 +700,66 @@ silently shortens the requested range or substitutes an empty slice.
 
 ## Qualifying an owning array
 
-Array qualification separates mutation of the current array value from
-replacement of the whole array lifetime:
+An owning array has two sets of qualifiers. Words written before `[` qualify
+each element. Words written after `]` qualify the array itself: its length,
+its capacity, and its storage. The two are independent, so an array can be
+fixed in shape while its elements change, or the other way around:
+
+```zax
+roster : MyMessage mutable[8] immutable      // the array can't grow, shrink, or resize
+roster[0] = fresh()                          // fine: the elements are mutable
+roster.resize(9)                             // error: the array is immutable
+
+journal : MyMessage immutable[0..] mutable   // entries can't change once added
+journal <+>= [ entry ]                       // fine: the array can grow
+journal[0] = fresh()                         // error: the element is immutable
+```
+
+If you come from C++, note the difference: a `const std::array` makes its
+elements const too, but an `immutable` Zax array does not. To make both
+immutable, write `immutable` on both layers:
+
+```zax
+fixedTable : Integer immutable[4] immutable = [ 1, 2, 3, 4 ]
+fixedTable[0] = 10       // error: the element is immutable
+fixedTable.resize(2)     // error: the array is immutable
+```
+
+An element left unqualified takes the same defaults as any other declaration,
+as [qualifier defaults](qualifiers.md#defaults-and-resolution) describes. An
+immutable array keeps its starting length for its whole lifetime, so an
+immutable array declared empty, such as `none : Integer[0..] immutable = []`,
+stays empty.
+
+The qualifiers after `]` also control two separate things: whether the
+current array can change, and whether the whole array can be replaced by a new
+one. Here the array is immutable, so it can't be resized, but its place is
+`varying` and the access path is `writable`, so `.=` may replace the whole
+array:
 
 ```zax
 myArray varying :
   Integer[4 in 4..10] immutable writable varying = [ 1, 2, 3, 4 ]
+
+myArray.resize(6)    // error: resizing changes the current immutable array
+myArray .= replacement
+// fine when replacement satisfies the array and storage contracts:
+// the old array ends and a new one is built in the same place
 ```
 
-The current array is immutable. Element assignment, insertion, removal,
-resizing, capacity changes, suggestion changes, and storage changes cannot
-mutate that lifetime.
+`writable` matters here because it allows replacing the whole array. It does
+not make the elements writable; their own qualifiers decide that.
 
-The place itself is varying, this declaration retains replacement permission,
-and the access path is writable. Compatible whole-array `.=` reconstruction may
-therefore end the old immutable array and construct another immutable array in
-the same place:
+An array declaration can also carry a storage clause and a stance. They come
+in this order: the dimensions, then the storage clause, then the array's
+qualifiers, then its stance, which is always last on its layer:
 
 ```zax
-myArray[0] = 10      // error: mutates the current immutable array
-myArray.resize(6)    // error: mutates the current immutable array
-myArray .= replacement
-// valid when replacement satisfies the array and storage contracts
+pool : MyMessage move[0..] storage type MyStorage immutable move
 ```
 
-`writable` is meaningful here because it permits whole-value replacement; it
-does not make immutable elements mutable.
+Storage clauses are explained under [storage strategies](#storage-strategies),
+and stances under [stances on elements and slices](#stances-on-elements-and-slices).
 
 ## Slice qualification and narrowing
 
@@ -738,8 +772,11 @@ T <element/type qualifiers> [] <slice qualifiers>
 
 Words before `[]` describe access to the elements. Words after `[]` describe
 the slice descriptor—its current start, length, origin, and validity state.
+The descriptor has qualifiers but no stance: a slice can always be copied,
+and copying it copies only the window. What may be built from the elements is
+the subject of [stances on elements and slices](#stances-on-elements-and-slices).
 
-Creating a slice may preserve or reduce the source authority. It cannot make a
+Creating a slice may keep or reduce the access the source gives. It cannot make a
 readonly element writable, make immutable state mutable, or extend an element's
 lifetime.
 
@@ -766,6 +803,182 @@ retain a view into an expiring temporary.
 
 An element reference obtained before descriptor narrowing remains bound to its
 original selected element.
+
+## Stances on elements and slices
+
+A [transfer stance](transfer-stances.md) says what may be built from a value:
+a copy, a new value that takes its contents, or nothing at all. An array
+holds its elements, so, like an optional, it can carry two stances. A slice
+holds none of its elements, so the only stance it carries is the stance of the
+elements it shows.
+
+### A stance on each element
+
+A stance written before `[` belongs to each element. A stance written after
+`]` belongs to the array itself:
+
+```zax
+consume final : ()(message : MyMessage) = {
+}
+
+messages : MyMessage move[4] move    // each element: move; the array itself: move
+
+consume(messages[0])                 // error: the element is move; write as move or as last
+consume(messages[0] as move)         // fine: the array's owner may move an element out
+other := messages                    // error: the array is move; write as move or as last
+other := messages as move            // fine: moves the array, and so moves each element
+```
+
+Elements behave like members of the array. Each element follows its own
+stance, and the array's owner writes stances on elements just as it writes
+them on members. The array's own stance covers only transfers of the whole
+array, so pinning an array does not pin its elements:
+
+```zax
+queue : MyMessage[0..] loan          // a pinned array of copy elements
+consume(queue[0] as move)            // fine: the element is copy, so its owner may move it
+other := queue as move               // error: the array itself is pinned
+```
+
+Copying or moving a whole array copies or moves every element, so the element
+stance limits which stances the array can have:
+
+| Element stance | Stances the array may have |
+| --- | --- |
+| `copy` | any |
+| `move` | `loan`, `move`, `last` |
+| `last` | `loan`, `last` |
+| `deep` | `loan`, `deep` |
+| `loan` | `loan` |
+
+When you leave the array's own stance out, it is the same as the element
+stance, which the table always allows:
+
+```zax
+messages : MyMessage move[4]         // the array is move too
+plain : MyMessage[4]                 // no element stance: copy elements and a copy array
+pinned : MyDevice loan[4]            // the array is pinned too
+```
+
+This also means aliases and generics work without specifying explicit
+defaults. A stance that arrives through an alias or a type parameter applies
+to the element:
+
+```zax
+OwnedPayload :: alias type Payload move
+batch : OwnedPayload[4]              // move elements, so a move array
+
+MyHolder$ :: type (T : type) {
+  items : T[4]                       // valid for every T, whatever stance it carries
+}
+```
+
+### A new array starts with unmarked elements
+
+A stance restricts what may be built from one place, not every value that
+later comes from it. So a new array built from `messages` does not inherit
+its element stance, even when its elements were moved in:
+
+```zax
+messages : MyMessage move[4]
+moved := messages as move            // each element of moved is built by moving
+// moved is a MyMessage[4]: its elements are unmarked, so copy
+
+kept : MyMessage move[4] = messages as move   // write the stance to keep the restriction
+```
+
+If every value of a kind must be move-only wherever it is stored, put that on
+the type, with a `transfer` list, as
+[transfer lists on types and identities](transfer-stances.md#transfer-lists-on-types-and-identities)
+explains.
+
+### A slice has no stance of its own
+
+A slice reaches elements that an array owns. Each element it shows is reached
+as if through a `<stance> &` reference, and the stance written before `[]`
+says what the slice was given for each element. The ordinary rules for
+[references](transfer-stances.md#owners-and-borrowers) apply: a slice may pass
+on only the stance it was given.
+
+```zax
+inspectSome final : ()(values : MyMessage readonly loan[]) = {
+  show(values[0])                    // fine: lends the element
+  consume(values[0])                 // error: nothing may be built from a loan element
+}
+
+drainSome final : ()(values : MyMessage mutable writable move[]) = {
+  consume(values[0] as move)         // fine: the slice was given move for each element
+  consume(values[0] as last)         // error: a slice given move may pass on only move
+}
+```
+
+A slice parameter, like a reference parameter, must write its element stance.
+Even a slice of plain integers needs one word:
+
+```zax
+total final : (result : Integer)(values : Integer[]) = {   // error: write an element stance
+}
+
+total final : (result : Integer)(values : Integer loan[]) = {
+  // fine: total only reads the elements
+}
+```
+
+A slice declared from one visible array takes its element stance from that
+array's elements, limited to stances that leave the elements unchanged, as
+for [references you declare](transfer-stances.md#references-you-declare):
+
+```zax
+messages : MyMessage move[8] move
+window := messages[1..<4]            // the elements are move, so window gets loan:
+                                     // it can use them but can't move their contents out
+drained : MyMessage move[] = messages[..] as move   // the owner gives move for each element
+```
+
+A stance written on a slice with `as` applies to its elements, because the
+slice has no stance of its own. Writing `as last` on a slice that was given
+`last` passes `last` on for each element; it does not finish the window. Assigning
+or passing a slice by value only copies its window, so there is no separate
+way, or need, to move a slice.
+
+A reference to a slice is written the same way, with the element stance
+before `[]`. Only the descriptor's qualifiers may follow `[]`:
+
+```zax
+narrow final : ()(values : Integer loan[] &) = {
+  values = values[1..]               // narrows the caller's slice
+}
+
+checksum final : (result : U32)(data : Byte readonly loan[] readonly &) = {
+  // the elements are read-only, and the window can't be narrowed
+}
+```
+
+### A slice given `last`
+
+The rules of a `last &` reference apply to every element of a slice given
+`last`. The slice may lend the elements or pass `last` on. It may not copy
+them, because two holders of `last` for the same element could both finish
+it:
+
+```zax
+whole : MyMessage last[] = messages[..] as last
+
+peek : MyMessage readonly loan[] = whole      // fine: whole is lent, not given up
+twin : MyMessage last[] = whole               // error: whole may only lend or pass last on
+
+keep final : ()(message : MyMessage) = {
+}
+
+keep(whole[0])                                // error: whole holds last, not copy
+keep(whole[0] as last)                        // fine: the element is passed on with last
+```
+
+To get a copy of an element from a `last` slice, pass the element on with
+`as last` to code that owns the result, such as `keep` above; that code may
+then copy it, because its parameter is its own value. Giving `last` to
+elements that stay in place leaves them finished inside their array, which
+[finishing elements in place](#finishing-elements-in-place) explains.
 
 ## Slice lifetime and invalidation
 
@@ -921,6 +1134,178 @@ In general, an overlapping bulk mutation behaves as if source values needed by
 later writes were saved before the first conflicting write. A separate
 directional operation may offer a cheaper explicit contract.
 
+## Taking elements out with `take`
+
+Direct splice mutation can remove elements, but it destroys them. To hand
+elements on while removing them, write `take` before the array and range:
+
+```zax
+messages : MyMessage[0..] = [ a, b, c, d, e, f ]
+
+batch := take messages[2..<5]        // batch is a new array holding c, d, e
+messages.length()                    // 3: messages now holds a, b, f
+```
+
+`take` builds a new owning array from the range and removes that range from
+the source at once. Each element is handed over with `last`, falling back to
+`move` and then `copy`, chosen from what the element's type can do. The later
+elements then shift down to close the gap. The source stays a normal, fully
+usable array; it is just shorter.
+
+Like direct splice mutation, `take messages[2..<5]` is one operation on the
+array and the range together. It does not first make a slice and then take
+from it.
+
+### Passing taken elements on
+
+`take` binds before `as`, so a stance written after it applies to the new
+array. Handing the elements straight to a function usually wants `as last`,
+and `last messages[2..<5]` is a shortcut for exactly that:
+
+```zax
+consumeAll final : ()(values : MyMessage last[]) = {
+}
+
+inbox : MyMessage[0..] = [ a, b, c, d, e, f, g, h ]
+consumeAll(take inbox[2..<5] as last)    // the new array's elements are given last
+consumeAll(last inbox[2..<5])            // the same, with the shortcut: takes what are now
+                                         // elements 2, 3, and 4
+```
+
+Any stance may follow `take`, but the taken elements are destroyed when the
+new array ends anyway, so `as last` gives the receiver the most freedom at no
+extra cost.
+
+### The type of the taken array
+
+The new array's length range is every count the `take` could produce. This
+follows the same rule as joining with `<+>`:
+
+```zax
+messages : MyMessage[0..8]
+window := take messages[2..<5]       // MyMessage[3]: the range always holds three
+tail := take messages[k..]           // MyMessage[0..8]: at most what messages can hold
+
+bounded : MyMessage[3..8]
+spare := take bounded[k..]           // MyMessage[0..5]: bounded must keep at least three
+```
+
+The new array gets its storage the way any new array does. When you write the
+destination's type, its storage clause decides, and `take` builds directly
+into it, with no second move. Passing the result to a by-value array parameter
+works the same way: the parameter's declared storage decides. Otherwise the
+new array uses the current [`___` execution context](execution-context.md)'s
+default. It never uses the source's provider implicitly, because that
+provider may serve only the source; to share it, name it in the destination's
+type with `storage provider`.
+
+```zax
+kept : MyMessage[0..] storage type MyStorage = take messages[2..<5]
+                                     // built directly into a MyStorage provider
+loose := take messages[0..<2]        // built with the context's default storage
+```
+
+### What `take` needs
+
+- **A resizable array.** A fixed array cannot change length, so it cannot
+  `take`.
+- **Room above the minimum.** `take` cannot leave fewer elements than the
+  array's declared minimum. When the count is known, that is a compile-time
+  error; otherwise it is checked, and panics, as `resize` does.
+- **Elements that may leave.** `take` hands each element over with `last`, so
+  the element stance must allow that. Pinned elements allow nothing to be
+  built from them, and `deep` elements allow only independent copies, so
+  neither can be taken. To move `deep` elements elsewhere, copy them with
+  `as deep` and then remove them.
+- **Write access to the array.** `take` changes the array's length, so it
+  needs the same `mutable writable` access as `values[2..4] = []`. The array's
+  own stance is not involved.
+
+```zax
+shortlist : MyMessage[3..8] = [ a, b, c, d, e ]
+consumeAll(take shortlist[0..<2] as last)    // fine: three elements remain
+consumeAll(take shortlist[..] as last)       // error: would leave none, below the minimum of three
+
+devices : MyDevice loan[0..]
+take devices[0..<1]                       // error: nothing may be built from a pinned element
+```
+
+`take` through a writable reference to someone else's array needs nothing
+written at the call, as `resize` and direct splice removal need nothing: the
+caller's array is simply shorter afterward, and nothing finished is left in
+it.
+
+### `take` on a slice
+
+On a slice, `take` shrinks the slice instead of the array. The elements stay
+where they are; the result is a shorter slice holding the stance the source
+held for those elements, and the source no longer covers them. Writing
+`as last` passes that stance on to the new slice:
+
+```zax
+letters : MyMessage[8]
+whole : MyMessage last[] = letters[..] as last    // covers elements 0..<8 of letters
+front := take whole[..<2] as last        // front covers 0..<2; whole now covers 2..<8
+back := take whole[4..] as last          // back covers 6..<8; whole now covers 2..<6
+rest := take whole[..] as last           // rest covers 2..<6; whole is now empty
+```
+
+The comments name positions in the underlying array. Indexes written on a
+slice count from the slice's own start, so after the first `take`,
+`whole[4..]` begins at the array's element 6.
+
+A slice is one window, so it can give up only a range from its start, a range
+to its end, or everything. The range must be written in one of those shapes,
+`[..<n]`, `[..n]`, `[n..]`, or `[..]`, so you and the compiler can both see
+which end it comes from:
+
+```zax
+middle := take whole[1..<2] as last      // error: a slice can only give up a range
+                                         // from its start or to its end
+part := take whole[a..<b] as last        // error, even if a is 0 at runtime: write [..<b]
+```
+
+For a middle piece, take twice: first the front part, then the piece you want
+from what remains. Each take on a slice costs only a little arithmetic on the
+window, so splitting a slice several ways is cheap:
+
+```zax
+partA := take whole[..<4] as last
+partB := take whole[..<4] as last
+partC := take whole[..] as last
+```
+
+Without `as last`, the new slice is bound like any slice taken from a holder of
+`last`, so it gets `loan` and may only look at the elements. That skips them:
+they are not finished, but `whole` no longer covers them and the new slice
+can't finish them, so they stay as they are until the array's destructor
+destroys them:
+
+```zax
+skipped := take whole[..<1]              // skipped may only look at that element
+```
+
+This is the one place `take` behaves differently on arrays and slices with no
+stance. On an array, `take` always builds a new array that owns the
+elements; on a slice, it can only hand on the stance the slice was given.
+
+`last whole[..<4]` is the shortcut for `take whole[..<4] as last` on a slice
+too. On a slice given only `copy` or `move`, it is an error, because that
+slice was never given `last`.
+
+### Costs
+
+- Taking from an array moves each taken element into the new array, then
+  shifts the later elements down. Taking from the end shifts nothing.
+- Taking from a slice moves nothing.
+
+For an array whose minimum is zero, `take messages[..]` and
+`messages as move` both leave `messages` empty, but they differ. `take`
+builds a new array and moves each element into it, and `messages` keeps its
+storage and capacity. `as move` transfers the whole array, and an array whose
+storage comes from a [storage provider](#storage-strategies) may hand its
+storage block over without touching any element.
+
 ## Growing, shrinking, and resizing
 
 These required callables return no result:
@@ -991,7 +1376,63 @@ reconstruction as required by the selected element contract.
 If an element type cannot perform the required construction, transfer, or
 replacement, the array operation is unavailable.
 
+Arrays sometimes relocate elements so they can grow and shrink. The most
+efficient way to relocate an element is to pass it on with `last`, so the
+array relocates elements with `last`, falling back to `move` and then `copy`
+when the element's type has no `last` or the element's qualifiers rule it out.
+A stance declared on the elements doesn't change this, except a `loan` stance,
+explained below:
+
+```zax
+archives : MyArchive deep[0..]
+archives.reserve(64)            // fine: relocation uses MyArchive's own last, move, or copy
+keep(archives[0])               // error: your code may build only independent copies
+
+frozen : MyMessage immutable[0..]
+frozen <+>= [ makeMessage() ]   // if this relocates, each element is copied:
+                                // last and move would have to change an immutable element
+```
+
+The one exception is a pinned element. A `loan` stance promises that the
+element's address never changes, and other code may rely on that, so any
+operation that could relocate pinned elements is an error, unless the array's
+storage provider offers a capability that guarantees stable element places.
+How an array requests such a capability is not settled yet.
+Using pinned elements is always fine; only relocating them is refused:
+
+```zax
+devices : MyDevice loan[0..]
+devices[0].start()              // fine: nothing moves
+devices <+>= [ makeDevice() ]   // error: growing may relocate pinned elements
+
+fixedDevices : MyDevice loan[4] // a fixed array never grows, shrinks, or relocates,
+                                // so pinned elements are a natural fit
+```
+
 ## Storage strategies
+
+An array keeps its elements in one of two ways:
+
+- **Inline storage:** the elements live inside the array value itself, the
+  way a C array sits inside a struct or on the stack. Such an array cannot
+  hand its storage to another array, and cannot grow past the room built into
+  it, so a resizable inline array needs a fixed maximum, such as
+  `MyMessage[0..8]`.
+- **Provider-backed storage:** the array value holds a handle to a block of
+  storage that a separate **storage provider**, such as an arena, manages for
+  it. The array can hand the whole block to another array, and grows by asking
+  the provider for more. When a provider-backed array names no provider, the
+  current [`___` execution context](execution-context.md) may supply one,
+  such as a default arena.
+
+An array's **storage profile** records which of the two it uses and, for a
+provider-backed array, which provider and capabilities. It affects what a
+transfer of the whole array can do, as
+[copy, deep, move, and last](#copy-deep-move-and-last) shows, and what an
+array costs. An array with no maximum, such as `Integer[0..]`, is always
+provider-backed, because inline storage needs a fixed amount of room. Which
+profile a fixed or bounded array gets when no storage clause is written is not
+yet settled; write a storage clause when the difference matters.
 
 An array keeps the same logical behavior while different storage providers
 organize its raw backing:
@@ -1178,27 +1619,245 @@ share internal resources according to that element type's contract.
 `deep` also creates independent array storage and requires every element to
 support its exact deep-copy contract. It never falls back to ordinary copy.
 
-An array using inline storage cannot donate that enclosing storage:
+### What `move` leaves behind
 
-- `move` transfers each element while leaving a valid moved-from element in the
-  source array.
-- `last` may take more resources from each element because the source only needs
-  to remain safe to destroy.
+`moved := recent as move` builds a new array and moves every element of
+`recent` into it. Afterward, `recent` has its declared minimum length, and each element it
+keeps is moved-from. Elements above the minimum are destroyed, from the
+highest index down, as a shrink destroys them. The source keeps its storage,
+and with it its capacity, unless it hands its whole storage block over to the
+new array, as described below.
 
-A provider-backed array—including a fixed-length one—may transfer its complete
-provider participation and unique backing handle when the destination accepts
-them. `move` may do so only if the source remains a valid live moved-from array.
-`last` only needs to leave enough local state for one correct destruction.
+```zax
+recent : MyMessage[0..8]           // minimum 0
+recent <+>= [ a, b, c, d, e ]
+moved := recent as move            // moved gets all five
+recent.length()                    // 0: the minimum is 0, so nothing is kept
 
-Copying or moving a slice affects its window description only. It never
-implicitly copies or moves borrowed elements and cannot transfer the unique
-backing handle.
+window : MyMessage[3..8]           // minimum 3
+window <+>= [ a, b, c, d, e ]
+moved2 := window as move           // moved2 gets all five
+window.length()                    // 3: elements 0, 1, and 2 are kept, moved-from;
+                                   // elements 3 and 4 are destroyed
 
-A slice is a borrower that was never given `last`, so `slice as last` is an
-error: only the array that owns the storage can hand it over. Storage-assisted
-transfer of an element range therefore needs a consuming operation rooted in
-the owning array. Future storage work may detach complete chunks or fall back
-to elementwise transfer.
+pair : MyMessage[4]                // fixed: the minimum and maximum are both 4
+moved3 := pair as move             // moved3 gets all four
+pair.length()                      // 4: every element is kept, moved-from
+```
+
+A fixed array is simply the case where the minimum is the maximum, so nothing
+is destroyed. On a resizable array, `move` runs one destructor for each
+element above the minimum.
+
+An `immutable` array can't change length, so `move` leaves it at its current
+length instead of its minimum. Its elements are left moved-from when they are
+mutable. When the elements are immutable too, nothing can be moved out of
+them, so `move` falls back to copying, as it does for any immutable value:
+
+```zax
+frozenList : MyMessage[0..] immutable = [ a, b, c ]
+moved := frozenList as move        // moved gets all three
+frozenList.length()                // 3: an immutable array keeps its length;
+                                   // its mutable elements are now moved-from
+
+sealed : MyMessage immutable[0..] immutable = [ a, b, c ]
+copied := sealed as move           // copies: immutable elements can't be moved from
+```
+
+How the elements get to the new array depends on the
+[storage profile](#storage-strategies):
+
+- An inline array cannot hand its storage over, so `move` moves each element
+  into the new array's storage.
+- A provider-backed array may hand its whole storage block over, without
+  touching any element, only when its minimum is 0: the source is then left
+  with no elements and no block. With a minimum above 0, the source still
+  needs storage for the elements it keeps, so each element is moved instead,
+  and the source keeps its block. Getting a fresh block for the minimum would
+  hide an allocation inside `move`.
+
+### What `last` leaves behind
+
+After `last`, the source only has to be safe to destroy, not usable, so it
+needn't keep any elements or storage. A provider-backed array may therefore
+always hand its block over on `last`, even a fixed one. An inline array still passes each
+element on, because inline storage cannot be handed over.
+
+### Passing a slice on
+
+Assigning or passing a slice copies only its window. It never copies or moves
+the elements, and it never hands over the array's storage; only the array
+that owns the storage can do that. A stance written on a slice applies to its
+elements, as
+[stances on elements and slices](#stances-on-elements-and-slices) explains.
+To hand a range of elements on and remove it from the array, use
+[`take`](#taking-elements-out-with-take).
+
+## Finishing elements in place
+
+Writing `last` on an element, or on a range of elements, that stays inside its
+array leaves those elements finished: they may only be destroyed or replaced.
+The array itself is not finished. It just holds elements that later code must
+not use, so it becomes **partially finished**. The same applies to a slice
+whose elements were given `last`.
+
+A partially finished array:
+
+- does not survive as a whole: copying it, moving it, passing it whole, and
+  ordinary iteration over it are errors;
+- still answers questions about itself that don't touch any element, such as
+  `length()` and its capacity, so a loop can still count its elements;
+- may still be destroyed or replaced, like any finished value;
+- allows a use of one element (reading it, lending it, or writing `last` on
+  it) only when the compiler can prove that element was not finished.
+
+Writing `last` on elements of an array whose elements are all unfinished is
+always allowed. The error appears at a later use that the compiler cannot
+prove safe:
+
+```zax
+consumeAll final : ()(values : MyMessage last[]) = {
+}
+
+messages : MyMessage[0..]
+consumeAll(messages[2..<5] as last)  // fine: messages is now partially finished
+messages[0].send()                   // fine: 0 is outside 2..<5
+other := messages                    // error: messages is partially finished
+```
+
+With indexes known only at runtime, the compiler usually can't tell which
+elements were finished:
+
+```zax
+inbox : MyMessage[0..]
+dispatch(inbox[i] as last)           // fine: every element was unfinished
+dispatch(inbox[j] as last)           // error: the compiler can't prove j differs from i
+```
+
+Constant indexes are different, because the compiler can see them:
+
+```zax
+pair : MyResource[2]
+first := pair[0] as last             // fine
+second := pair[1] as last            // fine: a different element
+pair[0].close()                      // error: pair[0] was finished
+```
+
+To keep the array whole, use [`take`](#taking-elements-out-with-take)
+instead. It removes the elements rather than leaving finished ones behind.
+
+### What the compiler can prove
+
+Every compiler accepts the same programs that finish elements in place,
+because the language lists the cases every compiler must prove:
+
+1. **Constant indexes:** `pair[0]` and `pair[1]` are different elements.
+2. **Constant ranges:** `messages[0]` is outside `messages[2..<5]`.
+3. **The finishing loop:** `each message : in messages as last` finishes each
+   element exactly once.
+4. **A plain index loop:** the loop variable is the only index used on the
+   array, the loop doesn't change it, and each pass touches only
+   `messages[i]`. After such a loop, every element it covered counts as
+   possibly finished, unless every pass ends by replacing that element, as
+   [replacing finished elements](#replacing-finished-elements) shows.
+
+```zax
+outbox : MyMessage[0..]
+each i : in 0..<outbox.length() {
+  dispatch(outbox[i] as last)        // fine: each pass has a different i
+}
+
+queue : MyMessage[0..]
+each i : in 0..<queue.length() {
+  if urgent(queue[i]) {
+    dispatch(queue[i] as last)       // element i may now be finished
+  }
+}
+queue[0].send()                      // error: queue[0] may have been finished in the loop
+```
+
+A use outside these cases needs an `unsafe` block, even when your compiler
+can prove it safe, so the program compiles the same way everywhere; in the
+block, you take responsibility for the use, as
+[safety and analysis](safety-and-analysis.md#unproved-but-valid) describes. A
+compiler that can prove the block safe can confirm it with a `[<safe=…>]`
+directive naming that compiler, which records that the `unsafe` was checked
+rather than only asserted. The directive's exact form is still being
+designed.
+
+### Replacing finished elements
+
+A finished element can be replaced in place with `.=`. Once every finished
+element is proven replaced, or gone, the whole array is usable again:
+
+```zax
+messages : MyMessage[0..]
+each i : in 0..<messages.length() {
+  dispatch(messages[i] as last)       // element i is finished
+  messages[i] .= makeMessage()        // replaced in place: element i is live again
+}
+send(messages)                        // fine: every pass ended by replacing its element
+```
+
+Replacement must build a new element. Ordinary assignment with `=` runs the
+existing element's assignment, which needs a live element, and a finished
+element may only be destroyed or replaced:
+
+```zax
+batch : MyMessage[0..]
+dispatch(batch[3] as last)
+batch[3] = fresh()                    // error: = assigns into a finished element
+batch[3] .= fresh()                   // fine: ends the finished element and builds a new one
+```
+
+Two other ways to replace finished elements:
+
+```zax
+consumeAll(batch[2..<5] as last)
+batch[2..<5] = [ a, b, c ]            // a direct splice destroys the finished elements and
+                                      // builds new ones: the range is live again
+batch .= freshArray()                 // replacing the whole array ends every old element
+```
+
+A function that was given `last` and replaces elements in its own body does
+not restore the caller's view: the caller still treats the elements it gave
+up as finished.
+
+### Finishing elements through a borrowed array
+
+Finishing an element in place always needs the caller to write `last` at the
+call, so anyone reading the call sees that elements may be finished. So
+through a reference to someone else's array, a
+function may move an element out, which leaves it usable, but may not finish
+it, unless the caller gave up the whole array with `as last`:
+
+```zax
+finishFirst final : ()(values : MyMessage[0..] mutable writable loan &) = {
+  consume(values[0] as move)              // fine: the element stays usable
+  consume(values[0] as last)              // error: a borrowed array allows move, not last
+  consumeAll(take values[0..<1] as last)  // fine: the element leaves the caller's array
+}
+
+finishAll final : ()(values : MyMessage[4] mutable writable last &) = {
+  consume(values[0] as last)              // fine: the caller gave up the whole array
+  consume(values[1] as last)
+}
+
+messages : MyMessage[0..]
+finishFirst(messages)                     // nothing written: messages may be shorter afterward
+
+fixed : MyMessage[4]
+finishAll(fixed as last)                  // the caller writes last on the whole array
+```
+
+Members follow a looser rule, including members of an element: a function
+with writable access may finish a member with `as last`. A finished member
+sits inside a value whose type defines how it is copied, replaced, and
+destroyed, and those operations must already cope with a finished member. A
+finished element would sit inside an array, and the language itself
+implements copying, iterating, and destroying an array; those operations
+expect every element to be live.
+[Members](transfer-stances.md#members) explains the member rule.
 
 ## Joining arrays
 
@@ -1237,9 +1896,13 @@ joined := left <+> right            // error: no stance means copy, and left is 
 reused := left as last <+> right    // fine: the result may reuse left's storage
 ```
 
-A compatible provider-backed left array may donate its unique backing handle.
-An ordinary copy may retain the same shared provider while requesting another
-unique handle. Suggested capacity does not propagate to the new array.
+With `as last`, or `as move` when its minimum length is zero, a compatible
+provider-backed left array may hand its whole storage block to the result. Otherwise the result gets new
+storage the way any new array does: from the storage clause of the
+destination's type when one is written, and from the `___` context's default
+when not. It never takes new storage from the left array's provider
+implicitly, because that provider may serve only the left array. Suggested
+capacity does not propagate to the new array.
 
 The current result length is the checked sum of input lengths. Static bounds add
 in the same way:
@@ -1252,11 +1915,9 @@ Integer[1..4] <+> Integer[2..<5] -> Integer[3..8]
 An open input maximum produces an open result maximum. If the current sum
 cannot fit `IndexSize`, the operation panics.
 
-The left input supplies the result element type. With no explicit destination
-provider, storage selection may reuse the left provider or use the applicable
-default according to the selected `copy`, `move`, or `last` contract. A slice
-left has no unique backing handle to donate and therefore constructs a new
-owning result.
+The left input supplies the result element type. A slice left has no storage
+block to hand over, so the result always gets new storage, as described
+above.
 
 `<+>=` retains the left array's type, so its new length must fit the existing
 limits. A fixed array has no mutating join when the source might contribute an
@@ -1278,9 +1939,12 @@ between two and ten elements. A known impossible size is a compile-time error;
 otherwise the call checks the current length and panics when it does not fit.
 
 The source's `copy`, `deep`, `move`, or `last` stance controls how the local
-array is constructed. With no explicit storage requirement, construction may
-reuse the source provider or choose the destination context's default. Once
-constructed, the local array may resize within its own declared limits.
+array is constructed. With `as last`, or `as move` when its minimum length is
+zero, a provider-backed source may hand its whole storage block over, when the
+parameter can use storage from that provider. Otherwise, with no storage requirement on the parameter, the
+local array gets new storage from the `___` context's default, never
+implicitly from the source's provider. Once constructed, the local array may
+resize within its own declared limits.
 
 A by-value parameter naming a provider instance constructs into that provider.
 A parameter naming only `storage type MyStorage` obtains a provider of that
@@ -1383,16 +2047,69 @@ it needs no size-changing capability. Ordinary writable references retain the
 runtime checks; a future no-panic capability contract may impose stronger
 static requirements.
 
+### Element stances in an array reference
+
+An element stance written inside a reference parameter says what the function
+may do with the elements. The caller's elements must allow it, by the same
+table as for passing a value you own to a reference:
+
+| Caller's element stance | Element stances the parameter may name |
+| --- | --- |
+| `copy` | any |
+| `move` | `loan`, `move`, `last` |
+| `last` | `loan`, `last` |
+| `deep` | `loan`, `deep` |
+| `loan` | `loan` |
+
+```zax
+inspect final : ()(values : MyMessage loan[4] readonly loan &) = {
+  show(values[0])                       // fine: lends the element
+}
+
+drain final : ()(values : MyMessage move[4] mutable writable loan &) = {
+  consume(values[0] as move)            // fine: move elements, and writable access
+}
+
+copyAll final : ()(values : MyMessage[4] readonly loan &) = {
+  keep(values[0])                       // fine: unmarked elements are copy
+}
+
+messages : MyMessage move[4] move
+inspect(messages)                       // fine: move elements allow loan
+drain(messages)                         // fine: move elements allow move
+copyAll(messages)                       // error: move elements don't allow copy
+
+plain : MyMessage[4]
+copyAll(plain)                          // fine
+```
+
+An unmarked element stance means `copy`, so `values : Integer[5] loan &`
+accepts any array whose elements allow copying. A parameter that names `loan`
+elements accepts any array and only looks at it.
+
+A reference to an array refers to the whole array, and the array's elements
+are its members. So, as with any member, writable access decides whether the function
+may move an element out, within what the element stance allows: `copy`
+elements may be moved, because their owner could. A slice is different: it
+reaches each element directly, so it may pass on only the stance it was
+given. Through a writable array reference, the function may move elements out
+but may not finish them, as
+[finishing elements through a borrowed array](#finishing-elements-through-a-borrowed-array)
+explains.
+
 ### Passing a slice
+
+A slice parameter's declaration includes the stance the function needs for
+each element:
 
 ```zax
 inspect final : ()(
-  values : Integer[]
+  values : Integer loan[]
 ) = {
 }
 
 narrow final : ()(
-  values : Integer[] loan &
+  values : Integer loan[] &
 ) = {
 }
 ```
@@ -1400,8 +2117,61 @@ narrow final : ()(
 Passing a slice by value copies its window description, not its elements.
 Passing it by reference lets the callee narrow the caller's slice descriptor.
 
-Passing an array where a slice is expected may create a temporary slice for the
+Passing an array where a slice is expected creates a temporary slice for the
 call. Narrowing that temporary does not change a separately named caller slice.
+A stance written on the array at such a call applies to its elements, just as
+a stance written on a reference argument applies to the value it refers to:
+
+```zax
+drainSome final : ()(values : MyMessage mutable writable move[]) = {
+  consume(values[0] as move)
+}
+
+messages : MyMessage[8]
+drainSome(messages)                   // error: the parameter needs move for each element
+drainSome(messages as move)           // each element is given move; messages stays usable
+drainSome(messages as last)           // each element is given last: messages is partially
+                                      // finished, with every element given last
+```
+
+A slice is never converted into a new array implicitly. Building an array
+copies or moves every element, and the source should show that:
+
+```zax
+keepAll final : ()(values : MyMessage[0..]) = {
+}
+
+window := messages[2..<5]
+keepAll(window)                      // error: a slice is not an array
+keepAll([ from window ])             // fine: builds a new array from the slice's elements
+```
+
+### When an array fits both an array and a slice parameter
+
+If a function has one version that takes an array by value and another that
+takes a slice, a call with an array and a stance fits both, and is ambiguous:
+
+```zax
+process final : ()(values : MyMessage[0..]) = {                      // builds a new array
+}
+
+process final : ()(values : MyMessage mutable writable move[]) = {   // borrows the elements
+}
+
+backlog : MyMessage[0..]
+process(backlog as move)              // error: ambiguous
+process(backlog[..] as move)          // the slice version: the argument is already a slice
+process(backlog as copy)              // the array version: the slice version needs move
+```
+
+The by-value version matches `backlog`'s type exactly, and the slice version
+matches the stance exactly, so neither is better; the general rule is in
+[function invocation](function-invocation.md#transfer-aware-value-and-reference-parameters).
+The two versions would also leave `backlog` in different states: the array
+version moves the whole array, which leaves `backlog` empty, while the slice
+version leaves its length unchanged and its elements moved-from.
+If callers will need `as move` or `as last` with whole arrays, give the two
+functions different names.
 
 ### Size of an array value and reference
 
@@ -1445,6 +2215,17 @@ non-reference binding constructs a separate value for every pass.
 Changing an element is allowed when its qualifications permit. An operation
 that might change array length, positions, or backing invalidates direct
 traversal instead of changing its remaining work.
+
+A stance written on the source gives each element that stance. Writing
+`as last` finishes each element exactly once, so it is the usual way to
+consume a whole array:
+
+```zax
+each message : in messages as last {
+  dispatch(message as last)
+}
+// messages is partially finished, with every element given last
+```
 
 `each from` remains available through cursors for controlled erasure, reverse or
 filtered order, and specialized progression. Direct traversal does not secretly
@@ -1602,6 +2383,19 @@ Intrinsic array source rejects a known:
 - exact initializer count mismatch;
 - requested length outside its declared limits;
 - fixed-array resize;
+- slice parameter, slice reference, or slice member without an element
+  stance;
+- stance that an element stance does not allow, on the array or on an array
+  reference parameter;
+- `take` on a fixed array, below the minimum, or on pinned or `deep`
+  elements;
+- `take` on a slice with a range not written from its start, to its end, or
+  as `[..]`;
+- relocating operation on pinned elements;
+- use of a partially finished array as a whole, or of an element not proven
+  unfinished;
+- `last` on an element reached through a borrowed array;
+- call that fits both a by-value array version and a slice version;
 - capacity request beyond a finite maximum;
 - foreign slice used to mutate another array;
 - incompatible nested or committed element type; or
@@ -1629,7 +2423,11 @@ Depending on the operation and type, array code may perform:
 - default, copy, deep, move, or last element construction;
 - reverse element destruction;
 - backing allocation, reservation, trimming, and recovery;
-- full relocation or affected-suffix movement;
+- full relocation or affected-suffix movement, including copying elements that
+  are immutable and so cannot be moved;
+- moving each taken element into the new array, then shifting later elements
+  down;
+- destroying the elements above the minimum after `move`;
 - temporary capture for overlapping mutation;
 - slice descriptor copying;
 - slice origin and validity checks;
@@ -1696,7 +2494,8 @@ Still future:
 - storage-clause and storage-capability syntax;
 - stability token/version representation;
 - shared/default provider factories and context hooks;
-- consuming range/chunk transfer;
+- detaching whole storage chunks for `take`, instead of moving each element;
+- which storage profile an array declared without a storage clause gets;
 - provider-specific and erased handle APIs;
 - explicit storage-change source;
 - exact optional/reporting callable names;

@@ -206,6 +206,52 @@ Each entry preserves:
   than the behavior being taught; a known compile error must be marked in code.
 - **Disposition.** Open.
 
+### A prerequisite map for concepts
+
+- **Concern.** A reader, human or agent, needs to know which concepts a
+  concept depends on before reading it. Today that knowledge exists only
+  implicitly, in links and in prerequisites each owner repeats. An agent that
+  misses one reads a later section wrongly.
+- **Representative example.** Understanding a slice parameter such as
+  `values : Integer loan[]` requires references and their stances, which
+  require owners and borrowers, which require what a stance says may be built
+  from a value. Nothing lists that chain; a reader reaching
+  [arrays and slices](../../language/arrays-and-slices.md) first has to find
+  it by following links.
+- **Why local review misses it.** Each owner can teach its own prerequisites
+  well while no document shows the dependency order across all of them.
+- **Likely owners.** [Language-design terms](../../language/terms.md) or a new
+  router, with criteria owned by
+  [documentation architecture](../documentation.md).
+- **Resolution.** A map, for each concept, of the concepts it depends on,
+  usable as a reading order, kept consistent with the owners.
+- **Activation pressure.** The documentation clean-up after the main
+  specification is done, or primer work in
+  [learning routes](learning-routes.md).
+- **Current constraints.** The map routes; it does not define concepts, which
+  stay with their owners.
+- **Disposition.** Open.
+
+### `terms.md` carries too much code
+
+- **Concern.** [Language-design terms](../../language/terms.md) is a lookup
+  document, but many entries teach behavior with code that their owners
+  already teach. Lookup is easier when an entry defines the term in words and
+  links to the owner that teaches the code.
+- **Representative example.** An entry such as "Declared stance" includes a
+  worked example and several rules that [transfer
+  stances](../../language/transfer-stances.md#declaring-stances) owns; a
+  definition in words plus that link would serve a reader looking the term up.
+- **Why local review misses it.** Each entry is accurate where it stands; the
+  weight shows only when the glossary is read as a whole.
+- **Likely owners.** `terms.md`, with the owners its entries link to.
+- **Resolution.** Each entry defines its term in words and links to the owner
+  that teaches it, keeping code only where it explains the term best.
+- **Activation pressure.** The documentation clean-up after the main
+  specification is done.
+- **Current constraints.** Code stays where it is the clearest definition.
+- **Disposition.** Open.
+
 ### Numbered-work provenance in current owners
 
 - **Concern.** Current programmer-facing owners must not cite numbered work items

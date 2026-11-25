@@ -266,8 +266,9 @@ each element : Integer readonly & in values {
 
 A loop variable written as a reference is bound to one visible element, so
 with no stance written it takes its stance from that element, like any
-reference bound to one visible value. The elements here have no declared
-stance, so they are `copy`, and `element` may be copied from. To only lend,
+reference bound to one visible value. The elements here declare no stance,
+so they are `copy`, and `element` may be copied from. If the array were
+declared `Integer move[0..]`, `element` would get `loan`. To only lend,
 write `Integer readonly loan &`. A stance that would let the loop variable
 take from the element, `move &` or `last &`, must also be written on the loop
 source, as in `in values as move` for `move &`. See

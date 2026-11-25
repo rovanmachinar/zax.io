@@ -516,16 +516,28 @@ On the type-use side, read outward from the base type:
 3. access capability;
 4. referent-place replacement;
 5. transfer stance, last on the layer;
-6. optional, pointer, or reference marker;
+6. optional, pointer, reference, array, or slice marker;
 7. then the independently qualified outer layer, when another layer follows,
-   with its own pointer kind words, qualifiers, and stance;
+   with its own pointer kind words, qualifiers, and stance; an array layer is
+   written as its dimensions, then any storage clause, then its qualifiers,
+   then its stance;
 8. for a by-value parameter or result, `via` after the stance.
+
+The markers are spaced differently. `?` attaches to the name, qualifier, or
+stance word before it, and is spaced only after other punctuation, as in
+`MyValue readonly & ?`. `[` attaches to whatever comes before it, and several
+dimensions form one layer, as in `Integer[4][3]`. `*` and `&` are always
+separated by spaces. [Source structure](source-structure.md#optional-layers-and-empty-construction-packets)
+owns the exact spacing rules.
 
 ```zax
 source final : Payload immutable = makePayload()
 view final unpliable : Payload immutable readonly final loan & = source
 escape final unsafe pliable : Payload immutable readonly final & = source
 owner : Payload copy * unique writable move   // the Payload's stance, then the pointer layer's
+slot : Payload move? loan                     // the payload's stance, then the optional's
+pool : Payload move[0..] storage type MyStorage immutable move
+                                              // element stance; dimensions; storage; array qualifiers and stance
 item : MyItem copy via move                   // a by-value parameter: its stance, then via
 ```
 
@@ -887,9 +899,11 @@ worked-out generic type keeps the argument's qualifiers; see
 [supplying compile-time arguments](generics.md#supplying-compile-time-arguments).
 
 A capture keeps the captured variable's qualifiers or makes them stricter, and
-never takes on `unsafe pliable` from it. A reference capture is a declared reference:
-a `loan` when no stance is written, and it does not take on a stance declared
-on the variable it captures. The stance written when building a capture and
+never takes on `unsafe pliable` from it. A reference capture is a reference
+bound to one visible variable: when no stance is written, it takes its stance
+from that variable, as
+[references you declare](transfer-stances.md#references-you-declare) describes.
+The stance written when building a capture and
 the stance declared on the capture itself are separate; a stance declared on
 the capture is a requirement on later transfers from it. Complete examples belong to
 [Zax lambdas and callable composition](lambdas-and-callable-composition.md#source-stance-and-capture-stance-are-separate).
@@ -1029,7 +1043,7 @@ and protected barriers are defined by
 `?` forms an outward qualification layer:
 
 ```zax
-T q0 ? q1 * q2
+T q0? q1 * q2
 ```
 
 This reads as a `q2` pointer to a `q1` optional wrapper containing a `q0` boxed
@@ -1169,22 +1183,33 @@ member lifetimes. Complete admissibility and lens behavior belongs to
 
 ## Array and slice qualification
 
-An immutable array may still occupy a writable varying place:
+An owning array has two qualified layers: its elements, qualified before `[`,
+and the array itself, qualified after `]`. They are independent, as an
+optional's wrapper and payload are:
+
+```zax
+roster : MyMessage mutable[8] immutable      // fixed length; elements may change
+roster[0] = fresh()                          // fine: the elements are mutable
+roster.resize(9)                             // error: the array is immutable
+```
+
+`immutable` after `]` prevents changing the array's length, capacity,
+suggestion, or storage during the current array lifetime; `immutable` before
+`[` prevents changing the elements. An immutable array may still occupy a
+writable varying place:
 
 ```zax
 myArray varying :
   Integer[4 in 4..10] immutable writable varying = [ 1, 2, 3, 4 ]
 
-myArray[0] = 10   // error: mutates the immutable array
-myArray.resize(6) // error: mutates the immutable array
+myArray.resize(6) // error: changes the current immutable array
 myArray .= replacement
 // valid reconstructive replacement when the contracts match
 ```
 
-`immutable` prevents changing elements, length, capacity, suggestion, or
-storage during the current array lifetime. Type-side `varying`,
-declaration-side `varying`, and `writable` together still permit ending that
-lifetime and constructing a complete successor array in the same place.
+Type-side `varying`, declaration-side `varying`, and `writable` together
+permit ending the current array's lifetime and constructing a complete
+successor array in the same place.
 
 A slice has two separately controlled things:
 
@@ -1201,9 +1226,8 @@ Words before `[]` govern element access. Words after `[]` govern the slice
 window itself. A readonly window cannot be narrowed through that path, but an
 independently writable element path may still change an element.
 
-An owning array directly contains its elements, so making the array immutable
-also constrains contained element state. A slice only borrows elements; its
-window qualification does not replace their qualifications.
+A slice only borrows elements; its window qualification does not replace
+their qualifications.
 
 Creating or copying a slice can keep or reduce existing authority. It cannot
 turn readonly elements writable, make immutable state mutable, permit

@@ -164,6 +164,13 @@ configuration, so `build size of` would invite a different confusion. These
 toolchain facts were recalled rather than re-verified when recorded; the
 future guide should confirm them against current documentation.
 
+## Relation to learning routes
+
+The "if you know X, here is how Zax does it" bridges described in
+[learning routes](learning-routes.md) are one reader route this guide's content
+would serve. That input also records why such routes matter for AI readers,
+and the step-by-step primer that complements them.
+
 ## Activation pressure
 
 Create a future subject-specific numbered work item only when:

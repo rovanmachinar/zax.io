@@ -7,7 +7,7 @@
 | Applies To | Unresolved safety guarantees, domain categories, and comparative safety input |
 | Owns | Preservation of unresolved guarantee categories, domain-specific safety pressure, and comparison material |
 | Does Not Own | Current safe-subset, proof, unsafe-permission, and contract-evolution behavior ([safety and analysis](../../language/safety-and-analysis.md)); or accepted unsafe syntax |
-| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, `020`, `032`, and `038` (the rejected warning for members `last` may have taken); Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
+| Source / Provenance | Work items `001`, `005`, `006`, `012`, `015`, `020`, `032`, `038` (the rejected warning for members `last` may have taken), and `040` (exclusive access and a provably safe contract); Zax purpose, lifecycle, invocation safety, optional unsafe-access, composition provenance, and general panic-contract pressure |
 
 Current general behavior has moved to
 [Zax safety and analysis](../../language/safety-and-analysis.md). This file
@@ -363,6 +363,122 @@ inside a contract-qualified safe subset, how the assumption is audited, and
 which non-representability panic conditions the policy covers. Defined modular
 arithmetic remains the separate wrapping operator family.
 
+## Exclusive access and a provably safe contract
+
+### Two levels of safe code
+
+- **No `unsafe` at all,** chosen at compile time. Such code is safe apart from
+  logic errors, but only for the source compiled in that mode: the language's
+  own library and compiler remain trusted, as Rust's
+  `#![forbid(unsafe_code)]` covers one crate while its standard library uses
+  `unsafe`.
+- **`unsafe` allowed only in narrow, named, auditable places,** where a
+  programmer asserts that code is actually safe. An `unsafe` assertion says a
+  fact is true; it is a claim of safety made by a person instead of proved by
+  the compiler.
+
+### `exclusive`: a promise the compiler validates
+
+The maintainer's preferred direction for exclusive write access is an opt-in
+path meaning that while it exists, no other path may read or write the value,
+checked by lifetime analysis like Rust's `&mut`. It is not a lock. Code that
+does not use it keeps today's low friction.
+
+```zax
+// compiles in Zax today: two writable paths to one buffer
+send final : ()(buffer : Buffer mutable writable loan &) = {
+  notifySent()       // a callback resets the same buffer through another path
+  buffer.read()      // the buffer changed underneath
+}
+
+// illustrative only: no exclusive form exists
+send final : ()(buffer : Buffer mutable writable exclusive &) = {
+  notifySent()       // error if the callback can reach buffer through another path
+  buffer.read()
+}
+```
+
+Related options considered:
+
+- **Borrowing a writable view of an `immutable` value:** advised against.
+  `immutable` promises the value never changes for its whole lifetime, and
+  every reader may rely on it. The reverse already exists: an immutable value
+  may be built from mutable storage over which the compiler proves exclusive
+  authority.
+- **A runtime lock wrapper,** like `Mutex` or `RefCell`: complementary, for
+  threads and dynamic sharing. Its reentrancy failure should be a defined
+  error, not silent corruption.
+
+### Three reentrancy cases
+
+1. **Mutation while access is held throughout.** An exclusive path prevents it.
+2. **Lifetime around relocation.** Holding a view while the array relocates:
+
+   ```zax
+   values : Integer[0..] = [ 10, 20, 30 ]
+   view := values[0..2]
+   values.reserve(100)  // may relocate storage
+   inspect(view)        // compile-time error when known; otherwise a checked use that can panic
+   ```
+
+   Zax answers this partly at runtime today. Rust answers it at compile time
+   through exclusivity.
+3. **Access released and taken again around a call-out.** No borrow rule can
+   prevent it, because releasing is deliberate. Rust allows it too:
+
+   ```rust
+   fn send(state: &Rc<RefCell<Buffer>>, on_sent: impl FnOnce()) {
+       { state.borrow_mut().prepare(); }   // take access, then release it
+       on_sent();                          // the callback may reset the buffer
+       state.borrow().read();              // compiles; the data is gone
+   }
+   ```
+
+   It needs other tools: checking state again after calling out, not calling
+   out while an invariant is broken, state machines that make an in-progress
+   state explicit, or declared effects such as "this callback does not change
+   the buffer" (see [purity and effects](purity-and-effects.md)).
+
+### Exclusive access to array regions
+
+Handing disjoint regions of one array to different threads, as Rust's
+`split_at_mut` allows, needs the source array and overlapping views to be
+unable to reach a region while an exclusive view of it exists. A slice has no
+stance of its own, and `as` on a slice applies to its elements, so an
+exclusive view would need a kind word after `[]`, by analogy with `* unique`,
+and a separate way to hand itself over:
+
+```zax
+// illustrative: no exclusive views exist
+window : MyMessage mutable writable loan[] unique = messages[2..<5]
+other := messages[3..<6]      // nothing forbids this overlap today,
+messages[3] = fresh()         // and the owner still reaches element 3
+```
+
+A plain `unique` slice is not enough: `unique` means one owner, not one path,
+and a slice owns nothing.
+
+### What a provably safe mode needs
+
+- a switch that forbids `unsafe`;
+- a contract that states what "safe" includes, where data-race freedom is
+  currently missing, because Zax has no `Send`/`Sync` equivalent or
+  exclusivity rule (immutability "is not a complete thread-safety
+  guarantee");
+- an explicit statement that defined panics count as safe outcomes, because
+  several Zax checks happen at runtime where Rust's happen at compile time.
+
+### The maintainer's position on complexity
+
+Programmers need to know only some of Zax's features to program. Most stances,
+qualifiers, and storage controls matter when building enduring libraries and
+tuning performance. The test is that the common path needs few concepts and
+the rest appear only when asked for. Some stance words are needed upfront
+because there is no default, which is a deliberate honesty.
+
+- **Reactivates:** threading work, which the maintainer intends to take up
+  once core aspects of the language are settled.
+
 ## Comparative input
 
 Rust is a comparison point, not an opponent.
@@ -382,7 +498,21 @@ Preserve investigation of:
 - AI-assisted analysis as broad but probabilistic support rather than a
   deterministic guarantee; and
 - CHERI-style pointer capabilities and their limits around temporal lifetime,
-  concurrency, resources, and logic.
+  concurrency, resources, and logic;
+- Rust preventing mutation while a borrow is active but not a stale assumption
+  carried across a call-out, where its protection is that sharing is visible
+  in the types;
+- bypassing a type's process as an encapsulation problem rather than a
+  mutability one;
+- C++ safe patterns being unchecked while Rust checks its patterns;
+- Swift enforcing exclusive access to variables statically where it can and at
+  runtime otherwise, which is close to `exclusive` with runtime-inclusive
+  proof, and Swift's costly late addition of data-race checking (`Sendable`),
+  which argues for settling thread safety before the rest of the language
+  hardens around its absence; and
+- runtime-checked proof guaranteeing no undefined behavior but not no crash,
+  so Zax should state which properties it proves at compile time and which it
+  checks at runtime.
 
 Future work must define Zax's promises first, then compare them carefully.
 

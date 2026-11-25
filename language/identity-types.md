@@ -621,10 +621,10 @@ generic code. A stance declared on one variable restricts only that variable:
 
 ```zax
 report : MyType move
-reports : MyType[] = [ report as move ]
-copied := reports[0]              // fine: array elements are governed by MyType
+reports : MyType[0..] = [ report as move ]
+copied := reports[0]              // fine: the element declares no stance, and MyType can be copied
 
-held : MyMoveOnlyType[]
+held : MyMoveOnlyType[0..]
 copied2 := held[0]                // error: no value of MyMoveOnlyType can be copied
 ```
 

@@ -7,7 +7,7 @@
 | Applies To | Discovery and maturity of proposed `unsafe` and panic category identifiers |
 | Owns | The centralized provisional inventory of category names, unnamed category pressure, source occurrences, and disposition state |
 | Does Not Own | Accepted unsafe syntax, accepted panic-control syntax, domain behavior, intent acknowledgements, diagnostic identifiers, or compiler implementation |
-| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work items `028` and `039` |
+| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work items `028`, `039`, and `040` |
 
 ## Purpose and reading posture
 
@@ -104,7 +104,22 @@ or an explicit decision that another mechanism owns them:
 - union-reference escape when later overlay writes may invalidate the requested
   lens; and
 - optional or debug-only unchecked variant access if future work wants a local
-  source form distinct from disabling its registered panic check.
+  source form distinct from disabling its registered panic check;
+- a use of an element of a partially finished array that the language's
+  listed proven cases do not cover. The current list, taught in
+  [arrays and slices](../../language/arrays-and-slices.md#what-the-compiler-can-prove),
+  is constant indexes, constant ranges, the `each … in messages as last`
+  loop, and a plain index loop. Future safety-and-analysis work fixes the
+  lasting list and the category's name, and may grow the list; current
+  teaching must not claim that a compiler may accept more without `unsafe`:
+
+  ```zax
+  dispatch(inbox[i] as last)
+  // illustrative category name
+  unsafe<distinct-element>{
+    dispatch(inbox[j] as last)   // the programmer asserts j differs from i
+  }
+  ```
 
 Complete construction and at-most-once establishment of result slots and
 explicitly controlled members no longer need an unsafe category: the

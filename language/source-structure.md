@@ -396,6 +396,27 @@ spaced :
 Whitespace after an earlier optional marker remains required only when another
 optional layer follows, as in `MyType? ?`.
 
+Each type marker has a fixed spacing rule, so a reader can always see which
+layer it belongs to. The spacing is required, not a style choice:
+
+- `?` attaches to a name or to a qualifier or stance word before it. After
+  other punctuation it is separated by a space.
+- `[` attaches to whatever comes before it, punctuation included, so it is
+  clear what the array or slice holds. Several dimensions form one layer and
+  are written together.
+- `*` and `&` never attach. Each is its own layer, with spaces around it.
+
+```zax
+slot : MyPayload move? loan          // ? attached to the stance word
+maybeMany : MyPayload move?[40]      // an array of 40 optionals
+view : MyValue readonly loan & ?     // an optional reference: ? after & is spaced
+matrix : Integer[4][3]               // one two-dimensional layer
+owners : MyPayload move * unique[8]  // an array of 8 unique pointers
+window : MyMessage readonly loan[]   // a slice: [ attached to the stance word
+
+spaced : MyPayload move ? loan       // error: ? must attach to move
+```
+
 `[{}]` is the one contiguous zero-entry
 [construction packet](terms.md#construction-packet):
 
@@ -554,7 +575,12 @@ both : Integer[50] storage provider type MyStorage
 ```
 
 One storage clause follows the complete dimension list and applies to the whole
-multidimensional array:
+multidimensional array. The array's own qualifiers and stance follow the
+storage clause, so the stance stays last on its layer:
+
+```zax
+pool : MyMessage move[0..] storage type MyStorage immutable move
+```
 
 ```zax
 matrix : Integer[4][3] storage type Flat

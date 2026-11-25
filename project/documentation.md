@@ -360,6 +360,38 @@ The table shows the pattern, not a list of banned sentences:
 | Its declared stance does not limit or rewrite that offer. | The parameter's declared stance does not change the stance the caller wrote. |
 | An `=` cannot hand out more than it was given. | When an `=` declares no receiver stance, `_` is a loan inside it, so returning `_` through a `& copy` result is an error: the caller could then copy a value the `=` was only lent. |
 
+**Why these slips keep happening.** A writer who has just worked through a
+design still holds its context, so a compressed phrase decodes fine for them.
+A reader who arrives cold has only the sentence. The forms below recur most
+often; each is a place where the writer's context silently filled a gap:
+
+- **Code that acts.** "A slice parameter must write its stance" or "an array
+  layer writes its dimensions". Code doesn't write anything: the programmer
+  writes, and a declaration includes. Making a construct the actor leaves the
+  reader wondering whether something happens at runtime.
+- **Pronouns that reach back.** "theirs", "them", and "it" pointing across a
+  clause or sentence boundary. If the noun isn't in the same sentence, repeat
+  the noun.
+- **Unfinished comparisons and consequences.** "so less has to be left
+  behind", "and so its capacity". When a sentence implies "so X", say what X
+  is.
+- **Places without a referent.** "here" or "below" in a rule. Name the
+  situation instead, such as "programs that finish elements in place".
+- **Stock or vague verbs.** "say so", "be worked on", "reaches", "takes from",
+  "builds nothing from it". Each stands in for a concrete operation the
+  writer knew; write that operation.
+- **A subject that drifts between paragraphs.** "receives all of them" right
+  after a paragraph about copying. When a paragraph changes topic, establish
+  the new subject again.
+- **A compressed rule with a surprising edge.** "A compiler may say an
+  `unsafe` looks unnecessary but may not accept the code without it" sounds
+  self-contradictory until the reason is given. When a rule would surprise a
+  reader, give the reason and the mechanism in the same place.
+
+These are not banned phrases. The same words can be clear where the noun or
+consequence sits right beside them. The test is whether a reader with only
+the sentence can tell who acts, on what, and with what result.
+
 When work is delegated, the delegating agent gives these rules to the writer
 and then reads every changed section itself. A search for known bad phrases
 does not replace reading the text.
@@ -843,6 +875,22 @@ The scope may expand when discussion or a concrete consequence makes additional
 material relevant. Explain the need and read only enough to follow that
 consequence responsibly.
 
+### The first deliverable is a set of decisions
+
+The first substantive output of every work item is a workable set of
+decisions for the language maintainer: the issues the concern is likely to
+raise, each with concrete Zax examples, the realistic options, what each
+option costs, and a recommendation. The maintainer should be able to act on
+it, deciding item by item, without first reconstructing the questions from an
+evidence summary.
+
+The reason is practical. A record that surveys everything but leaves the
+questions implicit makes the maintainer do the analysis again, and a
+question asked without examples or a recommendation is hard to answer well.
+Supporting evidence, tensions, and deferrals still belong in the record;
+they sit underneath the decisions rather than replacing them. The decision
+list can change as discussion proceeds; restructure the record when it does.
+
 ### Consequences and deferrals
 
 Keep the initiating concern fixed while tracing material consequences.
@@ -1074,7 +1122,13 @@ For an authorized documentation change, check the applicable items:
   reviews the changed owner sections as a reader arriving directly. It reports
   what it cannot follow, leaked discovery history, and examples without an
   evident purpose. The promoting agent's own cold-reader check is not a
-  substitute, because it shares the working context.
+  substitute, because it shares the working context. Give the cold reader the
+  [colleague-voice guidance](#write-the-way-you-would-explain-it-to-a-colleague),
+  including why its slips recur, and ask it also to flag every sentence whose
+  meaning it had to infer rather than read, and to name what each pronoun in
+  a rule refers to. A model reads agent phrasing easily, so without that
+  request it tends to pass sentences a human would stumble on. The language
+  maintainer's own read-through remains the final test.
 - Mirrored stable operating-prompt guidance agrees.
 - Both operating-prompt sources retain the generic active-work placeholder.
 - The `project/README.md` active-work pointer and next number agree with actual

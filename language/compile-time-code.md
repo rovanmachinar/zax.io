@@ -226,7 +226,7 @@ name-side words, such as `final`:
 hashName final [<execute=folding>] : (result : U64)(name : String readonly loan &) = {
 }
 
-buildSineTable final [<execute=compile>] : (result : Integer[])(size : Integer) = {
+buildSineTable final [<execute=compile>] : (result : Integer[0..])(size : Integer) = {
 }
 
 readPort final [<execute=runtime>] : (result : Byte)(port : U16) = {
@@ -495,7 +495,7 @@ A cycle is a diagnostic:
 
 ```zax
 myTableSize : Integer = 256
-myTable : Integer[] = buildSineTable(myTableSize)
+myTable : Integer[0..] = buildSineTable(myTableSize)
 
 myChecksum := compile sum(myTable)
 // The host world initializes myTableSize, then myTable, then runs sum.
@@ -666,7 +666,7 @@ There is no plain `size of`. `host` means the compiler host, the same
 environment that `CompilerHost.` names.
 
 ```zax
-makeBuffer$ final : (UseType : type)(result : Byte[])(count : Integer) = {
+makeBuffer$ final : (UseType : type)(result : Byte[0..])(count : Integer) = {
   return allocateBytes(count * active size of UseType)   // memory for whichever world runs this
 }
 

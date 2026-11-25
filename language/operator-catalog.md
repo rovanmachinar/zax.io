@@ -43,7 +43,7 @@ Zax recognizes:
 | Comparison | `==`, `!=`, `<`, `<=`, `>`, `>=`, `<=>` |
 | Logical | `!`, `&&`, `\|\|`, `^^`, `logical nand`, `logical nor`, `logical xnor` |
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
-| Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `strong count probe value`, `value is allocation root`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value` |
+| Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `strong count probe value`, `value is allocation root`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value`, `take values[range]`, `last values[range]` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `pointer as UPointer` |
 | Container and member navigation | `outer cast`, `tracked outer cast`, `unsafe outer cast`, `inner` |
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor` |
@@ -644,6 +644,19 @@ operand domains:
 | `unsafe vacate value` | Pre-unary phrase at ordinary phrase level | Accept responsibility for an opaque but potentially valid raw-pointer disposition relationship; never available to managed pointers or a proved guaranteed leak |
 | `last value` | Pre-unary phrase at ordinary phrase level | Same optional type; pass it on with `last`, and empty the optional when the call ends |
 | `move value` | Pre-unary phrase at ordinary phrase level | Same optional type; pass it on with `move`, without emptying the optional |
+| `take values[range]` | Pre-unary phrase with one splice component, at ordinary phrase level | On an array: extract the range into a new owning array and remove it from the source. On a slice: shrink the slice and return the taken part, for a range written from the start, to the end, or as `[..]` |
+| `last values[range]` | Same skeleton as `take values[range]` | Exactly `(take values[range]) as last`; never separately declared |
+
+`take values[range]` and `last values[range]` are each recognized as one form,
+as direct splice assignment is, so `take` acts on the array or slice together
+with its range rather than on a temporary slice. For intrinsic arrays and
+slices, both are [protected forms](#protected-forms) that no declaration can
+redefine; a custom type may declare its own `take` as a
+[mixfix](mixfix-operators.md#call-index-and-splice-components). A pre-unary
+phrase applies before a following post-unary phrase at the same level, so
+`take values[2..<5] as last` means `(take values[2..<5]) as last`. Complete
+behavior is defined by
+[Zax arrays and slices](arrays-and-slices.md#taking-elements-out-with-take).
 
 Protected optional forms are distinct from generic post-unary stance
 restatement. Complete optional behavior and source consequences are defined by

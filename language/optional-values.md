@@ -108,6 +108,43 @@ source as last // passed on with last; source is not emptied by this form
 last source    // passed on with last; source is empty after the call
 ```
 
+Both forms pass the contained value on with a stance: `last source` passes it
+on with `last` and then empties `source`, and `move source` passes it on with
+`move`. So the contained value's stance must allow them:
+
+```zax
+frozen : MyValue loan?               // the contained value is pinned
+keep(move frozen)                    // error: nothing may be built from a pinned value
+keep(last frozen)                    // error, for the same reason
+
+slot : MyValue move? loan            // a pinned optional holding a move value
+keep(last slot)                      // fine: pinning the optional does not pin what it holds
+```
+
+A function given a writable reference to someone else's optional may use
+both forms. `move cache` leaves the contained value usable, and `last cache`
+empties the optional, so nothing finished is left behind. Writing `last` on
+the contained value directly would leave a finished value inside the caller's
+optional, so that is an error through a reference:
+
+```zax
+refill final : ()(cache : MyValue? mutable writable loan &) = {
+  keep(move cache)          // fine: the contained value stays usable
+  keep(last cache)          // fine: the contained value leaves, and cache becomes empty
+  if ?cache {
+    keep(cache. as last)    // error: would leave a finished value in the caller's optional
+  }
+}
+
+peek final : ()(cache : MyValue? readonly loan &) = {
+  keep(move cache)          // error: readonly access can't change the contained value
+}
+```
+
+`cache` writes no stance for the contained value, so that value is `copy`, and
+only optionals whose contained value is `copy` may be passed; see
+[stances inside the referred-to type](transfer-stances.md#stances-inside-the-referred-to-type).
+
 The operator catalog records that these optional forms are protected from
 conflicting user declarations. That classification does not change their
 ordinary phrase precedence.
@@ -864,7 +901,7 @@ operation defines the exact nested state.
 Optional qualification reads outward:
 
 ```zax
-T q0 ? q1 * q2
+T q0? q1 * q2
 ```
 
 This is a `q2` pointer to a `q1` optional containing `q0 T`.
@@ -1052,7 +1089,8 @@ General fallback and what the original holds afterward are explained in
 
 A reference has a hidden handle location, auto-follows its referent, cannot be
 rebound, and accepts no qualifiers on the reference layer. It may be stored in an
-optional or pointed to:
+optional or pointed to. The type shapes below leave out stances to show only
+how the layers nest; a real declaration includes them where the rules require:
 
 ```zax
 MyValue readonly & ?          // optional containing a readonly reference
@@ -1067,7 +1105,7 @@ MyValue & & // error
 ```
 
 Pointers, references, and optionals otherwise compose when every adjacent layer
-is eligible:
+is eligible. Again, these are type shapes with their stances left out:
 
 ```zax
 MyValue & * & * &
@@ -1078,11 +1116,24 @@ There is no arbitrary depth limit.
 
 ### Optional references
 
-An optional reference owns only a conditional reference handle:
+An optional reference owns only a conditional reference handle. Its
+declaration must always include a stance before `&`, because the optional can
+later hold a reference to a different value, which might allow different
+things:
 
 ```zax
-view : MyValue readonly & ?
+view : MyValue readonly loan & ?           // absent now; any later reference is a loan
+view .= [{ firstValue }]                   // refers to firstValue
+view .= [{ secondValue }]                  // a new reference, to another value, same stance
+
+guess : MyValue & ? = firstValue           // error: write the stance before &
 ```
+
+A reference *to* an optional is different. Given a nested optional
+`nested : MyValue? ?`, the declaration `inner : MyValue? & = nested.` from
+[each operation acts on one layer](#each-operation-acts-on-one-layer) binds
+`inner` to the one inner optional that `nested.` reaches, so like any
+reference bound to one visible value it takes its stance from that optional.
 
 Reset ends the stored reference lifetime, not the referred-to `MyValue`.
 Lifetime analysis must prove that a present stored reference never outlives its
@@ -1125,7 +1176,7 @@ conditional acquisition and pins the target on success.
 An optional pointer adds another independent layer:
 
 ```zax
-maybeOwner : MyValue * unique ?
+maybeOwner : MyValue * unique?
 ```
 
 It distinguishes an absent optional wrapper from a present vacant pointer and
@@ -1175,14 +1226,18 @@ stance also allows:
 | `loan` | `loan` only |
 
 ```zax
-slot : MyPayload move ? loan     // a pinned slot whose contents may be moved out
+slot : MyPayload move? loan      // a pinned slot whose contents may be moved out
 
 keep(last slot)                  // fine: takes the contained value; slot becomes empty
 other := slot as move            // error: the slot itself is pinned
 slot .= makePayload()            // fine: builds a new contained value in place
 
-broken : MyPayload loan ? move   // error: moving the optional would move a pinned value
+broken : MyPayload loan? move    // error: moving the optional would move a pinned value
 ```
+
+When the optional's own stance is left out, it is the contained value's
+stance, which the table always allows: `MyPayload move?` is a `move` optional.
+In a nested optional, each layer takes the stance of the layer inside it.
 
 A stance written at a use on the whole optional is limited by the optional's
 own stance. Any of the five can be written, with no phrase fence:

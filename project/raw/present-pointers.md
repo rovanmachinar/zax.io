@@ -7,7 +7,7 @@
 | Applies To | Pointer-layer non-vacancy (`present`), flow narrowing after `?p`, narrow presence-only `unsafe cast`, and interaction with `last`, constructors, Nothing instances, and callable contracts |
 | Owns | Captured motivation, aligned direction, illustrative syntax, counterexamples, open questions, activation pressure, and retirement criteria for `present` pointers |
 | Does Not Own | Accepted current pointer behavior ([pointers, allocation, and arenas](../../language/pointers-and-arenas.md)); transfer stances ([transfer stances](../../language/transfer-stances.md)); Nothing-instance policies ([Nothing instances](../../language/nothing-instances.md)); or general callable contracts ([callable selection](callable-selection.md)) |
-| Source / Provenance | Maintainer design discussion during work item `039` promotion review of `language/pointers-and-arenas.md` (2026-11-21) |
+| Source / Provenance | Maintainer design discussion during work item `039` promotion review of `language/pointers-and-arenas.md` (2026-11-21); work item `040` (element and contained stances) added the note on question 6 |
 
 ## Why this input exists
 
@@ -204,7 +204,11 @@ Future work must resolve these open questions before promotion:
    `present` or whether recovery always yields a possibly-vacant pointer
    because runtime type/stance mismatch itself produces vacancy.
 6. **Optional values:** whether the same `present` modifier should extend to
-   non-empty optionals (`MyValue ? present`) or stay pointer-specific.
+   non-empty optionals (`MyValue? present`) or stay pointer-specific. An
+   optional's own stance is written after `?`, the position such a modifier
+   would also use, in the established qualifier-then-stance order (for
+   example `MyValue move? present move`); the optional-reference rules do not
+   otherwise constrain this question.
 
 ## Activation pressure
 
