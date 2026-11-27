@@ -7,7 +7,7 @@
 | Applies To | Concerns that cross several owners and must survive numbered-work archival |
 | Owns | An indexed, live list of cross-cutting audit entries, each with a concern, why local review misses it, likely owners, resolution criteria, activation pressure, current constraints, and eventual disposition; the durable-queue purpose, future-agent workflow, add/do-not-add criteria, and retirement model |
 | Does Not Own | Accepted language design, a miscellaneous design dump, ordinary local TODOs, or competing authority over any concept owner |
-| Source / Provenance | Work item `007` promotion and its corrective promotion; work item `012` optional legacy disposition; work items `032` and `034` entries |
+| Source / Provenance | Work item `007` promotion and its corrective promotion; work item `012` optional legacy disposition; work items `032` and `034` entries; work item `041` category-example entry |
 
 ## Purpose
 
@@ -567,6 +567,42 @@ Each entry preserves:
   declarations, or partials adding conversions.
 - **Current constraints.** None.
 - **Disposition.** Open. Provenance: work item 039 cold read, 2026-11-22.
+
+### Every `intent`, `safe`, and `unsafe` category has an example
+
+- **Concern.** Each category in the
+  [intent registry](../../language/intent-acknowledgements.md#current-category-registry)
+  and the [safety category table](../../language/safety-and-analysis.md#current-categories),
+  and each `unsafe` operation, needs at least one example showing why the
+  situation arises and how it is resolved, with the fix that needs no marker
+  shown first where one exists. Without one, a reader cannot form a mental
+  model of when the category applies.
+- **Representative example.** The safety owner now pairs every safety
+  category with an example of this shape:
+
+  ```zax
+  oldValue : MyValue & = optional.
+  opaqueObserve(oldValue)                // might keep oldValue somewhere
+  reset optional                         // error: a retained alias would see the ended value
+  safe<replacement-alias>{ reset optional }   // you vouch opaqueObserve keeps nothing
+  ```
+
+  The intent registry lists categories by name and meaning; whether each
+  linked owner shows an example has not been checked.
+- **Why local review misses it.** Categories are defined in the registries but
+  taught in many domain owners; a review of one owner cannot see whether every
+  registry entry is illustrated somewhere.
+- **Likely owners.** Intent acknowledgements, safety and analysis, and every
+  domain owner a registry entry links to; casting, qualifiers, pointers, and
+  enums for the `unsafe` operations.
+- **Resolution.** Every registry entry and `unsafe` operation links to an
+  example in its owner, and missing examples are written.
+- **Activation pressure.** Any change to a registry, any new category, or the
+  next teaching-debt refresh of safety-related owners.
+- **Current constraints.** Examples follow the example obligations in the
+  documentation architecture: an inline `// error` comment where code is
+  rejected, and the fix without a marker before the marker.
+- **Disposition.** Open.
 
 ## Activation and retirement
 

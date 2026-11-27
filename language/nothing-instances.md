@@ -150,8 +150,24 @@ MyArrayOwner :: type {
 ```
 
 Future array work may define narrower preparation without making zeroed backing
-into live elements. On targets unable to intercept the access, the missing trap
-has the undefined boundary described below.
+into live elements; a dynamically sized array, for example, might be prepared
+as empty. On targets unable to intercept the access, the missing trap has the
+undefined boundary described below.
+
+In summary, a compiler-prepared Nothing instance has:
+
+| Member form | Prepared value |
+| --- | --- |
+| Integer, fixed-point, floating-point, or other scalar with a default | Its default value |
+| Representation-trivial identity | Its underlying type's default |
+| Defined type with its own members | Its members prepared by these same rules |
+| Pointer | Vacant |
+| Optional | Absent |
+| Function value | Unavailable; calling it panics |
+| Array | None; access traps or panics where supported |
+
+A member form with no prepared value is accessed like a trapping Nothing
+instance.
 
 ### Trivial types still have Nothing instances
 
@@ -703,27 +719,35 @@ legalize a guaranteed leak or corrupt ownership accounting.
 
 ## Pointer dereference is unchecked
 
-Postfix pointer dereference does not ordinarily test vacancy:
+Postfix pointer dereference generates no runtime vacancy test. Through an
+untracked `* unsafe` pointer, the compiler does not check vacancy at all:
 
 ```zax
-pointer : MyValue * = choosePointer()
-view : MyValue & = pointer.
+pointer : MyValue * unsafe = choosePointer()
+view : MyValue & = pointer.     // no check: if pointer is vacant, view reaches Nothing backing
 ```
 
 The reference binds to the selected target place. If `pointer` is vacant at
-runtime, it mechanically reaches `MyValue`'s Nothing backing. A reference has
-no separate vacancy state and never rebinds.
+runtime, the reference reaches `MyValue`'s Nothing backing. A reference has no
+separate vacancy state and never rebinds.
 
-When vacancy is statically certain, the compiler reports the misuse:
+Through a tracked pointer, the compiler requires proof or a
+`safe<pointer-presence>` claim before an access that might reach Nothing
+backing; see
+[possible vacancy needs a presence claim](#possible-vacancy-needs-a-presence-claim).
+Whether owning and managed pointers follow that tracked rule is future
+pointer-tracking work.
+
+When vacancy is statically certain, the compiler reports the misuse for any
+pointer:
 
 ```zax
 vacant : MyValue *
-view : MyValue & = vacant. // error: pointer is proved vacant
+view : MyValue & = vacant. // error: vacant is proved vacant
 ```
 
-Analysis is intentionally incomplete. A compiler may diagnose more certainly
-invalid uses as its analysis improves; source is not limited to mistakes every
-compiler can prove.
+A compiler that proves an access invalid with certainty reports it, even
+beyond what the language contract requires.
 
 After an unchecked runtime vacancy:
 
@@ -752,7 +776,7 @@ view : MyType * = owner.      // points at the same value owner points at
 
 reset owner                   // owner is now vacant
 borrowed : MyType * = owner.  // vacant too: no access, no trap
-use(owner.x)                  // a member read: traps under a trapping Nothing policy, as above
+use(owner.x)                  // error: owner is proved vacant here
 ```
 
 Without this rule, `borrowed` would point at the Nothing stand-in and look like
@@ -787,13 +811,15 @@ compiler cannot promise universal interception.
 Writing compiler-provided Nothing backing is a contract violation:
 
 ```zax
-pointer : MyCounter * = chooseCounter()
-pointer.count = 1
+pointer : MyCounter * unsafe = chooseCounter()
+pointer.count = 1                // no check: a vacant pointer would write Nothing backing
 ```
 
-When analysis proves `pointer` vacant, the compiler reports an error. When it
-cannot prove the runtime state, Zax does not require a generated vacancy check
-on every store. Such checks would impose unacceptable cost on ordinary writes.
+When analysis proves `pointer` vacant, the compiler reports an error. Through
+a tracked pointer, a write that might reach Nothing backing needs proof or a
+`safe<pointer-presence>` claim. Either way, Zax does not require a generated
+vacancy check on every store; such checks would impose unacceptable cost on
+ordinary writes.
 
 Suitable target memory protection catches the write and enters panic. Without
 that hardware support, debug instrumentation may discover some violations, but
@@ -801,32 +827,60 @@ a missed write can corrupt shared Nothing backing or have undefined
 consequences. The programmer remains responsible for establishing ordinary
 target validity.
 
-The trapping policy deliberately chooses another tradeoff and requires a panic
-for dereference or access even when the target lacks a cheap hardware trap.
+The trapping policy chooses hardware trapping that enters panic. It cannot
+promise a panic for a read or write on a target without that hardware trap.
+What Zax can still check on such a target is a function call: calling a
+function that is not `once` with a Nothing receiver panics at entry, like a
+hidden assertion that `_` is valid. A `once` function is excluded because it
+is designed to run with the Nothing instance as its receiver. The check has
+its own independently selectable panic category, not yet named, so it can be
+disabled like other checks.
 
 A custom Nothing constructor may write its dedicated storage, and intended
 receiverless type calls may later mutate it through compatible declared
 qualifications. Accidental vacant-pointer access remains misuse even when the
 custom implementation contains the failure.
 
-### Possible write flow needs a future unsafe boundary
+### Possible vacancy needs a presence claim
 
-A proved write to compiler-provided Nothing is an error. Merely suspecting that
-a pointer may become vacant before a later write is different: writing through
-a pointer is not inherently unsafe, and the responsible source location may be
-the earlier call or handoff that exposes the pointer to a writer.
+An access the compiler proves reaches Nothing backing is an error. For a
+tracked pointer, any other access that might reach it needs proof that the
+pointer is not vacant, such as a preceding `?counter` test, or a
+`safe<pointer-presence>` claim:
 
-That uncertainty is a safety concern, not intent acknowledgement. Future
-safety/error work retains provisional `possible-nothing-write` and
-`possible-nothing-read-trap` catalog entries. It must define their exact trigger
-scenarios, placement, and whether stronger compiler-specific findings use
-standard behavior or explicitly namespaced extension diagnostics. Current
-source does not acquire a broad vanilla `unsafe` escape for every pointer write.
+```zax
+writeCount final : ()(counter : MyCounter writable loan &) = {
+  counter.count = 1                       // a reference: it cannot be vacant
+}
 
-The read category applies only when a possibly vacant pointer could reach a
-built-in type's canonical trapping Nothing or a defined type selecting
-`= trap`. Neither category disables an actual hardware trap or legalizes a
-proved vacant access.
+counter : MyCounter * = findCounter(id)   // vacant when id is unknown
+writeCount(counter.)                      // error: counter might be vacant here
+
+if ?counter {
+  writeCount(counter.)                    // fine: the test proves presence
+}
+
+safe<pointer-presence>{
+  writeCount(counter.)                    // you vouch counter is not vacant here
+}
+```
+
+The error and the claim belong at the operation that dereferences the pointer,
+here `counter.`, not inside `writeCount`, which receives a reference. The rule
+applies whatever the type's Nothing policy, including reads of prepared
+members that would otherwise return a default value. It depends only on what
+is visible in source, never on the target.
+
+A claim or a recognized `?counter` test establishes that `counter` is not
+vacant for later uses on the same path, until something could change the
+pointer: a reset, a reassignment, or a
+call that can write it. When every call path into a function passes a
+non-vacant pointer, the function's own accesses need no claim; once the
+function is compiled into a fixed exported interface, its callers can no
+longer be followed, and a possibly vacant access inside it is an error.
+
+This is a safety concern, not intent acknowledgement. A claim does not disable
+an actual hardware trap and cannot make a proved vacant access valid.
 
 ## Optional absence remains independent
 

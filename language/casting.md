@@ -238,20 +238,27 @@ trip does not preserve vacancy.
 ### Qualification
 
 The written destination type states the complete qualification of the result.
-`unsafe cast` can therefore remove `immutable`, `readonly`, or `final`, or add
-promises that no ordinary conversion allows:
+`unsafe cast` can therefore remove `immutable`, `readonly`, or `final`:
+
+```zax
+frozen : MyType immutable = makeValue()
+writable := frozen unsafe cast MyType mutable writable &   // you take responsibility for every holder of frozen
+```
+
+Adding `immutable` does not need `unsafe cast`. An `immutable` path promises
+that the value does not change while the path is held, so a mutable value can
+make that promise when analysis proves nothing writes it during that time, or
+when a `safe<no-mutation-while-held>` claim vouches for it:
 
 ```zax
 myMutable : MyType = makeValue()
 
 asReadonly : MyType readonly & = myMutable            // ordinary: readonly narrows one path
-asImmutable : MyType immutable & = myMutable          // error: another path may still change it
-trusted := myMutable unsafe cast MyType immutable &   // programmer asserts nothing will change it
+asImmutable : MyType immutable & = myMutable          // fine if nothing writes myMutable while asImmutable is held
 ```
 
-`immutable` promises that the value never changes for its whole lifetime. A
-mutable value cannot make that promise through an ordinary view, so adding it
-needs `unsafe cast`.
+[Qualifiers](qualifiers.md#ordinary-promise-strengthening) describes the
+complete rule.
 
 When the only goal is to change qualification on the same type, prefer
 [`unsafe pliable`](qualifiers.md#unsafe-pliable). It keeps the recorded
@@ -464,8 +471,10 @@ Useful diagnostics include:
 
 - by-value `unsafe cast`, with the view-then-construct correction;
 - a reinterpretation the compiler proves impossible, even under `unsafe`;
-- an ordinary view that tries to add `immutable` or remove a qualification,
-  with `unsafe pliable` and `unsafe cast` shown as the explicit alternatives;
+- an ordinary view that tries to remove a qualification, with
+  `unsafe pliable` and `unsafe cast` shown as the explicit alternatives;
+- an ordinary view that adds `immutable` while analysis cannot rule out a
+  write, with `safe<no-mutation-while-held>` shown as the claim;
 - a pointer-to-integer conversion whose integer role does not match the
   pointer's memory domain;
 - a type cast whose destination writes a different stance, with

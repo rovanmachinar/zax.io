@@ -147,6 +147,59 @@ outside the promotion. Revisit with the owner's teaching refresh.
 
 - **Provenance:** work item 039 cold read, 2026-11-22.
 
+### Older passages found by the work-item 041 cold read
+
+Unchanged text near the sections 041 rewrote. Each is one concrete passage a
+cold reader could not follow; none was rewritten, because it lies outside the
+promotion. Revisit with the owner's teaching refresh.
+
+- **`language/safety-and-analysis.md`, "Opaque owner and observer recovery"
+  and "Language contracts and compiler analysis":** "`value is type MyType` is
+  a safe nonexecuting proof operation", "checks ownership role, origin, and
+  qualification authority", "a defined but suspicious alternate safe mode",
+  "That proof may become canonical", and "without forcing a physical metadata
+  read". The double `as last` in `(view unsafe cast as last) as last` is shown
+  in "Raw pointers" without explanation, and "the stance cast" is used before
+  it is defined.
+- **`language/safety-and-analysis.md`, composition example in "Language
+  contracts and compiler analysis":**
+  `deliberatelyTracked : Container & ? = intent<...>{ ... }` uses an enclosure
+  as an initializer, which reads against "Enclosures create no scope and no
+  value".
+- **`language/composition.md`, "Proved, tracked, and claimed outer casting"
+  and "Static exact-origin proof":** a reader cannot tell whether plain
+  `outer cast` compiles today, given "a conceptual proof model rather than a
+  finished formal algorithm"; "A false claim has undefined behavior" sits
+  beside "cannot corrupt ownership accounting"; the tracked form "produces
+  absence or vacancy" here but "produces absence" in safety; the
+  redundant-tracking intent error appears only in prose, without a
+  `// error` example.
+- **`language/nothing-instances.md`, "Hardware-assisted traps are not
+  portable guarantees":** "There is no separate `write trap` policy" denies a
+  concept the text never introduces. "Pointer dereference is unchecked" says
+  "accessing an unprepared member panics" without the trap-capability caveat
+  given elsewhere.
+- **`language/qualifiers.md`, "Ordinary promise strengthening":**
+  `copy final : Payload = source` uses the stance word `copy` as a variable
+  name, so "`copy` is a new final place" reads ambiguously; "same-place
+  authority conversion", "referent-place stance", "exclusive authority", and
+  "former mutable capability" are undefined where used.
+- **`language/pointers-and-arenas.md`, "Borrowing through `p.`" and "Safe
+  owner recovery":** the `p.` table row ("from any raw or `strong` pointer, or
+  a visible local") omits `unique`, though `unique` examples write `owner.`;
+  "ownership/capability profile", "type-witness check", and "exact canonical
+  target type" are undefined.
+- **`language/lifetimes-and-references.md`, "Direct-member references cross a
+  renewal boundary":** "renewal boundary" and "renews every member resident
+  instance" are undefined where used.
+- **`language/construction-and-destruction.md`, "Reconstruction during
+  destruction" and "Incomplete current instances and safety claims":**
+  "Lifecycle analysis should distinguish them" is design voice rather than a
+  rule; "construction authority permits establishment of its state" uses
+  undefined vocabulary.
+
+- **Provenance:** work item 041 cold read, 2026-11-26.
+
 ### `language/pointers-and-arenas.md`
 
 #### Raw pointers

@@ -7,7 +7,7 @@
 | Applies To | Explicit acknowledgement of defined but suspicious-looking source; not a formal grammar or diagnostic specification |
 | Implementation State | Not established by this repository |
 | Owns | The intent-acknowledgement mental model; acknowledgeable versus non-acknowledgeable intent errors; `intent<category>{...}` use; the current category registry; intent-specific costs, diagnostics, and source-stability requirements |
-| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category, including [Zax `using`](using.md); the complete intent/unsafe/lint distinction, unsafe assertions and permissions ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
+| Does Not Own | Layout and enclosure mechanics ([source structure](source-structure.md)); transfer semantics ([transfer stances](transfer-stances.md)); domain behavior gated by a category, including [Zax `using`](using.md); the complete distinction among intent, safety claims, `unsafe`, and lints, and the safety categories ([safety and analysis](safety-and-analysis.md)); or exact diagnostic identifiers |
 | Source / Provenance | Transfer terminal-use review and prior confusable-form intent input |
 
 ## Defined source can still look mistaken
@@ -98,15 +98,15 @@ value = 5
 Complete tokenization, payload shape, layout, and source-tree behavior belong to
 [Zax source structure](source-structure.md).
 
-## Intent, unsafe, and lint suppression are different
+## Intent, safety claims, and lint suppression are different
 
 `intent<...>{...}` says: “This defined but suspicious interpretation is
 deliberate.” It does not accept proof responsibility or suppress an advisory
-lint. The complete distinction among intent, unsafe assertions, unsafe
-permissions, and lint suppression is owned by
-[Zax safety and analysis](safety-and-analysis.md#intent-unsafe-and-linting-are-different).
+lint. The complete distinction among intent, `safe<...>` claims, `unsafe`
+operations, and lint suppression is owned by
+[Zax safety and analysis](safety-and-analysis.md#intent-safety-claims-unsafe-and-linting-are-different).
 
-### Intent is not unsafe
+### Intent is not a safety claim
 
 ```zax
 intent<terminal-source-reuse>{
@@ -118,18 +118,17 @@ This is appropriate only when the operation is actually defined for terminal
 state. The acknowledgement does not revive an ended lifetime, grant writable
 access, override immutability, or make duplicate ownership valid.
 
-An unproved lifetime or alias property belongs to a future narrow unsafe
-assertion instead:
+An unproved lifetime or alias property belongs to a narrow `safe<...>` claim
+instead:
 
 ```zax
-unsafe<replacement-alias>{
-  destination = sourceView
+safe<replacement-alias>{
+  destination = sourceView   // you vouch sourceView does not alias destination in a way that matters
 }
 ```
 
-The complete distinction is defined by
-[Zax safety and analysis](safety-and-analysis.md). Exact unsafe syntax and
-categories remain future analysis-control design.
+The complete distinction and the current categories are defined by
+[Zax safety and analysis](safety-and-analysis.md#vouching-for-safety-safe).
 
 ### Intent is not a warning switch
 
@@ -213,6 +212,8 @@ copying a diagnostic message.
 | `asymmetric-saturating-magnitude` | Parse `\|\|value\|` as asymmetric saturating magnitude rather than malformed norm | [Integer operator catalog](integer-operator-catalog.md#magnitude) |
 | `redundant-control-placement` | Deliberately restate detached placement even though `controlArena:` already implies it | [Pointers, allocation, and arenas](pointers-and-arenas.md#allocation-policy-enclosure) |
 | `redundant-outer-tracking` | Deliberately retain optional tracked outer-provenance semantics when the selected contract proves the exact origin | [Zax composition](composition.md#deliberately-retaining-redundant-tracking) |
+| `reference-tracks-replacement` | Deliberately use a member reference after complete replacement of its container, so it observes the new member instance | [Lifetimes and references](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary) |
+| `inner-pointer-tracks-replacement` | Deliberately form an interior pointer whose container place is replaceable, so after replacement it reaches the new member | [Pointers, allocation, and arenas](pointers-and-arenas.md#interior-pointers) |
 | `conditionally-unallocated-member` | Deliberately suppress a member's declared automatic allocation while permitting a normal constructor path to leave the pointer vacant | [Construction and destruction](construction-and-destruction.md#automatic-and-explicit-member-construction) |
 | `case-conflicting-enum-member-names` | Declare ASCII case-equivalent enum member names with different enum values | [Enums](enums.md#ascii-case-insensitive-lookup) |
 | `unreachable-selection-clause` | Deliberately retain one semantically proven unreachable complete `case` or `default` clause | [Switch, case, and default](switch.md#ordering-effects-and-overlap) |
@@ -278,10 +279,10 @@ analysis cannot require the acknowledgement. Conversely, when the selected
 contract does not establish exact origin, tracking is necessary and the
 category is inapplicable.
 
-This category cannot preserve redundant `unsafe`; selected-contract proof makes
-that assertion a non-acknowledgeable error that must be removed. Complete
-outer-provenance behavior belongs to
-[Zax composition](composition.md#proved-tracked-and-unsafe-outer-casting).
+This category cannot preserve a redundant `safe<exact-origin>` claim;
+selected-contract proof makes that claim a non-acknowledgeable error that must
+be removed. Complete outer-provenance behavior belongs to
+[Zax composition](composition.md#proved-tracked-and-claimed-outer-casting).
 
 ### Repeated and duplicate resource entries
 
@@ -684,7 +685,7 @@ A category should be:
 - narrow enough to identify one suspicious semantic situation;
 - reusable wherever that same situation appears;
 - independent from incidental diagnostic wording;
-- distinct from unsafe proof responsibility;
+- distinct from `safe<...>` and `unsafe` proof responsibility;
 - and discoverable in this registry.
 
 One acknowledgement may name only categories applicable to its payload.
@@ -696,7 +697,7 @@ Future categories require review of:
 - the valid source they acknowledge;
 - why ordinary source is rejected;
 - the behavior owner;
-- interaction with unsafe and lints;
+- interaction with safety claims, `unsafe`, and lints;
 - source-reflection and formatting requirements;
 - and compatibility consequences.
 
@@ -722,7 +723,7 @@ Diagnostics should distinguish:
 - unknown category;
 - category not applicable to the enclosed source;
 - acknowledgement that cannot make a known-invalid operation valid;
-- unsafe responsibility incorrectly expressed as intent;
+- a safety claim or `unsafe` responsibility incorrectly expressed as intent;
 - lint suppression incorrectly used for a semantic error;
 - and malformed acknowledgement source.
 
@@ -754,6 +755,5 @@ Future work remains for:
 - category namespaces and extension policy;
 - interaction with generated source and build contracts;
 - redundant acknowledgement policy as analysis improves;
-- unsafe category syntax;
 - lint declaration and suppression syntax;
 - and formal diagnostic identifiers.

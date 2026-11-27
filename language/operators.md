@@ -971,10 +971,11 @@ the original is left in are explained in
 `OpaqueObserver`, and `OpaqueReferenceObserver`. It creates no pointer or
 reference, transfers nothing, and grants no liveness proof.
 
-`unsafe transfer (opaqueOwner as last)` is the protected unchecked ownership
-recovery form. It reconstructs typed ownership from allocation metadata rather
-than reinterpreting pointer bits. Complete behavior belongs to
-[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
+Recovery without the type check writes the ordinary `opaqueOwner as last`
+inside a `safe<opaque-type>{...}` claim. It reconstructs typed ownership from
+allocation metadata rather than reinterpreting pointer bits. Complete behavior
+belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#safe-owner-recovery).
 
 ### Protected structural forms
 

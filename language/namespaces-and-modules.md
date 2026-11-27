@@ -444,6 +444,43 @@ declaration, so `GeometryA.MyList$(Integer)` and `GeometryB.MyList$(Integer)`
 are different types when `GeometryA` and `GeometryB` import one library twice;
 see [generics](generics.md#module-instances).
 
+Inside the importing module, each instance is defined by exactly one import
+statement, together with its body. Every other reference to that instance in
+the module goes through that statement's binding:
+
+```zax
+// file: second.zax
+Geometry :: import Module.MyGeometryModule {   // the one statement that defines this instance
+}
+
+// file: third.zax, later in module order
+origin : Geometry.Point                        // the same instance, through the binding
+```
+
+Exactly how earlier files, forwards, and direct exposure reach an instance
+remains future module work.
+
+### Set how loudly an imported instance reports verification findings
+
+An import body may hold one unattached `[<safe-verification=...>]` directive.
+It is not injected into the imported module's source. It sets, for this
+instance only, whether verification findings in the imported code are silent,
+advice, or errors:
+
+```zax
+C :: import Module.CModule {
+  [<safe-verification=off, wellformed=lint>]   // quiet for this instance of C, except inside wellformed checks
+}
+```
+
+Without it, the instance reports at `lint`, including inside `wellformed`
+checks. The setting does not reach the modules that C itself imports, and
+while C is imported it overrides C's own `safe-verification` directives,
+including any ranges in C's source. Directive state otherwise never crosses an import; this setting may,
+because it changes only what the compiler reports, never what the program
+does. Complete behavior belongs to
+[safety and analysis](safety-and-analysis.md#how-loudly-findings-are-reported).
+
 ### Inject declarations before module source
 
 An import body inserts declarations into the target root before the target's own
@@ -652,8 +689,11 @@ remain future visibility work. That work inherits these constraints:
 
 No directive state crosses an `import`. An imported module begins with its own
 defaults and its own source, whatever deprecation, export, or panic-check state
-the importer is in. Source files brought in by inclusion are different: they
-begin with the state in effect where they are included. See
+the importer is in. The one exception is a `[<safe-verification>]` written in
+the import body, described under
+[setting how loudly an imported instance reports verification findings](#set-how-loudly-an-imported-instance-reports-verification-findings).
+Source files brought in by inclusion are different: they begin with the state
+in effect where they are included. See
 [directive ranges](compiler-directives.md#what-bounds-a-range).
 
 ## Namespace and module aliases

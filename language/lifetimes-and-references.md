@@ -169,7 +169,7 @@ reference target place       = permanently fixed
 resident instance in place   = may change when the place is varying
 ```
 
-No safe operation, unsafe assertion, transfer stance, cast, capture, parameter
+No safe operation, safety claim, transfer stance, cast, capture, parameter
 mapping, or result mapping can retarget an existing reference.
 
 Constructing another reference is not rebinding:
@@ -224,9 +224,11 @@ Safe use requires proof that:
 - no forbidden lifecycle transition overlaps the access; and
 - the access path retains the required qualifications and permissions.
 
-When the compiler cannot prove a genuinely valid relationship, a narrow unsafe
-assertion may accept responsibility. Unsafe source cannot create ownership,
-extend a path, rebind a reference, or make a known-absent instance exist.
+When the compiler cannot prove a genuinely valid relationship, for example
+because it loses track of where a reference's target came from, a narrow
+`safe<lifetime-escape>` claim may accept responsibility. No claim can create
+ownership, extend a path, rebind a reference, or make a known-absent instance
+exist.
 
 ## Mutation and replacement
 
@@ -283,18 +285,27 @@ record varying : MyRecord immutable writable varying
 countView : Integer readonly & = record.count
 
 record .= makeReplacement()
-inspect(countView) // error: the referenced member was renewed
+inspect(countView) // intent error: countView was formed from the old count
 ```
 
-This remains a safe-language error even when:
+The code is defined: `countView` still names the `count` member place, and
+that place now holds the new member instance. What is surprising is that the
+reference now observes a different lifetime than the one it was formed from,
+so the compiler asks whether that was meant. When it was, acknowledge it:
 
-- the member has a trivial representation;
-- the address did not change; and
-- low-level access to the successor would be technically possible.
+```zax
+intent<reference-tracks-replacement>{
+  inspect(countView)   // observes the new count, as intended
+}
+```
 
-A narrow unsafe permission may deliberately use the fixed member-place
-reference to reach a completely established successor. It accepts the logical
-renewal boundary; it does not claim that the old member instance survived.
+The acknowledgement is required even when the member has a trivial
+representation and the address did not change. It does not claim that the old
+member instance survived. Interior pointers have a parallel acknowledgement,
+`intent<inner-pointer-tracks-replacement>`, written where the pointer is
+formed rather than where it is used, as
+[pointers, allocation, and arenas](pointers-and-arenas.md#interior-pointers)
+describes.
 
 Complete replacement and member renewal are defined by
 [Zax construction, replacement, and destruction](construction-and-destruction.md).
@@ -355,9 +366,9 @@ recover final : (car : Car loan & ?)(engine : Engine loan &) = {
 A `tracked outer cast` returns an optional reference because an `Engine &` might
 name a standalone engine or an engine stored somewhere other than `Car.engine`.
 It explicitly uses the `outer tracked` placement capability to perform that
-checked operation. `unsafe outer cast` skips the check and makes the programmer
-responsible for the provenance claim. No outer-cast form can use an expired
-origin or revive an ended resident.
+checked operation. A plain `outer cast` inside `safe<exact-origin>{...}` skips
+the check and makes the programmer responsible for the provenance claim. No
+outer-cast form can use an expired origin or revive an ended resident.
 
 A selected contract may instead require a site-specific exact-origin proof:
 
@@ -887,7 +898,7 @@ ownership, weak observation, cross-thread lifetime accounting, or
 allocation-backed continuation selects an explicit pointer strategy and pays its
 visible costs.
 
-Compiler debugging modes may instrument unsafe claims or lifecycle state. Such
+Compiler debugging modes may instrument safety claims or lifecycle state. Such
 checks are tooling, not language guarantees.
 
 ## Diagnostics
@@ -900,7 +911,8 @@ Diagnostics should identify:
   the use;
 - the later conflicting use;
 - any permission lost through an alias, parameter, result, or capture; and
-- whether the operation is unproved, a defined unsafe boundary, or impossible.
+- whether the operation is unproved and can take a `safe<...>` claim, needs an
+  `unsafe` form, or is impossible.
 
 Representative errors include:
 

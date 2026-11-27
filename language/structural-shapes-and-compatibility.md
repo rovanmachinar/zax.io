@@ -1565,8 +1565,27 @@ relation, transformation uses a complete source temporary unconditionally.
 It does not emit a runtime address-range test.
 
 If no applicable copy, move, or other capture can establish the temporary, the
-transform is unavailable unless future analysis-control work supplies an
-explicit non-overlap contract.
+transform is unavailable unless the compiler proves that source and
+destination do not overlap, or a `safe<disjoint-storage>` claim vouches for
+it:
+
+```zax
+// GridTranspose maps each cell to its transposed position;
+// MyGrid's cells allow neither copy nor move
+adjust final : ()(target : MyGrid writable loan &, source : MyGrid readonly loan &) = {
+  target -<>- GridTranspose -<>- source   // error: target and source may be the same grid,
+                                         // and the cells can't be copied aside first
+}
+
+adjustDistinct final : ()(target : MyGrid writable loan &, source : MyGrid readonly loan &) = {
+  safe<disjoint-storage>{
+    target -<>- GridTranspose -<>- source // you vouch target and source never overlap
+  }
+}
+```
+
+A false claim has undefined consequences: the transform may read cells it has
+already overwritten.
 
 A direct same-member mapping needs no intermediate, but its selected assignment
 still executes when that operation has observable behavior.

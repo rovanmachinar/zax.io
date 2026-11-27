@@ -445,10 +445,9 @@ Postfix access does not grant authority to change the owning wrapper's state.
 Allowing the call would permit later wrapper destruction to destroy the same
 boxed lifetime again.
 
-When alias analysis cannot prove a valid reset boundary, future narrow
-`unsafe<...>{...}` assertions may acknowledge an unproved valid case. They
-cannot repair a known use of an ended lifetime or make direct boxed destruction
-legal.
+When alias analysis cannot prove a valid reset boundary, a narrow
+`safe<...>{...}` claim may vouch for an unproved valid case. It cannot repair
+a known use of an ended lifetime or make direct boxed destruction legal.
 
 ## Presence proof and postfix access
 
@@ -486,46 +485,47 @@ if ?optional {
 ```
 
 Reset may follow the proven final use of a non-escaping reference. If analysis
-cannot establish definitive proof for otherwise valid source, a future narrow
-assertion is required:
+cannot establish definitive proof for otherwise valid source, a narrow claim
+is required:
 
 ```zax
 if ?optional {
   oldValue : MyValue & = optional.
   opaqueObserve(oldValue)
 
-  unsafe<replacement-alias>{
-    reset optional // asserts that opaqueObserve retained no alias
+  safe<replacement-alias>{
+    reset optional // you vouch that opaqueObserve retained no alias
   }
 }
 ```
 
-When the uncertain operation is the access itself, the assertion belongs around
+When the uncertain operation is the access itself, the claim belongs around
 that access. Assume `possiblyValidReference` comes from an opaque lifetime source
 whose validity the compiler cannot establish:
 
 ```zax
-unsafe<lifetime-escape>{
+safe<lifetime-escape>{
   use(possiblyValidReference)
 }
 ```
 
-The exact categories remain future analysis-control design. These assertions add
-no required runtime validity check. If the programmer's presence, alias, or
+The current categories are listed by
+[safety and analysis](safety-and-analysis.md#current-categories). These claims
+add no required runtime validity check. If the programmer's presence, alias, or
 lifetime claim is false, behavior is undefined; optional debug instrumentation
 may detect the violation and panic.
 
-The current distinction among proof, unsafe assertion, defined unsafe
-permission, and no valid interpretation is owned by
-[Zax safety and analysis](safety-and-analysis.md).
+The distinction among proof, `safe<...>` claims, `unsafe` operations, and no
+valid interpretation is owned by
+[Zax safety and analysis](safety-and-analysis.md#vouching-for-safety-safe).
 
 A known absence or unconditionally known-ended lifetime remains invalid inside
-an unsafe enclosure. Such an assertion cannot make a value lifetime exist:
+a claim. A claim cannot make a value lifetime exist:
 
 ```zax
 reset optional
 
-unsafe<optional-presence>{
+safe<optional-presence>{
   use(optional.) // error: optional is known absent
 }
 ```
@@ -1368,7 +1368,7 @@ Future work owns:
   and source-view syntax;
 - `:=` value/reference inference;
 - self-assignment and alias policy beyond the optional guarantees here;
-- exact unsafe assertion categories;
+- final names for the optional safety categories;
 - optional pattern matching and presence binding;
 - async construction, transfer, and cancellation;
 - exact reference-handle representation and optional pointer layout;

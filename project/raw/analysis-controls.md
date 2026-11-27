@@ -4,10 +4,10 @@
 | --- | --- |
 | Status | Raw future-work input / non-authoritative |
 | Audience | Future work defining unsafe controls, static-analysis contracts, diagnostics, lints, or language-version behavior |
-| Applies To | Future source syntax and category design for narrow semantic permissions and assertions |
-| Owns | Preservation of construction-derived category behavior, concrete examples, the contiguous non-scoping unsafe-enclosure candidate, analysis provenance, remaining syntax, activation pressure, and retirement criteria |
-| Does Not Own | The centralized provisional category inventory ([analysis-control registry](analysis-control-registry.md)); current proof, unsafe-permission, redundant-control, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
-| Source / Provenance | Work items `005`, `006`, `007`, `012`, `015`, `032`, `034`, `036`, and `039`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, panic-category, intent-naming, compile-time error, generic-extension, and compiler-verified unsafe-tag pressure |
+| Applies To | Remaining future syntax and category questions for `safe<...>` claims, `unsafe` operations, runtime-check controls, and lints |
+| Owns | Remaining enclosure grammar questions, deferred verification questions, analysis provenance, remaining runtime-check and lint syntax, activation pressure, and retirement criteria |
+| Does Not Own | The centralized provisional category inventory ([analysis-control registry](analysis-control-registry.md)); current `safe<...>` claims, `unsafe` operations, categories, verification, redundant-claim, and lint boundaries ([safety and analysis](../../language/safety-and-analysis.md)) |
+| Source / Provenance | Work items `005`, `006`, `007`, `012`, `015`, `032`, `034`, `036`, `039`, and `041`; construction/lifecycle, invocation/result, core-flow, optional proof/alias, panic-category, intent-naming, compile-time error, generic-extension, and compiler-verified claim pressure |
 
 ## Reading posture
 
@@ -30,20 +30,11 @@ panic identifiers are centralized in the
 the reasoning and examples that give those entries meaning; it is not a second
 registry.
 
-## Semantic controls are not broad unsafe mode
+## Semantic controls are not a broad mode
 
-A future semantic control must:
-
-- use the literal `unsafe`;
-- identify the exact unsafe category;
-- name the resolved member, binding, expression, or operation where applicable;
-- apply at the narrowest useful source location;
-- affect only the stated analysis or generated behavior;
-- permit attached `///` documentation explaining the claim; and
-- have no required runtime check.
-
-Compiler debugging modes may instrument a claim and panic when misuse is
-detected. Such instrumentation is tooling, not a language guarantee.
+The requirements that every `safe<...>` claim and `unsafe` operation be narrow,
+named, and documented are current design in
+[safety and analysis](../../language/safety-and-analysis.md#markers-are-narrow).
 
 ## Intent acknowledgement is separate
 
@@ -52,9 +43,10 @@ owns defined but suspicious source such as deliberate terminal-source reuse.
 Intent confirms an interpretation the compiler already understands. It does not
 accept proof responsibility and cannot make an invalid operation valid.
 
-This raw input retains only semantic permissions or assertions that change what
-the compiler may trust about an unproved lifetime, alias, construction, or other
-required property. Lint suppression remains separate from both.
+This raw input retains only remaining questions about claims and `unsafe`
+operations that change what the compiler may trust about an unproved lifetime,
+alias, construction, or other required property. Lint suppression remains
+separate from both.
 
 The maintainer intends a later collective review of category names. The
 partial categories `grant-redirected-selection`, `injected-partial-exposure`,
@@ -65,25 +57,16 @@ to mean incomplete.
 
 ## Permission regions
 
-Some operations are valid only when the programmer accepts responsibility for a
-specific analysis boundary.
+Current `safe<...>` claims, `unsafe` operations, the test that chooses between
+them, and the current category list are owned by
+[safety and analysis](../../language/safety-and-analysis.md#vouching-for-safety-safe).
+This section keeps only the remaining grammar questions.
 
-Illustrative syntax:
-
-```zax
-/// The callback consumes the view synchronously and stores nothing.
-unsafe<lifetime-escape>{
-  myCaptureBeyondLifetime(myType.view())
-}
-```
-
-The angle-bracketed category is placeholder notation, not accepted syntax.
-
-The aligned source shape is a contiguous, non-scoping unsafe enclosure, not a
-keyword followed by a scope. Declarations retain their surrounding scope:
+The enclosure is contiguous and non-scoping. Declarations retain their
+surrounding scope:
 
 ```zax
-unsafe<lifetime-escape>{
+safe<lifetime-escape>{
   x : Integer
   myCaptureBeyondLifetime(myType.view())
 }
@@ -91,18 +74,18 @@ unsafe<lifetime-escape>{
 x = 5
 ```
 
-One enclosure may acknowledge several exact categories without becoming broad
-unsafe mode:
+One enclosure may name several exact categories without becoming a broad
+mode:
 
 ```zax
-unsafe<optional-presence, lifetime-escape, replacement-alias>{
+safe<optional-presence, lifetime-escape, replacement-alias>{
   reset optionalValue
 }
 ```
 
-Every category applies only its named permission. Future grammar must validate
-the contiguous opener, required whitespace after each comma separator,
-documentation attachment, nesting, and source reflection.
+Future grammar must validate the contiguous opener, required whitespace after
+each comma separator, documentation attachment, nesting, mixing `safe` and
+`unsafe` categories, and source reflection.
 
 ## Lifecycle-state assertions
 
@@ -122,32 +105,18 @@ may be revised. The syntax by which the enclosure names the places it
 establishes is open: a call receiving two empty places must not silently
 establish both.
 
-For construction, the conservative first-construction rule has no unsafe
-override: when the compiler cannot tell whether a place is constructed, the
-code must be restructured. For destruction, the future mechanism must still
-distinguish:
+For construction, the conservative first-construction rule has no override:
+when the compiler cannot tell whether a place is constructed, the code must be
+restructured.
 
-- suppressing a generated destruction;
-- asserting that an opaque operation ended a lifetime;
-- asserting destruction on every normal path; and
-- asserting that apparently overlapping calls cannot end one lifetime twice.
+## Construction-derived categories
 
-A warning-suppression mechanism is insufficient because these claims may change
-generated code or the compiler's semantic state.
-
-## Known construction-derived category pressure
-
-| Provisional identifier | Claim or permission |
-| --- | --- |
-| `opaque-construction` | Assert that the enclosed operation constructs the named empty member or result slot; the member receives no automatic construction |
-| `manual-member-destruction` | Suppress generated member destruction because another operation ends or transfers the member lifetime |
-| `destruction-path-complete` | Treat a member as destroyed or dispositioned on every applicable path despite incomplete proof |
-| `destruction-at-most-once` | Trust that apparently overlapping paths cannot end one member lifetime twice |
-| `partial-instance-access` | Permit bounded access to a current instance that is not fully constructed |
-| `partial-instance-escape` | Permit an incomplete current instance or access path to escape or become externally observable |
-| `lifetime-escape` | Permit an access path to cross a boundary whose lifetime cannot be proved sufficiently bounded |
-| `replacement-alias` | Permit replacement despite unresolved possible aliasing between the destination and a right-hand operand |
-| `terminal-reconstruction` | Permit reconstruction of a member during enclosing destruction |
+The construction and destruction categories are now current design, with
+examples, in
+[safety and analysis](../../language/safety-and-analysis.md#current-categories)
+and [construction and destruction](../../language/construction-and-destruction.md).
+`opaque-construction` and `manual-member-destruction` use `unsafe<...>`; the
+others use `safe<...>`.
 
 `manual-member-construction`, `construction-path-complete`, and
 `construction-at-most-once` are superseded. Every explicit construction step
@@ -155,27 +124,25 @@ suppresses automatic construction; opaque establishment
 is `opaque-construction`; and unknown construction state is an error to
 restructure rather than a fact to assert.
 
-Invocation and result work adds future proof categories without establishing
-their final identifiers:
+Invocation and result work still has proof concerns without category names:
 
 - completing every result slot on every normal path;
-- constructing each result slot at most once per lifetime;
-- preventing operations unavailable in moved-from or terminal state;
-- preventing a returned reference from escaping a temporary;
-- consuming each source-result and destination slot at most once; and
+- constructing each result slot at most once per lifetime; and
 - preserving diagnostic provenance for the contract or analysis that rejected a
   call.
 
+Operations on moved-from or finished values use `safe<not-finished>`, and a
+reference escaping from an opaque origin uses `safe<lifetime-escape>`. Each
+source result and destination slot being consumed at most once needs no
+category: routing is written in the call, so the compiler always checks it.
+
 Ordinary defined reuse after accepted `last` is an intent error and uses
-`intent<terminal-source-reuse>{...}`. Unsafe analysis control is needed only
-when a required valid lifetime, alias, or operation property cannot be proved.
+`intent<terminal-source-reuse>{...}`. A safety claim is needed only when a
+required valid lifetime, alias, or operation property cannot be proved.
 
-These names identify future-work concerns. They are not accepted keywords. Their
-central maturity and occurrence inventory is maintained in the
-[raw analysis-control registry](analysis-control-registry.md#unsafe-category-inventory).
-
-An unsafe assertion may override incomplete proof or assert the result of an
-opaque operation. It cannot make a known-ended lifetime live again.
+A claim may cover incomplete proof, and an `unsafe<...>` category may assert
+the result of an opaque operation. Neither can make a known-ended lifetime live
+again.
 
 ## Flow-derived proof pressure
 
@@ -219,14 +186,14 @@ override syntax:
   domain is provable. Only reachable tests contribute member coverage: `goto`
   may make a body reachable while bypassing its test, and a case after a
   positional default does not count for a search that cannot reach it.
-- **Obsolete proof assertions.** A smarter compiler may make a previously required
-  proof override redundant. Whether that redundancy is advisory or an error
-  follows the selected static-analysis contract; see
-  [Contract-dependent redundant controls](#contract-dependent-redundant-controls).
+- **Obsolete claims.** A smarter compiler may be able to prove a previously
+  required claim. What that compiler may report, and when the claim becomes an
+  error, follows the selected contract; see
+  [contract-dependent redundant controls](#contract-dependent-redundant-controls).
 
-These are future analysis concerns. A semantic assertion may override incomplete
-proof, while lint suppression may not change semantics; the two mechanisms remain
-distinct as described below.
+These are future analysis concerns. A `safe<...>` claim may cover incomplete
+proof, while lint suppression may not change semantics; the two mechanisms
+remain distinct as described below.
 
 ### Optional proof and invalidation pressure
 
@@ -236,8 +203,8 @@ presence test, construction, earlier flow, or another recognized contract.
 
 Reset, packet construction, complete-wrapper replacement, terminal transfer, or
 another lifetime-ending operation invalidates earlier payload proof and aliases.
-An assertion may accept responsibility when the compiler cannot prove valid
-source. The assertion adds no required runtime handle or check. If its presence,
+A `safe<...>` claim may accept responsibility when the compiler cannot prove
+valid source. The claim adds no required runtime handle or check. If its presence,
 alias, or lifetime claim is false, behavior is undefined; debug instrumentation
 may detect the violation and panic without making that check a language
 guarantee. It cannot legalize unconditional known absence, a known-ended
@@ -301,126 +268,67 @@ Analysis identifiers need visible provenance:
 
 An unknown standard identifier under a supported contract is an error. An
 unknown lint extension may be ignored or reported according to policy. An
-unknown unsafe semantic extension may be accepted only when the compiler
+unknown `safe<x-...>` or `unsafe<x-...>` extension category may be accepted only when the compiler
 independently proves the code valid without it; otherwise the compiler reports
 that the required extension is unsupported.
 
 ## Contract-dependent redundant controls
 
-The mental model for any analysis the selected contract mandates is
-prove-or-narrowly-assert:
+How a claim becomes redundant under the selected contract, what a cleverer
+compiler may report, and when a claim is an error are current design in
+[safety and analysis](../../language/safety-and-analysis.md#language-contracts-and-compiler-analysis).
 
-> For every property mandatory under the selected language contract, Zax attempts
-> to prove the operation valid. If proof cannot be established, the operation is
-> rejected unless a narrow semantic assertion explicitly accepts responsibility
-> for an unproved but valid boundary. An assertion cannot make a known violation
-> valid.
+### Deferred verification questions
 
-Redundant-control validity is not absolute; it follows the selected contract:
+Asking a compiler to verify a claim (`[<verify=...>]`), the reporting levels
+(`[<safe-verification=...>]`), and their behavior inside `wellformed` are
+current design in
+[safety and analysis](../../language/safety-and-analysis.md#asking-a-compiler-to-verify-a-claim).
+These questions remain:
 
-| Situation | Severity of the now-redundant control |
-| --- | --- |
-| The contract does not require proof of that case | Implementation improvement may make the assertion redundant, but it is at most advisory |
-| The selected contract requires that case to be recognized as safe | The redundant assertion may be a hard error |
-| A compiler demands an assertion for a contract-mandated passing case | That compiler is nonconforming |
-| Source adopts a later contract that newly mandates the proof | Source may need to remove a control that was valid under the earlier contract |
+- **Declaration-level and range forms of `[<verify>]`.** Today the directive
+  attaches only to one `safe<...>` enclosure, which keeps it next to the
+  claim it verifies:
 
-Source validity therefore follows the selected contract, not merely the executable
-compiler's current cleverness. Compiler experimentation does not silently change
-portable source validity, and a newly clever compiler does not by itself break
-source whose contract did not change.
-
-Removing an assertion that only one implementation has made redundant may make
-the source depend on that stronger implementation. Portability improves only
-when a selected language contract requires every conforming compiler to prove
-the case.
-
-This rule is general. It applies to every static analysis, not only conditional
-live-storage presence or one lifecycle feature.
-
-Concrete example shapes that must survive into the future owner:
-
-```zax
-if ?optionalValue
-  use(optionalValue.) // proven; no assertion is required under any contract
-```
-
-```zax
-// unsafe <construction-path-complete> _.prop2
-// Advisory when the contract does not mandate this proof;
-// a hard error under a contract that mandates recognizing the case.
-```
-
-### Compiler-verified unsafe tags
-
-Between "keep plain `unsafe` everywhere" and "opt into a non-portable
-extension contract that drops `unsafe`", there is a useful middle ground:
-keep the standard `unsafe` marker for portability under the baseline contract,
-and attach a directive naming one or more compilers or extension analyzers
-that **must actually prove the site safe**:
-
-```zax
-// illustrative syntax (using Zax's [<...>] directive brackets)
-makePtrFromRef final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
-  [<safe=x-my-compiler>]
-  unsafe<raw-from-reference>{
-    return input
+  ```zax
+  // possible future form, not current syntax
+  [<verify=x-acme>]
+  processBatch final : ()(inbox : MyMessage[0..] mutable writable loan &) = {
+    // every safe<...> claim in this body would be verified by x-acme
   }
-}
-```
+  ```
 
-Intended behavior:
+  Activation: real code with many verified claims in one function. Adding the
+  form later does not break source.
+- **Separate control of individual findings or verifiers** in
+  `[<safe-verification>]`, such as silencing only "can be verified" findings
+  or only one compiler's findings. Adding it later does not break source.
+- **Source reflection of `[<verify>]`**, and whether it is enough for tooling
+  to list verified claims.
+- **Who maintains the registry** of `x-` extension specification names.
+- **Official verifier names.** A plain, non-`x-` value could later name a
+  language contract, asking "would this claim be provable under contract N"
+  before upgrading. No pressure yet.
+- **A buffer-clear operation that cannot be optimized away.** A destructor
+  that zeroes a key may have its writes removed as dead stores, because
+  nothing reads them afterwards. A test that inspects the storage through a
+  `* unsafe` probe can keep the writes alive and pass, while production code
+  loses them:
 
-- **Compilers that do not implement `x-my-compiler`:** ignore the unknown tag
-  (optionally with an informational note) and accept the standard `unsafe`
-  underneath, so the program stays portable under the baseline spec contract.
-- **Compilers that do implement `x-my-compiler`:** do not treat the site as
-  unchecked trust—they must prove it safe. If a later refactor breaks the
-  proof, `x-my-compiler` rejects the site as an **error** instead of silently
-  falling back to trusting `unsafe`.
-- **Auditability and spec upgrades:** human reviewers can tell genuinely
-  unchecked `unsafe` sites apart from portable sites verified by a named
-  analyzer. When a later language contract adopts the proof natively, the
-  ordinary redundant-`unsafe` error prompts removing both the tag and the
-  `unsafe`.
-- **Multiple verifiers:** a tag should be able to list more than one
-  compiler/extension identifier (for example `[<safe=x-compiler-a, x-compiler-b>]`)
-  so portable libraries can verify the same site across toolchains.
+  ```zax
+  --- final : ()() = {
+    _.key.fill(0)          // may be removed: nothing reads key afterwards
+  }
+  ```
 
-**Naming candidates and concerns (undecided):**
+  The expected direction is an intrinsic whose writes always happen, rather
+  than reduced optimization. Activation: security-sensitive library or
+  runtime design.
 
-- **`safe=...`** (current lean): avoids reading as "proved unsafe", though by
-  itself `safe` can slightly sound as if the tag *makes* the code safe rather
-  than claiming a named verifier proves it.
-- **`proved=...`**: next to `unsafe<...>`, reads dangerously like "proved
-  unsafe" from context; rejected on its own unless paired with a word that
-  makes the polarity explicit.
-- **Explicit-polarity alternatives** to consider alongside `safe=...`:
-  `proved-safe=...` or `verified-safe=...` (unambiguous polarity, slightly
-  longer).
-
-**Open questions for future work:**
-
-- Exact keyword/key spelling and whether it shares the `[<...>]` directive
-  form with `[<panic=...>]`.
-- Whether an unknown verifier tag is ignored silently by default or emits a
-  configurable lint, and whether a strict build/CI option can require listed
-  verifiers to run.
-- Interaction with the compiler-agreement principle: without the tag, every
-  compiler on the same contract agrees on accept/reject; with the tag, the
-  programmer explicitly opts in to having the named verifier reject the site
-  if its proof fails.
-
-### Diagnostics must name the required `unsafe` form
-
-When a rejected operation can be made valid with `unsafe`, the compiler error
-must tell the programmer **what is required to mark it as `unsafe`**—naming
-the exact `unsafe` category or form (for example `unsafe<raw-from-reference>`,
-`unsafe<unique-raw-borrow>`, or `unsafe cast as last`) and the fact the
-programmer is taking responsibility for. Programmers should never have to
-search documentation or guess category identifiers to write a narrow unsafe
-boundary. When the operation is known-invalid and no `unsafe` escape exists,
-the error should say so instead of suggesting `unsafe`.
+The rule that a diagnostic names the exact `safe<...>` category or `unsafe`
+operation that would apply, and says so when no marker can help, is current
+design in
+[safety and analysis](../../language/safety-and-analysis.md#diagnostics).
 
 ## Lint suppression is a separate mechanism
 
@@ -551,7 +459,7 @@ defined result must distinguish success from pointer vacancy.
 
 Static proof obligations remain distinct. Optional presence, reference lifetime,
 and alias validity may be impossible or prohibitively expensive to track at
-runtime without changing representation. A narrow unsafe assertion may accept
+runtime without changing representation. A narrow `safe<...>` claim may accept
 responsibility without requiring a check; debug tooling may add best-effort
 instrumentation.
 
@@ -602,13 +510,9 @@ optimized away when the compiler proves the selected operation is preserved.
 uses conservative intermediate capture when source and destination may overlap.
 It emits no runtime range check merely to choose a cheaper transform.
 
-Future analysis-control work may define an explicit non-overlap contract for a
-transform whose source cannot be copied, moved, or otherwise captured. That
-contract would assert a semantic alias fact, affect generated operations, and
-produce undefined behavior when false. It is not a lint suppression or general
-optimizer hint.
-
-No exact category name or syntax is established here.
+A transform whose source cannot be copied, moved, or otherwise captured now
+uses a `safe<disjoint-storage>` claim, which is current design in the
+structural owner. Nothing further remains here.
 
 ## Nothing-instance diagnostics and controls
 
@@ -623,7 +527,9 @@ independently selectable categories for:
 - a proved write to compiler-provided Nothing backing;
 - a runtime pointer-arithmetic check when ordinary target validity is required;
   and
-- a proved call of an unavailable function value.
+- a proved call of an unavailable function value; and
+- the check at entry to a function that is not `once` when it is called with a
+  Nothing receiver on a target without a hardware trap.
 
 Compiler analysis remains intentionally incomplete. A selected category may
 control a required check where the language defines one; it must not convert a
@@ -638,69 +544,22 @@ that relies on it has undefined behavior. Future controls and diagnostics must
 expose this capability difference without pretending a debugger can stop every
 operation at the faulting instruction.
 
-### Proven errors versus suspected flow
+### Possible vacancy
 
-A compiler may prove with certainty that a pointer is vacant when source
-dereferences or writes it. That is an error. A different case arises when
-analysis only suspects that a pointer may become vacant before reaching a
-later writer:
+A possibly vacant access through a tracked pointer now needs proof or a
+`safe<pointer-presence>` claim at the operation that dereferences it, as
+[Nothing instances](../../language/nothing-instances.md#possible-vacancy-needs-a-presence-claim)
+teaches. The earlier provisional `possible-nothing-write` and
+`possible-nothing-read-trap` permissions are superseded by that claim.
 
-Provisional unsafe-catalog additions:
-
-| Provisional identifier | Permission |
-| --- | --- |
-| `possible-nothing-write` | Accept a pointer handoff or operation whose downstream write may reach compiler-provided Nothing backing, without claiming that the pointer is present |
-| `possible-nothing-read-trap` | Accept a pointer handoff or operation whose downstream read may reach a built-in type's canonical trapping Nothing or a defined type using `= trap` |
-
-`unsafe` already communicates risk, so the identifiers name the uncertain
-condition rather than appending `risk`. Both are permissions for possible flow,
-not assertions that the pointer is non-vacant.
-
-```zax
-writeValues final : ()(value : MyType *) = {
-  value.writeValuesIntoType()
-}
-
-// Illustrative placement; exact triggering rules remain future work.
-unsafe<possible-nothing-write>{
-  writeValues(possiblyVacant)
-}
-```
-
-The risky boundary may be the call or handoff that supplies the pointer, not the
-eventual store. Writing through a pointer is not inherently unsafe, so attaching
-an unsafe marker mechanically to every write would identify the wrong
-responsibility boundary.
-
-This is an unsafe concern rather than intent acknowledgement: the programmer is
-accepting possible memory-safety consequences, not merely confirming surprising
-defined behavior. The provisional identifiers will exist in the unsafe catalog;
-future work still owns their exact triggering scenarios and source placement.
-
-Neither permission disables an actual hardware trap, makes a proved vacant
-access valid, or promises successful execution. `possible-nothing-read-trap`
-names only reads subject to trapping policy: built-in Nothing instances and
-defined types selecting `= trap`. It is not a general warning for readable
-defined-type Nothing backing.
-
-Future safety/error work must choose how non-certain findings affect portable
-source:
-
-- compiler-dependent analysis with a standard unsafe escape;
-- only language-mandated findings affecting standard validity; or
-- language-mandated findings plus `x-` extension diagnostics and controls for
-  stronger compiler analysis.
-
-It may choose another coherent model. The design must avoid one compiler
-requiring a standard unsafe marker that another compiler rejects as needless,
-while still allowing implementations to report high-confidence problems beyond
-the mandatory language baseline.
-
-Future syntax must also express narrow unsafe responsibility for disabling an
-applicable check or asserting ordinary target validity. A false assertion has
-undefined consequences. Unsafe cannot legalize a proved managed-pointer leak,
-and no control may collapse a vacant pointer, absent optional, or unavailable
-function value into one universal state.
+Remaining future work: how far the rule's source tracking follows pointers
+stored in members (part of the pointer-tracking follow-up in
+[usage and provenance tracking](usage-and-provenance-tracking.md)), and
+narrow responsibility for disabling an applicable check or asserting ordinary
+target validity. A false claim has undefined consequences. No marker can
+legalize a proved managed-pointer leak, and no control may collapse a vacant
+pointer, absent optional, or unavailable function value into one universal
+state.
 
 ## Compile-time error reporting and assertions
 
@@ -785,19 +644,64 @@ the maintainer accepted explicit `active` as a valid choice.
 Undecided: whether to add it, its name, and whether it also follows a host
 value computed with `host` or `active` into a later decision.
 
+## Proof rules for each category
+
+Every `safe<...>` category needs specification-level rules saying when the
+language contract proves a site safe, so the claim is redundant, and when it
+proves the claim false, so the code is an error. Without them, compilers
+cannot agree on which claims are required, and the "proved by the contract"
+and "proved only beyond the contract" cases in
+[safety and analysis](../../language/safety-and-analysis.md#what-a-compiler-does-at-a-claim)
+have no portable boundary.
+
+The rules are algorithm-oriented and likely belong in their own documents
+rather than in the teaching owners. Several categories probably share one
+tracking mechanism, so the eventual structure may be one document per
+mechanism, each listing the specific check for every category that uses it:
+
+- **lifetime and origin tracking:** `lifetime-escape`, `unique-raw-borrow`,
+  `exact-origin`, `not-finished`, `pointer-presence`, and tracked pointers;
+- **path-merge state tracking**, as construction already uses for empty, live,
+  and unknown member states: `destruction-path-complete`,
+  `destruction-at-most-once`, `terminal-reconstruction`,
+  `partial-instance-access`, and `partial-instance-escape`;
+- **alias and write tracking:** `replacement-alias`, `disjoint-storage`, and
+  `no-mutation-while-held`;
+- **value and representation facts:** `distinct-element`,
+  `valid-representation`, `opaque-type`, and `optional-presence`.
+
+The kind of rule meant, for one category:
+
+```zax
+// destruction-path-complete: the contract proves the site when every path
+// from destructor entry to exit destroys the member exactly once, with path
+// conditions compared only in recognized shapes (if/else, else if, switch arms)
+--- final : ()() = {
+  if _.pooled {
+    _.buffer.---()
+  } else {
+    _.buffer.---()        // proved: if/else covers both paths
+  }
+}
+```
+
+Each rule must also say which check shapes count as proof, matching the
+current rule that a check counts only if the compiler can follow it, and must
+stay stable across contract versions except where a later contract
+deliberately recognizes more.
+
+Activation: specification work on any category, or the first time two
+compilers disagree about whether a claim is required. Constraint on current
+work: teaching owners describe outcomes and examples, not the algorithms.
+
 ## What this input does not decide
 
 This file does not establish:
 
-- angle-bracket syntax;
-- block, statement, expression, annotation, or directive form for unsafe
-  assertions and permissions (panic-check controls are current directives);
 - the final category names;
 - which analyses are mandatory in each contract;
 - language-version syntax;
 - extension namespaces;
-- compiler-verified unsafe-tag syntax and name (`safe=...` vs explicit-polarity
-  alternatives);
 - lint severity or suppression syntax;
 - runtime instrumentation; or
 - compiler analysis algorithms.

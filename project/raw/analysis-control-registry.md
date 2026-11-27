@@ -1,13 +1,13 @@
-# Raw registry: unsafe and panic analysis controls
+# Raw registry: safety and panic analysis controls
 
 | Field | Value |
 | --- | --- |
 | Status | Raw provisional registry / non-authoritative |
-| Audience | Language maintainers and future work defining unsafe assertions, unsafe permissions, runtime-check controls, or panic categories |
-| Applies To | Discovery and maturity of proposed `unsafe` and panic category identifiers |
+| Audience | Language maintainers and future work defining safety categories, runtime-check controls, or panic categories |
+| Applies To | Discovery, maturity, and history of `safe<...>`, `unsafe<...>`, and panic category identifiers |
 | Owns | The centralized provisional inventory of category names, unnamed category pressure, source occurrences, and disposition state |
-| Does Not Own | Accepted unsafe syntax, accepted panic-control syntax, domain behavior, intent acknowledgements, diagnostic identifiers, or compiler implementation |
-| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work items `028`, `039`, and `040` |
+| Does Not Own | The current category list and its teaching ([safety and analysis](../../language/safety-and-analysis.md#current-categories)), accepted panic-control syntax, domain behavior, intent acknowledgements, diagnostic identifiers, or compiler implementation |
+| Source / Provenance | Current conceptual owners, `project/raw/analysis-controls.md`, reached raw safety input, legacy compiler-directive evidence, and work items `028`, `039`, `040`, and `041` |
 
 ## Purpose and reading posture
 
@@ -22,7 +22,7 @@ language-contract requirements, and promotion into an accepted registry.
 The current accepted **intent acknowledgement** registry is separate and owned
 by
 [Zax intent acknowledgements](../../language/intent-acknowledgements.md#current-category-registry).
-`intent<...>` confirms defined but suspicious behavior; it supplies no unsafe
+`intent<...>` confirms defined but suspicious behavior; it supplies no safety
 fact and disables no runtime check. Do not duplicate its categories here.
 
 The root legacy compiler-directive page formerly contained historical panic
@@ -50,85 +50,77 @@ Entries use these local maturity labels:
 
 An occurrence in source does not raise its maturity.
 
-## Unsafe-category inventory
+## Safety-category inventory
 
-Unsafe categories identify an exact assertion or permission. They do not disable
-a defined panic check merely by sharing a failure condition.
+Each category identifies one exact fact. `safe<...>` categories are facts about
+state the language tracks; `unsafe<...>` categories concern things it does not
+track. Categories do not disable a defined panic check merely by sharing a
+failure condition. The current list, with an example for each, is taught by
+[safety and analysis](../../language/safety-and-analysis.md#current-categories);
+this ledger records maturity and history.
 
-| Identifier | Maturity | Claim or permission | Behavior owner and current evidence |
-| --- | --- | --- | --- |
-| `union-lens-validity` | Accepted domain entry | Assert that the current backing representation of a `union unsafe` is valid for the requested lens where the selected contract does not prove it | [Zax unions](../../language/unions.md#unsafe-union) and [safety and analysis](../../language/safety-and-analysis.md#unsafe-union-lens-validity) |
-| `opaque-construction` | Accepted domain entry (name may be revised; place-naming syntax open) | Assert that the enclosed operation constructs the named empty member or result slot; the member receives no automatic construction | [Zax construction, replacement, and destruction](../../language/construction-and-destruction.md#construction-by-an-opaque-operation), [declarations and bindings](../../language/declarations-and-bindings.md#low-level-initialization-belongs-in-a-constructor), and [raw analysis controls](analysis-controls.md#lifecycle-state-assertions) |
-| `manual-member-construction` | Superseded (032) | Replaced by explicit construction control plus `opaque-construction` | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
-| `manual-member-destruction` | Provisional | Suppress generated member destruction because another operation ends or transfers the member lifetime | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `construction-path-complete` | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
-| `destruction-path-complete` | Provisional | Treat a member as destroyed or dispositioned on every applicable path despite incomplete proof | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `construction-at-most-once` | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
-| `destruction-at-most-once` | Provisional | Trust that apparently overlapping paths cannot end one member lifetime twice | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `partial-instance-access` | Provisional | Permit bounded access to a current instance that is not fully constructed | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction and safety owners |
-| `partial-instance-escape` | Provisional | Permit an incomplete current instance or access path to escape or become externally observable | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction and safety owners |
-| `lifetime-escape` | Provisional | Assert that an access path remains valid across a boundary whose lifetime proof is incomplete | Used illustratively by [safety and analysis](../../language/safety-and-analysis.md#unproved-but-valid), [optional values](../../language/optional-values.md#presence-proof-and-postfix-access), and [raw analysis controls](analysis-controls.md#permission-regions) |
-| `replacement-alias` | Provisional | Permit replacement despite unresolved possible aliasing between the destination and a right-hand operand | Used by [optional values](../../language/optional-values.md#presence-proof-and-postfix-access), [intent acknowledgements](../../language/intent-acknowledgements.md#intent-is-not-unsafe), and [raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure) |
-| `terminal-reconstruction` | Provisional | Permit reconstruction of a member during enclosing destruction where required analysis cannot prove the lifecycle sequence | [Raw analysis controls](analysis-controls.md#known-construction-derived-category-pressure); construction owner |
-| `optional-presence` | Provisional | Assert that the exact optional boxed lifetime required by an access is present despite incomplete proof | Used illustratively by [optional values](../../language/optional-values.md#presence-proof-and-postfix-access) and [raw analysis controls](analysis-controls.md#permission-regions) |
-| `replacement-member-successor` | Illustrative | Deliberately reach the completely established successor resident instance through a continuing member place after replacement | Used illustratively by [safety and analysis](../../language/safety-and-analysis.md#defined-unsafe-permission); lifetime and replacement owners |
-| `possible-nothing-write` | Provisional | Accept a pointer handoff or operation whose downstream write may reach compiler-provided Nothing backing without asserting pointer presence | [Raw analysis controls](analysis-controls.md#proven-errors-versus-suspected-flow) and [Nothing instances](../../language/nothing-instances.md#possible-write-flow-needs-a-future-unsafe-boundary) |
-| `possible-nothing-read-trap` | Provisional | Accept a pointer handoff or operation whose downstream read may reach trapping Nothing backing | [Raw analysis controls](analysis-controls.md#proven-errors-versus-suspected-flow) and [Nothing instances](../../language/nothing-instances.md#possible-write-flow-needs-a-future-unsafe-boundary) |
-| `raw-from-reference` | Provisional | Accept responsibility for forming a raw pointer from a reference whose origin is unseen (a reference parameter, reference result, or `_`), where the reference may reach a `unique` allocation or outlive the checked reference | [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md#raw-pointers) and [raw analysis controls](analysis-controls.md#compiler-verified-unsafe-tags) |
-| `unique-raw-borrow` | Provisional | Defined unsafe permission to form a raw borrowing pointer from a `unique` allocation; programmer takes responsibility that the raw borrower does not outlive or race with the `unique` owner | [Zax pointers, allocation, and arenas](../../language/pointers-and-arenas.md#unique-ownership) |
+| Identifier | Marker | Maturity | Fact | Behavior owner |
+| --- | --- | --- | --- | --- |
+| `distinct-element` | `safe` | Accepted domain entry (name may be revised) | Two element accesses name different elements, or an element not finished earlier | [Arrays and slices](../../language/arrays-and-slices.md#what-the-compiler-can-prove) |
+| `optional-presence` | `safe` | Accepted domain entry (name may be revised) | The optional's boxed value is present | [Optional values](../../language/optional-values.md#presence-proof-and-postfix-access) |
+| `pointer-presence` | `safe` | Accepted domain entry (name may be revised) | This pointer is not vacant here; replaces the superseded `possible-nothing-write` and `possible-nothing-read-trap` | [Nothing instances](../../language/nothing-instances.md#possible-vacancy-needs-a-presence-claim) |
+| `replacement-alias` | `safe` | Accepted domain entry (name may be revised) | A replacement's destination and right-hand operand do not alias in a way that matters | [Optional values](../../language/optional-values.md#presence-proof-and-postfix-access), [construction](../../language/construction-and-destruction.md) |
+| `lifetime-escape` | `safe` | Accepted domain entry (name may be revised) | A reference's target outlives its use where the compiler lost track of its origin | [Lifetimes and references](../../language/lifetimes-and-references.md) |
+| `unique-raw-borrow` | `safe` | Accepted domain entry (name may be revised) | A raw pointer does not come from inside a `unique` allocation; absorbs the superseded `raw-from-reference` | [Pointers, allocation, and arenas](../../language/pointers-and-arenas.md#raw-pointers-and-unique-allocations) |
+| `valid-representation` | `safe` | Accepted domain entry (name may be revised) | These bits are a valid value of this type; renamed from `union-lens-validity` | [Unions](../../language/unions.md#unsafe-union), [floating-point scalars](../../language/floating-point-scalars.md) |
+| `exact-origin` | `safe` | Accepted domain entry (name may be revised) | A member reference came from the named container member; replaces `unsafe outer cast` and `unsafe via` | [Composition](../../language/composition.md#proved-tracked-and-claimed-outer-casting) |
+| `opaque-type` | `safe` | Accepted domain entry (name may be revised) | An erased owner or observer holds this type; replaces `unsafe transfer` | [Pointers, allocation, and arenas](../../language/pointers-and-arenas.md#safe-owner-recovery) |
+| `partial-instance-access` | `safe` | Accepted domain entry (name may be revised) | Code given an incomplete instance touches only constructed members | [Construction and destruction](../../language/construction-and-destruction.md) |
+| `partial-instance-escape` | `safe` | Accepted domain entry (name may be revised) | Code receiving an incomplete instance does not use it before it is complete | [Construction and destruction](../../language/construction-and-destruction.md) |
+| `destruction-path-complete` | `safe` | Accepted domain entry (name may be revised) | Every destructor path ended the member | [Construction and destruction](../../language/construction-and-destruction.md#destructor-declarations-and-sequence) |
+| `destruction-at-most-once` | `safe` | Accepted domain entry (name may be revised) | Apparently overlapping paths never end one member twice | [Construction and destruction](../../language/construction-and-destruction.md#destructor-declarations-and-sequence) |
+| `terminal-reconstruction` | `safe` | Accepted domain entry (name may be revised) | A member rebuilt during destruction ends exactly once more | [Construction and destruction](../../language/construction-and-destruction.md#reconstruction-during-destruction) |
+| `not-finished` | `safe` | Accepted domain entry (name may be revised) | A member or value was not finished by an `as last` the compiler cannot rule out | [Transfer stances](../../language/transfer-stances.md#members) |
+| `disjoint-storage` | `safe` | Accepted domain entry (name may be revised) | A structural transform's source and destination do not overlap | [Structural shapes](../../language/structural-shapes-and-compatibility.md#overlap-is-handled-statically) |
+| `no-mutation-while-held` | `safe` | Accepted domain entry (name may be revised) | Nothing writes a value while an `immutable` path to it is held | [Qualifiers](../../language/qualifiers.md#ordinary-promise-strengthening) |
+| `opaque-construction` | `unsafe` | Accepted domain entry (name may be revised; place-naming syntax open) | An opaque operation constructs the named empty member or result slot; the member receives no automatic construction | [Construction and destruction](../../language/construction-and-destruction.md#construction-by-an-opaque-operation), [declarations and bindings](../../language/declarations-and-bindings.md#low-level-initialization-belongs-in-a-constructor) |
+| `manual-member-destruction` | `unsafe` | Accepted domain entry (name may be revised) | An opaque operation ends the named member; its automatic destruction does not run | [Construction and destruction](../../language/construction-and-destruction.md#destructor-declarations-and-sequence) |
+| `manual-member-construction` | — | Superseded (032) | Replaced by explicit construction control plus `opaque-construction` | — |
+| `construction-path-complete` | — | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | — |
+| `construction-at-most-once` | — | Superseded (032) | Unknown construction state is an error to restructure, not a fact to assert | — |
+| `union-lens-validity` | — | Superseded | Renamed `valid-representation` | — |
+| `raw-from-reference` | — | Superseded | Merged into `unique-raw-borrow` | — |
+| `possible-nothing-write`, `possible-nothing-read-trap` | — | Superseded | Replaced by `pointer-presence` | — |
+| `replacement-member-successor` | — | Superseded | Not a safety question; became `intent<reference-tracks-replacement>` in the [intent registry](../../language/intent-acknowledgements.md#current-category-registry) | — |
 
-### Illustrative spellings that are not suitable registry entries
+### Operations that are not categories
 
-`unsafe<lifetime>{...}` appears once in
-[safety and analysis](../../language/safety-and-analysis.md#false-unsafe-claims)
-to show that unsafe cannot revive a known-ended lifetime. `lifetime` is too broad
-to identify one responsibility and is not a candidate registry identifier.
+`unsafe pliable`, `unsafe cast`, `unsafe cast as`, `unsafe as coercive`,
+`unsafe from`, `unsafe vacate`, `union unsafe`, and `* unsafe` are domain
+source forms, not category identifiers. Opaque raw-pointer facts such as
+allocation root, alignment, and sole disposition are what `unsafe cast` and
+`unsafe cast as last` already claim, so they need no separate category.
 
-`unsafe pliable`, `unsafe cast`, `unsafe from`,
-`unsafe outer cast`, `unsafe via`, and `unsafe vacate` are domain source forms,
-not category identifiers in the candidate `unsafe<category>{...}` registry.
+### Unassigned pressure
 
-### Unassigned unsafe pressure
+The following reached concerns still need focused review:
 
-The following reached concerns still need focused review and exact identifiers
-or an explicit decision that another mechanism owns them:
-
-- source-result and destination-slot single consumption;
-- operations on moved-from or terminal values when validity is unproved rather
-  than merely suspicious;
-- returned-reference escape from temporaries or opaque origins;
-- non-overlap assertions for structural transformation;
-- opaque raw-pointer allocation-root, provenance, alignment, sole-disposition,
-  reset, overwrite, and vacate facts;
-- unsafe recovery of type-erased owners or observers;
-- union-reference escape when later overlay writes may invalidate the requested
-  lens; and
 - optional or debug-only unchecked variant access if future work wants a local
-  source form distinct from disabling its registered panic check;
-- a use of an element of a partially finished array that the language's
-  listed proven cases do not cover. The current list, taught in
-  [arrays and slices](../../language/arrays-and-slices.md#what-the-compiler-can-prove),
-  is constant indexes, constant ranges, the `each … in messages as last`
-  loop, and a plain index loop. Future safety-and-analysis work fixes the
-  lasting list and the category's name, and may grow the list; current
-  teaching must not claim that a compiler may accept more without `unsafe`:
+  source form distinct from disabling its registered panic check; and
+- the lasting list of array element cases every compiler must prove, which
+  decides when `safe<distinct-element>` is needed; current teaching must not
+  claim that a compiler may accept more without the claim.
 
-  ```zax
-  dispatch(inbox[i] as last)
-  // illustrative category name
-  unsafe<distinct-element>{
-    dispatch(inbox[j] as last)   // the programmer asserts j differs from i
-  }
-  ```
+Resolved since earlier audits: single consumption of source results and
+destination slots needs no category, because routing is written in the call;
+operations on moved-from or finished values use `not-finished`; returned
+references from opaque origins use `lifetime-escape`; structural non-overlap
+uses `disjoint-storage`; opaque raw-pointer facts belong to `unsafe cast`;
+recovery of type-erased owners uses `opaque-type`; and union-reference escape
+uses `valid-representation`.
 
 Complete construction and at-most-once establishment of result slots and
-explicitly controlled members no longer need an unsafe category: the
-construction owner's first-construction rule makes unknown state an error to
-restructure.
+explicitly controlled members need no category: the construction owner's
+first-construction rule makes unknown state an error to restructure.
 
-Do not assign these identifiers merely to complete the table. Their future owner
-must distinguish an assertion from a defined unsafe permission and from a
-known-invalid operation.
+Do not assign identifiers merely to complete the table. A future category must
+be placed on one side of the `safe<...>` / `unsafe` test and distinguished from
+a known-invalid operation.
 
 ## Panic-category inventory
 
@@ -176,7 +168,9 @@ for these conditions but have not accepted exact identifiers:
 - write to compiler-provided Nothing backing where a target-supported trap is
   part of the selected contract; and
 - invocation of an unavailable function representation through a generated
-  panic path.
+  panic path; and
+- a call of a function that is not `once` with a Nothing receiver, checked at
+  function entry on a target without a hardware trap.
 
 The array conditions are listed by
 [arrays and slices](../../language/arrays-and-slices.md#required-reporting-and-unchecked-behavior)
@@ -229,12 +223,22 @@ The initial live-source audit on 2026-09-20 searched:
 - exact `intent<...>` examples; and
 - the legacy panic registry for value-based disposition.
 
-Exact `unsafe<...>` examples currently occur in:
+An audit on 2026-11-26, during the `safe<...>` / `unsafe` split, found
+`safe<...>` and `unsafe<...>` examples in:
 
 - `language/safety-and-analysis.md`;
+- `language/arrays-and-slices.md`;
 - `language/unions.md`;
 - `language/optional-values.md`;
-- `language/intent-acknowledgements.md`; and
+- `language/intent-acknowledgements.md`;
+- `language/construction-and-destruction.md`;
+- `language/declarations-and-bindings.md`;
+- `language/pointers-and-arenas.md`;
+- `language/composition.md`, `language/function-invocation.md`, and
+  `language/operator-catalog.md` (`exact-origin`);
+- `language/nothing-instances.md`, `language/qualifiers.md`,
+  `language/casting.md`, `language/floating-point-scalars.md`, and
+  `language/structural-shapes-and-compatibility.md`; and
 - `project/raw/analysis-controls.md`.
 
 Panic-category obligations without a current registry occur in:
@@ -249,13 +253,10 @@ Panic-category obligations without a current registry occur in:
 - `project/raw/array-storage-strategies.md`; and
 - `project/raw/safety.md`.
 
-The accepted intent registry covers current accepted intent names. One live
-interior-pointer example uses provisional
-`intent<inner-pointer-tracks-replacement>{...}` (formerly
-`anchored-pointer-tracks-replacement`) while explicitly stating that
-its exact category identifier remains unsettled. That occurrence is intentional
-future intent-registry pressure, not an accepted entry and not an unsafe or panic
-category.
+The accepted intent registry covers current accepted intent names, including
+`inner-pointer-tracks-replacement` (formerly
+`anchored-pointer-tracks-replacement`) and `reference-tracks-replacement`,
+which were promoted together.
 
 Archived work preserves provenance but is not a live registry source. A future
 audit may inspect it when a current category's provenance or regression cannot
@@ -264,18 +265,19 @@ be resolved from live owners and raw inputs.
 ## Addition and retirement rules
 
 Add a registry entry when a current work item or live owner establishes a
-concrete unsafe responsibility or independently selectable runtime panic
+concrete safety category or independently selectable runtime panic
 condition. Record:
 
 - the exact or provisional identifier;
 - maturity;
-- assertion, permission, or disabled-check meaning;
+- the fact claimed, its `safe` or `unsafe` marker, or the disabled-check
+  meaning;
 - behavior owner;
 - false-claim or disabled-check consequence;
 - representative live occurrences; and
 - the pressure that must disposition it.
 
-Do not add broad aliases for convenience, convert intent categories into unsafe
+Do not add broad aliases for convenience, convert intent categories into safety
 categories, or import a legacy panic name without current semantic review.
 
 When accepted analysis-control owners exist, move each surviving entry into its

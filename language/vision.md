@@ -134,9 +134,10 @@ should nevertheless define a safe subset with explicit guarantees.
 
 Code that stays within that subset should receive the guarantees assigned to it.
 Operations that leave those guarantees should be recognizable and auditable.
-Current proof, unsafe-responsibility, contract-evolution, and lint boundaries are
-defined by [Zax safety and analysis](safety-and-analysis.md). Exact unsafe syntax,
-category identifiers, and formal guarantees remain future design work.
+Current proof, `safe<...>` claim, `unsafe` responsibility, contract-evolution,
+and lint boundaries are defined by
+[Zax safety and analysis](safety-and-analysis.md). Final category identifiers
+and formal guarantees remain future design work.
 
 Safety does not include universal correctness. Memory guarantees do not prevent
 deadlock, starvation, resource exhaustion, flawed algorithms, incorrect
@@ -149,7 +150,8 @@ No single lifetime strategy fits every program.
 Zax supports one explicit lifetime foundation with several ownership and
 allocation strategies. Every instance lives within a life path; references
 borrow fixed instance places without owning them; raw-pointer operations require
-proof or unsafe responsibility; unique pointers transfer one owner; and
+proof, a `safe<...>` claim, or an untracked `* unsafe` pointer; unique pointers
+transfer one owner; and
 strong/weak pointers provide shared ownership and observation through visible
 control-block costs.
 Arenas separately control storage and allocation disposition.

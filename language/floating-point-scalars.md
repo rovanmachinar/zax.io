@@ -566,7 +566,9 @@ The aligned representation surface requires concepts equivalent to:
 // Illustrative only; exact operator words remain unsettled.
 myBits := representation bits of myValue
 myOptional := X87Extended80 optional from representation myBits
-myTrusted := X87Extended80 unsafe from representation myBits
+safe<valid-representation>{
+  myTrusted := X87Extended80 from representation myBits   // you vouch the pattern is valid
+}
 myCanonical := myValue canonical representation
 ```
 
@@ -575,11 +577,13 @@ These distinguish:
 - exact logical-bit extraction;
 - validation;
 - optional reporting of an invalid pattern;
-- unsafe assertion that a pattern is valid; and
+- a `safe<valid-representation>` claim that a pattern is valid, which skips
+  validation; and
 - canonicalization.
 
-Unsafe adoption asserts validity; it cannot turn an invalid bit pattern into a
-floating value.
+A claimed adoption vouches for validity; it cannot turn an invalid bit pattern
+into a floating value. A compiler that can trace where the bits came from, for
+example an earlier extraction from a valid value, may prove the claim.
 
 For an unusual padded width, logical representation excludes storage-envelope
 padding. Direct pointer access to complete object bytes is a separate
@@ -691,7 +695,7 @@ This makes representation coercion and its safety directional:
 ```text
 X87Extended80 -> same-endian readonly U80 view: safe
 X87Extended80 -> same-endian writable U80 view: unsafe
-same-endian U80 -> X87Extended80: validated or unsafe assertion
+same-endian U80 -> X87Extended80: validated, or a safe<valid-representation> claim
 ```
 
 #### Provider-relative operations

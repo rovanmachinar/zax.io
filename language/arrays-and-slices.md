@@ -95,12 +95,13 @@ operations that move or remove viewed elements can invalidate the slice.
 
 A slice is a borrower of the elements it shows, checked by lifetime analysis
 like a reference. So a slice may view the elements of an array that a `unique`
-pointer owns, where a raw pointer to an element would need `unsafe`:
+pointer owns, where a raw pointer to an element is an error:
 
 ```zax
 owner : MyMessage[0..] * unique = @
 window : MyMessage[] = owner.[1..<3]     // fine: a slice is checked like a reference
-raw : MyMessage * = owner.[0]            // error outside unsafe: unique allows no raw borrowers
+raw : MyMessage * = owner.[0]            // error: unique allows no raw borrowers
+escape : MyMessage * unsafe = owner.[0]  // allowed: an untracked pointer, fully your responsibility
 ```
 
 `T[N]`, ranged arrays, and `T[]` slices are built into Zax. Programmers declare
@@ -1776,14 +1777,24 @@ each i : in 0..<queue.length() {
 queue[0].send()                      // error: queue[0] may have been finished in the loop
 ```
 
-A use outside these cases needs an `unsafe` block, even when your compiler
-can prove it safe, so the program compiles the same way everywhere; in the
-block, you take responsibility for the use, as
-[safety and analysis](safety-and-analysis.md#unproved-but-valid) describes. A
-compiler that can prove the block safe can confirm it with a `[<safe=…>]`
-directive naming that compiler, which records that the `unsafe` was checked
-rather than only asserted. The directive's exact form is still being
-designed.
+A use outside these cases needs a `safe<distinct-element>` claim, even when
+your compiler can prove it safe, so the program compiles the same way
+everywhere. In the claim, you vouch for the use:
+
+```zax
+inbox : MyMessage[0..]
+each i : in 0..<inbox.length() / 2 {
+  safe<distinct-element>{
+    dispatch(inbox[2 * i] as last)
+    dispatch(inbox[2 * i + 1] as last)   // two indexes per pass: outside the listed cases
+  }
+}
+```
+
+A compiler that can prove the claim can be asked to keep checking it with a
+`[<verify=…>]` directive naming that compiler, which records that the claim is
+checked rather than only vouched for; see
+[asking a compiler to verify a claim](safety-and-analysis.md#asking-a-compiler-to-verify-a-claim).
 
 ### Replacing finished elements
 

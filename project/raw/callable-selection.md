@@ -168,8 +168,9 @@ does not add a preference rule or make the helper visible.
 Outer-result provenance adds an explicit three-way mapping distinction.
 Ordinary `via` may produce a non-optional outer result only when the selected
 language contract proves its exact origin. `tracked via` names a checked
-optional mapping through the applicable `outer tracked` capability. `unsafe via`
-asserts an unproved non-optional mapping. `= existing` must not silently discover
+optional mapping through the applicable `outer tracked` capability. Ordinary
+`via` inside a `safe<exact-origin>{...}` claim vouches for an unproved
+non-optional mapping. `= existing` must not silently discover
 tracked outer-result work; that runtime-capable route remains explicitly named.
 If selected-contract proof makes tracking redundant, retaining `tracked via`
 requires `intent<redundant-outer-tracking>`; stronger private analysis cannot

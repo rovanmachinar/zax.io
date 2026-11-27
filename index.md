@@ -25,8 +25,8 @@ producing them.
   anonymous identity, stored members, type-body organization, self-reference,
   completion, lifecycle handoffs, and `outer tracked` integration.
 - Read [Zax unions](language/unions.md) for untagged offset-zero lenses,
-  passive/all-bit-safe overlays, jagged storage, and explicit unsafe lens
-  responsibility.
+  passive/all-bit-safe overlays, jagged storage, and explicit `safe<...>` lens
+  claims.
 - Read [Zax variants](language/variants.md) for absent or named-present managed
   payloads, contained reconstruction with `.=` and reset, checked access,
   transfer, and alternative selection.
@@ -74,8 +74,9 @@ producing them.
   `___` context, its application-wide shape, replacement, and context-provided
   default arenas.
 - Read [Zax safety and analysis](language/safety-and-analysis.md) for safe
-  guarantees, compiler proof, narrow unsafe responsibility, contract evolution,
-  and lint boundaries.
+  guarantees, compiler proof, narrow `safe<...>` claims and `unsafe`
+  responsibility, asking a compiler to verify a claim, contract evolution, and
+  lint boundaries.
 - Read [Zax function invocation](language/function-invocation.md) for ordinary
   calls, arguments, defaults, results, result routing, and callable selection.
 - Read [Zax exceptional result flow](language/except.md) for success versus

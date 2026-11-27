@@ -6,8 +6,8 @@
 | Audience | Human developers building types from stored components and choosing which component surfaces the container presents |
 | Applies To | Named containment; independent `own`, `preferred`, and `expose`; semantic-indirection boundaries; published data paths; singular and family composition routing and filtering; abstract roles and fulfillment; outer casting and exact-origin proof; costs, diagnostics, formatting, and source stability; not a formal grammar or specification |
 | Implementation State | Not established by this repository |
-| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `unsafe via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the two activations of abstract roles, through `own` and through hook points; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast`, `tracked outer cast`, `unsafe outer cast` (including role-preserving outer casts of managed pointers and their operand-shaped failure), and composition-specific exact-origin proof |
-| Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); complete semantic-wrapper behavior ([optional values](optional-values.md), [variants](variants.md), and [unions](unions.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable unsafe model ([safety and analysis](safety-and-analysis.md)) |
+| Owns | The complete programmer-facing composition model; data publication and collisions; expected-type projection; generated behavior exposure and unchanged results; `via`, `tracked via`, `via family`, and `existing`; exact and outer-family fences; composition-specific mapping eligibility; `abstract`, `abstract optional`, `abstract relaxed`, `abstract optional relaxed`, and `fulfill`; the two activations of abstract roles, through `own` and through hook points; the shared mechanical filter used by identity exposure; `outer`, `outer tracked`, `outer cast` and `tracked outer cast` (including role-preserving outer casts of managed pointers and their operand-shaped failure), composition-specific exact-origin proof, and the `safe<exact-origin>` claim |
+| Does Not Own | Ordinary declarations and member lookup ([declarations and bindings](declarations-and-bindings.md)); callable selection and compatible visible prototypes ([function invocation](function-invocation.md)); shared operator discovery and selection ([operators](operators.md)); [structural shape and compatibility](structural-shapes-and-compatibility.md); qualification meaning ([qualifiers](qualifiers.md)); general transfer semantics ([transfer stances](transfer-stances.md)); complete semantic-wrapper behavior ([optional values](optional-values.md), [variants](variants.md), and [unions](unions.md)); reference origin and lifetime ([lifetimes and references](lifetimes-and-references.md)); ordinary lifecycle behavior ([construction and destruction](construction-and-destruction.md)); identity admission and projection ([identity types](identity-types.md)); pointer ownership ([pointers and arenas](pointers-and-arenas.md)); or the reusable claim and unsafe model ([safety and analysis](safety-and-analysis.md)) |
 | Source / Provenance | Legacy composition intent, reconciled with current declaration, invocation, operator, transfer, lifetime, construction, identity, and safety design |
 | Supersedes | Legacy composition design formerly published at the repository root |
 
@@ -608,7 +608,7 @@ wrapping:
 | Receiver reference result explicitly declared `self` | Eligible; receiver origin is proved |
 | Mapping a copied contained result to a complete outer value | Ineligible; the outer's remaining state cannot be invented |
 | Constructor, replacement constructor, destructor, generated copy, or generated assignment | Ineligible; lifecycle targets the physical stored shape |
-| Mapping requiring a checked or unsafe outer cast | Omitted |
+| Mapping requiring a checked or claimed outer cast | Omitted |
 | Ambiguous input, result, qualification, or provenance mapping | Omitted |
 
 Exposure cannot strengthen or launder:
@@ -670,7 +670,7 @@ results even if they happen to refer to a resident engine.
 `tune` is different. Its verified reference `self` contract proves that the
 result is exactly the receiver used for that invocation. The wrapper may
 therefore return the original `Car` receiver. This narrow proof-backed
-substitution does not authorize checked or unsafe outer casting for other
+substitution does not authorize checked or claimed outer casting for other
 results.
 
 Passing through safe unchanged results removes the need for broad
@@ -706,8 +706,8 @@ How a `self` result carries the caller's stance and qualifiers is explained in
 
 Reference origin and escape remain governed by
 [lifetimes and references](lifetimes-and-references.md#returned-references).
-When a true provenance claim cannot be proved, only a localized unsafe
-assertion can accept that responsibility. An `intent` acknowledgement cannot.
+When a true provenance fact cannot be proved, only a localized
+`safe<exact-origin>` claim can accept that responsibility.
 
 ### Direct declarations, ambiguity, and `once`
 
@@ -1019,9 +1019,10 @@ For results:
   outer casting;
 - ordinary `via` may produce a non-optional outer result when the selected
   contract proves its origin; and
-- an unproved non-optional outer remapping requires localized `unsafe via`.
+- an unproved non-optional outer remapping writes ordinary `via` inside a
+  localized `safe<exact-origin>{...}` claim.
 
-The last form is a provenance assertion, not an intent acknowledgement.
+The last form is a provenance claim, not an intent acknowledgement.
 
 For example, suppose `Engine.selectedPeer()` returns an `Engine loan &` whose
 container relationship is not its invocation receiver:
@@ -1039,19 +1040,21 @@ Car :: type {
   checkedPeerOwner final : (result : Car loan & ?)() =
     tracked via engine.selectedPeer
 
-  assertedPeerOwner final : (result : Car loan &)() =
-    unsafe via engine.selectedPeer
+  safe<exact-origin>{
+    claimedPeerOwner final : (result : Car loan &)() =
+      via engine.selectedPeer
+  }
 }
 ```
 
 The `tracked via` declaration visibly selects checked immediate outer casting
-and therefore keeps an optional result. The non-optional `unsafe via`
-declaration instead asserts that the returned engine really resides at
-`Car.engine`; a false claim has unsafe consequences. When the selected language
-contract proves that result origin, ordinary unmarked `via` supplies the
-non-optional form without tracking or unsafe responsibility. Deliberately
-retaining `tracked via` under that proof requires
-`intent<redundant-outer-tracking>`.
+and therefore keeps an optional result. The non-optional declaration inside
+`safe<exact-origin>{...}` instead vouches that the returned engine really
+resides at `Car.engine`; a false claim has undefined consequences. When the
+selected language contract proves that result origin, ordinary unmarked `via`
+supplies the non-optional form without tracking or a claim, and the claim
+becomes redundant. Deliberately retaining `tracked via` under that proof
+requires `intent<redundant-outer-tracking>`.
 
 ## Abstract roles and explicit fulfillment
 
@@ -1440,7 +1443,9 @@ Car :: type {
 }
 
 inspectContainer final : ()(input : Engine loan &) = {
-  asserted : Car & = input unsafe outer cast Car.engine
+  safe<exact-origin>{
+    claimed : Car & = input outer cast Car.engine
+  }
 
   checked : Car & ? = input tracked outer cast Car.engine
   if ?checked
@@ -1465,10 +1470,7 @@ The operations are protected language forms, not overloadable operators.
 Their exact recognition and precedence are recorded by the
 [operator catalog](operator-catalog.md#outer-cast-forms).
 
-### Proved, tracked, and unsafe outer casting
-
-`unsafe outer cast` uses the named member offset under programmer-asserted
-provenance. A false claim has undefined behavior.
+### Proved, tracked, and claimed outer casting
 
 Plain `outer cast` is the proof-required safe form. It returns a non-optional
 container reference only when the selected language contract proves that every
@@ -1476,6 +1478,11 @@ origin reaching the operand is the exact named member path. It requires neither
 tracking metadata nor a runtime relationship check. If that contract does not
 establish the proof at this site, the declaration is rejected rather than
 silently changing result type or runtime mechanism.
+
+Inside `safe<exact-origin>{...}`, the same plain cast uses the named member
+offset because the programmer vouches for the provenance. A false claim has
+undefined behavior. When a later contract proves the origin, the programmer
+deletes the enclosure and the cast underneath is already correct.
 
 `tracked outer cast` is the checked runtime form. It validates one immediate
 relationship at runtime and reports failure in the shape of its operand:
@@ -1513,14 +1520,14 @@ sameCar : Car * strong = engine outer cast Car.engine   // one more strong owner
 
 This is how an [interior pointer](pointers-and-arenas.md#interior-pointers)
 returns to its container without losing ownership. The proved, tracked, and
-unsafe forms keep their usual meaning. A false `unsafe outer cast` assertion
+claimed forms keep their usual meaning. A false `safe<exact-origin>` claim
 cannot corrupt ownership accounting, because the result shares the operand's
 real control block; only its target place would be wrong.
 
 Temporaries and references whose origin has expired are ineligible for all
 forms. No outer cast revives an ended resident instance.
 
-These operations apply the reusable unsafe and proof model in
+These operations apply the reusable claim and proof model in
 [safety and analysis](safety-and-analysis.md). Their reference origins and
 lifetimes remain governed by
 [lifetimes and references](lifetimes-and-references.md#published-paths-and-outer-casts).
@@ -1568,18 +1575,20 @@ can reach the cast.
 This initial site-specific analysis is a conceptual proof model rather than a
 finished formal algorithm. Source validity follows the selected contract:
 
-| Situation | `outer cast` | `tracked outer cast` | `unsafe outer cast` |
+| Situation | `outer cast` | `tracked outer cast` | `outer cast` inside `safe<exact-origin>` |
 | --- | --- | --- | --- |
-| Selected-contract exact-origin proof succeeds | Produces the non-optional container reference | Requires `intent<redundant-outer-tracking>` to retain the optional tracked operation | Redundant assertion is an error |
-| Selected contract does not mandate or establish that proof | Error | Performs the checked operation | Retains the required programmer assertion |
-| Source selects a stronger extension contract whose proof succeeds | Produces the non-optional result under that selected contract | Requires the same intent acknowledgement | Redundant assertion is an error under that contract |
-| The exact relationship is proved false | Error | Produces absence or vacancy under its checked semantics | Error; unsafe cannot contradict a known fact |
+| Selected-contract exact-origin proof succeeds | Produces the non-optional container reference | Requires `intent<redundant-outer-tracking>` to retain the optional tracked operation | Redundant claim is an error |
+| Selected contract does not mandate or establish that proof | Error | Performs the checked operation | Produces the non-optional result under the programmer's claim |
+| Source selects a stronger extension contract whose proof succeeds | Produces the non-optional result under that selected contract | Requires the same intent acknowledgement | Redundant claim is an error under that contract |
+| The exact relationship is proved false | Error | Produces absence or vacancy under its checked semantics | Error; a claim cannot contradict a known fact |
 
 A compiler may use extra private analysis to optimize or advise. Without a
 selected contract that makes the proof part of source semantics, it cannot make
-plain `outer cast` portable or make one program reject `unsafe` while another
-conforming compiler still requires that word. For the same reason, private
-proof cannot require an intent acknowledgement around `tracked outer cast`.
+plain `outer cast` portable or reject a claim another conforming compiler still
+requires; it may report that it can verify the claim, as
+[safety and analysis](safety-and-analysis.md#asking-a-compiler-to-verify-a-claim)
+describes. For the same reason, private proof cannot require an intent
+acknowledgement around `tracked outer cast`.
 
 ### Deliberately retaining redundant tracking
 
@@ -1631,10 +1640,11 @@ The same three-way distinction applies to outer result provenance in `via`:
 - when the selected contract proves the outer result origin, ordinary unmarked
   `via` produces the non-optional outer result;
 - `tracked via` explicitly selects tracked checking and an optional outer result;
-- without contract-required proof, an unchecked non-optional outer result
-  requires `unsafe via`, even if this compiler privately proves the origin;
+- without contract-required proof, the programmer writes ordinary `via`
+  inside `safe<exact-origin>{...}` for an unchecked non-optional outer result,
+  even if this compiler privately proves the origin;
 - an explicitly selected extension may make its stronger proof canonical; and
-- a `via` provenance assertion that is proved false is always an error.
+- a `via` provenance claim that is proved false is always an error.
 
 When selected-contract proof makes ordinary `via` available, deliberately
 retaining the optional tracked route uses the same category around the complete
@@ -1762,10 +1772,11 @@ Required composition diagnostics include:
   operand);
 - selected-contract proof making `tracked outer cast` or `tracked via`
   redundant without `intent<redundant-outer-tracking>`;
-- redundant `unsafe` when selected-contract proof requires the safe form;
-- omitted `unsafe` when the selected contract does not authorize the asserted
-  provenance;
-- a provenance assertion proved false; and
+- a redundant `safe<exact-origin>` claim when selected-contract proof
+  requires the plain form;
+- a plain `outer cast` or non-optional `via` with neither contract proof nor
+  a `safe<exact-origin>` claim;
+- a provenance claim proved false; and
 - an outer cast from a temporary or expired origin.
 
 Exact diagnostic identifiers and presentation remain future diagnostics work.
@@ -1784,7 +1795,7 @@ Canonical formatting:
 - keeps `existing family`, `via family`, and `forbidden family` together as
   declaration states; and
 - writes the type capability as `outer tracked` and the operation forms as
-  `outer cast`, `tracked outer cast`, and `unsafe outer cast`;
+  `outer cast` and `tracked outer cast`;
 - writes optional relaxed roles as `abstract optional relaxed`.
 
 The wider declaration grammar and formatter own placement of the complete

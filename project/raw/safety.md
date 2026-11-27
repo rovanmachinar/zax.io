@@ -157,9 +157,9 @@ Current [composition](../../language/composition.md) distinguishes three
 immediate outer-provenance operations. Plain `outer cast` or outer-result `via`
 requires selected-contract proof and produces a non-optional result.
 `tracked outer cast` or `tracked via` performs the checked optional operation
-through the `outer tracked` capability. `unsafe outer cast` or `unsafe via`
-asserts unproved non-optional provenance. An `intent` acknowledgement cannot
-grant unsafe authority.
+through the `outer tracked` capability. Plain `outer cast` or `via` inside a
+`safe<exact-origin>{...}` claim vouches for unproved non-optional provenance.
+An `intent` acknowledgement cannot supply that claim.
 
 Future safety work must formalize the initial site-specific exact-origin proof
 candidate. At one cast site, every origin that can reach the operand must be the
@@ -177,35 +177,35 @@ work.
 
 Required source spelling must remain portable under the selected contract:
 
-- a mainline contract-required proof requires the safe unmarked form and makes a
-  redundant `unsafe` a hard error; deliberately retaining tracked optional
-  semantics requires `intent<redundant-outer-tracking>`;
-- without contract-required proof, plain `outer cast` is unavailable; checked
-  optional behavior requires `tracked outer cast`, while the unchecked
-  non-optional form still requires `unsafe` even when one compiler privately
-  proves the claim;
+- a mainline contract-required proof requires the plain unmarked form and makes
+  a redundant `safe<exact-origin>` claim a hard error; deliberately retaining
+  tracked optional semantics requires `intent<redundant-outer-tracking>`;
+- without contract-required proof, plain `outer cast` alone is unavailable;
+  checked optional behavior requires `tracked outer cast`, while the unchecked
+  non-optional form still requires the `safe<exact-origin>` claim even when
+  one compiler privately proves it;
 - a stronger compiler or shared extension may make that proof canonical only
   when source explicitly selects the extension contract; and
-- a proved-false plain or unsafe claim is invalid, while the checked tracked
+- a proved-false plain or claimed cast is invalid, while the checked tracked
   operation produces absence.
 
-Private stronger analysis may optimize or advise, but cannot silently change
-mainline source validity, require a redundant-tracking intent acknowledgement,
-or change the optional result shape of a tracked operation. The same matrix
-applies to outer-result provenance through ordinary, `tracked`, and
-`unsafe via`.
+Private stronger analysis may report that it can verify a claim, but cannot
+silently change mainline source validity, require a redundant-tracking intent
+acknowledgement, or change the optional result shape of a tracked operation.
+The same matrix applies to outer-result provenance through ordinary,
+`tracked`, and claimed `via`.
 
 The intent category acknowledges the selected-contract-proved redundancy and
 the optional tracked contract; it grants no provenance and does not force a
 physical metadata read. Future proof formalization must apply it at the portable
 source contract boundary rather than making it compiler-cleverness-dependent.
 
-Future safety and diagnostic work may decide whether deliberately choosing an
-unsafe form when an available `tracked outer cast` could express the same
+Future safety and diagnostic work may decide whether deliberately choosing a
+claimed form when an available `tracked outer cast` could express the same
 operation should require a dedicated intent acknowledgement or advisory
 diagnostic. That future policy must not make intent authorize provenance,
 change the tracked form's optional result, or turn a known-false relationship
-into a valid unsafe claim.
+into a valid claim.
 
 Future callable preconditions and postconditions add proof pressure:
 
@@ -312,16 +312,15 @@ check on every store. It must keep vacant pointers, absent optionals,
 unavailable function values, uninitialized storage, and ended lifetimes
 distinct in diagnostics.
 
-It must also distinguish certainty from suspicion. A compiler that proves an
-invalid Nothing write may reject it. When a pointer may flow into a later
-writer but invalidity is not proved, any standard unsafe responsibility likely
-belongs at that handoff or call boundary rather than on the eventual store.
-The provisional unsafe catalog records `possible-nothing-write` and
-`possible-nothing-read-trap`; the latter applies only to built-in trapping
-Nothing or a defined type selecting `= trap`.
-Whether stronger non-mandatory findings use standard compiler-dependent
-analysis, only language-defined cases, or `x-` extension diagnostics remains
-future safety/error design.
+Certainty and suspicion are now distinguished in current design. A compiler
+that proves an invalid Nothing access rejects it. Any other possibly vacant
+access through a tracked pointer needs proof or a `safe<pointer-presence>`
+claim at the dereferencing operation, as
+[Nothing instances](../../language/nothing-instances.md#possible-vacancy-needs-a-presence-claim)
+teaches. A compiler that proves more than the contract requires reports at a
+build-chosen level and never changes what compiles, as
+[safety and analysis](../../language/safety-and-analysis.md#asking-a-compiler-to-verify-a-claim)
+describes.
 
 ## Unchecked versus unsafe admission
 

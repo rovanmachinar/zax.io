@@ -45,13 +45,13 @@ Zax recognizes:
 | Bitwise | `~`, `&`, `\|`, `^`, `&~`, phrases, counts, masks, shifts, and rotations |
 | Presence and lifecycle | `?value`, `value.`, `value .= source`, `liveness probe value`, `strong count probe value`, `value is allocation root`, `binding kind of value`, `reset value`, `vacate value`, `unsafe vacate value`, `last value`, `move value`, `take values[range]`, `last values[range]` |
 | Conversion/admission | `as`, `narrowing as`, `from`, `optional from`, `narrowing from`, `unchecked from`, `unsafe from`, `pointer as UPointer` |
-| Container and member navigation | `outer cast`, `tracked outer cast`, `unsafe outer cast`, `inner` |
+| Container and member navigation | `outer cast`, `tracked outer cast`, `inner` |
 | Structural compatibility | `as shape`, `as flattened shape`, `as layout`, `as flattened layout`, safe/unsafe coercive `as`, `anchor` |
 | Unchecked reinterpretation | `unsafe cast` |
 | Structural mapping | `>-`, `-<`, `-<>-`, with result-routing and `reshape` integration |
 | Transfer stance | `value as loan`, `value as copy`, `value as move`, `value as last`, `value as deep` |
 | Callable flow | Composition `>|>`, reshape composition `>|> reshape >|>`, and immediate chaining `|>` |
-| Opaque lifetime | `value is type Type` and `unsafe transfer (value as last)` |
+| Opaque lifetime | `value is type Type` |
 | Literal source/value | Source merge `<\|>` and value join `<+>` |
 | Mutation | Compounds including array `<+>=`, increment/decrement, `~=`, and exact phrase mutations |
 | Circumfix | `\|value\|`, `\|?value\|`, `\|!value\|`, `\|\|value\|\|` |
@@ -550,8 +550,10 @@ proved : Container & =
   knownMemberReference outer cast Container.member
 checked : Container & ? =
   uncertainMemberReference tracked outer cast Container.member
-asserted : Container & =
-  assertedMemberReference unsafe outer cast Container.member
+safe<exact-origin>{
+  claimed : Container & =
+    claimedMemberReference outer cast Container.member
+}
 ```
 
 The right operand is an exact resident stored-member path, not a type. These are
@@ -565,8 +567,9 @@ produces an optional reference; a pointer operand produces a same-role pointer
 that is vacant on failure. If the selected contract also proves that tracked
 operation's exact origin, retaining it requires
 `intent<redundant-outer-tracking>`; compiler-private proof does not.
-`unsafe outer cast` trusts the programmer's provenance assertion instead. An
-outer cast of a `strong` or `weak` pointer keeps its role and control block.
+Inside a `safe<exact-origin>{...}` claim, plain `outer cast` trusts the
+programmer's provenance claim instead of proof. An outer cast of a `strong` or
+`weak` pointer keeps its role and control block.
 Complete behavior belongs to
 [Zax composition](composition.md#outer-casting-to-an-immediate-container).
 
@@ -675,10 +678,10 @@ defined by [Zax Nothing instances](nothing-instances.md).
 right operand is a concrete type identity. It probes the exact hidden type of an
 opaque owner or observer without recovering access.
 
-`unsafe transfer (value as last)` is a protected pre-unary phrase at ordinary
-phrase level. It performs unchecked typed ownership recovery from
-`OpaqueOwner`; complete behavior belongs to
-[Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
+Recovering typed ownership without the type check uses the ordinary recovery
+`opaque as last` inside a `safe<opaque-type>{...}` claim rather than a
+separate phrase; complete behavior belongs to
+[Zax pointers, allocation, and arenas](pointers-and-arenas.md#safe-owner-recovery).
 
 `>|>` is the protected callable-composition form, at shift/rotate precedence
 with left association. It is one token, so `first >|> second` never reads as

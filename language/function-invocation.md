@@ -283,8 +283,8 @@ call on the type or on an instance.
 `self` result is always a reference, so `return _` in a function with a `self`
 result returns the receiver itself. `_` is not a pointer the programmer made:
 passing `_` on passes the receiver with the same permissions, and making a raw
-pointer from it needs `unsafe`, because the function can't see where its
-receiver came from. In a
+pointer from it needs a `safe<unique-raw-borrow>` claim when the compiler
+can't rule out that the receiver lives inside a `unique` allocation. In a
 function whose receiver has no stance, that means passing on a loan, and
 passing it on with `move` or `last` is then an error. In a `move` or `last`
 version, passing `_` on with `move` or `last` is allowed but needs
@@ -1677,9 +1677,29 @@ restore presence before it completes. `= @!` permits a vacant success result.
 | `@!` | Possibly vacant | Possibly vacant |
 | None | Unconstructed result slot | Body must construct one complete pointer value |
 
-An opaque operation may use narrow unsafe responsibility to assert a
-presence fact that analysis cannot prove. A path proved to return vacancy
-cannot satisfy a non-reporting contract through unsafe assertion.
+When an opaque operation supplies the pointer, a `safe<pointer-presence>`
+claim may vouch for a presence fact that analysis cannot prove:
+
+```zax
+acquire final : (result : MyValue * last = @)() = {
+  reset result
+  result = foreignAcquire()            // error: foreignAcquire might return vacant
+
+  if !?result {                        // fix without a claim: restore presence
+    result = @
+  }
+}
+
+acquireTrusted final : (result : MyValue * last = @)() = {
+  reset result
+  safe<pointer-presence>{
+    result = foreignAcquire()          // you vouch foreignAcquire never returns vacant
+  }
+}
+```
+
+A path proved to return vacancy cannot satisfy a non-reporting contract
+through a claim.
 
 Current ordinary-result syntax cannot express a delayed-construction contract
 that leaves an owning, raw, or optional result unconstructed on body entry while
@@ -4293,20 +4313,22 @@ If the programmer deliberately preserves the optional tracked contract despite
 that proof, the complete declaration requires
 `intent<redundant-outer-tracking>`.
 
-Without selected-contract proof, the checked and asserted forms instead remain:
+Without selected-contract proof, the checked and claimed forms instead remain:
 
 ```zax
 possibleOwner final : (result : Car loan & ?)() =
   tracked via engine.selectedPeer
 
-assertedOwner final : (result : Car loan &)() =
-  unsafe via engine.selectedPeer
+safe<exact-origin>{
+  claimedOwner final : (result : Car loan &)() =
+    via engine.selectedPeer
+}
 ```
 
 `tracked via` selects the checked optional mapping and requires the applicable
-`outer tracked` capability. `unsafe via` is the programmer's unchecked
-non-optional provenance assertion. Compiler-private proof cannot require the
-intent acknowledgement or change either portable form. `= existing` cannot
+`outer tracked` capability. Ordinary `via` inside `safe<exact-origin>{...}` is
+the programmer's non-optional provenance claim. Compiler-private proof cannot
+require the intent acknowledgement or change either portable form. `= existing` cannot
 silently discover a mapping that needs tracked outer-result work. Complete
 redundancy and cost behavior belongs to
 [Zax composition](composition.md#deliberately-retaining-redundant-tracking).

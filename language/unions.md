@@ -268,19 +268,28 @@ value.raw = readRawCode()
 ```
 
 After the arbitrary raw write, using `value.code` requires a proof that the bits
-name an admitted code or the exact unsafe category `union-lens-validity`.
-
-Exact unsafe-enclosure syntax remains future analysis-control work. The current
-illustrative spelling is:
+name an admitted code, or a `safe<valid-representation>` claim:
 
 ```zax
-unsafe<union-lens-validity>{
-  use(value.code)
+safe<valid-representation>{
+  use(value.code)              // you vouch the raw bits name an admitted code
 }
 ```
 
-A false assertion has undefined consequences. It does not validate or convert
-the bits.
+A false claim has undefined consequences. It does not validate or convert the
+bits. A compiler that traces every path into the use, and finds that the union
+never holds a mismatched pattern there, may prove the claim.
+
+The same claim covers a reference into a lens that a later write might have
+invalidated:
+
+```zax
+codeView : MyCode readonly & = value.code
+update(value)                  // might write value.raw through another path
+safe<valid-representation>{
+  use(codeView)                // you vouch the lens still holds a valid code
+}
+```
 
 ### Portable minimum proof
 

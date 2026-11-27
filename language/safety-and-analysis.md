@@ -6,8 +6,8 @@
 | Audience | Human developers reasoning about Zax's safe subset, compiler proof, unsafe responsibility, and source portability |
 | Applies To | Cross-cutting programmer-visible safety and static-analysis behavior; not a formal proof system or diagnostic specification |
 | Implementation State | Not established by this repository |
-| Owns | The safe-subset model; required proof; narrow unsafe assertions and permissions; known-invalid boundaries; distinction from intent and lints; language-contract versus compiler-analysis evolution; panic-check control attachment, ranges, import boundary, and build starting state; cross-cutting safety diagnostics and source stability |
-| Does Not Own | Domain-specific validity and admission rules, including [enum admission](enums.md#admission-and-reachable-values); exact future unsafe syntax and category registry; intent acknowledgements ([intent acknowledgements](intent-acknowledgements.md)); or compiler implementation algorithms |
+| Owns | The safe-subset model; required proof; `safe<...>` claims and `unsafe` operations and the test that chooses between them; the current category list; which checks count as proof; known-invalid boundaries; distinction from intent and lints; asking a compiler to verify a claim with `[<verify=...>]`; how loudly verification findings are reported; language-contract versus compiler-analysis evolution; panic-check control attachment, ranges, import boundary, and build starting state; cross-cutting safety diagnostics and source stability |
+| Does Not Own | Domain-specific validity and admission rules, including [enum admission](enums.md#admission-and-reachable-values), which define each category's fact; the provisional category registry; intent acknowledgements ([intent acknowledgements](intent-acknowledgements.md)); directive grammar and placement ([compiler directives](compiler-directives.md)); or compiler implementation algorithms |
 | Source / Provenance | Current intent, construction, invocation, optional, lifetime, and pointer safety boundaries |
 | Supersedes | Accepted general safety direction formerly preserved only as project input |
 
@@ -24,8 +24,9 @@ The central rule is:
 
 > For every property mandatory under the selected language contract, Zax
 > attempts to prove the operation valid. If proof cannot be established, the
-> operation is rejected unless a narrow unsafe assertion or permission provides
-> a valid lower-level interpretation. Unsafe source cannot make a known
+> operation is rejected unless the programmer writes a narrow `safe<...>` claim
+> supplying the missing fact, or uses an `unsafe` operation whose lower-level
+> meaning the programmer takes responsibility for. Neither can make a known
 > impossibility valid.
 
 The contract decides what must be proved. One executable compiler's current
@@ -44,53 +45,50 @@ view : MyValue readonly & = value
 inspect(view)
 ```
 
-No unsafe marker is needed.
+No marker is needed.
 
 ### Unproved but valid
 
 The operation may be valid, but analysis lacks a required fact because code is
 opaque, alias relationships are complex, or another recognized proof boundary
-intervenes.
-
-Illustrative future syntax:
+intervenes. The programmer supplies the fact with a `safe<...>` claim:
 
 ```zax
 /// The callback consumes the view synchronously and stores nothing.
-unsafe<lifetime-escape>{
+safe<lifetime-escape>{
   invokeOpaqueCallback(view)
 }
 ```
 
-The assertion says that a fact is true. It does not change runtime behavior.
+The claim says that a fact is true. It does not change runtime behavior.
 
-### Defined unsafe permission
+### Unchecked operations
 
-Some operations have a coherent lower-level meaning but are deliberately
-excluded from ordinary safe source:
+Some operations have a lower-level meaning that the language deliberately does
+not check. They are written with `unsafe`:
 
 ```zax
-// Illustrative category identifier; exact name remains unsettled.
-/// The member place and successor representation remain suitable.
-unsafe<replacement-member-successor>{
-  inspect(memberView)
-}
+header : PacketHeader * = myBuffer unsafe cast PacketHeader *   // treat these bytes as a header
 ```
 
-Here the enclosing instance was completely replaced, so the old member resident
-instance ended. The permission deliberately accesses the completely established
-successor through the continuing member place.
+No analysis could confirm that `myBuffer` holds a valid `PacketHeader`: the
+bytes came from outside anything the language tracks. The programmer takes
+responsibility for that.
 
-An unsafe permission differs from an assertion:
+A `safe<...>` claim and an `unsafe` operation differ in what the compiler could
+ever know:
 
-- an assertion supplies an unproved fact required by an otherwise safe
-  operation;
-- a permission deliberately crosses a defined safe-language boundary.
+- a `safe<...>` claim supplies a fact about state the language tracks, which a
+  compiler could prove with enough analysis;
+- an `unsafe` operation relies on something the language does not track, such
+  as raw bytes, foreign code, or ownership given up and later taken back.
 
-Both must identify the exact property and source region they affect.
+Both must name the exact property and source region they affect.
+[Vouching for safety](#vouching-for-safety-safe) explains how to choose.
 
 ### No valid interpretation
 
-Unsafe source cannot manufacture:
+Neither `safe<...>` nor `unsafe` can manufacture:
 
 - a resident instance where none exists;
 - a life path after it ended;
@@ -105,69 +103,452 @@ value.---()
 inspect(value) // error: no resident instance exists
 ```
 
-There is no unsafe spelling that makes this ordinary access valid without first
-establishing another instance through a real lifecycle operation.
+No marker makes this ordinary access valid without first establishing another
+instance through a real lifecycle operation.
 
 The threshold for declaring a case impossible is intentionally high.
-Conservative analysis belongs in the unproved or defined-unsafe categories
-rather than being mislabeled as universal invalidity.
+Conservative analysis belongs in the unproved-but-valid or unchecked
+categories rather than being mislabeled as universal invalidity.
 
-## Unsafe is narrow
+## Vouching for safety: `safe<...>`
 
-Unsafe control is not a broad alternate language mode.
-
-Every unsafe operation or enclosure must eventually:
-
-- use the literal `unsafe`;
-- identify the exact category;
-- name or enclose the affected operation, binding, member, or expression;
-- apply at the narrowest useful source location;
-- permit attached documentation explaining the responsibility;
-- alter only the stated proof or permission boundary; and
-- require no runtime check unless the underlying selected operation independently
-  specifies one.
-
-One enclosure may identify several exact categories without granting unrelated
-authority.
-
-Exact syntax, category identifiers, nesting, reflection, and extension
-provenance remain future analysis-control work.
-
-## False unsafe claims
-
-A false lifetime, alias, presence, construction, or transition assertion may
-have undefined consequences. The language does not require a runtime check.
-
-Compiler debugging modes may instrument unsafe claims and panic when misuse is
-detected. Such instrumentation is a tooling feature, not a portable language
-guarantee.
-
-An assertion may fill a proof gap. It cannot contradict a fact the compiler
-already knows:
+Zax has two markers for places where the programmer takes responsibility:
 
 ```zax
-value.---()
+safe<distinct-element>{                         // "this is safe; here is the fact"
+  dispatch(inbox[2 * i] as last)
+  dispatch(inbox[2 * i + 1] as last)
+}
 
-unsafe<lifetime>{
-  inspect(value) // error: known-ended lifetime
+header : PacketHeader * = myBuffer unsafe cast PacketHeader *   // "this is unchecked"
+```
+
+In the first block, the two indexes always name different elements, but the
+language's listed proofs do not cover two indexes per loop pass. The
+programmer vouches for the fact. In the second line, nothing the language
+tracks could say whether the bytes form a valid header.
+
+To choose between them, ask what the claim is about:
+
+- **Use `safe<category>{...}`** when the claim is a fact about state the
+  language already tracks, such as lifetimes, aliases, presence, element
+  distinctness, or where a member reference came from. A compiler could prove
+  such a fact with enough analysis. When a language contract later requires
+  that proof, the marker becomes redundant and you delete it, leaving the
+  plain code underneath.
+- **Use `unsafe`** when the claim concerns something the language deliberately
+  does not track, or when code brings something back under tracking from that
+  state. Examples are raw reinterpretation, ownership given up with
+  `unsafe vacate` and later reclaimed, and an untracked `* unsafe` pointer. No
+  analysis of Zax source can make such a marker redundant. Only a new
+  declaration that the language recognizes, true on every compiler, could take
+  over the vouching: for example, a future foreign-interface declaration
+  saying "this call constructs its argument".
+
+A false claim of either kind has undefined consequences. A `safe<...>` claim
+is still the programmer vouching that the code is safe; the word names what
+the programmer asserts, not what the compiler checked.
+
+To audit source, search for `safe<`, which finds every claim and every
+`unsafe<...>` enclosure, and for the word `unsafe`, which finds every
+unchecked operation and untracked pointer.
+
+### Current categories
+
+Each category names one fact. The domain owner defines the fact precisely.
+
+| Category | You vouch that | Owner |
+| --- | --- | --- |
+| `distinct-element` | Two array element accesses name different elements, or an element not finished earlier | [Arrays and slices](arrays-and-slices.md#what-the-compiler-can-prove) |
+| `optional-presence` | The optional's boxed value is present here | [Optional values](optional-values.md#presence-proof-and-postfix-access) |
+| `pointer-presence` | This pointer is not vacant here | [Nothing instances](nothing-instances.md#possible-vacancy-needs-a-presence-claim) |
+| `replacement-alias` | A replacement's destination and right-hand operand do not alias in a way that matters | [Optional values](optional-values.md#presence-proof-and-postfix-access) |
+| `lifetime-escape` | A reference's target outlives its use, where the compiler lost track of where the target came from | [Lifetimes and references](lifetimes-and-references.md) |
+| `unique-raw-borrow` | A raw pointer does not come from inside a `unique` allocation | [Pointers, allocation, and arenas](pointers-and-arenas.md#raw-pointers) |
+| `valid-representation` | These bits are a valid value of this type | [Unions](unions.md#unsafe-union), [floating-point scalars](floating-point-scalars.md) |
+| `exact-origin` | A member reference really came from the named container member | [Composition](composition.md#proved-tracked-and-claimed-outer-casting) |
+| `opaque-type` | An erased owner or observer really holds this type | [Pointers, allocation, and arenas](pointers-and-arenas.md#safe-owner-recovery) |
+| `partial-instance-access` | Code given an incomplete instance touches only members already constructed | [Construction and destruction](construction-and-destruction.md) |
+| `partial-instance-escape` | Code that receives an incomplete instance does not use it before it is complete | [Construction and destruction](construction-and-destruction.md) |
+| `destruction-path-complete` | Every path through a destructor ended the member | [Construction and destruction](construction-and-destruction.md#destructor-declarations-and-sequence) |
+| `destruction-at-most-once` | Paths that look like they overlap never end one member twice | [Construction and destruction](construction-and-destruction.md#destructor-declarations-and-sequence) |
+| `terminal-reconstruction` | A member rebuilt during destruction is ended exactly once more | [Construction and destruction](construction-and-destruction.md#reconstruction-during-destruction) |
+| `not-finished` | A member or value was not finished by an earlier `as last` the compiler cannot rule out | [Transfer stances](transfer-stances.md#members) |
+| `disjoint-storage` | A structural transform's source and destination do not overlap | [Structural shapes](structural-shapes-and-compatibility.md#overlap-is-handled-statically) |
+| `no-mutation-while-held` | Nothing writes a value while an `immutable` path to it is held | [Qualifiers](qualifiers.md#ordinary-promise-strengthening) |
+
+Two categories are about things the language does not track, so they use
+`unsafe<...>{...}`:
+
+| Category | You take responsibility that | Owner |
+| --- | --- | --- |
+| `opaque-construction` | An opaque operation constructs the named member, which therefore gets no automatic construction | [Construction and destruction](construction-and-destruction.md#construction-by-an-opaque-operation) |
+| `manual-member-destruction` | An opaque operation ends the named member, so its automatic destruction does not run | [Construction and destruction](construction-and-destruction.md#destructor-declarations-and-sequence) |
+
+The unchecked operations are `unsafe cast`, `unsafe cast as`, `unsafe vacate`,
+`unsafe pliable`, `unsafe as coercive`, `unsafe from`, `union unsafe`, and
+the untracked pointer `* unsafe`. Their owners define them.
+
+A compiler or vendor may define extension categories with `x-` names, such
+as `safe<x-acme-ring-index>{...}`; see
+[analysis provenance](#analysis-provenance).
+
+### When each category arises
+
+Each example shows code the compiler rejects, the fix that needs no marker
+where one exists, and the claim otherwise. Names such as `calibrate` and
+`registry` are placeholders.
+
+**`partial-instance-access`.** A constructor passes its incomplete instance to
+a helper:
+
+```zax
+MyEngine :: type {
+  sensor : MySensor
+  log : MyLog
+
+  +++ final : ()() = {
+    _.sensor .= makeSensor()
+    calibrate(_)         // error: the compiler can't confirm calibrate touches only sensor
+    _.log .= makeLog()
+  }
 }
 ```
 
-## Diagnosable unchecked Nothing access
+Here the compiler cannot confirm that `calibrate`, whose body it cannot
+follow, reads only `sensor` and keeps no reference. Better: pass only what is ready,
+`calibrate(_.sensor)`. When the helper must take the whole instance, write
+`safe<partial-instance-access>{ calibrate(_) }`.
 
-Nothing-instance access has one deliberate low-level boundary that does not
-require proof before every operation. Postfix pointer dereference is unchecked:
+**`partial-instance-escape`.** A constructor publishes its instance early:
 
 ```zax
-pointer : MyValue * = choosePointer()
-view : MyValue & = pointer.
++++ final : ()() = {
+  _.sensor .= makeSensor()
+  registry.add(_)        // error: other code could reach log before it exists
+  _.log .= makeLog()
+}
 ```
 
-If analysis proves `pointer` vacant, the compiler reports an error. If runtime
-vacancy escapes analysis, the reference mechanically reaches the type's Nothing
-backing. Prepared reads may succeed, unprepared access uses its defined panic
-path where available, and a write to compiler-provided shared backing is
-invalid.
+Better: register after every member exists. If registration must come first,
+for example because the registry only records the address until a later
+start-up step, write `safe<partial-instance-escape>{ registry.add(_) }`.
+
+**`destruction-path-complete`.** A destructor destroys a member on two
+complementary paths:
+
+```zax
+--- final : ()() = {
+  if _.pooled {
+    pool.returnSlot(_.slot)
+    _.buffer.---()                     // destroyed on this path
+  }
+  if !_.pooled {
+    flush(_.buffer)
+    _.buffer.---()                     // and on this one
+  }
+}                                      // error: the compiler can't tell that every path destroyed buffer
+```
+
+The compiler destroys members still alive at exit without any runtime flag,
+so it must know on every path whether `buffer` was destroyed. When it cannot
+connect the two conditions, it reports an error rather than guess. Better: use
+`if … else`. Otherwise wrap the second `if` in
+`safe<destruction-path-complete>{...}`.
+
+**`destruction-at-most-once`.** Two paths the compiler thinks could both run:
+
+```zax
+--- final : ()() = {
+  if isPrimary(_) { _.buffer.---() }
+  if isMirror(_)  { _.buffer.---() }   // error: buffer may be destroyed twice
+}
+```
+
+The programmer knows an instance is never both. Better: `else if`. Otherwise
+wrap the second line in `safe<destruction-at-most-once>{...}`.
+
+**`terminal-reconstruction`.** A helper rebuilds and ends a member during
+destruction:
+
+```zax
+--- final : ()() = {
+  _.conn.---()
+  reopenFlushAndClose(_)               // rebuilds conn, flushes it, and destroys it again
+}                                      // error: the compiler can't confirm conn ended exactly once
+```
+
+Better: write the steps in the destructor. Otherwise wrap the helper call in
+`safe<terminal-reconstruction>{...}`.
+
+**`lifetime-escape`.** The compiler loses track of where a returned reference
+came from:
+
+```zax
+pick final : (result : MyValue readonly &)(a : MyValue readonly &, b : MyValue readonly &) = {
+  return chooser(a, b)                 // error: where does chooser's result come from?
+}
+```
+
+The programmer knows `chooser` returns one of its arguments, so
+`safe<lifetime-escape>{ return chooser(a, b) }`.
+
+**`unique-raw-borrow`.** A raw pointer made from a reference, or from `_`,
+whose origin the function cannot see:
+
+```zax
+MyValue :: type {
+  selfPtr final : (result : MyValue loan *)() = {
+    safe<unique-raw-borrow>{
+      return _                         // _ might live inside a unique allocation
+    }
+  }
+}
+```
+
+A raw pointer made directly from a `unique` owner is a proved violation that
+no claim fixes; see [raw pointers](#raw-pointers).
+
+**`pointer-presence`.** An opaque call inside a result that promises presence:
+
+```zax
+acquire final : (result : MyValue * last = @)() = {   // = @ allocates first and promises callers a present result
+  reset result
+  result = foreignAcquire()            // error: foreignAcquire might return vacant
+}
+```
+
+Better: restore presence before returning, with `if !?result { result = @ }`
+after the call. Otherwise wrap the call in
+`safe<pointer-presence>{ result = foreignAcquire() }`.
+[Nothing instances](nothing-instances.md#possible-vacancy-needs-a-presence-claim)
+shows the more common case of passing a possibly vacant pointer to a writer.
+
+**`exact-origin`.** A cast to a container the compiler cannot prove:
+
+```zax
+safe<exact-origin>{
+  container : Container & = memberReference outer cast Container.member
+}
+```
+
+**`opaque-type`.** Recovering a typed owner from an erased one without the
+runtime check:
+
+```zax
+safe<opaque-type>{
+  vouched : MyType * unique = opaque as last       // you vouch opaque holds a MyType
+}
+```
+
+**`valid-representation`.** Reading bits through a type that has invalid bit
+patterns:
+
+```zax
+value.raw = readRawCode()
+safe<valid-representation>{
+  use(value.code)                       // you vouch the bits name an admitted code
+}
+```
+
+The same claim covers a reference into a union lens that a later write might
+have invalidated, and a floating-point pattern read without validation.
+
+**`not-finished`.** A use after an `as last` the compiler cannot rule out:
+
+```zax
+if mustArchive(message) {
+  archive(message.payload as last)     // payload finished on this path
+}
+if !mustArchive(message) {
+  message.payload.send()               // error: payload may have been finished
+}
+```
+
+Better: `if … else`. Otherwise wrap the use in
+`safe<not-finished>{ message.payload.send() }`. Tracking a member finished
+inside a called function, through a writable parameter, is future work; today
+[transfer stances](transfer-stances.md#members) leaves that to the function
+and the type.
+
+**`disjoint-storage`.** A structural transform whose source cannot be copied
+aside first:
+
+```zax
+// GridTranspose maps each cell to its transposed position;
+// MyGrid's cells allow neither copy nor move
+adjust final : ()(target : MyGrid writable loan &, source : MyGrid readonly loan &) = {
+  target -<>- GridTranspose -<>- source   // error: target and source may be the same grid
+}
+```
+
+Better: pass grids that are visibly distinct, or make the cells copyable.
+Otherwise wrap the transform in `safe<disjoint-storage>{...}`.
+
+**`no-mutation-while-held`.** An `immutable` view of a mutable value, when an
+opaque call also receives the value:
+
+```zax
+counter : Counter mutable writable = makeCounter()
+snapshot : Counter immutable readonly & = counter
+logCounters(counter)                 // error: logCounters could write counter while snapshot is held
+inspect(snapshot)
+```
+
+Better: pass `logCounters` a readonly view, or finish with `snapshot` first.
+If `logCounters` takes a writable parameter but never writes, wrap the call in
+`safe<no-mutation-while-held>{...}`.
+
+**`distinct-element`.** A loop that finishes two elements per pass, which the
+language's listed array proofs do not cover:
+
+```zax
+each i : in 0..<inbox.length() / 2 {
+  dispatch(inbox[2 * i] as last)
+  dispatch(inbox[2 * i + 1] as last)   // error: the compiler can't confirm this is a different element
+}
+```
+
+The programmer knows `2 * i` and `2 * i + 1` never collide, so wrap both
+calls in `safe<distinct-element>{...}`.
+[Arrays and slices](arrays-and-slices.md#what-the-compiler-can-prove) lists
+the cases that need no claim.
+
+**`optional-presence`.** An optional read where the presence proof is out of
+the compiler's sight:
+
+```zax
+loadIfMissing(cache)                   // an opaque call that always fills cache
+use(cache.)                            // error: the compiler can't confirm cache is present
+```
+
+Better: test with `if ?cache`. Otherwise wrap the use in
+`safe<optional-presence>{ use(cache.) }`.
+
+**`replacement-alias`.** A replacement the compiler cannot prove is safe from
+an alias:
+
+```zax
+oldValue : MyValue & = optional.
+opaqueObserve(oldValue)                // might keep oldValue somewhere
+reset optional                         // error: a retained alias would see the ended value
+```
+
+The programmer knows `opaqueObserve` keeps nothing, so wrap the reset in
+`safe<replacement-alias>{ reset optional }`.
+
+**`opaque-construction`** and **`manual-member-destruction`** mark an opaque
+operation that constructs or ends a member:
+
+```zax
+--- final : ()() = {
+  unsafe<manual-member-destruction>{
+    foreignRelease(_.handle)           // the C library ends handle; don't destroy it again
+  }
+}
+```
+
+### A check counts only if the compiler can follow it
+
+Many claims can be avoided with a check: a `?pointer` test before access, or
+an `is type` test before recovering an erased owner. The compiler must be able
+to recognize the check:
+
+```zax
+if opaque is type MyType {
+  typed : MyType * unique = opaque as last         // fine: the test is recognized
+}
+
+isWanted := fooBarChecking(opaque is type MyType, extraCheck) || goodToGo
+if isWanted {
+  typed : MyType * unique = opaque as last         // checked recovery: the compiler can't follow the test
+}
+```
+
+The language contract defines which check shapes count, so every compiler
+agrees on what compiles. A cleverer compiler may recognize more, but that
+never changes whether the code compiles; see
+[asking a compiler to verify a claim](#asking-a-compiler-to-verify-a-claim).
+When a check is too tangled to count, simplify it or write `safe<...>`.
+
+## Markers are narrow
+
+Neither marker is a broad alternate language mode. Every `safe<...>` claim and
+`unsafe` operation:
+
+- uses the literal word `safe` or `unsafe`;
+- identifies the exact category or operation;
+- encloses or names the affected operation, binding, member, or expression;
+- applies at the narrowest useful source location;
+- permits attached documentation explaining the responsibility;
+- alters only the stated proof or boundary; and
+- requires no runtime check unless the underlying operation independently
+  specifies one.
+
+One enclosure may name several categories without granting anything else:
+
+```zax
+safe<optional-presence, replacement-alias>{
+  observe(optionalValue.)    // optional-presence: you vouch a value is present
+  reset optionalValue        // replacement-alias: you vouch observe kept no alias
+}
+```
+
+Enclosures create no scope and no value, as
+[compiler directives](compiler-directives.md#directives-enclosures-and-compile-time-expressions)
+describes.
+
+## False claims
+
+A false `safe<...>` claim, or a false assumption behind an `unsafe` operation,
+may have undefined consequences. The language does not require a runtime
+check. Compiler debugging modes may instrument claims and panic when misuse is
+detected; that is a tooling feature, not a language guarantee.
+
+A claim may fill a proof gap. It cannot contradict a fact the compiler already
+knows. A compiler that proves a claim false, with certainty, reports an error:
+
+```zax
+value.---()                                 // value's instance is destroyed
+
+safe<lifetime-escape>{
+  inspect(value)                            // error: the claim says value is alive; the compiler knows it was destroyed
+}
+```
+
+No marker makes access to a destroyed instance valid. Sometimes low-level code
+genuinely needs to look at the storage left behind, for example a unit test
+checking that a destructor cleared a buffer stored in an arena, whose storage
+stays allocated after the destructor runs. Such code reads the storage through
+an untracked pointer taken while the value was alive. The compiler does not
+check accesses through it, which is not the same as making them valid:
+
+```zax
+secret : MySecretBuffer = loadSecret()
+probe : MySecretBuffer * unsafe = secret   // untracked borrow, taken while secret is alive
+secret.---()                               // the destructor clears the buffer
+checkCleared(probe.)                       // compiles: untracked, so the check is on you
+inspect(secret)                            // error: no instance exists
+```
+
+This is an escape hatch, not a pattern to reach for: whether reading the
+leftover storage means anything is entirely the programmer's responsibility.
+
+## Diagnosable unchecked Nothing access
+
+Postfix pointer dereference generates no runtime vacancy test. Through an
+untracked `* unsafe` pointer, nothing checks vacancy at all:
+
+```zax
+pointer : MyValue * unsafe = choosePointer()
+view : MyValue & = pointer.     // no check
+```
+
+If the compiler proves `pointer` vacant, it reports an error. If `pointer` is
+vacant at runtime anyway, the reference reaches the type's Nothing backing.
+Reading a prepared member may succeed, reading an unprepared member uses its
+defined panic path where available, and a write to compiler-provided shared
+backing is invalid.
 
 Zax does not require a generated vacancy check on every read or store. Suitable
 target protection traps writes and requested trapping-policy reads; debug
@@ -175,26 +556,41 @@ instrumentation may detect additional misuse. When the target lacks the needed
 trap, a missed access can read prepared backing, corrupt shared backing, or have
 undefined consequences.
 
-Compiler improvements may diagnose more certainly invalid source without
-requiring every implementation to use one proof algorithm. How a compiler acts
-on a high-confidence but unproved flow remains future safety/error design. Any
-unsafe responsibility may belong at the call or handoff that exposes a possibly
-vacant pointer to a writer, rather than on the eventual store; it is not an
-intent acknowledgement. The future unsafe catalog retains provisional
-`possible-nothing-write` and `possible-nothing-read-trap` categories for those
-two uncertain-flow classes.
+For a tracked pointer, every access that might reach Nothing backing needs
+proof that the pointer is not vacant, or a `safe<pointer-presence>` claim,
+whatever the type's Nothing policy. An access the compiler proves vacant is an
+error. The error and the claim belong at the operation that dereferences the
+pointer, such as `myPointer.`, not inside a function that later receives the
+resulting reference:
 
-This is not an unsafe assertion silently inserted by the compiler. It is a
-domain rule for unchecked pointer access whose exact behavior is owned by
+```zax
+counter : MyCounter * = findCounter(id)    // tracked; vacant when id is unknown
+safe<pointer-presence>{
+  writeCount(counter.)                     // you vouch counter is not vacant here
+}
+```
+
+A claim or a recognized `?counter` test establishes that `counter` is not
+vacant for later uses on the same path, until something could change the
+pointer: a reset, a
+reassignment, or a call that can write it. Across calls, tracking follows
+source: when every call path into a function passes a non-vacant pointer, the
+function's own accesses need nothing. Once the function is compiled into a
+fixed exported interface, such as a library binary whose callers are compiled
+separately, its callers can no longer be followed, and a possibly vacant
+access inside it is an error. Whether owning and managed pointers follow this
+tracked rule is future pointer-tracking work.
+
+Exact Nothing behavior is owned by
 [Zax Nothing instances](nothing-instances.md#pointer-dereference-is-unchecked).
 
-## Intent, unsafe, and linting are different
+## Intent, safety claims, unsafe, and linting are different
 
 | Mechanism | Programmer statement |
 | --- | --- |
 | `intent<...>{...}` | “This defined but suspicious interpretation is deliberate.” |
-| Unsafe assertion | “This required fact is true although the compiler cannot prove it.” |
-| Unsafe permission | “I deliberately accept this defined lower-level boundary.” |
+| `safe<...>{...}` | “This required fact is true although the compiler cannot prove it.” |
+| `unsafe` operation or `unsafe<...>{...}` | “I take responsibility for something the language does not track.” |
 | Lint suppression | “Do not report this advisory diagnostic here.” |
 
 ### Intent does not accept safety responsibility
@@ -208,9 +604,11 @@ intent<terminal-source-reuse>{
 This confirms defined terminal-source behavior. It does not grant lifetime,
 ownership, mutation, or alias authority.
 
-An interior pointer may require intent because replacement will make it observe
-a successor member resident instance. The operation is defined; the
-acknowledgement confirms that surprising meaning.
+An interior pointer or a member reference may require intent because
+replacement will make it observe a new member instance. The operation is
+defined; the acknowledgement confirms that surprising meaning, as
+`intent<inner-pointer-tracks-replacement>` and
+`intent<reference-tracks-replacement>` do.
 
 ### Lints do not change semantics
 
@@ -224,7 +622,7 @@ Lint suppression:
 - creates no proof;
 - grants no permission;
 - suppresses no required semantic error; and
-- should not require `unsafe`.
+- should not require `safe<...>` or `unsafe`.
 
 ## Domain rules remain with their owners
 
@@ -242,25 +640,25 @@ Examples:
 - [optional values](optional-values.md) defines presence and boxed access;
 - [function invocation](function-invocation.md) defines result and parameter
   completion;
-- [composition](composition.md) distinguishes proof-required and tracked checked
-  outer casting, defines the receiver-origin proof required for non-optional
-  outer result remapping, and owns `tracked via`, `unsafe via`, and
-  `unsafe outer cast`;
+- [composition](composition.md) distinguishes proof-required, tracked checked,
+  and claimed outer casting, defines the receiver-origin proof required for
+  non-optional outer result remapping, and owns `tracked via` and the
+  `exact-origin` claim;
 - [transfer stances](transfer-stances.md) defines moved-from and terminal source
   states;
 - integer owners define overflow, narrowing, and required-result behavior; and
 - [enums](enums.md) defines strict and flags admission domains and the values
   produced by enum operations.
 
-An unsafe category does not become a duplicate definition of the domain rule it
+A category does not become a duplicate definition of the domain rule it
 qualifies.
 
 In particular, an intent acknowledgement cannot authorize a composition
-provenance claim. `unsafe via` and `unsafe outer cast` accept responsibility for
-an unproved relationship at the exact forwarding or outer-cast site. A false
-claim has the unsafe consequences defined by the composition operation.
+provenance claim. A `safe<exact-origin>` claim accepts responsibility for an
+unproved relationship at the exact forwarding or outer-cast site. A false
+claim has the consequences defined by the composition operation.
 
-### Unsafe union lens validity
+### Union lens validity
 
 A plain [union](unions.md) admits only passive, all-bit-pattern-valid lenses, so
 every lens remains safe after every write.
@@ -268,20 +666,21 @@ every lens remains safe after every write.
 `union unsafe` admits passive representations with restricted value domains.
 The selected language contract may prove one lens valid from zero-fill, a
 preceding write, exact representation facts, or preserved flow. When it cannot,
-interpreting the backing through that lens uses the exact unsafe category
-`union-lens-validity`.
+reading the backing through that lens needs a `safe<valid-representation>`
+claim:
 
-The category asserts:
-
-> The current union backing is a valid ordinary value representation for this
-> requested lens.
+> The current union backing is a valid ordinary value of the requested lens's
+> type.
 
 It neither converts the bits nor starts a lens lifetime. A false claim has
-undefined consequences. Known-invalid representation remains an error.
+undefined consequences. Known-invalid representation remains an error. The
+same category covers other reads of bits through a type with invalid bit
+patterns, such as an unvalidated
+[floating-point](floating-point-scalars.md) pattern.
 
-Private compiler analysis may optimize or advise, but it does not silently
-change portable assertion requirements. Stronger source validity belongs to a
-selected contract as described under
+A compiler's private analysis may advise, but it does not change which claims
+source must write. Stronger source validity belongs to a selected contract as
+described under
 [language contracts and compiler analysis](#language-contracts-and-compiler-analysis).
 
 ### Checked variant access
@@ -331,16 +730,18 @@ A constructor helper may need access to already-live members before the complete
 enclosing instance exists. That bounded access differs from publishing the
 incomplete instance through a global, callback, or stored reference.
 
-Unsafe controls must distinguish:
+Claims must distinguish:
 
-- bounded partial-instance access;
-- escape or external publication;
+- bounded partial-instance access (`partial-instance-access`);
+- escape or external publication (`partial-instance-escape`);
 - asserting that opaque work established a member, which
   [`opaque-construction`](construction-and-destruction.md#construction-by-an-opaque-operation)
   does at the establishing operation and which also takes the member out of
   automatic construction;
-- suppressing a generated destruction; and
-- claiming path completeness or at-most-once behavior.
+- suppressing a generated destruction because opaque code ends the member
+  (`manual-member-destruction`); and
+- claiming path completeness or at-most-once behavior
+  (`destruction-path-complete`, `destruction-at-most-once`).
 
 ### Replacement and aliases
 
@@ -350,18 +751,36 @@ members. Analysis must account for whether the operation:
 - copies required values before ending them;
 - consumes an alias before renewal;
 - delegates exact self-alias handling to the selected operation;
-- preserves only storage or resources rather than an old member lifetime; or
-- deliberately crosses a defined unsafe successor boundary.
+- preserves only storage or resources rather than an old member lifetime.
+
+Where analysis cannot settle a possible alias, `safe<replacement-alias>`
+claims it does not matter. A reference that deliberately goes on to observe the
+new member after replacement is not a safety question at all; it uses
+`intent<reference-tracks-replacement>`, described by
+[lifetimes and references](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary).
 
 ### Returned references
 
 A returned reference must target a place whose life path outlives every use.
-Returning a local or temporary is known invalid when it escapes. An opaque but
-valid origin may need an unsafe assertion or future callable-origin contract.
+Returning a local or temporary is known invalid when it escapes. When the
+compiler loses track of where a valid result came from, the function needs a
+`safe<lifetime-escape>` claim or a future callable-origin contract.
 
 ### Raw pointers
 
-A non-vacant raw pointer does not prove:
+A plain borrowing raw pointer is tracked: the compiler checks, at each access
+to what it points to, that the target is still alive. A pointer declared
+`* unsafe` is not tracked, and every access through it is the programmer's
+responsibility:
+
+```zax
+node : MyNode = makeNode()
+link : MyNode * = node               // tracked: checked at each use
+parent : MyNode * unsafe = link      // untracked from here on
+back : MyNode * = parent             // error: an untracked pointer can't become tracked again
+```
+
+A non-vacant pointer still does not prove:
 
 - live pointee storage;
 - a resident instance;
@@ -370,40 +789,39 @@ A non-vacant raw pointer does not prove:
 - permitted aliasing; or
 - ownership.
 
-A raw-pointer operation is safe when analysis proves every fact required by the
-selected contract. A structurally bounded pointer whose allocation,
-construction, use, destruction, and recovery remain inside one containing life
-path may be fully provable.
+A pointer operation is safe when analysis proves every fact required by the
+selected contract. `?pointer` proves only non-vacancy. Origin analysis may prove
+the remaining facts, or an escape, opaque operation, owner release, reset,
+relocation, or arena teardown may invalidate that proof. Where a required fact
+cannot be proved, the code needs a `safe<...>` claim for that fact or a
+`* unsafe` pointer. A claim cannot make a known-invalid pointee valid, and a
+`* unsafe` pointer is simply not checked.
 
-`?rawPointer` proves only non-vacancy. Existing origin analysis may prove the
-remaining facts, or an escape, opaque operation, owner release, reset,
-relocation, or arena teardown may invalidate that proof.
+One fact concerns where a raw pointer comes from: a `unique` allocation allows
+no raw borrowers.
 
-Raw-pointer operations require explicit unsafe responsibility only where the
-safe contract requires a fact the compiler cannot prove. A known-invalid
-pointee remains invalid inside unsafe source.
-
-Two such facts concern where a raw pointer comes from:
-
-- **A `unique` allocation allows no raw borrowers.** References and slices into
-  it are checked by lifetime analysis, but a raw pointer is not, so making one
-  is a defined unsafe permission.
-- **A reference whose origin the function can't see** (a reference parameter,
-  a reference result, or `_`) might reach a `unique` allocation, so making a
-  raw pointer from it needs unsafe responsibility for that origin. Raw
-  pointers from visible values, such as a local, a member of a local, or the
-  value behind an owning raw pointer, need none.
+- A raw pointer made directly from a `unique` owner is a proved violation. No
+  claim fixes it; the only escape is an untracked `* unsafe` borrow.
+- A raw pointer made from a reference whose origin the function can't see (a
+  reference parameter, a reference result, or `_`) might reach a `unique`
+  allocation. When the compiler cannot rule that out, the function needs a
+  `safe<unique-raw-borrow>` claim. Raw pointers from visible values, such as
+  a local, a member of a local, or the value behind an owning raw pointer,
+  need none.
 
 ```zax
 owner : MyValue * unique = @
-raw : MyValue * = owner.          // error outside unsafe: unique allows no raw borrowers
+raw : MyValue * = owner.               // error: unique allows no raw borrowers
+escape : MyValue * unsafe = owner.     // allowed: untracked, fully on you
 
 makePtr final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
-  return input                    // error outside unsafe: input might reach a unique allocation
+  safe<unique-raw-borrow>{
+    return input                       // you vouch input is not inside a unique allocation
+  }
 }
 ```
 
-The exact unsafe forms are shown in
+Complete rules belong to
 [pointers, allocation, and arenas](pointers-and-arenas.md#raw-pointers).
 
 Whether a raw pointer is responsible for freeing its allocation is decided by
@@ -454,11 +872,13 @@ checks ownership role, origin, and qualification authority:
 - a successful preceding `is type` test supplies the exact type fact to its
   proven flow path.
 
-`unsafe transfer (opaqueOwner as last)` is a defined unsafe assertion that
-bypasses the type-witness check while performing an ownership transition. It
-cannot recover an erased interior target from allocation-root ownership, regain
-lost qualifications, or turn a nonowner into an owner. A known mismatch remains
-an error; a false opaque assertion has undefined consequences.
+A recovery written inside `safe<opaque-type>{...}` skips the type-witness
+check because the programmer vouches for the type. It cannot recover an erased
+interior target from allocation-root ownership, regain lost qualifications, or
+turn a nonowner into an owner. A known mismatch remains an error; a false
+claim has undefined consequences. The `is type` test counts as proof only when
+the compiler can follow it; see
+[a check counts only if the compiler can follow it](#a-check-counts-only-if-the-compiler-can-follow-it).
 
 Complete domain behavior belongs to
 [Zax pointers, allocation, and arenas](pointers-and-arenas.md#type-erased-ownership-and-observation).
@@ -491,12 +911,6 @@ the array determines which element-place guarantees ended. A version mismatch
 is the runtime evidence for the existing invalidated-slice panic, not a second
 kind of slice failure.
 
-Array and storage providers may cooperate through future stability
-kinds/tokens and observed versions. The provider reports changed raw mappings;
-the array determines which element-place guarantees ended. A version mismatch
-is the runtime evidence for the existing invalidated-slice panic, not a second
-kind of slice failure.
-
 Complete array conditions and programmer-visible behavior belong to
 [Zax arrays and slices](arrays-and-slices.md#required-reporting-and-unchecked-behavior).
 Exact registry syntax and identifiers remain analysis-control work.
@@ -514,8 +928,8 @@ Examples of defined failure include:
 - a checked operation returning absence; and
 - a required runtime check panicking.
 
-A false unsafe assertion may instead have undefined consequences with no
-required check.
+A false `safe<...>` claim, or a false assumption behind an `unsafe`
+operation, may instead have undefined consequences with no required check.
 
 Future contracts should state which failure model applies rather than leaving it
 to compiler accident.
@@ -533,10 +947,10 @@ The source-validity outcomes are:
 
 | Proof status | Portable source consequence |
 | --- | --- |
-| Selected-contract-required proof succeeds | Use the safe unmarked form; a redundant `unsafe` assertion is an error, while a defined but suspicious alternate safe mode may require intent acknowledgement; every conforming compiler must recognize the proof |
-| Selected contract does not require the proof | An unchecked operation still needs its narrow `unsafe` assertion; one compiler's stronger private proof may optimize or advise, but cannot make omission portable or reject the retained assertion |
-| Explicitly selected stronger extension proof succeeds | That proof may become canonical, making the unmarked form required and redundant `unsafe` an error for that source |
-| The asserted fact is proved false | Reject the operation even when it is marked `unsafe` |
+| Selected-contract-required proof succeeds | Use the plain unmarked form; a redundant `safe<...>` claim is an error, while a defined but suspicious alternate safe mode may require intent acknowledgement; every conforming compiler must recognize the proof |
+| Selected contract does not require the proof | The code still needs its narrow `safe<...>` claim; one compiler's stronger private proof cannot make omitting it portable or reject the retained claim |
+| Explicitly selected stronger extension proof succeeds | That proof may become canonical, making the unmarked form required and a redundant claim an error for that source |
+| Any compiler proves the claimed fact false | Reject the operation, with or without the claim |
 
 Composition provenance is a concrete example:
 
@@ -552,38 +966,36 @@ deliberatelyTracked : Container & ? =
 
 If the selected contract requires and establishes exact-origin proof at this
 site, plain `outer cast` produces the non-optional result without tracking, while
-retaining an `unsafe` provenance assertion is an error. A deliberately retained
-tracked operation requires `intent<redundant-outer-tracking>`, preserving its
-optional result and potential tracking costs without forcing a physical metadata
-read.
+retaining a `safe<exact-origin>` claim around it is an error. A deliberately
+retained tracked operation requires `intent<redundant-outer-tracking>`,
+preserving its optional result and potential tracking costs without forcing a
+physical metadata read.
 
-Without contract-required proof, plain `outer cast` is rejected. The programmer
-may write the optional `tracked outer cast` directly or retain an `unsafe`
-assertion for an unchecked non-optional result, even if one compiler privately
-proves the origin. That private proof cannot require the intent category, change
-the tracked result shape, or reject the portable unsafe assertion. An explicitly
-selected stronger extension may make plain `outer cast` canonical and make
-tracked use acknowledgement-required. A compiler-proved impossible origin
-rejects the plain and unsafe forms; the tracked checked form instead produces
-absence.
+Without contract-required proof, plain `outer cast` alone is rejected. The
+programmer may write the optional `tracked outer cast`, or write the plain
+cast inside `safe<exact-origin>{...}` for an unchecked non-optional result,
+even if one compiler privately proves the origin. That private proof cannot
+require the intent category, change the tracked result shape, or reject the
+portable claim. An explicitly selected stronger extension may make plain
+`outer cast` canonical and make tracked use acknowledgement-required. A
+compiler-proved impossible origin rejects the plain and claimed forms; the
+tracked checked form instead produces absence.
 
 The composition owner defines the exact origin proof class and applies the same
 distinction to callable result mapping: plain `via` for a proved non-optional
-outer result, `tracked via` for a checked optional result, and `unsafe via` for
-an unproved non-optional assertion.
+outer result, `tracked via` for a checked optional result, and plain `via`
+inside `safe<exact-origin>{...}` for an unproved non-optional result.
 
 ### A compiler may prove more
 
-Suppose source contains an unsafe assertion because an older compiler cannot
-prove a valid member-lifetime relationship.
+Suppose source contains a `safe<...>` claim because the selected contract does
+not require compilers to prove a valid member-lifetime relationship.
 
-A newer compiler may prove it under the same language contract. The assertion
-may then be unnecessary for that implementation's generated code, but it is at
-most advisory when the contract did not require every compiler to recognize the
-case.
-
-Removing it may make the source depend on the newer compiler's stronger
-analysis.
+A newer compiler may prove it. The claim stays required: removing it would make
+the source depend on that compiler's stronger analysis. What the newer compiler
+may do is report that it can prove the site, so the programmer can ask it to
+keep checking; see
+[asking a compiler to verify a claim](#asking-a-compiler-to-verify-a-claim).
 
 ### A later or extension contract may require more
 
@@ -592,26 +1004,170 @@ require conforming compilers for that contract to recognize the case as safe.
 
 Under that explicitly selected contract:
 
-- the obsolete assertion may be a hard error;
-- every conforming compiler must accept the unmarked valid operation; and
+- the obsolete claim is an error, and so is any `[<verify>]` directive above
+  it, because it no longer has a claim to verify;
+- every conforming compiler must accept the unmarked valid operation;
 - a defined alternate safe mode may become acknowledgement-required when the
   contract proves it redundant; and
-- a compiler that still demands the assertion is nonconforming.
+- a compiler that still demands the claim is nonconforming.
 
 This rule applies to every mandatory analysis, not only lifetime or optional
 presence.
 
 ### Analysis provenance
 
-Future controls need visible provenance:
+Categories need visible provenance:
 
 - language-contract categories;
-- compiler or vendor experimental categories; and
-- community extensions implemented by multiple tools.
+- compiler or vendor categories, named with `x-`; and
+- community extensions implemented by multiple tools, also named with `x-`.
 
-An unknown unsafe extension can be ignored only when the compiler independently
-proves the source valid without it. Otherwise the compiler must report that the
-required semantic extension is unsupported.
+A vendor category is a fact that vendor's compiler defines and checks, as in
+`safe<x-acme-ring-index>{...}`. That compiler may report a problem other
+compilers miss, or confirm code the programmer wants checked. Another compiler
+that does not know the category may ignore it only when it independently
+proves the source valid without it. Otherwise it reports that the required
+extension is unsupported.
+
+This differs from [asking a compiler to verify](#asking-a-compiler-to-verify-a-claim)
+a standard category: there, every compiler understands the claim, and the
+directive only asks one of them to check it.
+
+## Asking a compiler to verify a claim
+
+A `safe<...>` claim stays in source even when your compiler could prove it, so
+that every compiler accepts the same program. You can still ask a capable
+compiler to keep checking the claim, so that an edit that breaks it is caught
+instead of silently trusted:
+
+```zax
+[<verify=x-acme>]
+safe<distinct-element>{
+  dispatch(inbox[2 * i] as last)
+  dispatch(inbox[2 * i + 1] as last)
+}
+```
+
+The `[<verify=...>]` directive goes on the line directly above the
+`safe<...>` enclosure. It names a compiler or extension specification by an
+`x-` name: a specific compiler (`x-specific-compiler-name`) or a registered
+extension specification (`x-extension-spec-name`), chosen so that it never
+collides with anyone else's. To ask several compilers, repeat the directive:
+
+```zax
+[<verify=x-acme>][<verify=x-other>]
+safe<distinct-element>{
+  dispatch(inbox[j] as last)
+}
+```
+
+`[<verify=x-acme>]` concerns only the `x-acme` compiler; every other compiler
+ignores it. A misspelled name is simply never checked. An enclosure naming
+several categories is verified for all of them. A `[<verify>]` with no
+`safe<...>` enclosure below it is an error.
+
+A reviewer reading the source can tell a claim a named compiler keeps checking
+from one only the programmer vouches for.
+
+### What a compiler does at a claim
+
+| Situation at a `safe<...>` site | Result |
+| --- | --- |
+| The selected contract's rules prove the site | Error: remove the claim |
+| Any compiler proves, with certainty, that the claimed fact is false, even using analysis beyond the contract | Error: fix the code. This happens at every reporting level, including `off` |
+| A compiler proves the site only by going beyond the contract, and no `[<verify>]` names it | A finding suggesting `[<verify=x-acme>]`, reported at the [`safe-verification` level](#how-loudly-findings-are-reported) |
+| `[<verify=x-acme>]` is present and `x-acme` still proves the site | Nothing reported |
+| `[<verify=x-acme>]` is present and `x-acme` can no longer prove the site, without proving it false | A finding asking to fix the code or remove the directive, reported at the `safe-verification` level |
+
+"Proves false" means certainty, not suspicion.
+
+The first and third rows differ in whose proof it is. When the language
+contract proves the site, every compiler agrees the claim is redundant, so it
+is an error everywhere. When only one compiler can prove the site, the claim
+stays valid Zax on every compiler; that compiler reports a finding, and the
+build's `safe-verification` level decides whether the finding is advice or
+fails the build.
+
+### Checks inside `wellformed`
+
+A `wellformed{...}` answer follows the language contract alone. A cleverer
+compiler's analysis never changes it, so every compiler takes the same branch:
+
+```zax
+if compile wellformed{ pairwiseDispatch$(MyMessage)(inbox) } {
+  pairwiseDispatch$(MyMessage)(inbox)   // its body has a [<verify=x-acme>] claim
+} else {
+  serialDispatch(inbox)
+}
+```
+
+Findings from a cleverer compiler's analysis inside a `wellformed` payload,
+both "this claim is false" and "this site can be verified", are reported at a
+separate `wellformed` level, which defaults to `lint`. Code that is also
+compiled outside the payload, like `pairwiseDispatch$(MyMessage)` in the
+selected branch above, is judged there under the ordinary rules. The separate
+level matters for code that exists only as a probe, which should not break a
+build. The same holds for `if compile`, `switch compile`, constraints,
+overload and specialization selection, and reflection: none of them sees a
+verification result.
+
+### How loudly findings are reported
+
+`[<safe-verification=...>]` chooses whether the two findings above are
+silent, advice, or errors:
+
+| Level | Effect |
+| --- | --- |
+| `off` | The "can be verified" and "can no longer be verified" findings are not reported, so the compiler need not search for proofs. A claim proved false is still an error |
+| `lint` | The findings are advice |
+| `error` | The findings fail the build |
+
+A separate `wellformed=` level, with the same values, covers findings inside
+`wellformed` payloads.
+
+Your own code defaults to `error`, and the `wellformed=` level defaults to
+`lint` everywhere. The `error` default means a capable compiler asks you to
+resolve every finding in your own code, by adding `[<verify>]` or fixing the
+claim, so that a library you publish produces no findings in its users'
+builds. Which programs are valid Zax is still the same on every compiler; the
+default only decides whether your build stops on the finding. The level for
+your own code comes from a compiler or build option. Each imported module
+instance gets its level inside the import statement that creates it,
+defaulting to `lint`:
+
+```zax
+C :: import Module.CModule {
+  [<safe-verification=off>]                    // quiet for this whole instance of C
+}
+
+D :: import Module.DModule {
+  [<safe-verification=error, wellformed=error>]
+}
+
+E :: import Module.EModule                     // nothing written: lint, and lint inside wellformed
+```
+
+- **The importer's choice applies to the whole instance.** A module's own
+  `safe-verification` directives apply when that module is the code being
+  built. When it is imported, the importer's setting governs it, so a
+  library's strict setting cannot fail its users' builds over findings they
+  cannot fix.
+- **The setting stops at that instance.** If C imports another module, C's
+  own import statement decides that module's level.
+- **Re-exported and shared instances keep the level of the import that
+  created them.** Each instance has one level, so each claim has one answer.
+- **A finding is judged where the claim is written**, under the level of the
+  instance whose source contains it. When a generic's claim fails only for one
+  instantiation, the diagnostic also names the instantiation, so the author
+  whose type broke the proof can see it.
+- **Inside ordinary code**, `[<safe-verification=...>]` can also be used as a
+  [range](compiler-directives.md#directive-ranges) to tune particular regions;
+  this is expected to be rare.
+
+Panic-check state never crosses an import, because no module may make
+undefined-behavior promises about code it did not write. The
+`safe-verification` level may cross an import because it changes only what
+the compiler reports, never what the program does.
 
 ## Panic boundary
 
@@ -704,18 +1260,23 @@ Safety diagnostics should identify:
 - the exact required property;
 - the source operation and affected place, value, pointer, or result;
 - the available proof and the missing or contradictory fact;
-- whether an assertion or permission can apply;
+- the exact `safe<...>` category or `unsafe` operation that would apply, so
+  the programmer never has to look up a category name;
 - the consequence of a false claim;
 - and any runtime check or failure that the selected operation guarantees.
 
 Diagnostics should distinguish:
 
-- unproved valid operation;
-- defined unsafe permission;
-- known-invalid operation;
+- unproved valid operation that a `safe<...>` claim can cover;
+- an operation that needs an `unsafe` form;
+- known-invalid operation, including a claim proved false;
+- a claim made redundant by the selected contract;
+- a site a named compiler can verify, and a `[<verify>]` site it can no longer
+  verify, each with the `safe-verification` level that applied;
+- a `[<verify>]` directive with no claim below it;
 - defined but suspicious intent;
 - advisory lint;
-- unsupported experimental analysis; and
+- unsupported extension category; and
 - compiler nonconformance with a selected contract.
 
 Do not report a vague “unsafe” or “lifetime” error when the actual issue is an
@@ -737,9 +1298,10 @@ Runtime-checked policies may add:
 - panic paths; or
 - larger values.
 
-Unsafe assertions can remove required runtime checks where the contract permits
-that model, but they transfer correctness responsibility to the programmer.
-They are not optimization hints detached from semantics.
+Claims can remove required runtime checks where the contract permits that
+model, but they transfer correctness responsibility to the programmer. They are
+not optimization hints detached from semantics. Verifying a claim adds compile
+time and changes no generated code.
 
 ## Source stability
 
@@ -751,11 +1313,16 @@ Compiler improvements must not silently:
 - choose another transfer stance;
 - add ownership;
 - remove required synchronization;
-- turn an unsafe permission into ordinary safe meaning;
+- turn an `unsafe` operation into ordinary safe meaning;
 - or change defined runtime failure into undefined behavior.
 
 A new contract may deliberately strengthen mandatory proof or reject obsolete
-controls. Such changes must be explicit and reproducible.
+claims. Such changes must be explicit and reproducible.
+
+A compiler upgrade that proves less than before can turn passing `[<verify>]`
+sites into findings. Because your own code defaults to `error`, that can fail
+a build until the directive is removed or the level is lowered; the program's
+meaning does not change.
 
 ## Boundaries and maturity
 
@@ -765,8 +1332,11 @@ compiler conformance suite.
 
 Still deferred:
 
-- exact unsafe syntax and category names;
+- final category names, which may be revised, and exact enclosure nesting and
+  reflection rules;
+- which check shapes each contract version recognizes as proof;
 - mandatory proof sets for each contract version;
+- who maintains the registry of `x-` extension specification names;
 - formal analysis provenance and extension rules;
 - debug instrumentation;
 - formal panic behavior;

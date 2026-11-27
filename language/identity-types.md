@@ -739,7 +739,7 @@ introducing meaningful work or constraints:
 
 - explicit construction or transfer;
 - validation and optional failure;
-- an unchecked or unsafe assertion;
+- an unchecked operation or a `safe<...>` claim;
 - copies, moves, references, and temporaries;
 - another overload domain; and
 - exposed or locally declared operations.

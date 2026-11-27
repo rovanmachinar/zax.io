@@ -22,7 +22,7 @@ Each question has its own qualifier axis:
 | Axis | Qualifiers | Governs |
 | --- | --- | --- |
 | Place replacement | `final` / `varying` | `final` promises that the place keeps the same value lifetime; `varying` permits another lifetime in that place, and the declaration side controls whether this path may initiate it |
-| Value mutability | `mutable` / `immutable` | `immutable` promises that the current value's contents do not change through ordinary safe behavior; `mutable` makes no such promise |
+| Value mutability | `mutable` / `immutable` | `immutable` promises that the value's contents do not change through ordinary safe behavior while you hold the `immutable` path; `mutable` makes no such promise |
 | Access capability | `writable` / `readonly` | `readonly` promises that this path performs no change; `writable` may perform an otherwise permitted content mutation or place replacement |
 
 These are called **place-replacement qualifiers**, **value-mutability
@@ -551,22 +551,56 @@ explicit default as redundant without changing source.
 
 ## Ordinary promise strengthening
 
-Ordinary views may narrow authority and strengthen the promise made by the new
-path:
+An `immutable` path promises its holder that the value does not change while
+the holder has the path. When the holder no longer has it, the promise no
+longer applies. `readonly` instead promises that this path makes no change.
+
+These views need no marker, because each new path either can change less than
+the original or is promised less about the value:
 
 - `writable` to `readonly`;
 - declaration-side `varying` to declaration-side `final`;
-- a mutable value to a readonly path; and
-- an immutable value to a readonly path.
+- a mutable value to a readonly path;
+- an immutable value to a readonly path; and
+- `immutable` to `mutable readonly`, when both name the same type: the new
+  holder is told the value may change and cannot change it.
 
-The reverse directions weaken promises and are not ordinary conversions:
+```zax
+frozen : Counter immutable = makeCounter()
+reader : Counter mutable readonly & = frozen        // fine: same type, no marker
+writer : Counter mutable writable & = frozen        // error: would break the promise to frozen's holders
+```
 
-- `readonly` to `writable`;
-- declaration-side `final` to declaration-side `varying`; and
-- `immutable` to `mutable`.
+`immutable` to `mutable writable` would let the new path break the promise
+made to every holder of the value, so it is never an ordinary conversion; it
+needs [`unsafe pliable`](#unsafe-pliable) or `unsafe cast`. Nor are
+`readonly` to `writable` or declaration-side `final` to declaration-side
+`varying`.
 
-Mutable or readonly state does not thereby become immutable. Readonly constrains
-one path; immutable makes a guarantee about one value lifetime.
+`mutable` to `immutable` is allowed when analysis proves that nothing writes
+the value while the `immutable` path is held. Being `readonly` does not help
+in this direction: a `mutable readonly` path still has to pass the same
+analysis, because a writable path may exist elsewhere:
+
+```zax
+counter : Counter mutable writable = makeCounter()
+snapshot : Counter immutable readonly & = counter   // fine: counter is not written while snapshot lives
+inspect(snapshot)
+
+counter.increment()                                 // fine: snapshot is no longer used
+```
+
+```zax
+counter : Counter mutable writable = makeCounter()
+snapshot : Counter immutable readonly & = counter
+counter.increment()                                 // error: counter is written while snapshot is held
+inspect(snapshot)
+```
+
+When analysis cannot settle whether anything writes the value during that
+time, for example because an opaque call receives a writable alias, a
+`safe<no-mutation-while-held>` claim vouches for it. Different `mutable` and
+`immutable` representations of a split type allow no conversion at all.
 
 Type-side final/varying is not an ordinary same-place authority conversion. An
 alias preserves the actual referent-place stance, even when its own
@@ -585,8 +619,7 @@ copy final : Payload = source
 An explicit `unsafe cast` may change qualification in either direction. Its
 written destination type states the complete result qualification, so it can
 produce mutable or writable pointer or reference access from immutable or
-readonly input, or add an `immutable` promise that a mutable value cannot make
-through an ordinary view:
+readonly input:
 
 ```zax
 source : Payload immutable = makePayload()
@@ -598,23 +631,22 @@ For a qualification change on the same type, prefer
 bypasses them locally. Complete `unsafe cast` behavior is defined by
 [Zax conversions and casts](casting.md#qualification).
 
-An ordinary mutable alias cannot safely become an immutable alias. Other mutable
-aliases may still change the same value. Mutable-to-readonly access is safe
-because it constrains only the new path.
+Adding `immutable` to a mutable value does not need `unsafe cast`: analysis
+proves it, or a `safe<no-mutation-while-held>` claim vouches for it, as
+[ordinary promise strengthening](#ordinary-promise-strengthening) shows.
 
-A new immutable value may be produced safely from mutable input when the
-operation establishes the complete deep-immutability guarantee. This may
-involve:
+A new immutable value may also be produced from mutable input when the
+operation establishes the complete deep-immutability guarantee by itself. This
+may involve:
 
 - constructing an independent immutable value;
 - making a sufficiently independent copy; or
 - consuming mutable storage for which the compiler proves exclusive authority
   over all storage covered by the immutable guarantee.
 
-A consuming transition ends the former mutable capability. A scoped
-non-mutating view that later permits mutation again is readonly, not temporarily
-immutable. Exact uniqueness proofs, freezing operations, `copy` selection, cost
-visibility, and syntax remain future work.
+A consuming transition ends the former mutable capability. Exact uniqueness
+proofs, freezing operations, `copy` selection, cost visibility, and syntax
+remain future work.
 
 ## Construction and deep immutability
 
@@ -1439,3 +1471,10 @@ Later work may refine syntax and adjacent mechanisms while preserving:
 
 Pointer repointing remains distinct from pointee replacement. References never
 rebind.
+
+Future work on path-based immutability owns which derived paths count as still
+holding an `immutable` path (copies of the reference, member references, and
+pointers formed from it), exactly where a conflicting write is reported, how
+construction authority and future threading rules interact with the path
+meaning, and a separate form for a value that never changes at all, rather
+than only while a path is held.

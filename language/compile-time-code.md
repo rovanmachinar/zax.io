@@ -825,6 +825,13 @@ ok := wellformed{ first <+> second }                                     // fals
 ok := wellformed{ intent<same-prefix-literal-join>{ first <+> second } } // checks the acknowledged form
 ```
 
+The answer follows the language contract alone, so it is the same on every
+compiler. A compiler that can prove more than the contract requires, for
+example that a `safe<...>` claim inside the payload is false or could be
+verified, reports that as a finding at a separate `wellformed` level, which
+defaults to `lint`; it never changes the answer. See
+[checks inside `wellformed`](safety-and-analysis.md#checks-inside-wellformed).
+
 ### Seeing why a check failed
 
 A `false` hides its reason. `explain` keeps the result but reports the

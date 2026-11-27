@@ -6,7 +6,7 @@
 | Audience | Human developers allocating dynamic storage and choosing ownership, sharing, disposition, and pointer-lifetime behavior |
 | Applies To | Declaration-bound allocation, programmer-facing raw and managed pointers, ownership transitions, weak observation, arenas, allocation disposition, control blocks, collection, and cross-thread lifetime accounting; not a formal grammar or ABI |
 | Implementation State | Not established by this repository |
-| Owns | The `@` allocation family and policy enclosure; borrowing and owning raw pointers; stances on pointer layers and pointed-to values; `unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic` behavior; interior pointers and `inner`; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, `strong count probe`, `is allocation root`, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
+| Owns | The `@` allocation family and policy enclosure; borrowing and owning raw pointers; tracked borrowers and untracked `* unsafe` pointers; raw pointers near `unique` allocations; stances on pointer layers and pointed-to values; `unique`, `shareable`, `strong`, `weak`, and pointer-layer `atomic` behavior; interior pointers and `inner`; arena-backed dynamic allocation; allocation records; destruction/recovery/collection choices; control-block obligations; pointer `reset` and raw `vacate`; immediate presence, weak liveness probing, `strong count probe`, `is allocation root`, and ownership transitions; `OpaqueOwner`, `OpaqueObserver`, and `OpaqueReferenceObserver`; allocation/pointer costs and diagnostics |
 | Does Not Own | The cohesive Nothing-instance and prepared-access model ([Nothing instances](nothing-instances.md)); general declaration initialization ([declarations and bindings](declarations-and-bindings.md)); constructor and packet behavior ([construction and destruction](construction-and-destruction.md)); complete result mapping ([function invocation](function-invocation.md)); non-owning references and life paths ([lifetimes and references](lifetimes-and-references.md)); complete transfer-stance behavior ([transfer stances](transfer-stances.md)); execution-context construction and replacement ([execution context](execution-context.md)); pointer representation integers ([integers](integers.md)); `unsafe cast` and pointer/integer conversion ([conversions and casts](casting.md)); outer-cast mechanics ([composition](composition.md)); pointee operation thread safety; or arena API/registration |
 | Source / Provenance | Legacy pointer, memory-allocation, custom-allocator, strong/weak, handle/hint, context, and `Nothing` evidence reconciled with current declaration, transfer, construction, and lifetime design |
 | Supersedes | Current-purpose portions of the retired root pointer and allocation pages |
@@ -492,31 +492,66 @@ pinned : MyValue * loan = view      // pinned borrowing raw pointer
 owner : MyValue * last = @          // owning raw pointer
 ```
 
+#### Tracked and untracked borrowers
+
+A borrowing raw pointer is tracked, as a slice is: at each access to what the
+pointer points to, the compiler checks that the target is still alive. When
+you need a pointer the compiler does not track, write `unsafe` on the pointer
+layer:
+
+```zax
+node : MyNode = makeNode()
+link : MyNode * = node               // tracked borrow of a local value
+use(link.)                           // checked: node is still alive here
+
+parent : MyNode * unsafe = link      // untracked from here on
+use(parent.)                         // compiles: keeping node alive is now your responsibility
+
+back : MyNode * = parent             // error: an untracked pointer can't become tracked again
+```
+
+A pointer to a local value is formed with `= value`. On a pointer, the postfix
+`.` names the value it points to, so `borrowed : MyNode * = link.` makes
+another pointer to the same `node`.
+
+A tracked `*` converts to `* unsafe`, never the reverse. Use `* unsafe` for
+lifetimes the compiler cannot follow: parent links and graphs, addresses
+stored as data, foreign code, and hardware addresses. When you only need to
+lend a value safely, pass a reference (`MyValue readonly loan &`) instead of a
+raw pointer.
+
+Where the compiler cannot tell whether an access through a tracked pointer is
+safe, a `safe<...>` claim can supply the fact, such as
+`safe<pointer-presence>` for a pointer that might be vacant; see
+[safety and analysis](safety-and-analysis.md#vouching-for-safety-safe).
+
 A raw pointer can carry `loan` on its pointed-to layer (`MyValue loan *`), so
-it can borrow a value without allowing copies or moves of that value. Even so,
-making a raw pointer from a reference whose origin the function cannot see—a
-reference parameter, a reference result, or `_`—requires `unsafe`, because the
-reference might reach a `unique` allocation (which forbids raw borrowers):
+it can borrow a value without allowing copies or moves of that value.
+
+#### Raw pointers and `unique` allocations
+
+A `unique` allocation allows no raw borrowers. A raw pointer made from a
+reference whose origin the function cannot see (a reference parameter, a
+reference result, or `_`) might reach one. When the compiler cannot rule that
+out, the function needs a `safe<unique-raw-borrow>` claim:
 
 ```zax
 makePtrFromRef final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
-  return input                      // error outside unsafe: input might reach a unique allocation
+  return input                      // error: input might reach a unique allocation
 }
 
-// Illustrative unsafe category name; exact unsafe syntax remains unsettled.
-makePtrFromRefUnsafe final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
-  unsafe<raw-from-reference>{
-    return input                    // compiles: programmer takes responsibility for input's origin and lifetime
+makePtrFromRefClaimed final : (result : MyValue readonly loan *)(input : MyValue readonly loan &) = {
+  safe<unique-raw-borrow>{
+    return input                    // you vouch input is not inside a unique allocation
   }
 }
 ```
 
-Making a raw pointer from a visible value—a local variable, a member of a
-local, or the value behind an owning raw pointer—needs no `unsafe`. When you
-only need to lend a value safely, pass a reference (`MyValue readonly loan &`)
-instead of a raw pointer. Raw pointers are for lifetimes the compiler cannot
-track: parent links and graphs, addresses stored as data, foreign code,
-hardware addresses, owning raw allocations, and frequent repointing.
+Tracking follows source, so when every caller visibly passes a reference that
+is not inside a `unique` allocation, the claim is unnecessary. When a caller
+passes one that is, the raw pointer is an error, with or without the claim.
+Making a raw pointer from a visible value (a local variable, a member of a
+local, or the value behind an owning raw pointer) needs no claim.
 
 `?view` on a borrowing raw pointer checks only that the pointer is non-vacant.
 It does not prove a live pointee, valid provenance, alignment, or permitted
@@ -696,7 +731,7 @@ do not flatten through it or infer anything about its pointee.
 Structural slicing may copy a pointer while excluding storage that pointer
 targets. The destination pointer/copy contract and ordinary lifetime analysis
 decide whether another owner preserves the target, the operation is unavailable,
-or local unsafe responsibility is required. Slicing itself does not create a
+or a local `safe<...>` claim or `* unsafe` pointer is required. Slicing itself does not create a
 second pointer model.
 
 Reinterpreting a pointer as another pointee type uses protected `unsafe cast`:
@@ -726,8 +761,9 @@ member : Item * = container.items[0]     // a raw pointer to one element: takes 
 ```
 
 `container` is an owning raw pointer here, so a raw pointer into its allocation
-needs no `unsafe`. If `container` were `Container * unique`, the same line would
-need `unsafe`, because a `unique` allocation allows no raw borrowers.
+is an ordinary tracked borrow. If `container` were `Container * unique`, the
+same line would be an error, because a `unique` allocation allows no raw
+borrowers; only an untracked `* unsafe` borrow could point there.
 
 `container` targets the allocation root. `member` may target bytes and a live
 place inside that allocation, but the element is not an independently
@@ -784,25 +820,27 @@ owner : MyValue * unique = @
 `unique` means one pointer owns the allocation-root life path. Ownership may be
 transferred, but it is never shared concurrently with another owning pointer.
 
-**`unique` allows no raw borrowers.** Outside `unsafe`, nothing unchecked may
-point at a `unique` pointer's value or into its allocation. References and
-slices are checked by lifetime analysis, so they are allowed:
+**`unique` allows no raw borrowers.** References and slices may point at a
+`unique` pointer's value or into its allocation. A raw pointer may not, even a
+tracked one; the only exception is an explicit `* unsafe` escape:
 
 ```zax
 owner : MyValue * unique = @
 view : MyValue readonly loan & = owner.   // fine: checked by lifetime analysis
-raw : MyValue * = owner.                  // error outside unsafe
-
-// Illustrative unsafe category name; exact unsafe syntax remains unsettled.
-unsafe<unique-raw-borrow>{
-  raw2 : MyValue * = owner.               // compiles: programmer keeps raw2 within owner's lifetime
-}
+raw : MyValue * = owner.                  // error: unique allows no raw borrowers
+escape : MyValue * unsafe = owner.        // allowed: untracked, fully your responsibility
 ```
+
+The raw pointer here is a proved violation, so no `safe<...>` claim can fix
+it. The only escape is an untracked `* unsafe` borrow. When the compiler
+cannot tell whether a raw pointer comes from inside a `unique` allocation, as
+with a reference parameter, it needs a `safe<unique-raw-borrow>` claim
+instead; see
+[raw pointers and `unique` allocations](#raw-pointers-and-unique-allocations).
 
 This is what separates `unique` from an owning raw pointer (`* move` or
 `* last`): both own their allocation alone with no control block, but only an
-owning raw pointer allows raw borrowers, leaving it to the programmer to keep
-those borrowers valid.
+owning raw pointer allows raw borrowers.
 
 A blockless unique owner has no ownership control block. This is the
 minimum-overhead managed pointer form.
@@ -1363,9 +1401,9 @@ Weak-to-strong construction performs the real acquisition.
 `copy`, `move`, `last`, reset, weak acquisition, and atomic accounting follow
 their corresponding managed ownership roles. `deep` is unavailable.
 
-### Safe and unsafe owner recovery
+### Safe owner recovery
 
-Safe recovery compares the exact canonical target type and requested
+Checked recovery compares the exact canonical target type and requested
 ownership/capability profile:
 
 ```zax
@@ -1376,7 +1414,8 @@ Mismatch or an unavailable ownership transition produces a vacant typed
 destination. The opaque source retains ownership when the checked transition
 fails.
 
-`is type` probes exact identity without transfer:
+`is type` probes exact identity without transfer, and the recovery that follows
+it on the same path needs no type check:
 
 ```zax
 if opaque is type MyType {
@@ -1386,18 +1425,23 @@ if opaque is type MyType {
 
 Transparent aliases compare as their canonical target; identity types remain
 distinct. The probe does not establish liveness or ownership-transition
-success.
+success. It counts only when the compiler can follow it: a test buried in a
+complicated expression may leave the recovery checked.
 
-Unsafe recovery deliberately bypasses the type-witness check:
+When you know the type but have no test the compiler can follow, a
+`safe<opaque-type>` claim recovers without the type-witness check:
 
 ```zax
-typed : MyType * unique =
-  unsafe transfer (opaque as last)
+safe<opaque-type>{
+  typed : MyType * unique = opaque as last   // you vouch opaque holds a MyType
+}
 ```
 
 This is not `unsafe cast`: it reconstructs typed ownership from allocation
 metadata rather than reinterpreting pointer bits. A known mismatch is still an
-error; a false assertion has undefined consequences.
+error; a false claim has undefined consequences. A compiler that can see where
+`opaque` was created may prove the claim, and a later contract may make the
+plain recovery canonical.
 
 Erasing an [interior pointer](#interior-pointers) keeps its interior target, so
 recovery returns the same pointer:
@@ -1611,7 +1655,7 @@ sameCar : Car * strong = engine outer cast Car.engine
 
 Each outer cast crosses one immediate boundary, so returning from
 `inner car.axle.wheel` takes two casts. Composition owns the proved, tracked,
-and unsafe forms.
+and claimed forms.
 
 ### Interior pointers never become blockless `unique` or owning raw pointers
 
@@ -1652,7 +1696,6 @@ place, so after replacement it reaches the new member:
 ```zax
 car : Car * strong = makeCar()          // the Car pointee place is replaceable
 
-// Illustrative category identifier; exact name remains unsettled.
 intent<inner-pointer-tracks-replacement>{
   engine : Engine * strong = inner car.engine
 }
@@ -1896,7 +1939,7 @@ responsibility.
 
 | Form or policy | Typical cost |
 | --- | --- |
-| Borrowing raw (`* copy` or `* loan`) | Address-sized pointer and no ownership work; static proof or unsafe responsibility |
+| Borrowing raw (`* copy` or `* loan`) | Address-sized pointer and no ownership work; checked statically, or a `safe<...>` claim; `* unsafe` is unchecked |
 | Owning raw (`* move` or `* last`) | Address-sized pointer plus automatic cleanup and allocation-record access when destroyed or replaced; no control block |
 | `unique` | Exclusive ownership and final disposition; no control block |
 | `unique shareable` | Reserved inline or detached control block |
@@ -1946,9 +1989,11 @@ Representative diagnostics include:
 - writing `as move` or `as last` on a borrowing raw pointer (`* copy` or
   `* loan`);
 - attempting to borrow an owning raw pointer without `.`;
-- raw borrower created from a `unique` allocation outside `unsafe`;
+- tracked raw borrower created from a `unique` allocation;
 - raw pointer made from a reference of unseen origin (a reference parameter,
-  reference result, or `_`) outside `unsafe`;
+  reference result, or `_`) without a `safe<unique-raw-borrow>` claim;
+- conversion from `* unsafe` back to a tracked `*`;
+- access through a tracked pointer whose target may have ended;
 - raw pointer was statically proved vacant at an access;
 - unchecked raw pointer access may reach Nothing backing;
 - raw pointer has no proved live pointee, provenance, alignment, or access
@@ -2016,6 +2061,11 @@ specification.
 
 Still deferred:
 
+- detailed tracking rules for borrowing raw pointers: how a tracked `*` stored
+  in a member or graph is tracked, whether a tracked `*` falls back to a
+  runtime check where proof fails, whether anything can bring a `* unsafe`
+  pointer back under tracking, and what `unsafe` means on an owning pointer
+  layer such as `* last unsafe`;
 - custom arena and control-block interfaces;
 - custom control-block implementations;
 - unsafe interior ownership beyond direct member paths;

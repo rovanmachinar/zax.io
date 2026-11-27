@@ -7,7 +7,7 @@
 | Applies To | Mechanics deferred by current lifetime and pointer design |
 | Owns | Preservation of unresolved arena interfaces, custom control-block implementation, unsafe interior ownership, pointer provenance, raw-memory byte views, allocator and control-block metadata queries, managed-pointer and `OpaqueOwner` layout, pointer-layer presence mechanics, cycle-tracing algorithms, recovery implementation, prompt-disposition generic pressure, and thread-affine release |
 | Does Not Own | Current reference lifetime, pointer ownership semantics, `unsafe cast` and pointer/integer conversion ([conversions and casts](../../language/casting.md)), or the programmer-facing Nothing-instance model |
-| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; legacy `basics.md` pointer operator list; work items `014`, `015`, and `031` |
+| Source / Provenance | Former raw lifetime input; legacy `pointers.md`, `memory-allocation.md`, `custom-allocators.md`, `strong-weak.md`, and `handle-hint.md`; legacy `basics.md` pointer operator list; work items `014`, `015`, `031`, and `041` (opaque recovery revalidation) |
 
 ## Current constraints
 
@@ -103,6 +103,57 @@ Blockless `unique` stays a single address.
 Future work must define the physical layout. `OpaqueOwner` may need more storage
 than a root-only owner; that is acceptable if no better representation is found.
 Activate when pointer representation, ABI, or opaque-owner storage is designed.
+
+## Revalidating opaque owner recovery
+
+Current [type-erased ownership](../../language/pointers-and-arenas.md#type-erased-ownership-and-observation)
+teaching needs to be revalidated on two points, and the `safe<opaque-type>`
+classification depends on the outcome.
+
+**Recovery to a compatible type, not only the exact type.** Recovery today
+compares the exact canonical target type. Code may need to recover an erased
+owner as a type compatible with the stored one:
+
+```zax
+typed : MyWidget * unique = @
+erased : OpaqueOwner unique = typed as last
+
+exact : MyWidget * unique = erased as last           // allowed today: the exact type
+// illustrative, not current design:
+shown : MyWidgetView * unique = erased as last       // a compatible type: not allowed today
+```
+
+Future work must decide which compatibility counts (structural
+compatibility, a composition relationship, or another rule), whether the check
+stays a runtime witness comparison, what a mismatch produces, and how
+`is type` extends to compatible types.
+
+**No leak when an opaque owner ends without extraction.** An opaque owner that
+holds `last`, `unique`, or other owning captures and is destroyed without
+anything being recovered from it must still destroy the value and release its
+allocation, exactly once:
+
+```zax
+{
+  typed : MyWidget * unique = @
+  erased : OpaqueOwner unique = typed as last
+}                                  // erased ends without recovery: the MyWidget must be
+                                   // destroyed and its allocation released, exactly once
+```
+
+The current owner says the opaque owner retains the destructor, arena,
+disposition, and control-block participation, which suggests this holds.
+Future work must confirm it for every ownership role an opaque owner can hold,
+including interior targets, `strong` owners whose other owners remain, and a
+checked recovery that fails and leaves ownership in the opaque source.
+
+How `safe` relies on this: a `safe<opaque-type>` claim skips the type-witness
+check during recovery. If compatible-type recovery is added, the claim's fact
+("an erased owner holds this type") must say whether it means exactly this
+type or a compatible one.
+
+Activation: any review of type-erased ownership, opaque observers, or
+structural compatibility of owners.
 
 ## Blockless `unique` disposal information
 

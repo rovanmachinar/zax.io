@@ -6,7 +6,7 @@
 | Audience | Human developers reading or writing `[<...>]` directives, and anyone deciding whether a control belongs in a directive at all |
 | Applies To | What a compiler directive is, how one is written and named, where it attaches, directive ranges, the promises a directive may carry, `deprecate`, source mapping, and the catalog of current directives; not a formal grammar |
 | Implementation State | Not established by this repository |
-| Owns | The directive mental model; directive, enclosure, and compile-time-expression families; directive grammar; official and `x-` names; unattached, attached, and slot attachment; directive ranges and how openings, files, inclusion, and imports bound them; hint, unchecked-promise, and semantic-control kinds; `deprecate`; source-mapping directives; the directive catalog |
+| Owns | The directive mental model; directive, enclosure, and compile-time-expression families; directive grammar; official and `x-` names; unattached, attached, and slot attachment; directive ranges and how openings, files, inclusion, and imports bound them; hint, unchecked-promise, semantic-control, and verification-request kinds; `deprecate`; source-mapping directives; the directive catalog |
 | Does Not Own | The `[< ... >]` token enclosure ([source structure](source-structure.md#compiler-directive-enclosure)); execution policies and compile-time code ([compile-time code](compile-time-code.md)); individual directives' meanings, which belong to the owners named in the [catalog](#directive-catalog) |
 | Source / Provenance | Legacy compiler-directive input, reconciled with current source structure, Nothing policy, module, flow, safety, and compile-time design |
 
@@ -47,7 +47,7 @@ them follows what the form does:
 | Form | What it does | Examples |
 | --- | --- | --- |
 | Directive, `[<name>]` | Describes a construct, a region, or a point to the compiler | `[<inline>]`, `[<deprecate>]`, `[<likely>]` |
-| Source enclosure, `word<category>{ ... }` | Changes how a visibly bounded piece of source is checked or authorized. It creates no scope and no value. | `intent<...>{ }`, `unsafe<...>{ }`, `bare{ }` |
+| Source enclosure, `word<category>{ ... }` | Changes how a visibly bounded piece of source is checked or authorized. It creates no scope and no value. | `intent<...>{ }`, `safe<...>{ }`, `unsafe<...>{ }`, `bare{ }` |
 | Keyword or compile-time expression | Computes or asks something and yields a value, or changes what a declaration means | `compile`, `wellformed{ }`, `target size of`, `outward` |
 
 So `wellformed{...}` is an expression, because it yields a `Boolean`, and
@@ -150,9 +150,9 @@ smallHelper final : ()() = {   // error: inline is unattached here and accepts n
 
 ## Directive ranges
 
-`deprecate`, panic controls, and `export` can also apply to a run of
-declarations. An unattached **state marker** sets the state from that point
-onward:
+`deprecate`, panic controls, `export`, and `safe-verification` can also apply
+to a run of declarations. An unattached **state marker** sets the state from
+that point onward:
 
 | Marker | State from here on |
 | --- | --- |
@@ -160,6 +160,9 @@ onward:
 | `=never` | Off: declarations are not deprecated or exported; for panic controls, the check is disabled |
 | `=inherit` | Back to the state the enclosing opening or file started with |
 | `=default` | Back to the language's default |
+
+`safe-verification` sets a reporting level instead of on and off: its markers
+are `=off`, `=lint`, and `=error`, plus `=inherit` and `=default`.
 
 The state lasts until a later marker for the same directive changes it, or the
 region ends. There are no separate "end" markers: a range ends when another
@@ -220,7 +223,10 @@ A range never escapes the region it is written in:
 - **Imports.** Directive state never crosses an `import`. An imported module
   starts from the language's defaults, or from a starting state its build
   configuration sets, and then applies its own source, never its importer's
-  state.
+  state. The one exception is a `[<safe-verification>]` written inside the
+  import statement itself, which sets how loudly verification findings are
+  reported for that imported instance; see
+  [safety and analysis](safety-and-analysis.md#how-loudly-findings-are-reported).
 
 Because closing braces and file ends restore the previous state, there are no
 `push` and `pop` directives.
@@ -242,19 +248,21 @@ drawLineOld final : ()() = {   // intent error: a state marker placed as an atta
 Write the attached form, `[<deprecate>]`, to mark one declaration, or put blank
 lines around the state marker.
 
-Only `deprecate`, panic controls, and `export` have ranges. Other directives,
+Only `deprecate`, panic controls, `export`, and `safe-verification` have
+ranges. Other directives,
 such as the [Nothing policy](nothing-instances.md#set-a-scoped-default), attach
 to one opening and deliberately have no "from here onward" form.
 
 ## What a directive may promise
 
-Every directive is one of three kinds:
+Every directive is one of four kinds:
 
 | Kind | What it does | Examples |
 | --- | --- | --- |
 | Hint | Suggests an optimization. A compiler may ignore it, and the program's meaning never changes. | `inline` levels, `likely`, `unlikely` |
 | Unchecked promise | States a fact the compiler may rely on. Where a check exists, it is on by default; with the check disabled, breaking the promise is undefined behavior. | `always`, `never`, `void`, disabling a panic category |
 | Semantic control | Changes what the program means | `execute`, `constant`, `label`, `deprecate`, `export`, the Nothing policy, layout |
+| Verification request | Asks a named compiler to check a claim already written in source, or sets how loudly such checks are reported. It promises nothing and never changes meaning, but a compiler it names must not ignore it. | `verify`, `safe-verification` |
 
 An unchecked-promise directive is itself the visible marker of the promise. It
 needs no separate `unsafe` enclosure. Whether a check exists is controlled by
@@ -374,6 +382,8 @@ directives.
 | `deprecate` | Semantic control | Attached; range | [This page](#deprecating-declarations) |
 | `export` | Semantic control | Attached; range | [Namespaces and modules](namespaces-and-modules.md#exporting-with-directives) |
 | Panic controls (`panic`) | Unchecked promise when disabling | Attached; range | [Safety and analysis](safety-and-analysis.md#controlling-panic-checks) |
+| `verify` | Verification request: asks the named `x-` compiler to keep proving the `safe<...>` claim below | Attached to a `safe<...>{ }` enclosure | [Safety and analysis](safety-and-analysis.md#asking-a-compiler-to-verify-a-claim) |
+| `safe-verification` | Verification request: sets whether verification findings are off, lint, or errors, with a separate `wellformed=` level | Unattached inside an import statement's body, for that imported instance; range | [Safety and analysis](safety-and-analysis.md#how-loudly-findings-are-reported) |
 | `nothing-instance-default` | Semantic control | Attached to a module or namespace opening | [Nothing instances](nothing-instances.md#set-a-scoped-default) |
 | `align`, `reserve`, `void` | Semantic control; `void` is also an unchecked promise | Attached to a member; `reserve` unattached in a type body | [Type definitions](type-definitions.md#explicit-member-layout) |
 | `reorder` | Semantic control | Attached to a type definition | [Type definitions](type-definitions.md#member-order) |
@@ -387,7 +397,8 @@ Diagnostics should distinguish:
 - a directive in a position it does not accept, such as `label` after a type
   instead of after a parameter's or result's name;
 - a state marker placed as an attachment, or a standalone directive that needs
-  something to attach to;
+  something to attach to, such as a `[<verify>]` with no `safe<...>`
+  enclosure below it;
 - a state marker that sets the state already in effect, which is redundant;
 - incompatible options in one directive, such as `context=local` with `min`;
   and

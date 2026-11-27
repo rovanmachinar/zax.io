@@ -1329,8 +1329,9 @@ Plain `outer cast` requires a proof mandated by the selected language contract
 and returns a non-optional reference without runtime tracking.
 `tracked outer cast` checks the placement at runtime; a reference operand
 produces an optional reference, and a pointer operand produces a same-role
-pointer that is vacant on failure. `unsafe outer cast` instead asserts that the
-placement is correct. An outer cast of a `strong` or `weak` pointer keeps its
+pointer that is vacant on failure. Inside `safe<exact-origin>{...}`, plain
+`outer cast` relies on the programmer's claim that the placement is correct.
+An outer cast of a `strong` or `weak` pointer keeps its
 ownership role. The exact path matters when a container
 stores several members of the same type.
 
@@ -1558,6 +1559,22 @@ it is marked `#`. The generated `=` returns a `self` result, so
 `first = second = third` behaves like `second = third` followed by
 `first = second`; its `#` lets `a = b` stand alone as a statement. See
 [Zax function invocation](function-invocation.md#receiver-origin-self-results).
+
+## Safety claim
+
+A **safety claim** is a `safe<category>{...}` enclosure in which the
+programmer vouches for a fact the compiler could not prove, about state the
+language tracks:
+
+```zax
+safe<distinct-element>{
+  dispatch(inbox[2 * i + 1] as last)
+}
+```
+
+A false claim has undefined consequences. Operations whose safety depends on
+something the language does not track use `unsafe` instead. See
+[Zax safety and analysis](safety-and-analysis.md#vouching-for-safety-safe).
 
 ## Semantic error
 
@@ -1968,6 +1985,22 @@ if wellformed{ ++myValue } {
 ```
 
 See [Zax compile-time code](compile-time-code.md#checking-whether-code-is-well-formed-wellformed).
+
+## Verification request
+
+A **verification request** is a compiler directive that asks a named compiler
+to check a claim already written in source, or sets how loudly such checks are
+reported. It never changes what the program means:
+
+```zax
+[<verify=x-acme>]
+safe<distinct-element>{
+  dispatch(inbox[2 * i + 1] as last)
+}
+```
+
+See
+[asking a compiler to verify a claim](safety-and-analysis.md#asking-a-compiler-to-verify-a-claim).
 
 ## Visibility grant
 

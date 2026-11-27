@@ -487,6 +487,25 @@ The compiler also diagnoses:
 - conflicting call-site and constructor-body construction of one member; and
 - normal return with an incomplete instance.
 
+Passing the incomplete `_` to code the compiler cannot see is also an error,
+because that code might touch a member not yet constructed:
+
+```zax
++++ final : ()() = {
+  _.sensor .= makeSensor()
+  calibrate(_)         // error: _ is incomplete; log is not built yet
+  _.log .= makeLog()
+}
+```
+
+The better fix passes only what is ready, such as `calibrate(_.sensor)`. When
+the whole instance must be passed, `safe<partial-instance-access>{...}` vouches
+that the code touches only constructed members and keeps nothing. Publishing
+the incomplete instance, for example registering it where other code can reach
+it later, uses `safe<partial-instance-escape>{...}` to vouch that nothing uses
+it before it is complete; registering after every member exists needs no
+claim.
+
 ## Construction packets
 
 A construction packet distinguishes positional constructor arguments, named
@@ -798,9 +817,9 @@ An explicit `_.member .= ...` or `_.member.+++()` in the selected constructor
 body conflicts because both operations attempt to construct the same member. The compiler diagnoses
 that conflict.
 
-Low-level code may eventually use a narrow unsafe lifecycle assertion when
-opaque control flow makes the apparent conflict valid. The syntax and formal
-guarantees for such assertions remain future safety and analysis-control work.
+Low-level code may eventually need a narrow claim when opaque control flow
+makes the apparent conflict valid. No category for it exists yet; this remains
+future safety and analysis-control work.
 
 ### Structural construction and transformation
 
@@ -2183,12 +2202,13 @@ Safe cases may include:
 - a lifetime policy that proves nonconflicting access.
 
 The compiler diagnoses conflicts required by the applicable language contract.
-A future narrow unsafe permission may allow a use whose safety the compiler
-cannot prove. The permission belongs at the risky operation, not on every `&`
-declaration.
+Where it cannot prove that a possible alias is harmless, a
+`safe<replacement-alias>` claim may vouch for the use. The claim belongs at the
+risky operation, not on every `&` declaration.
 
-Complete reference origin, fixed place binding, and the unsafe successor-member
-boundary are defined by
+Complete reference origin, fixed place binding, and the
+`intent<reference-tracks-replacement>` acknowledgement for a reference that
+deliberately observes the new member are defined by
 [lifetimes and references](lifetimes-and-references.md#direct-member-references-cross-a-renewal-boundary).
 
 ### Raw pointers
@@ -2201,9 +2221,10 @@ Same-storage replacement does not categorically invalidate every raw pointer.
 - Reusing an address does not by itself decide whether the intended pointee
   survives.
 
-A borrowing raw pointer (`*`, `* copy`, or `* loan`) carries no ownership or
-lifetime guarantee. A use is safe when analysis proves its required origin and
-lifetime facts; otherwise it needs narrow unsafe responsibility. Owning raw
+A borrowing raw pointer (`*`, `* copy`, or `* loan`) carries no ownership. A
+tracked use is safe when analysis proves its required origin and lifetime
+facts; otherwise it needs a narrow `safe<...>` claim, or the pointer must be
+an untracked `* unsafe`. Owning raw
 pointers (`* move` or `* last`) and managed ownership, including interior
 pointers to direct members, are defined by
 [pointers and arenas](pointers-and-arenas.md).
@@ -2322,8 +2343,8 @@ if ?optional
 ```
 
 The selected construction must make an independent snapshot, consume the alias
-before renewal, deliberately support the relationship, or use the applicable
-`replacement-alias` unsafe responsibility.
+before renewal, deliberately support the relationship, or vouch for it with a
+`safe<replacement-alias>` claim.
 
 A panic leaves the same contained-reconstruction operation blocked. It does not
 publish a partial payload, restore the old payload, or continue ordinary
@@ -2380,7 +2401,53 @@ constructor-body `+++` calls.
 An explicit `_.member.---()` call may run in any destructor-body control-flow
 order and suppresses the ordinary generated destructor call for that member
 lifetime. The compiler tracks which member lifetimes remain live at every normal
-destructor exit.
+destructor exit, and destroys the ones still alive.
+
+The analysis uses no runtime flags, so when the compiler cannot tell on every
+path whether a member was destroyed, it cannot safely insert its own
+destruction and reports an error:
+
+```zax
+--- final : ()() = {
+  if _.pooled {
+    pool.returnSlot(_.slot)
+    _.buffer.---()                     // destroyed on this path
+  }
+  if !_.pooled {
+    flush(_.buffer)
+    _.buffer.---()                     // and on this one
+  }
+}                                      // error: the compiler can't tell that every path destroyed buffer
+```
+
+Writing `if … else` lets the compiler see that every path ends `buffer`. When
+the paths cannot be restructured, a `safe<destruction-path-complete>` claim
+around the second `if` vouches that every path has ended the member. In the
+same way, two destructions the compiler thinks could both run are an error
+unless restructured, for example with `else if`, or wrapped in
+`safe<destruction-at-most-once>{...}`:
+
+```zax
+--- final : ()() = {
+  if isPrimary(_) { _.buffer.---() }
+  if isMirror(_)  { _.buffer.---() }   // error: buffer may be destroyed twice
+}
+```
+
+When opaque code ends a member, such as a foreign library releasing a handle,
+`unsafe<manual-member-destruction>{...}` marks the call and stops the
+compiler from destroying the member again:
+
+```zax
+--- final : ()() = {
+  unsafe<manual-member-destruction>{
+    foreignRelease(_.handle)           // the library ends handle
+  }
+}
+```
+
+Finishing a member with `as last` needs no such marker: the member stays
+alive in its finished state, and its destructor still runs at exit.
 
 A destructor may change and take apart the value it is destroying, even one
 declared `immutable` or reached through a `readonly` path, but it cannot hand
@@ -2414,10 +2481,22 @@ A destructor may reconstruct a member:
 The two member destructor calls end two different lifetimes. Lifecycle analysis
 should distinguish them rather than report double destruction of one lifetime.
 
-Advanced terminal code may need a narrow future unsafe permission when required
-analysis cannot prove its lifecycle behavior. Generated destruction suppression
-depends on tracked member state at normal exit, not merely on the presence of a
-`---` token.
+When the sequence happens somewhere analysis cannot follow, such as a helper
+that rebuilds, uses, and destroys the member again, a
+`safe<terminal-reconstruction>` claim vouches that the member ends exactly
+once more:
+
+```zax
+--- final : ()() = {
+  _.conn.---()
+  safe<terminal-reconstruction>{
+    reopenFlushAndClose(_)             // you vouch: rebuilds conn, flushes it, destroys it again
+  }
+}
+```
+
+Generated destruction suppression depends on tracked member state at normal
+exit, not merely on the presence of a `---` token.
 
 The exact severity of optional diagnostics and any runtime debugging checks
 remain future safety and tooling work.
@@ -2706,7 +2785,7 @@ filled this way, wrap it in a type whose constructor makes the assertion, as
 shown in
 [Zax declarations and bindings](declarations-and-bindings.md#low-level-initialization-belongs-in-a-constructor).
 
-## Incomplete current instances and unsafe controls
+## Incomplete current instances and safety claims
 
 A helper may receive the current instance while construction is incomplete:
 
@@ -2718,8 +2797,8 @@ A helper may receive the current instance while construction is incomplete:
 ```
 
 The compiler may permit the call when it proves that the helper uses only live
-members and completes a valid state. Otherwise a future narrow unsafe
-partial-instance permission is required.
+members and completes a valid state. Otherwise a
+`safe<partial-instance-access>` claim is required.
 
 The current instance retains its actual immutable qualification while
 construction authority permits establishment of its state. An
@@ -2736,28 +2815,34 @@ Publishing an incomplete current instance is a stronger operation:
 ```
 
 Publication may retain a reference, notify subscribers, or reenter through
-another path. Permission for bounded helper access does not imply permission for
-escape.
+another path. A claim for bounded helper access does not cover escape, which
+needs its own `safe<partial-instance-escape>` claim.
 
 Construction performed by an opaque operation uses `opaque-construction`, as
-described above. The language needs distinct future unsafe controls for:
+described above. The other lifecycle categories are:
 
-- manual member destruction hidden from analysis;
-- destruction that analysis cannot prove occurs on every path;
-- apparently overlapping destruction calls known to be mutually exclusive;
-- bounded partial-instance access;
-- partial-instance escape or publication;
-- unresolved replacement aliasing; and
-- terminal member reconstruction.
+| Situation | Marker |
+| --- | --- |
+| Opaque code ends a member | `unsafe<manual-member-destruction>` |
+| Analysis cannot prove destruction on every path | `safe<destruction-path-complete>` |
+| Apparently overlapping destruction calls are mutually exclusive | `safe<destruction-at-most-once>` |
+| Bounded access to an incomplete instance | `safe<partial-instance-access>` |
+| Escape or publication of an incomplete instance | `safe<partial-instance-escape>` |
+| Unresolved replacement aliasing | `safe<replacement-alias>` |
+| A member rebuilt during destruction | `safe<terminal-reconstruction>` |
 
-Construction has no such override. When the compiler cannot tell whether a
-place has been constructed, the code must be restructured so that it can.
+[Safety and analysis](safety-and-analysis.md#when-each-category-arises) shows
+an example of each.
 
-The final source syntax, analysis provenance, and contract-version behavior
-remain future analysis-control work. The general distinction among proof,
-unsafe assertion, unsafe permission, and no valid interpretation is defined by
-[safety and analysis](safety-and-analysis.md). No broad unsafe marker can make a
-known-ended lifetime valid again.
+Apart from `opaque-construction`, construction has no claim. When the compiler
+cannot tell whether a place has been constructed, the code must be
+restructured so that it can.
+
+Analysis provenance and contract-version behavior remain future
+analysis-control work. The general distinction among proof, `safe<...>`
+claims, `unsafe` operations, and no valid interpretation is defined by
+[safety and analysis](safety-and-analysis.md#vouching-for-safety-safe). No
+marker can make a known-ended lifetime valid again.
 
 ## Panic and allocation boundaries
 
@@ -2833,7 +2918,7 @@ Programmers must be able to discover:
 - post operations run on `next` and normal completion but skipped on `break`,
   `continue`, and `return`;
 - allocator retention and deallocation behavior;
-- static-analysis and unsafe-override boundaries; and
+- static-analysis boundaries and the claims that cover them; and
 - synchronization or async machinery when future facilities use them.
 
 ## Diagnostics
@@ -2896,8 +2981,11 @@ Diagnostics should distinguish:
 - complete `.=` without writable varying replacement authority or a viable
   replacement/fallback constructor;
 - wrapper-owned `.=` with an invalid optional or variant target shape;
-- partial-instance access or escape requiring a future unsafe control; and
-- an inapplicable or unsupported future unsafe semantic assertion.
+- partial-instance access or escape that needs a
+  `safe<partial-instance-access>` or `safe<partial-instance-escape>` claim;
+- a member that may still be alive, or may be destroyed twice, at destructor
+  exit, naming the applicable claim; and
+- an inapplicable claim or unsupported extension category.
 
 Exact identifiers, wording, presentation, and mandatory-versus-tooling
 boundaries remain future diagnostic and safety work.
@@ -2913,7 +3001,7 @@ Canonical formatting should preserve:
 - omission versus explicit type-default input;
 - ordinary qualifier and parameter ordering;
 - explicit `= default`, `= existing`, and `= forbidden`; and
-- narrow unsafe-control documentation when those controls are later defined.
+- documentation attached to `safe<...>` and `unsafe<...>` enclosures.
 
 Formatters must not reorder packet entries because evaluation order is
 observable. They must not add or remove explicit positional intent, convert
